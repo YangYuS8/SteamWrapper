@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<OutputType>WinExe</OutputType>
+		<!-- 隐藏控制台窗口 -->
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<PublishSingleFile>true</PublishSingleFile>
+		<SelfContained>false</SelfContained>
+		<!-- framework-dependent，发布更小；如需要独立 exe 可设 true -->
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- WMI 支持，用于子进程树检测 -->
+		<PackageReference Include="System.Management" Version="10.0.1" />
+	</ItemGroup>
+</Project>
