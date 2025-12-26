@@ -4,7 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
-using System.Management; // 需要安装 System.Management NuGet 包
+using System.Management;
+using System.Text.Json;
 
 namespace SteamWrapper
 {
@@ -15,19 +16,28 @@ namespace SteamWrapper
         {
             try
             {
-                string baseDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
-                string chsExe = Path.Combine(baseDir, "nine_kokoiro_chs.exe");
+                // ✅ 关键修复：永远以自身 exe 所在目录为准
+                string exePath = Environment.ProcessPath!;
+                string baseDir = Path.GetDirectoryName(exePath)!;
 
-                if (!File.Exists(chsExe))
+                var config = LoadOrCreateConfig(baseDir);
+                if (config == null)
                 {
-                    // 简单返回非0（也可弹窗提示）
+                    // 首次运行，已生成配置文件
+                    return 0;
+                }
+
+                string launcherPath = Path.Combine(baseDir, config.LauncherExe);
+                if (!File.Exists(launcherPath))
+                {
+                    Console.WriteLine($"找不到启动文件：{launcherPath}");
                     return 1;
                 }
 
                 var psi = new ProcessStartInfo
                 {
-                    FileName = chsExe,
-                    Arguments = string.Join(" ", Array.ConvertAll(args, a => $"\"{a}\"")),
+                    FileName = launcherPath,
+                    Arguments = string.Join(" ", args.Select(a => $"\"{a}\"")),
                     WorkingDirectory = baseDir,
                     UseShellExecute = false,
                     CreateNoWindow = true
@@ -36,21 +46,16 @@ namespace SteamWrapper
                 using var p = Process.Start(psi);
                 if (p == null) return 2;
 
-                int rootPid = p.Id;
-
-                // 等待主进程及其所有后代进程全部退出
-                WaitForProcessAndDescendantsExit(rootPid);
-
-                // 最后返回主进程退出码（若无法获取则返回0）
-                try
+                if (config.WaitForChildProcessTree)
                 {
-                    if (!p.HasExited) p.WaitForExit();
-                    return p.ExitCode;
+                    WaitForProcessAndDescendantsExit(p.Id);
                 }
-                catch
+                else
                 {
-                    return 0;
+                    p.WaitForExit();
                 }
+
+                return p.ExitCode;
             }
             catch
             {
@@ -58,24 +63,55 @@ namespace SteamWrapper
             }
         }
 
+        // ================= 配置文件 =================
+
+        private static WrapperConfig? LoadOrCreateConfig(string baseDir)
+        {
+            string configPath = Path.Combine(baseDir, "wrapper.config.json");
+            string guidePath = Path.Combine(baseDir, "SteamWrapper使用指南.txt");
+
+            if (!File.Exists(configPath))
+            {
+                var cfg = new WrapperConfig
+                {
+                    LauncherExe = "nine_kokoiro_chs.exe",
+                    OriginalExe = "nine_kokoiro.exe",
+                    WaitForChildProcessTree = true
+                };
+
+                File.WriteAllText(
+                    configPath,
+                    JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true })
+                );
+
+                File.WriteAllText(
+                    guidePath,
+@"SteamWrapper 使用指南
+
+本程序用于让 Steam 正确统计
+汉化版 / 启动器游戏的游玩时间。
+
+使用方法：
+1. 修改 wrapper.config.json
+2. 将 LauncherExe 改成你真正要启动的 exe
+3. Steam 启动本程序即可
+");
+
+                Console.WriteLine("已生成默认配置文件，请修改后重新启动。");
+                return null;
+            }
+
+            return JsonSerializer.Deserialize<WrapperConfig>(File.ReadAllText(configPath));
+        }
+
+        // ================= 进程树等待 =================
+
         private static void WaitForProcessAndDescendantsExit(int rootPid)
         {
-            // 循环检测：只要存在 root 或其任一后代就继续等待
             while (true)
             {
-                bool rootAlive = ProcessExists(rootPid);
-                bool anyDescendants = false;
-                try
-                {
-                    anyDescendants = AnyDescendantsAlive(rootPid);
-                }
-                catch
-                {
-                    // 若 WMI 查询失败（权限/平台问题），退回到按照可执行名检测的策略
-                    anyDescendants = FallbackDetectByExeName(rootPid);
-                }
-
-                if (!rootAlive && !anyDescendants) break;
+                if (!ProcessExists(rootPid) && !AnyDescendantsAlive(rootPid))
+                    break;
 
                 Thread.Sleep(1000);
             }
@@ -83,79 +119,38 @@ namespace SteamWrapper
 
         private static bool ProcessExists(int pid)
         {
-            try
-            {
-                Process.GetProcessById(pid);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            try { Process.GetProcessById(pid); return true; }
+            catch { return false; }
         }
 
         private static bool AnyDescendantsAlive(int rootPid)
         {
-            // 使用 WMI 查找 ParentProcessId 链（递归）
-            var toCheck = new Queue<int>();
-            toCheck.Enqueue(rootPid);
+            var queue = new Queue<int>();
+            queue.Enqueue(rootPid);
 
-            while (toCheck.Count > 0)
+            while (queue.Count > 0)
             {
-                int parent = toCheck.Dequeue();
-                string q = $"Select ProcessId from Win32_Process Where ParentProcessId = {parent}";
-                using var searcher = new ManagementObjectSearcher(q);
-                using var results = searcher.Get();
-                foreach (ManagementObject mo in results)
+                int parent = queue.Dequeue();
+                using var searcher = new ManagementObjectSearcher(
+                    $"Select ProcessId from Win32_Process Where ParentProcessId = {parent}"
+                );
+
+                foreach (ManagementObject mo in searcher.Get())
                 {
-                    try
-                    {
-                        var childPidObj = mo["ProcessId"];
-                        if (childPidObj == null) continue;
-                        int childPid = Convert.ToInt32(childPidObj);
-                        if (ProcessExists(childPid)) return true;
-                        // 继续向下查找该 child 的后代（以防 CHS 创建了多级子进程）
-                        toCheck.Enqueue(childPid);
-                    }
-                    catch
-                    {
-                        // 忽略单个 process 查询错误，继续查别的
-                    }
+                    int pid = Convert.ToInt32(mo["ProcessId"]);
+                    if (ProcessExists(pid)) return true;
+                    queue.Enqueue(pid);
                 }
             }
 
             return false;
         }
+    }
 
-        private static bool FallbackDetectByExeName(int rootPid)
-        {
-            // WMI 不可用时的保底策略：检测与 rootPid 启动时间接近的相关 exe 名称是否存在。
-            // 这种方法不如 WMI 精确，但通常能覆盖常见场景。
-            try
-            {
-                var rootProc = Process.GetProcessById(rootPid);
-                var rootStart = rootProc.StartTime;
-
-                // 常见可疑 exe 名称（根据你游戏实际的 exe 名称调整）
-                string[] suspectNames = new[] { "nine_kokoiro", "nine_kokoiro_chs" };
-
-                foreach (var name in suspectNames)
-                {
-                    var procs = Process.GetProcessesByName(name);
-                    foreach (var pr in procs)
-                    {
-                        try
-                        {
-                            // 只认为启动时间 >= rootStart - 5s 的进程为后代（避免误匹配旧进程）
-                            if (pr.StartTime >= rootStart.AddSeconds(-5)) return true;
-                        }
-                        catch { }
-                    }
-                }
-            }
-            catch { }
-
-            return false;
-        }
+    internal class WrapperConfig
+    {
+        public string LauncherExe { get; set; } = "";
+        public string OriginalExe { get; set; } = "";
+        public bool WaitForChildProcessTree { get; set; } = true;
     }
 }
