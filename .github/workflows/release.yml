@@ -1,0 +1,48 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Get changelog
+        id: changelog
+        run: |
+          git fetch --prune --unshallow --tags || true
+          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          PREV_TAG=$(git tag --sort=-creatordate | grep -v "$CURRENT_TAG" | sed -n '1p' || true)
+          if [ -n "$PREV_TAG" ]; then
+            git --no-pager log --pretty=format:'- %s (%an)' $PREV_TAG..$CURRENT_TAG > CHANGELOG.md || true
+          else
+            git --no-pager log --pretty=format:'- %s (%an)' --max-count=50 > CHANGELOG.md || true
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat CHANGELOG.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Build publish
+        run: dotnet publish SteamWrapper.csproj -c Release -r win-x64 -o publish --self-contained false /p:GenerateFullPaths=true
+
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: publish/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

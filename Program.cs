@@ -5,7 +5,10 @@ using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
 using System.Management;
+using System.Runtime.Versioning;
 using System.Text.Json;
+
+[assembly: SupportedOSPlatform("windows")]
 
 namespace SteamWrapper
 {
@@ -75,7 +78,6 @@ namespace SteamWrapper
                 var cfg = new WrapperConfig
                 {
                     LauncherExe = "nine_kokoiro_chs.exe",
-                    OriginalExe = "nine_kokoiro.exe",
                     WaitForChildProcessTree = true
                 };
 
@@ -93,10 +95,10 @@ namespace SteamWrapper
 
 使用方法：
 1. 修改 wrapper.config.json
-2. 将 LauncherExe 改成你真正要启动的 exe
-3. Steam 启动本程序即可
+2. 将 ""LauncherExe"" 改成你真正要启动的可执行文件名（相对于本程序所在目录）
+3. 根据需要设置 ""WaitForChildProcessTree"" 为 true/false（默认 true）
+4. Steam 启动本程序即可
 ");
-
                 Console.WriteLine("已生成默认配置文件，请修改后重新启动。");
                 return null;
             }
@@ -150,7 +152,6 @@ namespace SteamWrapper
     internal class WrapperConfig
     {
         public string LauncherExe { get; set; } = "";
-        public string OriginalExe { get; set; } = "";
         public bool WaitForChildProcessTree { get; set; } = true;
     }
 }
