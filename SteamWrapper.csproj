@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<OutputType>WinExe</OutputType>
 		<!-- 隐藏控制台窗口 -->
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
