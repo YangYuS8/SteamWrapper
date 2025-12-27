@@ -18,34 +18,79 @@ jobs:
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
 
       - name: Get changelog
         id: changelog
         run: |
-          git fetch --prune --unshallow --tags || true
           CURRENT_TAG=${GITHUB_REF#refs/tags/}
-          PREV_TAG=$(git tag --sort=-creatordate | grep -v "$CURRENT_TAG" | sed -n '1p' || true)
+          PREV_TAG=$(git tag --sort=-creatordate | grep -v "$CURRENT_TAG" | sed -n '1p' || echo "")
+          
           if [ -n "$PREV_TAG" ]; then
-            git --no-pager log --pretty=format:'- %s (%an)' $PREV_TAG..$CURRENT_TAG > CHANGELOG.md || true
+            CHANGELOG=$(git --no-pager log --pretty=format:'- %s (%an)' $PREV_TAG..$CURRENT_TAG 2>/dev/null || echo "Initial release")
           else
-            git --no-pager log --pretty=format:'- %s (%an)' --max-count=50 > CHANGELOG.md || true
+            CHANGELOG=$(git --no-pager log --pretty=format:'- %s (%an)' --max-count=50 2>/dev/null || echo "Initial release")
           fi
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          cat CHANGELOG.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          
+          # 使用随机定界符避免冲突
+          DELIMITER=$(openssl rand -hex 16)
+          echo "changelog<<${DELIMITER}" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "${DELIMITER}" >> $GITHUB_OUTPUT
 
-      - name: Build publish
-        run: dotnet publish SteamWrapper.csproj -c Release -r win-x64 -o publish --self-contained false /p:GenerateFullPaths=true
+      - name: Restore dependencies
+        run: dotnet restore SteamWrapper.csproj
+
+      - name: Build and publish
+        run: |
+          dotnet publish SteamWrapper.csproj \
+            -c Release \
+            -r win-x64 \
+            -o publish \
+            --self-contained false \
+            --no-restore \
+            /p:GenerateFullPaths=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false
+
+      - name: Prepare release artifacts
+        run: |
+          cd publish
+          # 创建 ZIP 压缩包
+          zip -r ../SteamWrapper-${{ github.ref_name }}-win-x64.zip .
+          cd ..
+          # 生成校验和
+          sha256sum SteamWrapper-${{ github.ref_name }}-win-x64.zip > SteamWrapper-${{ github.ref_name }}-win-x64.zip.sha256
 
       - name: Create GitHub Release and upload assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          body: ${{ steps.changelog.outputs.changelog }}
-          files: publish/**
+          body: |
+            ## 📝 更新日志
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## 📦 下载说明
+            
+            下载 `SteamWrapper-${{ github.ref_name }}-win-x64.zip` 并解压使用。
+            
+            **SHA256 校验和：**
+            请下载对应的 `.sha256` 文件进行完整性验证。
+            
+            ## ⚙️ 系统要求
+            
+            - Windows x64
+            - .NET Runtime 10.0 或更高版本
+          files: |
+            SteamWrapper-${{ github.ref_name }}-win-x64.zip
+            SteamWrapper-${{ github.ref_name }}-win-x64.zip.sha256
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
