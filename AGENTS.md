@@ -107,6 +107,29 @@ Do not introduce without discussion:
 - Background services or daemons.
 - DLL injection or Steam client modification.
 
+## Brand assets
+
+The unified project icon is:
+
+```text
+assets/brand/steamwrapper.svg
+```
+
+Manager frontend copy for direct import is:
+
+```text
+apps/manager/src/assets/steamwrapper.svg
+```
+
+Rules:
+
+- Treat this SVG as the canonical v2 project mark.
+- It is an original Rust-inspired gear and Steam-like launch graph mark.
+- It is not the official Steam logo and must not be described as such.
+- Do not replace it with official Steam, Rust, or third-party trademarked logos.
+- Use the root `assets/brand/steamwrapper.svg` in README, docs and release materials.
+- Use the frontend copy inside `apps/manager/src/assets/` for Manager UI imports.
+
 ## Licensing
 
 SteamWrapper v2 uses Apache-2.0.
@@ -217,6 +240,7 @@ Visual direction:
 
 - Use card-based game list.
 - Show local Steam cover images when available.
+- Use the SteamWrapper SVG project icon in the sidebar, hero area and future About page.
 - Keep the primary flow obvious.
 - Avoid terminal-like workflows for normal users.
 
