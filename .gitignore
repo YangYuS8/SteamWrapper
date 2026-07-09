@@ -101,7 +101,6 @@ StyleCopReport.xml
 # Rust / SteamWrapper v2
 /target/
 **/*.rs.bk
-Cargo.lock
 profiles.toml
 logs/
 backups/
