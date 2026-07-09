@@ -1,9 +1,12 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { HardDrive, ImageIcon, Play, Save, Settings2, ShieldCheck } from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { HardDrive, ImageIcon, Minus, Play, Save, Settings2, ShieldCheck, Square, X } from "lucide-react";
 import { useState } from "react";
 import steamWrapperIcon from "@/assets/steamwrapper.svg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+const appWindow = getCurrentWindow();
 
 type LocalSteamGame = {
   appid: string;
@@ -64,6 +67,42 @@ export function App() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <div data-tauri-drag-region className="flex h-12 select-none items-center border-b bg-slate-950/95 px-4 shadow-sm">
+        <div data-tauri-drag-region className="flex flex-1 items-center gap-3">
+          <img src={steamWrapperIcon} alt="SteamWrapper" className="h-7 w-7 rounded-lg" />
+          <div data-tauri-drag-region>
+            <div className="text-sm font-semibold leading-none">SteamWrapper Manager</div>
+            <div className="mt-0.5 text-[11px] text-muted-foreground">配置一次，以后从 Steam 正常启动</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-white/10 hover:text-foreground"
+            aria-label="最小化"
+            onClick={() => void appWindow.minimize()}
+            type="button"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-white/10 hover:text-foreground"
+            aria-label="最大化或还原"
+            onClick={() => void appWindow.toggleMaximize()}
+            type="button"
+          >
+            <Square className="h-3.5 w-3.5" />
+          </button>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-red-500/80 hover:text-white"
+            aria-label="关闭"
+            onClick={() => void appWindow.close()}
+            type="button"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
       <div className="mx-auto flex max-w-7xl gap-6 p-6">
         <aside className="hidden w-64 shrink-0 flex-col gap-3 rounded-2xl border bg-card p-4 lg:flex">
           <div className="flex items-center gap-3 px-2 py-1">
