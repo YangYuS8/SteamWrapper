@@ -1,43 +1,217 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
-  <title id="title">SteamWrapper project icon</title>
-  <desc id="desc">An original Rust-inspired gear and Steam-like launch graph icon for SteamWrapper.</desc>
-  <defs>
-    <linearGradient id="bg" x1="36" y1="28" x2="220" y2="228" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#111827"/>
-      <stop offset="0.52" stop-color="#0F172A"/>
-      <stop offset="1" stop-color="#020617"/>
-    </linearGradient>
-    <linearGradient id="rust" x1="72" y1="56" x2="192" y2="204" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#F97316"/>
-      <stop offset="0.5" stop-color="#D97706"/>
-      <stop offset="1" stop-color="#7C2D12"/>
-    </linearGradient>
-    <linearGradient id="steam" x1="68" y1="68" x2="192" y2="190" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#E5E7EB"/>
-      <stop offset="1" stop-color="#94A3B8"/>
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000000" flood-opacity="0.35"/>
-    </filter>
-  </defs>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
 
-  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
-
-  <g filter="url(#shadow)">
-    <circle cx="128" cy="128" r="85" fill="#020617" stroke="#334155" stroke-width="8"/>
-    <g fill="url(#rust)">
-      <path d="M119 29h18l5 23a77 77 0 0 1 20 5l18-15 16 9-6 23a81 81 0 0 1 15 15l23-6 9 16-15 18a76 76 0 0 1 5 20l23 5v18l-23 5a76 76 0 0 1-5 20l15 18-9 16-23-6a81 81 0 0 1-15 15l6 23-16 9-18-15a77 77 0 0 1-20 5l-5 23h-18l-5-23a77 77 0 0 1-20-5l-18 15-16-9 6-23a81 81 0 0 1-15-15l-23 6-9-16 15-18a76 76 0 0 1-5-20l-23-5v-18l23-5a76 76 0 0 1 5-20L19 99l9-16 23 6a81 81 0 0 1 15-15l-6-23 16-9 18 15a77 77 0 0 1 20-5l5-23Z"/>
-    </g>
-    <circle cx="128" cy="128" r="66" fill="#0F172A" stroke="#FED7AA" stroke-opacity="0.55" stroke-width="4"/>
-    <path d="M75 157c24-10 45-20 66-43" fill="none" stroke="url(#steam)" stroke-width="17" stroke-linecap="round"/>
-    <path d="M139 113c13-19 30-30 52-34" fill="none" stroke="url(#steam)" stroke-width="14" stroke-linecap="round"/>
-    <circle cx="68" cy="162" r="25" fill="#0B1120" stroke="#E5E7EB" stroke-width="9"/>
-    <circle cx="68" cy="162" r="10" fill="#F97316"/>
-    <circle cx="151" cy="104" r="30" fill="#0B1120" stroke="#E5E7EB" stroke-width="10"/>
-    <circle cx="151" cy="104" r="13" fill="#F97316"/>
-    <circle cx="193" cy="77" r="16" fill="#0B1120" stroke="#CBD5E1" stroke-width="7"/>
-    <circle cx="193" cy="77" r="5" fill="#FDBA74"/>
-    <path d="M91 64H67v128h24" fill="none" stroke="#FDBA74" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M165 192h24V64h-24" fill="none" stroke="#FDBA74" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-</svg>
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg1"
+   xml:space="preserve"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="px"
+     inkscape:zoom="0.82714844"
+     inkscape:cx="356.64699"
+     inkscape:cy="406.81936"
+     inkscape:window-width="995"
+     inkscape:window-height="1080"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1"><inkscape:page
+       x="0"
+       y="0"
+       width="512"
+       height="512"
+       id="page2"
+       margin="0"
+       bleed="0" /></sodipodi:namedview><defs
+     id="defs1"><linearGradient
+       id="A"
+       x2="32.010761"
+       x1="32.010761"
+       y2="63.965492"
+       y1="0"
+       gradientTransform="scale(0.99946079,1.0005395)"
+       gradientUnits="userSpaceOnUse"><stop
+         stop-color="#111d2e"
+         offset="0%"
+         id="stop1" /><stop
+         stop-color="#051839"
+         offset="21.2%"
+         id="stop2" /><stop
+         stop-color="#0a1b48"
+         offset="40.7%"
+         id="stop3" /><stop
+         stop-color="#132e62"
+         offset="58.1%"
+         id="stop4" /><stop
+         stop-color="#144b7e"
+         offset="73.8%"
+         id="stop5" /><stop
+         stop-color="#136497"
+         offset="87.3%"
+         id="stop6" /><stop
+         stop-color="#1387b8"
+         offset="100%"
+         id="stop7" /></linearGradient></defs><g
+     inkscape:label="图层 1"
+     inkscape:groupmode="layer"
+     id="layer1"><g
+       style="display:inline;fill:#ffffff"
+       id="g1"
+       transform="matrix(5.8730044,0,0,5.9367443,65.566385,65.495608)"><use
+         xlink:href="#B"
+         x="0.5"
+         y="0.5"
+         id="use1-3" /><symbol
+         id="B"><g
+           id="g8"><path
+             d="M 1.305,41.202 C 5.259,54.386 17.488,64 31.959,64 c 17.673,0 32,-14.327 32,-32 0,-17.673 -14.327,-32 -32,-32 C 15.001,0 1.124,13.193 0.028,29.874 c 2.074,3.477 2.879,5.628 1.275,11.328 z"
+             fill="url(#A)"
+             id="path7"
+             style="fill:url(#A)" /><path
+             d="m 30.31,23.985 0.003,0.158 -7.83,11.375 c -1.268,-0.058 -2.54,0.165 -3.748,0.662 a 8.14,8.14 0 0 0 -1.498,0.8 L 0.042,29.893 c 0,0 -0.398,6.546 1.26,11.424 l 12.156,5.016 c 0.6,2.728 2.48,5.12 5.242,6.27 a 8.88,8.88 0 0 0 11.603,-4.782 8.89,8.89 0 0 0 0.684,-3.656 l 11.193,-8.005 0.275,0.005 c 6.705,0 12.155,-5.466 12.155,-12.18 0,-6.714 -5.44,-12.16 -12.155,-12.174 -6.702,0 -12.155,5.46 -12.155,12.174 z m -1.88,23.05 c -1.454,3.5 -5.466,5.147 -8.953,3.694 a 6.84,6.84 0 0 1 -3.524,-3.362 l 3.957,1.64 a 5.04,5.04 0 0 0 6.591,-2.719 5.05,5.05 0 0 0 -2.715,-6.601 l -4.1,-1.695 c 1.578,-0.6 3.372,-0.62 5.05,0.077 1.7,0.703 3,2.027 3.696,3.72 0.696,1.693 0.692,3.56 -0.01,5.246 M 42.466,32.1 a 8.12,8.12 0 0 1 -8.098,-8.113 8.12,8.12 0 0 1 8.098,-8.111 8.12,8.12 0 0 1 8.1,8.111 8.12,8.12 0 0 1 -8.1,8.113 m -6.068,-8.126 a 6.09,6.09 0 0 1 6.08,-6.095 c 3.355,0 6.084,2.73 6.084,6.095 a 6.09,6.09 0 0 1 -6.084,6.093 6.09,6.09 0 0 1 -6.081,-6.093 z"
+             id="path8" /></g></symbol></g><g
+       id="gear-9"
+       mask="url(#holes-8)"
+       style="display:inline"
+       transform="matrix(4.8762036,0,0,4.8762036,256.27109,256.72093)"><circle
+         r="43"
+         fill="none"
+         stroke="#6e7681"
+         stroke-width="9"
+         id="circle1-5"
+         cx="0"
+         cy="0" /><g
+         id="cogs-0"><polygon
+           id="cog-4"
+           fill="#6e7681"
+           stroke="#6e7681"
+           stroke-width="3"
+           stroke-linejoin="round"
+           points="51,0 46,-3 46,3 " /><use
+           xlink:href="#cog-4"
+           transform="rotate(11.25)"
+           id="use1-8" /><use
+           xlink:href="#cog-4"
+           transform="rotate(22.5)"
+           id="use2-7" /><use
+           xlink:href="#cog-4"
+           transform="rotate(33.75)"
+           id="use3-1" /><use
+           xlink:href="#cog-4"
+           transform="rotate(45)"
+           id="use4-7" /><use
+           xlink:href="#cog-4"
+           transform="rotate(56.25)"
+           id="use5-2" /><use
+           xlink:href="#cog-4"
+           transform="rotate(67.5)"
+           id="use6-7" /><use
+           xlink:href="#cog-4"
+           transform="rotate(78.75)"
+           id="use7-2" /><use
+           xlink:href="#cog-4"
+           transform="rotate(90)"
+           id="use8-2" /><use
+           xlink:href="#cog-4"
+           transform="rotate(101.25)"
+           id="use9-6" /><use
+           xlink:href="#cog-4"
+           transform="rotate(112.5)"
+           id="use10-1" /><use
+           xlink:href="#cog-4"
+           transform="rotate(123.75)"
+           id="use11-0" /><use
+           xlink:href="#cog-4"
+           transform="rotate(135)"
+           id="use12-6" /><use
+           xlink:href="#cog-4"
+           transform="rotate(146.25)"
+           id="use13-1" /><use
+           xlink:href="#cog-4"
+           transform="rotate(157.5)"
+           id="use14-5" /><use
+           xlink:href="#cog-4"
+           transform="rotate(168.75)"
+           id="use15-9" /><use
+           xlink:href="#cog-4"
+           transform="scale(-1)"
+           id="use16-4" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-168.75)"
+           id="use17-9" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-157.5)"
+           id="use18-0" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-146.25)"
+           id="use19-9" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-135)"
+           id="use20-1" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-123.75)"
+           id="use21-7" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-112.5)"
+           id="use22-7" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-101.25)"
+           id="use23-1" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-90)"
+           id="use24-1" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-78.75)"
+           id="use25-5" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-67.5)"
+           id="use26-9" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-56.25)"
+           id="use27-7" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-45)"
+           id="use28-7" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-33.75)"
+           id="use29-6" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-22.5)"
+           id="use30-7" /><use
+           xlink:href="#cog-4"
+           transform="rotate(-11.25)"
+           id="use31-3" /></g><g
+         id="mounts-6"><polygon
+           id="mount-5"
+           fill="#6e7681"
+           stroke="#6e7681"
+           stroke-width="6"
+           stroke-linejoin="round"
+           points="0,-35 7,-42 -7,-42 " /><use
+           xlink:href="#mount-5"
+           transform="rotate(72)"
+           id="use32-6" /><use
+           xlink:href="#mount-5"
+           transform="rotate(144)"
+           id="use33-3" /><use
+           xlink:href="#mount-5"
+           transform="rotate(-144)"
+           id="use34-9" /><use
+           xlink:href="#mount-5"
+           transform="rotate(-72)"
+           id="use35-4" /></g></g></g></svg>
