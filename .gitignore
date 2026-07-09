@@ -41,7 +41,7 @@ bld/
 # Visual Studio 2017 auto generated files
 Generated\ Files/
 
-# MSTest test Results
+# MSTest Test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
@@ -369,3 +369,7 @@ profiles.toml
 logs/
 backups/
 .DS_Store
+
+# Tauri / frontend
+/apps/manager/dist/
+/apps/manager/src-tauri/gen/
