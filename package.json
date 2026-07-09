@@ -1,0 +1,12 @@
+{
+  "name": "steamwrapper-workspace",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm --filter steamwrapper-manager dev",
+    "build": "pnpm --filter steamwrapper-manager build",
+    "tauri:dev": "pnpm --filter steamwrapper-manager tauri:dev",
+    "tauri:build": "pnpm --filter steamwrapper-manager tauri:build",
+    "lint": "pnpm --filter steamwrapper-manager lint"
+  }
+}
