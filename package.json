@@ -1,6 +1,7 @@
 {
   "name": "steamwrapper-workspace",
   "private": true,
+  "license": "Apache-2.0",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "pnpm --filter steamwrapper-manager dev",
