@@ -2,6 +2,7 @@
   "name": "steamwrapper-manager",
   "private": true,
   "version": "0.2.0",
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420",
