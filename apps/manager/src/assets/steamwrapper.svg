@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">SteamWrapper project icon</title>
+  <desc id="desc">An original Rust-inspired gear and Steam-like launch graph icon for SteamWrapper.</desc>
+  <defs>
+    <linearGradient id="bg" x1="36" y1="28" x2="220" y2="228" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="0.52" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="rust" x1="72" y1="56" x2="192" y2="204" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F97316"/>
+      <stop offset="0.5" stop-color="#D97706"/>
+      <stop offset="1" stop-color="#7C2D12"/>
+    </linearGradient>
+    <linearGradient id="steam" x1="68" y1="68" x2="192" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E5E7EB"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <circle cx="128" cy="128" r="85" fill="#020617" stroke="#334155" stroke-width="8"/>
+    <g fill="url(#rust)">
+      <path d="M119 29h18l5 23a77 77 0 0 1 20 5l18-15 16 9-6 23a81 81 0 0 1 15 15l23-6 9 16-15 18a76 76 0 0 1 5 20l23 5v18l-23 5a76 76 0 0 1-5 20l15 18-9 16-23-6a81 81 0 0 1-15 15l6 23-16 9-18-15a77 77 0 0 1-20 5l-5 23h-18l-5-23a77 77 0 0 1-20-5l-18 15-16-9 6-23a81 81 0 0 1-15-15l-23 6-9-16 15-18a76 76 0 0 1-5-20l-23-5v-18l23-5a76 76 0 0 1 5-20L19 99l9-16 23 6a81 81 0 0 1 15-15l-6-23 16-9 18 15a77 77 0 0 1 20-5l5-23Z"/>
+    </g>
+    <circle cx="128" cy="128" r="66" fill="#0F172A" stroke="#FED7AA" stroke-opacity="0.55" stroke-width="4"/>
+    <path d="M75 157c24-10 45-20 66-43" fill="none" stroke="url(#steam)" stroke-width="17" stroke-linecap="round"/>
+    <path d="M139 113c13-19 30-30 52-34" fill="none" stroke="url(#steam)" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="68" cy="162" r="25" fill="#0B1120" stroke="#E5E7EB" stroke-width="9"/>
+    <circle cx="68" cy="162" r="10" fill="#F97316"/>
+    <circle cx="151" cy="104" r="30" fill="#0B1120" stroke="#E5E7EB" stroke-width="10"/>
+    <circle cx="151" cy="104" r="13" fill="#F97316"/>
+    <circle cx="193" cy="77" r="16" fill="#0B1120" stroke="#CBD5E1" stroke-width="7"/>
+    <circle cx="193" cy="77" r="5" fill="#FDBA74"/>
+    <path d="M91 64H67v128h24" fill="none" stroke="#FDBA74" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M165 192h24V64h-24" fill="none" stroke="#FDBA74" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
