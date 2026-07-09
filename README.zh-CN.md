@@ -1,0 +1,153 @@
+# SteamWrapper v2
+
+SteamWrapper v2 是 SteamWrapper 的重构版本。
+
+它不再只是“把一个 wrapper exe 放进游戏目录”的小工具，而是一个面向普通玩家的 Steam 自定义启动管理器。
+
+核心目标：
+
+> 在 SteamWrapper Manager 里配置一次，以后仍然从 Steam 正常启动游戏。
+
+日常游玩时，用户不需要打开 SteamWrapper Manager。Steam 会通过启动选项自动调用无界面的 `SteamWrapperRunner`，Runner 再启动用户配置好的汉化 exe、启动器或 mod loader。
+
+## 设计目标
+
+- 不要求用户安装 .NET Runtime。
+- 默认不依赖 SteamEdit。
+- 不需要把完整 wrapper 复制到每个游戏目录。
+- GUI 只负责配置，平时游玩无感。
+- Runner 是无界面原生程序，由 Steam 自动调用。
+- Windows 首发，未来规划 Linux 与 SteamOS / Steam Deck。
+- Windows 用户优先使用安装程序，也提供 portable zip。
+- 第一阶段只读取本地 Steam 游戏库和本地封面缓存，不接入在线封面服务。
+
+## 产品形态
+
+```text
+SteamWrapperManager.exe   # Tauri 图形配置器
+SteamWrapperRunner.exe    # 被 Steam Launch Options 调用的无界面原生运行器
+profiles.toml             # 游戏配置
+logs/                     # 运行日志
+backups/                  # Steam 配置备份，后续使用
+cache/                    # 本地缓存，后续使用
+```
+
+## 普通用户流程
+
+```text
+安装 SteamWrapper
+→ 打开 SteamWrapper Manager
+→ 扫描本地 Steam 游戏
+→ 选择需要修改启动方式的游戏
+→ 选择真正要启动的 exe / launcher
+→ 应用到 Steam 或复制生成的启动选项
+→ 以后直接从 Steam 启动游戏
+```
+
+生成的 Steam 启动选项示例：
+
+```text
+"C:\Users\<User>\AppData\Local\SteamWrapper\bin\SteamWrapperRunner.exe" --appid "123456" -- %command%
+```
+
+## 技术栈
+
+v2 采用 Rust + Tauri 架构：
+
+```text
+crates/
+  core/      # 共享配置、profile、启动选项和 Steam 库逻辑
+  runner/    # 被 Steam 调用的原生无界面运行器
+
+apps/
+  manager/   # Tauri v2 + React + shadcn/ui 配置器
+```
+
+主要技术选择：
+
+- Runner/Core：Rust
+- Manager 桌面壳：Tauri v2
+- Manager 前端：React + TypeScript + Vite
+- UI：Tailwind CSS + shadcn/ui
+- 配置格式：TOML
+- Windows 分发：优先 NSIS setup.exe，其次 portable zip
+- Windows 进程等待：规划使用 Job Object
+- Linux 进程等待：规划使用 process group / session
+- SteamOS 支持：Windows 主流程稳定后再推进
+
+## Windows 安装方式
+
+主推：
+
+```text
+SteamWrapper-v2.x.x-win-x64-setup.exe
+```
+
+备选：
+
+```text
+SteamWrapper-v2.x.x-win-x64-portable.zip
+```
+
+建议路径：
+
+```text
+%LOCALAPPDATA%\Programs\SteamWrapper\      # Manager 安装目录
+%LOCALAPPDATA%\SteamWrapper\bin\           # Runner 稳定路径
+%LOCALAPPDATA%\SteamWrapper\profiles.toml  # 用户配置
+%LOCALAPPDATA%\SteamWrapper\logs\          # 日志
+%LOCALAPPDATA%\SteamWrapper\backups\       # Steam 配置备份
+```
+
+Steam 启动选项应该引用稳定的 Runner 路径，不应该引用临时解压目录。
+
+## 本地封面策略
+
+第一阶段不接入在线封面 API。
+
+Manager 只读取本地 Steam 缓存，例如：
+
+```text
+<Steam安装目录>\appcache\librarycache\
+<Steam安装目录>\userdata\<steamid>\config\grid\
+```
+
+找不到封面时只显示占位图，不联网、不报错，也不影响配置游戏。
+
+## 安全边界
+
+SteamWrapper v2 不做：
+
+- 不注入 DLL；
+- 不修改 Steam 客户端；
+- 不破解游戏；
+- 不绕过 DRM；
+- 不常驻后台；
+- 第一阶段不联网拉取封面。
+
+SteamWrapper v2 只做：
+
+- 读取本地 Steam 游戏库；
+- 读取本地 Steam 封面缓存；
+- 配置自定义启动目标；
+- 生成或应用 Steam Launch Options；
+- 运行时启动用户选择的本地程序；
+- 等待目标退出，以配合 Steam 统计游玩时间。
+
+## 开发说明
+
+给 Agents 或贡献者的开发规范见：
+
+- `AGENTS.md`
+- `docs/tech-stack.md`
+- `docs/architecture.md`
+- `docs/distribution.md`
+- `docs/roadmap.md`
+
+## License
+
+Apache-2.0
+
+## 状态
+
+`v2` 分支仍处于早期布局阶段。`main` 分支上的 C# 版本暂时仍是旧版稳定实现。
