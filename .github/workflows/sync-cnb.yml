@@ -1,0 +1,39 @@
+name: Sync to CNB
+
+on:
+  push:
+    branches: ["v2"]
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push current ref to CNB
+        env:
+          CNB_GIT_TOKEN: ${{ secrets.CNB_GIT_TOKEN }}
+          CNB_REMOTE_URL: ${{ vars.CNB_REMOTE_URL }}
+        run: |
+          set -euo pipefail
+          test -n "${CNB_GIT_TOKEN:-}" || { echo "CNB_GIT_TOKEN is not configured" >&2; exit 1; }
+          test -n "${CNB_REMOTE_URL:-}" || { echo "CNB_REMOTE_URL repository variable is not configured" >&2; exit 1; }
+
+          git remote add cnb "$CNB_REMOTE_URL"
+          git config --global credential.helper store
+          printf 'protocol=https\nhost=cnb.cool\nusername=cnb\npassword=%s\n\n' "$CNB_GIT_TOKEN" | git credential approve
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            git push --force cnb "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          else
+            git push --force cnb "HEAD:${GITHUB_REF_NAME}"
+          fi

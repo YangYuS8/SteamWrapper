@@ -1,0 +1,50 @@
+$:
+  tag_push:
+    - name: release
+      runner:
+        cpus: 16
+      docker:
+        image: cnbcool/default-build-env:latest
+      stages:
+        - name: verify release tag
+          script: |
+            set -euo pipefail
+            case "$CNB_BRANCH" in
+              v[0-9]*.[0-9]*.[0-9]*) ;;
+              *) echo "Skip non-semver tag: $CNB_BRANCH"; exit 0 ;;
+            esac
+
+        - name: generate release notes
+          if: 'case "$CNB_BRANCH" in v[0-9]*.[0-9]*.[0-9]*) exit 0 ;; *) exit 1 ;; esac'
+          script: |
+            set -euo pipefail
+            TAG_NAME="$CNB_BRANCH"
+            previous_tag="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | grep -v "^${TAG_NAME}$" | head -n 1 || true)"
+            if [ -n "$previous_tag" ]; then
+              range="${previous_tag}..${TAG_NAME}"
+              compare_url="https://cnb.cool/${CNB_REPO_SLUG}/-/compare/${previous_tag}...${TAG_NAME}"
+            else
+              range="${TAG_NAME}"
+              compare_url=""
+            fi
+            {
+              printf '## SteamWrapper %s\n\n' "$TAG_NAME"
+              printf 'SteamWrapper v2 LTS 同步发布。\n\n'
+              printf '## 下载说明\n\n'
+              printf -- '- 国内玩家优先使用 CNB Release 下载。\n'
+              printf -- '- Windows 用户优先下载 setup.exe；Linux / SteamOS 用户下载 AppImage 或 tar.gz。\n'
+              printf -- '- 更新时覆盖安装或替换程序文件，用户配置目录会保留。\n\n'
+              printf '## Changes\n\n'
+              git log "$range" --reverse --pretty=format:'- %s (`%h`, %an)' || true
+              if [ -n "$compare_url" ]; then
+                printf '\n\n**Full Changelog**: %s\n' "$compare_url"
+              fi
+            } > release-notes.md
+
+        - name: publish CNB release
+          if: 'case "$CNB_BRANCH" in v[0-9]*.[0-9]*.[0-9]*) exit 0 ;; *) exit 1 ;; esac'
+          type: git:release
+          options:
+            tag: $CNB_BRANCH
+            title: SteamWrapper $CNB_BRANCH
+            descriptionFromFile: release-notes.md
