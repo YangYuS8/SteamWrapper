@@ -2,7 +2,7 @@
 members = [
     "crates/core",
     "crates/runner",
-    "crates/manager",
+    "apps/manager/src-tauri",
 ]
 resolver = "2"
 
@@ -14,9 +14,10 @@ repository = "https://github.com/YangYuS8/SteamWrapper"
 [workspace.dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
-eframe = "0.31"
-egui = "0.31"
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = "2"
+tauri-build = "2"
 thiserror = "2"
 toml = "0.8"
 tracing = "0.1"
