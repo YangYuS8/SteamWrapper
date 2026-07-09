@@ -1,5 +1,9 @@
 # SteamWrapper v2
 
+<p align="center">
+  <img src="assets/brand/steamwrapper.svg" alt="SteamWrapper 图标" width="128" height="128" />
+</p>
+
 SteamWrapper v2 是 SteamWrapper 的重构版本。
 
 它不再只是“把一个 wrapper exe 放进游戏目录”的小工具，而是一个面向普通玩家的 Steam 自定义启动管理器。
@@ -9,6 +13,16 @@ SteamWrapper v2 是 SteamWrapper 的重构版本。
 > 在 SteamWrapper Manager 里配置一次，以后仍然从 Steam 正常启动游戏。
 
 日常游玩时，用户不需要打开 SteamWrapper Manager。Steam 会通过启动选项自动调用无界面的 `SteamWrapperRunner`，Runner 再启动用户配置好的汉化 exe、启动器或 mod loader。
+
+## 品牌资源
+
+统一项目图标位于：
+
+```text
+assets/brand/steamwrapper.svg
+```
+
+它是为 SteamWrapper 设计的原创 SVG 图标，结合了 Rust 齿轮感和类似 Steam 启动链路的视觉意象，但不是 Steam 官方 Logo。
 
 ## 设计目标
 
