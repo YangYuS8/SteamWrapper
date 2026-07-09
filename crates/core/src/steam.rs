@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -17,8 +17,12 @@ pub fn scan_local_steam_games() -> Vec<LocalSteamGame> {
         return Vec::new();
     };
 
+    scan_steam_games_in(&steam_dir)
+}
+
+fn scan_steam_games_in(steam_dir: &Path) -> Vec<LocalSteamGame> {
     let libraries = find_steam_libraries(&steam_dir);
-    let mut games = Vec::new();
+    let mut games = BTreeMap::new();
 
     for library in libraries {
         let steamapps = library.join("steamapps");
@@ -51,6 +55,11 @@ pub fn scan_local_steam_games() -> Vec<LocalSteamGame> {
             let name =
                 parse_vdf_value(&text, "name").unwrap_or_else(|| format!("Steam App {appid}"));
             let install_dir_name = parse_vdf_value(&text, "installdir");
+
+            if is_non_game_steam_app(&appid, &name, install_dir_name.as_deref()) {
+                continue;
+            }
+
             let install_dir = install_dir_name.as_deref().map(|dir| {
                 steamapps
                     .join("common")
@@ -61,17 +70,46 @@ pub fn scan_local_steam_games() -> Vec<LocalSteamGame> {
             let cover_path =
                 find_local_cover(&steam_dir, &appid).map(|path| path.to_string_lossy().to_string());
 
-            games.push(LocalSteamGame {
-                appid,
+            let game = LocalSteamGame {
+                appid: appid.clone(),
                 name,
                 install_dir,
                 cover_path,
-            });
+            };
+
+            games
+                .entry(appid)
+                .and_modify(|existing| merge_game_metadata(existing, &game))
+                .or_insert(game);
         }
     }
 
+    let mut games: Vec<LocalSteamGame> = games.into_values().collect();
     games.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     games
+}
+
+fn merge_game_metadata(existing: &mut LocalSteamGame, candidate: &LocalSteamGame) {
+    if existing.install_dir.is_none() && candidate.install_dir.is_some() {
+        existing.install_dir.clone_from(&candidate.install_dir);
+    }
+
+    if existing.cover_path.is_none() && candidate.cover_path.is_some() {
+        existing.cover_path.clone_from(&candidate.cover_path);
+    }
+}
+
+fn is_non_game_steam_app(appid: &str, name: &str, install_dir: Option<&str>) -> bool {
+    let normalized_name = name.to_ascii_lowercase();
+    let normalized_install_dir = install_dir.unwrap_or_default().to_ascii_lowercase();
+
+    appid == "228980"
+        || normalized_name == "steamworks common redistributables"
+        || normalized_name.starts_with("proton ")
+        || normalized_name == "proton experimental"
+        || normalized_name.starts_with("steam linux runtime")
+        || normalized_install_dir.starts_with("proton ")
+        || normalized_install_dir.starts_with("steamlinuxruntime")
 }
 
 fn find_steam_dir() -> Option<PathBuf> {
@@ -107,7 +145,7 @@ fn find_steam_dir() -> Option<PathBuf> {
 
 fn find_steam_libraries(steam_dir: &Path) -> Vec<PathBuf> {
     let mut libraries = BTreeSet::new();
-    libraries.insert(steam_dir.to_path_buf());
+    libraries.insert(normalize_existing_path(steam_dir));
 
     let libraryfolders = steam_dir.join("steamapps").join("libraryfolders.vdf");
     let Ok(text) = fs::read_to_string(libraryfolders) else {
@@ -121,11 +159,15 @@ fn find_steam_libraries(steam_dir: &Path) -> Vec<PathBuf> {
 
         if let Some(path) = parse_quoted_value_after_key(line, "path") {
             let path = path.replace("\\\\", "\\");
-            libraries.insert(PathBuf::from(path));
+            libraries.insert(normalize_existing_path(Path::new(&path)));
         }
     }
 
     libraries.into_iter().collect()
+}
+
+fn normalize_existing_path(path: &Path) -> PathBuf {
+    fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
 fn parse_vdf_value(text: &str, key: &str) -> Option<String> {
@@ -208,6 +250,7 @@ fn file_stem_starts_with(path: &Path, prefix: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn parses_vdf_value() {
@@ -220,5 +263,80 @@ mod tests {
             parse_vdf_value(text, "name"),
             Some("Example Game".to_string())
         );
+    }
+
+    #[test]
+    fn filters_runtime_tools_and_deduplicates_games() {
+        let temp_dir = unique_temp_dir();
+        let steamapps = temp_dir.join("steamapps");
+        let common = steamapps.join("common");
+        fs::create_dir_all(&common).unwrap();
+
+        fs::write(
+            steamapps.join("libraryfolders.vdf"),
+            format!(
+                r#""libraryfolders"
+{{
+    "0"
+    {{
+        "path" "{}"
+    }}
+}}"#,
+                temp_dir.display()
+            ),
+        )
+        .unwrap();
+
+        write_manifest(
+            &steamapps,
+            "228980",
+            "Steamworks Common Redistributables",
+            "Steamworks Shared",
+        );
+        write_manifest(
+            &steamapps,
+            "1493710",
+            "Proton Experimental",
+            "Proton - Experimental",
+        );
+        write_manifest(
+            &steamapps,
+            "1070560",
+            "Steam Linux Runtime 1.0 (scout)",
+            "SteamLinuxRuntime",
+        );
+        write_manifest(&steamapps, "123456", "Example Game", "Example Game");
+
+        let games = scan_steam_games_in(&temp_dir);
+
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].appid, "123456");
+        assert_eq!(games[0].name, "Example Game");
+
+        fs::remove_dir_all(temp_dir).unwrap();
+    }
+
+    fn write_manifest(steamapps: &Path, appid: &str, name: &str, install_dir: &str) {
+        fs::write(
+            steamapps.join(format!("appmanifest_{appid}.acf")),
+            format!(
+                r#""AppState"
+{{
+    "appid" "{appid}"
+    "name" "{name}"
+    "installdir" "{install_dir}"
+    "StateFlags" "4"
+}}"#
+            ),
+        )
+        .unwrap();
+    }
+
+    fn unique_temp_dir() -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("steamwrapper-test-{nanos}"))
     }
 }
