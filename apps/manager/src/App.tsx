@@ -1,8 +1,10 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   ChevronRight,
   Copy,
+  FolderOpen,
   HardDrive,
   ImageIcon,
   Library,
@@ -11,13 +13,14 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Play,
+  RefreshCcw,
   Save,
   ScrollText,
   Settings2,
   Square,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import steamWrapperIcon from "@/assets/steamwrapper.svg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +33,29 @@ type LocalSteamGame = {
   name: string;
   install_dir?: string;
   cover_path?: string;
+};
+
+type ConfiguredProfile = {
+  appid: string;
+  name: string;
+  game_dir: string;
+  target: string;
+  launch_option: string;
+};
+
+type AppPaths = {
+  app_data_dir: string;
+  profiles_path: string;
+  runner_path: string;
+  logs_dir: string;
+  backups_dir: string;
+  cache_dir: string;
+};
+
+type RunnerLogEntry = {
+  file_name: string;
+  path: string;
+  content: string;
 };
 
 type ViewKey = "library" | "configured" | "logs" | "settings";
@@ -47,8 +73,19 @@ const guideSteps = [
   { title: "保存", description: "生成 Launch Options" },
 ];
 
+function pathInfo(path: string) {
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  const fileName = parts.at(-1) ?? "手动添加的游戏";
+  const directory = path.slice(0, Math.max(0, path.length - fileName.length)).replace(/[\\/]$/, "");
+  const displayName = fileName.replace(/\.[^.]+$/, "") || fileName;
+  return { directory, displayName };
+}
+
 export function App() {
   const [games, setGames] = useState<LocalSteamGame[]>([]);
+  const [profiles, setProfiles] = useState<ConfiguredProfile[]>([]);
+  const [logs, setLogs] = useState<RunnerLogEntry[]>([]);
+  const [paths, setPaths] = useState<AppPaths | null>(null);
   const [selectedGame, setSelectedGame] = useState<LocalSteamGame | null>(null);
   const [targetPath, setTargetPath] = useState("");
   const [launchOption, setLaunchOption] = useState("");
@@ -56,6 +93,27 @@ export function App() {
   const [activeView, setActiveView] = useState<ViewKey>("library");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isConfigOpen, setConfigOpen] = useState(false);
+
+  useEffect(() => {
+    void refreshProfiles();
+    void refreshLogs();
+    void refreshPaths();
+  }, []);
+
+  async function refreshProfiles() {
+    const items = await invoke<ConfiguredProfile[]>("list_profiles");
+    setProfiles(items);
+  }
+
+  async function refreshLogs() {
+    const items = await invoke<RunnerLogEntry[]>("list_runner_logs");
+    setLogs(items);
+  }
+
+  async function refreshPaths() {
+    const value = await invoke<AppPaths>("get_app_paths");
+    setPaths(value);
+  }
 
   async function generateLaunchOption(appid: string) {
     const option = await invoke<string>("generate_launch_option", { appid });
@@ -68,6 +126,57 @@ export function App() {
     const scanned = await invoke<LocalSteamGame[]>("scan_local_steam_games_command");
     setGames(scanned);
     setStatusText(scanned.length > 0 ? `已找到 ${scanned.length} 个本地 Steam 游戏` : "没有扫描到本地 Steam 游戏");
+  }
+
+  async function chooseTargetPath() {
+    const selected = await open({
+      directory: false,
+      multiple: false,
+      title: "选择真正要启动的程序",
+    });
+
+    if (typeof selected === "string") {
+      setTargetPath(selected);
+      setSelectedGame((current) => {
+        if (!current?.appid.startsWith("manual-")) {
+          return current;
+        }
+
+        const { directory, displayName } = pathInfo(selected);
+        return {
+          ...current,
+          name: current.name === "手动添加的游戏" ? displayName : current.name,
+          install_dir: directory || current.install_dir,
+        };
+      });
+      setStatusText("已选择目标程序");
+    }
+  }
+
+  function createManualGame() {
+    const game: LocalSteamGame = {
+      appid: `manual-${Date.now()}`,
+      name: "手动添加的游戏",
+      install_dir: paths?.app_data_dir,
+    };
+
+    setGames((current) => [game, ...current]);
+    openGameConfig(game);
+    setStatusText("已创建手动游戏条目，请选择目标程序后保存");
+  }
+
+  function openConfiguredProfile(profile: ConfiguredProfile) {
+    const game: LocalSteamGame = {
+      appid: profile.appid,
+      name: profile.name,
+      install_dir: profile.game_dir,
+    };
+
+    setSelectedGame(game);
+    setTargetPath(profile.target);
+    setLaunchOption(profile.launch_option);
+    setConfigOpen(true);
+    setStatusText(`正在编辑：${profile.name}`);
   }
 
   function openGameConfig(game: LocalSteamGame) {
@@ -104,17 +213,110 @@ export function App() {
     });
 
     await generateLaunchOption(selectedGame.appid);
+    await refreshProfiles();
     setStatusText("配置已保存");
   }
 
   function renderContent() {
     switch (activeView) {
       case "configured":
-        return <PlaceholderView title="已配置游戏" description="保存过的 profile 会在后续版本集中展示、编辑和恢复。" />;
+        return (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle>已配置游戏</CardTitle>
+                <CardDescription>这里读取本机 profiles.toml，点击条目可以继续编辑。</CardDescription>
+              </div>
+              <Button variant="secondary" onClick={() => void refreshProfiles()}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                刷新
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {profiles.length === 0 ? (
+                <EmptyState title="还没有保存过配置" description="先到游戏库选择一个游戏，保存后会出现在这里。" />
+              ) : (
+                profiles.map((profile) => (
+                  <button
+                    key={profile.appid}
+                    className="w-full rounded-xl border bg-white/[0.03] p-4 text-left transition hover:border-ring hover:bg-white/[0.05]"
+                    onClick={() => openConfiguredProfile(profile)}
+                    type="button"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="font-medium">{profile.name}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">AppID: {profile.appid}</div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
+                      <PathLine label="游戏目录" value={profile.game_dir} />
+                      <PathLine label="目标程序" value={profile.target} />
+                    </div>
+                  </button>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        );
       case "logs":
-        return <PlaceholderView title="日志" description="后续会在这里查看 Runner 最近一次启动记录和错误信息。" />;
+        return (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle>日志</CardTitle>
+                <CardDescription>显示 logs 目录下最近的 Runner 日志，便于排查启动失败。</CardDescription>
+              </div>
+              <Button variant="secondary" onClick={() => void refreshLogs()}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                刷新
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {logs.length === 0 ? (
+                <EmptyState title="暂无日志" description="Runner 启动过游戏后，这里会显示日志文件。" />
+              ) : (
+                logs.map((log) => (
+                  <div key={log.path} className="rounded-xl border bg-white/[0.03] p-4">
+                    <div className="font-medium">{log.file_name}</div>
+                    <div className="mt-1 break-all text-xs text-muted-foreground">{log.path}</div>
+                    <pre className="mt-3 max-h-64 overflow-auto rounded-lg bg-black/30 p-3 text-xs text-muted-foreground">{log.content || "日志为空"}</pre>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        );
       case "settings":
-        return <PlaceholderView title="设置" description="稳定 Runner 路径、备份目录和高级选项会放在这里。" />;
+        return (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle>设置</CardTitle>
+                <CardDescription>查看 SteamWrapper 的稳定数据目录。后续检查更新也会放在这里。</CardDescription>
+              </div>
+              <Button variant="secondary" onClick={() => void refreshPaths()}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                刷新
+              </Button>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2">
+              {paths ? (
+                <>
+                  <PathCard label="用户数据目录" value={paths.app_data_dir} />
+                  <PathCard label="profiles.toml" value={paths.profiles_path} />
+                  <PathCard label="Runner 稳定路径" value={paths.runner_path} />
+                  <PathCard label="日志目录" value={paths.logs_dir} />
+                  <PathCard label="备份目录" value={paths.backups_dir} />
+                  <PathCard label="缓存目录" value={paths.cache_dir} />
+                </>
+              ) : (
+                <EmptyState title="路径信息未加载" description="点击刷新重新读取。" />
+              )}
+            </CardContent>
+          </Card>
+        );
       case "library":
       default:
         return (
@@ -131,7 +333,7 @@ export function App() {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <Button onClick={scanLocalGames}>扫描本地 Steam 游戏</Button>
-                  <Button variant="secondary" onClick={() => setStatusText("手动添加游戏稍后实现")}>
+                  <Button variant="secondary" onClick={createManualGame}>
                     手动添加游戏
                   </Button>
                 </div>
@@ -310,14 +512,20 @@ export function App() {
                 <div className="mt-1 break-all">{selectedGame.install_dir ?? "未找到安装目录"}</div>
               </div>
 
-              <label className="space-y-2 block">
+              <label className="block space-y-2">
                 <span className="text-sm font-medium">真正要启动的程序</span>
-                <input
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
-                  value={targetPath}
-                  onChange={(event) => setTargetPath(event.target.value)}
-                  placeholder="例如 Game_CHS.exe 或 launcher.exe"
-                />
+                <div className="flex gap-2">
+                  <input
+                    className="h-10 min-w-0 flex-1 rounded-md border bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
+                    value={targetPath}
+                    onChange={(event) => setTargetPath(event.target.value)}
+                    placeholder="例如 Game_CHS.exe 或 launcher.exe"
+                  />
+                  <Button variant="secondary" onClick={() => void chooseTargetPath()} type="button">
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    浏览
+                  </Button>
+                </div>
               </label>
 
               <div className="flex flex-wrap gap-3">
@@ -354,17 +562,30 @@ export function App() {
   );
 }
 
-function PlaceholderView({ title, description }: { title: string; description: string }) {
+function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-xl border bg-white/[0.03] p-8 text-sm text-muted-foreground">该页面的完整功能将在后续迭代开放。</div>
-      </CardContent>
-    </Card>
+    <div className="rounded-xl border bg-white/[0.03] p-8 text-sm text-muted-foreground">
+      <div className="font-medium text-foreground">{title}</div>
+      <div className="mt-1">{description}</div>
+    </div>
+  );
+}
+
+function PathLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[11px] text-muted-foreground/80">{label}</div>
+      <div className="mt-1 break-all">{value}</div>
+    </div>
+  );
+}
+
+function PathCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border bg-white/[0.03] p-4 text-sm">
+      <div className="font-medium">{label}</div>
+      <div className="mt-2 break-all text-muted-foreground">{value}</div>
+    </div>
   );
 }
 

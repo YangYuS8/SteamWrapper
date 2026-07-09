@@ -42,10 +42,10 @@ v2 的目标平台从一开始就包括：
 - [x] 过滤 Proton / Steam Linux Runtime / Steamworks Redistributables 等非游戏条目
 - [x] 按 AppID 去重，避免同一 Steam 库被符号链接重复扫描
 - [x] Manager 自定义标题栏与可折叠侧边栏
-- [ ] 已配置游戏列表与 profile 编辑
-- [ ] 日志页展示最近 Runner 启动记录
-- [ ] 设置页展示稳定 Runner 路径与数据目录
-- [ ] 手动添加非 Steam 游戏 / 手动选择目标程序
+- [x] 已配置游戏列表与 profile 编辑
+- [x] 日志页展示最近 Runner 启动记录
+- [x] 设置页展示稳定 Runner 路径与数据目录
+- [x] 手动添加非 Steam 游戏 / 手动选择目标程序
 
 ## v2.2 - Linux / SteamOS 基础支持
 
