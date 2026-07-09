@@ -1,4 +1,4 @@
-name: v2 Rust CI
+name: v2 CI
 
 on:
   push:
@@ -15,6 +15,23 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install frontend dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Type-check manager frontend
+        run: pnpm --filter steamwrapper-manager lint
+
+      - name: Build manager frontend
+        run: pnpm --filter steamwrapper-manager build
 
       - name: Cargo fmt
         run: cargo fmt --all -- --check
