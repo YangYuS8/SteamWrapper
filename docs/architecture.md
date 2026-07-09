@@ -2,6 +2,8 @@
 
 ## 核心目标
 
+v2 是 SteamWrapper 的长期支持主线。Windows、Linux、SteamOS / Steam Deck 都纳入 v2 路线；除非以后出现必须破坏兼容性的架构原因，否则不再单独规划 v3 主线。
+
 用户只需要在 SteamWrapper Manager 里配置一次。以后启动游戏时，用户仍然只从 Steam 点击“开始游戏”。
 
 SteamWrapper 的 GUI 不参与日常启动流程。
@@ -122,9 +124,9 @@ apps/
 - Proton / SteamOS 启动环境；
 - 本地封面缓存路径差异。
 
-## Windows 安装模型
+## 分发与安装模型
 
-普通用户主推 NSIS 安装程序：
+Windows 普通用户主推 NSIS 安装程序：
 
 ```text
 SteamWrapper-v2.x.x-win-x64-setup.exe
@@ -147,6 +149,8 @@ SteamWrapper-v2.x.x-win-x64-portable.zip
 ```
 
 portable 版首次启动时，也应该引导用户把 Runner 复制到稳定路径，避免 Steam Launch Options 指向被移动或删除的解压目录。
+
+Linux / SteamOS 的 v2 目标是 AppImage 或 tar.gz 预览分发，并使用 XDG 数据目录保存 profiles、Runner、日志与备份。SteamOS 需要额外考虑只读系统、桌面模式操作路径和 Steam Deck 用户教程。
 
 ## 本地封面策略
 

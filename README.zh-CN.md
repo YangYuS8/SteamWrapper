@@ -31,8 +31,8 @@ assets/brand/steamwrapper.svg
 - 不需要把完整 wrapper 复制到每个游戏目录。
 - GUI 只负责配置，平时游玩无感。
 - Runner 是无界面原生程序，由 Steam 自动调用。
-- Windows 首发，未来规划 Linux 与 SteamOS / Steam Deck。
-- Windows 用户优先使用安装程序，也提供 portable zip。
+- v2 是长期支持主线，覆盖 Windows、Linux 与 SteamOS / Steam Deck。
+- Windows 用户优先使用安装程序，也提供 portable zip；Linux 与 SteamOS 分发也纳入 v2 路线。
 - 第一阶段只读取本地 Steam 游戏库和本地封面缓存，不接入在线封面服务。
 
 ## 产品形态
@@ -85,9 +85,10 @@ apps/
 - UI：Tailwind CSS + shadcn/ui
 - 配置格式：TOML
 - Windows 分发：优先 NSIS setup.exe，其次 portable zip
+- Linux 分发：规划 AppImage 或 tar.gz
 - Windows 进程等待：规划使用 Job Object
 - Linux 进程等待：规划使用 process group / session
-- SteamOS 支持：Windows 主流程稳定后再推进
+- SteamOS / Proton 支持：纳入 v2，不再作为独立 v3 路线
 
 ## Windows 安装方式
 

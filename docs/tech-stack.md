@@ -10,7 +10,7 @@ SteamWrapper v2 采用 Rust + Tauri 重构。
 - Manager 使用 Tauri v2，可以获得更友好的中文界面、Web UI 生态和更好的视觉表现。
 - Manager 可以展示本地 Steam 游戏列表与本地封面缓存。
 - Runner 仍然保持轻量、无界面、无后台常驻。
-- 架构上可以同时覆盖 Windows、Linux 与未来 SteamOS / Steam Deck。
+- v2 作为长期支持主线，架构上需要同时覆盖 Windows、Linux 与 SteamOS / Steam Deck。
 
 ## Workspace
 
@@ -59,6 +59,7 @@ apps/manager/src-tauri
 - Windows：默认使用 Job Object 等待进程组。
 - Linux：使用 process group / session 等待。
 - SteamOS：优先保留 Steam / Proton 展开的原始 `%command%` 环境。
+- Windows、Linux、SteamOS 都属于 v2 长期支持范围，不再后置到 v3。
 
 ### SteamWrapper Manager
 
@@ -166,7 +167,9 @@ SteamWrapper 的 GUI 只负责配置，不需要完整 Chromium 运行时。Elec
 
 - Windows x64 / arm64
 - Linux x86_64
+- Linux AppImage 或 tar.gz
+- SteamOS / Steam Deck 桌面模式文档
 
 长期：
 
-- SteamOS / Steam Deck 文档化支持
+- v2 LTS 发布矩阵稳定化：Windows、Linux、SteamOS

@@ -1,8 +1,12 @@
-# Windows 分发与安装方案
+# v2 分发与安装方案
 
 ## 原则
 
-SteamWrapper 面向普通 Windows 玩家时，安装方式必须尽量简单。
+SteamWrapper v2 是长期支持主线，分发目标覆盖 Windows、Linux 与 SteamOS / Steam Deck。安装方式必须尽量简单，且 Runner 路径必须稳定，不能指向临时解压目录。
+
+## Windows
+
+面向普通 Windows 玩家时，主推安装程序。
 
 主推：
 
@@ -87,6 +91,41 @@ README.zh-CN.md
 Manager 可以通过安装包附带 Runner，后续首次启动时复制到稳定路径。
 
 Runner 不应该做成 Tauri GUI，也不应该依赖 WebView。它是被 Steam 调用的无界面原生程序。
+
+## Linux / SteamOS
+
+Linux 与 SteamOS 不再后置到 v3，而是作为 v2 LTS 的平台目标推进。
+
+预览分发目标：
+
+```text
+SteamWrapper-v2.x.x-linux-x64.AppImage
+SteamWrapper-v2.x.x-linux-x64.tar.gz
+```
+
+Linux 用户数据目录遵循 XDG 约定：
+
+```text
+$XDG_DATA_HOME/SteamWrapper/
+  profiles.toml
+  bin/steamwrapper-runner
+  logs/
+  backups/
+  cache/
+```
+
+如果 `$XDG_DATA_HOME` 未设置，则使用：
+
+```text
+~/.local/share/SteamWrapper/
+```
+
+SteamOS / Steam Deck 需要额外注意：
+
+- 优先支持桌面模式配置；
+- 避免依赖写入只读系统区域；
+- 文档中明确 Steam Deck 用户目录、权限和恢复路径；
+- Proton 场景要尽量保留 Steam 展开的 `%command%` 环境。
 
 ## 本地封面策略
 

@@ -300,5 +300,6 @@ The current v2 priority order is:
 3. Implement local Steam library scanning.
 4. Implement local cover cache lookup.
 5. Make Runner launch configured targets robustly.
-6. Add Windows setup.exe and portable zip release workflow.
+6. Bring Linux / SteamOS support into the v2 LTS line.
 7. Add Steam Launch Options apply/restore flow.
+8. Add Windows setup.exe, portable zip, and Linux preview release workflow.

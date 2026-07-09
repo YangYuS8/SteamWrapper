@@ -1,8 +1,21 @@
 # SteamWrapper v2 Roadmap
 
-## v2.0 - Windows 无感启动闭环
+## 路线原则
 
-目标：先完成 Windows 用户的核心体验。
+SteamWrapper v2 是长期支持主线。除非以后出现必须破坏兼容性的架构原因，否则不再单独规划 v3 主线。
+
+v2 的目标平台从一开始就包括：
+
+- Windows 桌面 Steam；
+- Linux 桌面 Steam；
+- SteamOS / Steam Deck 桌面模式；
+- Windows 游戏经 Proton 启动时的自定义 launcher 场景。
+
+开发顺序仍然保持渐进：先让核心闭环可靠，再扩展一键应用、分发和平台兼容性。跨平台能力不再后置到 v3。
+
+## v2.0 - 无感启动基础闭环
+
+目标：完成 Manager / Runner 分离后的最小可用闭环。
 
 - [x] Rust workspace 基础结构
 - [x] Manager / Runner 分离
@@ -13,25 +26,54 @@
 - [x] Manager 保存基础 profile 到稳定数据目录
 - [x] Runner 从稳定数据目录读取 `profiles.toml`
 - [x] Runner 启动目标 exe / launcher 的基础错误处理
-- [x] Windows root-process 等待基线
+- [x] root-process 等待基线
 - [x] 日志目录与 Runner 错误日志
 - [x] 基础 README 与使用教程
 
-## v2.1 - Windows 安装与本地 Steam 游戏库
+## v2.1 - 本地 Steam 游戏库与 Manager 可用性
 
-目标：让普通 Windows 玩家通过安装程序点点点完成安装，并在 Manager 里看到本地 Steam 游戏。
+目标：让用户能在 Manager 里可靠看到本机 Steam 游戏，并完成基础配置。
 
-- [x] Tauri NSIS 安装器配置骨架
-- [ ] Windows setup.exe 发布流程
-- [ ] Windows portable zip 发布流程
-- [ ] 首次启动复制 Runner 到 `%LOCALAPPDATA%\\SteamWrapper\\bin\\`
 - [x] 扫描 Steam 安装目录基础实现
 - [x] 读取 `libraryfolders.vdf` 基础实现
 - [x] 扫描 Steam Library 与 `appmanifest_<appid>.acf` 基础实现
 - [x] 读取本地 Steam 封面缓存基础实现
 - [x] 封面缺失时显示占位图，不联网
+- [x] 过滤 Proton / Steam Linux Runtime / Steamworks Redistributables 等非游戏条目
+- [x] 按 AppID 去重，避免同一 Steam 库被符号链接重复扫描
+- [x] Manager 自定义标题栏与可折叠侧边栏
+- [ ] 已配置游戏列表与 profile 编辑
+- [ ] 日志页展示最近 Runner 启动记录
+- [ ] 设置页展示稳定 Runner 路径与数据目录
+- [ ] 手动添加非 Steam 游戏 / 手动选择目标程序
 
-## v2.2 - Windows 一键应用到 Steam
+## v2.2 - Linux / SteamOS 基础支持
+
+目标：把 Linux 与 SteamOS 纳入 v2 基础能力，而不是作为 v3 Preview。
+
+- [ ] Linux profile 路径处理与默认数据目录确认
+- [ ] Linux Steam 安装目录与 Library 扫描完善
+- [ ] Linux 本地 Steam 封面缓存读取完善
+- [ ] Linux Launch Options 生成
+- [ ] Linux Runner 启动原生目标程序
+- [ ] `process_group` / session 等待模式
+- [ ] SteamOS 用户目录与只读系统约束梳理
+- [ ] Steam Deck 桌面模式配置教程
+- [ ] AppImage 或 tar.gz 预览分发
+
+## v2.3 - SteamOS / Proton 兼容性
+
+目标：覆盖 Steam Deck、Proton 与 launcher 链式启动场景。
+
+- [ ] Proton 命令包装策略
+- [ ] 尽量保留 Steam 展开的 `%command%` 环境
+- [ ] Windows 游戏通过 Proton 启动的自定义 launcher 场景
+- [ ] 原版 / 汉化版 / mod loader 多目标切换
+- [ ] `process_name` 等待模式
+- [ ] Linux / SteamOS 日志路径与错误提示优化
+- [ ] Steam Deck 用户教程与故障排查文档
+
+## v2.4 - 一键应用到 Steam 与恢复
 
 目标：用户只在 Manager 里操作，不需要手动打开 Steam 属性。
 
@@ -42,44 +84,25 @@
 - [ ] 修改前备份 Steam 本地配置
 - [ ] 一键恢复原启动选项
 - [ ] 避免在 Steam 运行时直接写入配置
+- [ ] Windows / Linux / SteamOS 分平台应用与恢复策略
 
-## v2.3 - Windows 兼容性增强
+## v2.5 - Windows 分发与进程等待增强
 
-目标：覆盖更多 launcher / 汉化补丁 / mod loader 场景。
+目标：补齐 Windows 安装体验与复杂 launcher 等待模式。
 
+- [x] Tauri NSIS 安装器配置骨架
+- [ ] Windows setup.exe 发布流程
+- [ ] Windows portable zip 发布流程
+- [ ] 首次启动复制 Runner 到 `%LOCALAPPDATA%\\SteamWrapper\\bin\\`
 - [ ] Windows Job Object 等待模式
-- [ ] process_name 等待模式
-- [ ] 原版 / 汉化版 / mod loader 多目标切换
 - [ ] Manager 内测试启动
-- [ ] 查看最近一次启动日志
 - [ ] 配置导入导出
 
-## v3.0 - Linux Preview
+## v2.x 长期方向
 
-目标：先支持 Linux 原生游戏和基本 Launch Options 生成。
-
-- [ ] Linux runner
-- [ ] Linux profile 路径处理
-- [ ] process_group 等待模式
-- [ ] Linux Steam Library 扫描
-- [ ] Linux 本地 Steam 封面缓存读取
-- [ ] Linux Launch Options 生成
-- [ ] AppImage 或 tar.gz 发布
-
-## v3.1 - SteamOS / Proton 支持
-
-目标：面向 Steam Deck / SteamOS 逐步适配。
-
-- [ ] SteamOS 用户目录安装方案
-- [ ] Steam Deck 桌面模式教程
-- [ ] Proton 命令包装策略
-- [ ] 尽量保留 Steam 展开的 `%command%` 环境
-- [ ] Windows 游戏通过 Proton 启动的自定义 launcher 场景
-
-## 长期方向
-
-- [ ] 跨平台 Manager
+- [ ] 跨平台 Manager 发布矩阵：Windows x64 / Linux x86_64 / SteamOS
 - [ ] profiles 可迁移
 - [ ] 一键恢复所有已修改游戏
 - [ ] 安全说明与反误报说明
 - [ ] 中英双语文档
+- [ ] 面向 Steam Deck 的简化配置流程

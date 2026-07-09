@@ -31,8 +31,8 @@ It is an original Rust-inspired gear and Steam-like launch graph mark for SteamW
 - No need to copy a full wrapper program into every game folder.
 - GUI is used only for configuration.
 - Runtime launcher is headless and started automatically by Steam.
-- Windows first, with Linux and SteamOS / Steam Deck support planned.
-- Windows users should install with a setup wizard or use a portable zip.
+- v2 is the long-term support line for Windows, Linux, and SteamOS / Steam Deck.
+- Windows users should install with a setup wizard or use a portable zip; Linux and SteamOS packaging are planned in the v2 line.
 - Game cover images should be loaded from the local Steam library/cache first; no online cover service is required for the first version.
 
 ## Product shape
@@ -85,9 +85,10 @@ Selected stack:
 - UI system: Tailwind CSS + shadcn/ui
 - Config format: TOML
 - Windows packaging: NSIS setup.exe first, portable zip second
+- Linux packaging: AppImage or tar.gz planned in v2
 - Windows process waiting: Job Object planned
 - Linux process waiting: process group/session planned
-- SteamOS support: planned after the Windows workflow is stable
+- SteamOS / Proton support: planned in v2, not a separate v3 track
 
 See:
 
