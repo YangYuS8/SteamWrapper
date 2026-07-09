@@ -1,5 +1,5 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { Gamepad2, HardDrive, ImageIcon, Play, Settings2, ShieldCheck } from "lucide-react";
+import { Gamepad2, HardDrive, ImageIcon, Play, Save, Settings2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,8 @@ type LocalSteamGame = {
 
 export function App() {
   const [games, setGames] = useState<LocalSteamGame[]>([]);
+  const [selectedGame, setSelectedGame] = useState<LocalSteamGame | null>(null);
+  const [targetPath, setTargetPath] = useState("");
   const [launchOption, setLaunchOption] = useState("");
   const [statusText, setStatusText] = useState("点击“扫描本地 Steam 游戏”开始。第一阶段不会联网拉取封面。");
 
@@ -26,7 +28,37 @@ export function App() {
     setStatusText("正在扫描本地 Steam 游戏库……");
     const scanned = await invoke<LocalSteamGame[]>("scan_local_steam_games_command");
     setGames(scanned);
-    setStatusText(scanned.length > 0 ? `已找到 ${scanned.length} 个本地 Steam 游戏。` : "没有扫描到本地 Steam 游戏。可以稍后手动添加。 ");
+    setSelectedGame(scanned[0] ?? null);
+    setStatusText(scanned.length > 0 ? `已找到 ${scanned.length} 个本地 Steam 游戏。` : "没有扫描到本地 Steam 游戏。可以稍后手动添加。");
+  }
+
+  async function saveCurrentProfile() {
+    if (!selectedGame) {
+      setStatusText("请先选择一个游戏。");
+      return;
+    }
+
+    if (!selectedGame.install_dir) {
+      setStatusText("当前游戏缺少安装目录，暂时无法保存配置。");
+      return;
+    }
+
+    if (!targetPath.trim()) {
+      setStatusText("请填写真正要启动的 exe 或 launcher 路径，可以是相对游戏目录的路径。");
+      return;
+    }
+
+    await invoke("save_profile", {
+      request: {
+        appid: selectedGame.appid,
+        name: selectedGame.name,
+        game_dir: selectedGame.install_dir,
+        target: targetPath.trim(),
+      },
+    });
+
+    await generateLaunchOption(selectedGame.appid);
+    setStatusText("配置已保存到 profiles.toml，并生成了启动选项。");
   }
 
   return (
@@ -70,7 +102,7 @@ export function App() {
             </CardHeader>
           </Card>
 
-          <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+          <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
             <div className="grid gap-4 md:grid-cols-2">
               {games.length === 0 ? (
                 <Card className="md:col-span-2">
@@ -81,7 +113,7 @@ export function App() {
                 </Card>
               ) : (
                 games.map((game) => (
-                  <Card key={game.appid} className="overflow-hidden">
+                  <Card key={game.appid} className={`overflow-hidden ${selectedGame?.appid === game.appid ? "ring-1 ring-ring" : ""}`}>
                     <div className="flex h-36 items-center justify-center bg-muted">
                       {game.cover_path ? (
                         <img src={convertFileSrc(game.cover_path)} alt={game.name} className="h-full w-full object-cover" />
@@ -102,11 +134,18 @@ export function App() {
                         <span className="line-clamp-2">{game.install_dir ?? "未找到安装目录"}</span>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={() => generateLaunchOption(game.appid)}>
-                          生成启动选项
-                        </Button>
-                        <Button size="sm" variant="outline">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedGame(game);
+                            setTargetPath("");
+                            setStatusText(`已选择：${game.name}`);
+                          }}
+                        >
                           配置
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => generateLaunchOption(game.appid)}>
+                          生成启动选项
                         </Button>
                       </div>
                     </CardContent>
@@ -127,6 +166,29 @@ export function App() {
                 <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
                   第一阶段只读取本地 Steam 游戏库和本地封面缓存，不接入在线封面服务。
                 </div>
+
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">当前游戏</div>
+                  <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    {selectedGame ? `${selectedGame.name} (${selectedGame.appid})` : "未选择游戏"}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">真正要启动的程序</div>
+                  <input
+                    className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
+                    value={targetPath}
+                    onChange={(event) => setTargetPath(event.target.value)}
+                    placeholder="例如 Game_CHS.exe 或 launcher.exe"
+                  />
+                </div>
+
+                <Button className="w-full" onClick={saveCurrentProfile}>
+                  <Save className="mr-2 h-4 w-4" />
+                  保存配置并生成启动选项
+                </Button>
+
                 <div className="space-y-2">
                   <div className="text-sm font-medium">生成的 Launch Options</div>
                   <textarea
