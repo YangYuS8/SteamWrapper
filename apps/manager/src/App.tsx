@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { Gamepad2, HardDrive, ImageIcon, Play, Settings2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,36 +11,22 @@ type LocalSteamGame = {
   cover_path?: string;
 };
 
-const sampleGames: LocalSteamGame[] = [
-  {
-    appid: "123456",
-    name: "示例游戏",
-    install_dir: "D:/SteamLibrary/steamapps/common/Example Game",
-  },
-  {
-    appid: "654321",
-    name: "示例启动器游戏",
-    install_dir: "E:/SteamLibrary/steamapps/common/Launcher Game",
-  },
-];
-
 export function App() {
-  const [games, setGames] = useState<LocalSteamGame[]>(sampleGames);
+  const [games, setGames] = useState<LocalSteamGame[]>([]);
   const [launchOption, setLaunchOption] = useState("");
+  const [statusText, setStatusText] = useState("点击“扫描本地 Steam 游戏”开始。第一阶段不会联网拉取封面。");
 
   async function generateLaunchOption(appid: string) {
-    const option = await invoke<string>("generate_launch_option", {
-      runnerPath: "C:/Users/<User>/AppData/Local/SteamWrapper/bin/SteamWrapperRunner.exe",
-      appid,
-    });
+    const option = await invoke<string>("generate_launch_option", { appid });
     setLaunchOption(option);
+    setStatusText("已生成启动选项。后续版本会支持一键应用到 Steam。");
   }
 
   async function scanLocalGames() {
-    const scanned = await invoke<LocalSteamGame[]>("scan_local_steam_games");
-    if (scanned.length > 0) {
-      setGames(scanned);
-    }
+    setStatusText("正在扫描本地 Steam 游戏库……");
+    const scanned = await invoke<LocalSteamGame[]>("scan_local_steam_games_command");
+    setGames(scanned);
+    setStatusText(scanned.length > 0 ? `已找到 ${scanned.length} 个本地 Steam 游戏。` : "没有扫描到本地 Steam 游戏。可以稍后手动添加。 ");
   }
 
   return (
@@ -86,38 +72,47 @@ export function App() {
 
           <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
             <div className="grid gap-4 md:grid-cols-2">
-              {games.map((game) => (
-                <Card key={game.appid} className="overflow-hidden">
-                  <div className="flex h-36 items-center justify-center bg-muted">
-                    {game.cover_path ? (
-                      <img src={game.cover_path} alt={game.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <ImageIcon className="h-8 w-8" />
-                        <span className="text-xs">本地封面缓存未找到</span>
-                      </div>
-                    )}
-                  </div>
+              {games.length === 0 ? (
+                <Card className="md:col-span-2">
                   <CardHeader>
-                    <CardTitle className="text-lg">{game.name}</CardTitle>
-                    <CardDescription>AppID: {game.appid}</CardDescription>
+                    <CardTitle>还没有游戏列表</CardTitle>
+                    <CardDescription>{statusText}</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <HardDrive className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span className="line-clamp-2">{game.install_dir ?? "等待扫描 Steam Library"}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => generateLaunchOption(game.appid)}>
-                        生成启动选项
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        配置
-                      </Button>
-                    </div>
-                  </CardContent>
                 </Card>
-              ))}
+              ) : (
+                games.map((game) => (
+                  <Card key={game.appid} className="overflow-hidden">
+                    <div className="flex h-36 items-center justify-center bg-muted">
+                      {game.cover_path ? (
+                        <img src={convertFileSrc(game.cover_path)} alt={game.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <ImageIcon className="h-8 w-8" />
+                          <span className="text-xs">本地封面缓存未找到</span>
+                        </div>
+                      )}
+                    </div>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{game.name}</CardTitle>
+                      <CardDescription>AppID: {game.appid}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <HardDrive className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span className="line-clamp-2">{game.install_dir ?? "未找到安装目录"}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => generateLaunchOption(game.appid)}>
+                          生成启动选项
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          配置
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
 
             <Card className="h-fit">
@@ -126,7 +121,7 @@ export function App() {
                   <Settings2 className="h-5 w-5" />
                   当前配置状态
                 </CardTitle>
-                <CardDescription>后续会在这里显示目标 exe、等待模式、Steam 写入状态和恢复入口。</CardDescription>
+                <CardDescription>{statusText}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
