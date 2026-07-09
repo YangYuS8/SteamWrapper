@@ -8,7 +8,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-license = "MIT"
+license = "Apache-2.0"
 repository = "https://github.com/YangYuS8/SteamWrapper"
 
 [workspace.dependencies]
