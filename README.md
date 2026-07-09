@@ -77,6 +77,7 @@ See:
 
 - `docs/tech-stack.md`
 - `docs/architecture.md`
+- `docs/distribution.md`
 - `docs/roadmap.md`
 
 ## Status
