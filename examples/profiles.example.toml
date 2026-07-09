@@ -1,0 +1,22 @@
+version = 2
+
+[profiles."123456"]
+name = "Example Galgame"
+app_id = "123456"
+platform = "windows"
+game_dir = "D:/SteamLibrary/steamapps/common/Example Galgame"
+target = "ExampleGame_CHS.exe"
+working_dir = "."
+args = []
+wait_mode = "job"
+
+[profiles."654321"]
+name = "Example Launcher Game"
+app_id = "654321"
+platform = "windows"
+game_dir = "E:/SteamLibrary/steamapps/common/Example Launcher Game"
+target = "Launcher.exe"
+working_dir = "."
+args = []
+wait_mode = "process_name"
+process_name = "RealGame.exe"
