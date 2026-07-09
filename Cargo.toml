@@ -1,0 +1,23 @@
+[workspace]
+members = [
+    "crates/core",
+    "crates/runner",
+    "crates/manager",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/YangYuS8/SteamWrapper"
+
+[workspace.dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+eframe = "0.31"
+egui = "0.31"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+toml = "0.8"
+tracing = "0.1"
+tracing-subscriber = "0.3"
