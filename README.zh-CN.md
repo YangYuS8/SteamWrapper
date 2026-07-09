@@ -33,6 +33,7 @@ assets/brand/steamwrapper.svg
 - Runner 是无界面原生程序，由 Steam 自动调用。
 - v2 是长期支持主线，覆盖 Windows、Linux 与 SteamOS / Steam Deck。
 - Windows 用户优先使用安装程序，也提供 portable zip；Linux 与 SteamOS 分发也纳入 v2 路线。
+- 面向普通游戏玩家，安装、更新、卸载都应尽量简单；后续发布会同步 GitHub 与 CNB，方便国内玩家下载。
 - 第一阶段只读取本地 Steam 游戏库和本地封面缓存，不接入在线封面服务。
 
 ## 产品形态
@@ -92,6 +93,8 @@ apps/
 
 ## Windows 安装方式
 
+正式发布后，中文 README 会优先提供 CNB 国内下载入口，同时保留 GitHub Release 链接。
+
 主推：
 
 ```text
@@ -115,6 +118,8 @@ SteamWrapper-v2.x.x-win-x64-portable.zip
 ```
 
 Steam 启动选项应该引用稳定的 Runner 路径，不应该引用临时解压目录。
+
+更新时应直接运行新版安装包覆盖旧版本，并保留 `%LOCALAPPDATA%\SteamWrapper\` 下的用户配置、日志和备份。卸载时默认只删除程序本体，用户数据应提供明确选项再清理。
 
 ## 本地封面策略
 

@@ -2,7 +2,15 @@
 
 ## 原则
 
-SteamWrapper v2 是长期支持主线，分发目标覆盖 Windows、Linux 与 SteamOS / Steam Deck。安装方式必须尽量简单，且 Runner 路径必须稳定，不能指向临时解压目录。
+SteamWrapper v2 是长期支持主线，分发目标覆盖 Windows、Linux 与 SteamOS / Steam Deck。安装、更新、卸载都必须面向普通游戏玩家设计：少解释、少选择、少手工复制，尽量做到“下载 → 双击 → 下一步”。Runner 路径必须稳定，不能指向临时解压目录。
+
+核心体验原则：
+
+- 安装：默认无需管理员权限，不要求命令行，不要求用户理解 Runner / profiles 细节；
+- 更新：新版安装包应能覆盖安装并保留用户配置；Manager 后续应提供“检查更新”入口；
+- 卸载：走系统标准卸载入口，卸载程序本体时默认保留用户配置，并提供“同时清理用户数据”的明确选项；
+- 国内下载：正式发布时同步 GitHub Release 与 CNB Release，README 优先给国内玩家可用的 CNB 下载入口；
+- 失败可恢复：应用 Steam 启动项前必须备份，更新前后都不能破坏已配置游戏。
 
 ## Windows
 
@@ -34,6 +42,32 @@ setup.exe 使用 Tauri 的 NSIS 打包目标。
 → 完成
 ```
 
+更新体验目标：
+
+```text
+下载新版 setup.exe
+→ 双击运行
+→ 自动覆盖旧版本
+→ 保留 profiles.toml / logs / backups / cache
+→ 完成
+```
+
+后续 Manager 内应提供“检查更新”入口：
+
+- 国内玩家默认引导到 CNB Release；
+- 海外或开发者可选择 GitHub Release；
+- 显示当前版本、最新版本、更新说明和下载按钮；
+- 更新不应要求用户重新配置游戏。
+
+卸载体验目标：
+
+```text
+系统设置 / 控制面板卸载 SteamWrapper
+→ 默认删除程序本体
+→ 默认保留用户配置
+→ 可选清理 %LOCALAPPDATA%\SteamWrapper\ 用户数据
+```
+
 建议安装位置：
 
 ```text
@@ -46,6 +80,26 @@ setup.exe 使用 Tauri 的 NSIS 打包目标。
 - 符合普通 Windows 用户习惯；
 - 升级和卸载路径清晰；
 - 不污染游戏目录。
+
+## 发布渠道
+
+正式发布时采用双渠道：
+
+```text
+GitHub Release：面向海外用户、开发者和自动化下载
+CNB Release：面向国内玩家，作为 README 中文入口的优先下载渠道
+```
+
+每次 release 应包含：
+
+- Windows setup.exe；
+- Windows portable zip；
+- Linux AppImage 或 tar.gz；
+- SHA256 校验和；
+- 中文更新说明；
+- 简短的安装 / 更新 / 卸载说明。
+
+版本命名保持一致，避免 GitHub 与 CNB 产物名称不同导致玩家困惑。
 
 ## 用户数据目录
 
@@ -70,7 +124,7 @@ Steam Launch Options 应该引用：
 
 ## portable zip
 
-portable zip 面向高级用户，结构大致为：
+portable zip 面向高级用户和不想安装的玩家，结构大致为：
 
 ```text
 SteamWrapperManager.exe
@@ -85,6 +139,8 @@ README.zh-CN.md
 ```
 
 否则用户移动或删除解压目录后，Steam 启动选项会失效。
+
+portable 更新方式应足够直白：下载新版 zip，解压覆盖 Manager；Runner 稳定路径和用户配置不随 portable 解压目录移动。
 
 ## Runner 分发策略
 
@@ -126,6 +182,12 @@ SteamOS / Steam Deck 需要额外注意：
 - 避免依赖写入只读系统区域；
 - 文档中明确 Steam Deck 用户目录、权限和恢复路径；
 - Proton 场景要尽量保留 Steam 展开的 `%command%` 环境。
+
+Linux / SteamOS 更新体验：
+
+- AppImage：下载新版 AppImage 后替换旧文件；
+- tar.gz：解压覆盖程序目录，保留 XDG 数据目录；
+- 后续 Manager 内“检查更新”同样优先提供 CNB 与 GitHub 双入口。
 
 ## 本地封面策略
 

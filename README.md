@@ -33,6 +33,7 @@ It is an original Rust-inspired gear and Steam-like launch graph mark for SteamW
 - Runtime launcher is headless and started automatically by Steam.
 - v2 is the long-term support line for Windows, Linux, and SteamOS / Steam Deck.
 - Windows users should install with a setup wizard or use a portable zip; Linux and SteamOS packaging are planned in the v2 line.
+- Installation, updates, and uninstallation should stay simple for normal players. Releases are planned for both GitHub and CNB so mainland China users have a convenient download channel.
 - Game cover images should be loaded from the local Steam library/cache first; no online cover service is required for the first version.
 
 ## Product shape

@@ -86,13 +86,26 @@ v2 的目标平台从一开始就包括：
 - [ ] 避免在 Steam 运行时直接写入配置
 - [ ] Windows / Linux / SteamOS 分平台应用与恢复策略
 
-## v2.5 - Windows 分发与进程等待增强
+## v2.5 - 玩家友好的安装、更新与卸载
+
+目标：让普通游戏玩家可以简单下载、安装、更新和卸载，不需要理解项目结构。
+
+- [ ] Windows setup.exe 发布流程
+- [ ] Windows portable zip 发布流程
+- [ ] Linux AppImage 或 tar.gz 发布流程
+- [ ] GitHub Release 与 CNB Release 双渠道发布
+- [ ] CNB 国内下载入口与中文下载说明
+- [ ] SHA256 校验和与中文更新说明
+- [ ] 新版安装包覆盖安装并保留用户配置
+- [ ] Manager 内“检查更新”入口
+- [ ] 标准卸载入口：默认保留用户数据，可选清理用户数据
+- [ ] 首次启动复制 Runner 到稳定数据目录
+
+## v2.6 - Windows 分发与进程等待增强
 
 目标：补齐 Windows 安装体验与复杂 launcher 等待模式。
 
 - [x] Tauri NSIS 安装器配置骨架
-- [ ] Windows setup.exe 发布流程
-- [ ] Windows portable zip 发布流程
 - [ ] 首次启动复制 Runner 到 `%LOCALAPPDATA%\\SteamWrapper\\bin\\`
 - [ ] Windows Job Object 等待模式
 - [ ] Manager 内测试启动
@@ -101,6 +114,7 @@ v2 的目标平台从一开始就包括：
 ## v2.x 长期方向
 
 - [ ] 跨平台 Manager 发布矩阵：Windows x64 / Linux x86_64 / SteamOS
+- [ ] 面向国内玩家的 CNB 镜像发布与下载说明
 - [ ] profiles 可迁移
 - [ ] 一键恢复所有已修改游戏
 - [ ] 安全说明与反误报说明

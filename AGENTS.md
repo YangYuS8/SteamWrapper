@@ -302,4 +302,5 @@ The current v2 priority order is:
 5. Make Runner launch configured targets robustly.
 6. Bring Linux / SteamOS support into the v2 LTS line.
 7. Add Steam Launch Options apply/restore flow.
-8. Add Windows setup.exe, portable zip, and Linux preview release workflow.
+8. Add player-friendly install/update/uninstall workflows.
+9. Add Windows setup.exe, portable zip, Linux preview, and CNB/GitHub release workflow.
