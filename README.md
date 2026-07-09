@@ -1,30 +1,75 @@
-# SteamWrapper
+# SteamWrapper v2
 
-仅支持 Windows 平台（程序使用了 Windows 专用的进程管理 API）。
+SteamWrapper v2 is a planned rewrite of SteamWrapper.
 
-这是一个小工具，用于让 Steam 正确统计汉化版或使用自定义启动器的 galgame 的游玩时长。
+The goal is no longer just "put a wrapper exe into a game folder". The new goal is:
 
-核心思路：把 Steam 指定为游戏启动的可执行替换为本程序，由本程序启动真实的游戏启动器（或汉化启动器），并在需要时等待整个子进程树退出，从而让 Steam 能正确记录时长。
+> Configure once in SteamWrapper, then launch the game normally from Steam.
 
-使用场景：当你想要让 Steam 启动一个汉化版启动器（而不是官方 exe），可以把 Steam 的启动配置改为启动本程序（例如配合 SteamEdit 修改启动命令）。
+SteamWrapper should be visible only when users configure a game. During daily play, Steam should silently call a small runner process, and users should feel like they are launching the game normally.
 
-快速使用说明：
+## Goals
 
-1. 把本程序放在游戏目录（与要启动的 exe 同目录）
-2. 启动一次，程序会在首次运行时生成 `wrapper.config.json`（和一个使用指南文件）
-3. 编辑 `wrapper.config.json` 将 `LauncherExe` 设置为你要实际运行的可执行文件名（相对于本程序目录），例如 `nine_kokoiro_chs.exe`。
-4. 将 Steam 的启动命令改为启动本程序（或使用 SteamEdit 修改启动配置）
+- No .NET Runtime requirement.
+- No SteamEdit requirement in the default workflow.
+- No need to copy a full wrapper program into every game folder.
+- GUI is used only for configuration.
+- Runtime launcher is headless and started automatically by Steam.
+- Windows first, with Linux and SteamOS / Steam Deck support planned.
 
-配置示例（wrapper.config.json）：
+## Product shape
 
+```text
+SteamWrapperManager.exe   # GUI/configuration app
+SteamWrapperRunner.exe    # headless runner called by Steam Launch Options
+profiles.toml             # shared game profiles
+logs/                     # runtime logs
+backups/                  # Steam config backups, future use
 ```
-{
-	"LauncherExe": "nine_kokoiro_chs.exe",
-	"WaitForChildProcessTree": true
-}
+
+Typical flow:
+
+```text
+Open SteamWrapperManager once
+→ add a Steam game profile
+→ select the real target exe / launcher
+→ apply or copy the generated Steam Launch Options
+→ from then on, launch directly from Steam
 ```
 
-字段说明：
+Generated Launch Options example:
 
-- `LauncherExe`：要由本程序实际启动的 exe 文件名（必须与本程序同目录或使用相对路径）
-- `WaitForChildProcessTree`：如果为 `true`，本程序会等待由启动器衍生出的子进程全部退出后再退出（推荐开启，便于 Steam 正确统计时长）
+```text
+"C:\Users\<User>\AppData\Local\SteamWrapper\SteamWrapperRunner.exe" --appid "123456" -- %command%
+```
+
+## Technical direction
+
+The v2 branch is being laid out as a Rust workspace:
+
+```text
+crates/
+  core/      # shared config, profile and launch option logic
+  runner/    # headless runtime entrypoint called by Steam
+  manager/   # GUI configuration app
+```
+
+Selected stack:
+
+- Language: Rust
+- Config format: TOML
+- GUI: egui/eframe for the Manager
+- Runner: native headless binary
+- Windows process waiting: Job Object planned
+- Linux process waiting: process group/session planned
+- SteamOS support: planned after the Windows workflow is stable
+
+See:
+
+- `docs/tech-stack.md`
+- `docs/architecture.md`
+- `docs/roadmap.md`
+
+## Status
+
+This branch is an early v2 layout branch. The original C# implementation on `main` remains the stable legacy version for now.
