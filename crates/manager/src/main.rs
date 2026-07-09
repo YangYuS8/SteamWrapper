@@ -40,7 +40,7 @@ impl eframe::App for ManagerApp {
             ui.text_edit_singleline(&mut self.appid);
 
             if ui.button("Generate Launch Options").clicked() {
-                self.generated_launch_option = build_launch_option(&self.runner_path, &self.appid);
+                self.generated_launch_option = build_launch_option(self.runner_path.as_str(), &self.appid);
             }
 
             ui.label("Generated Launch Options");
