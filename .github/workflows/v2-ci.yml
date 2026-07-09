@@ -13,6 +13,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check required project docs
+        shell: pwsh
+        run: |
+          $required = @(
+            "AGENTS.md",
+            "README.md",
+            "README.zh-CN.md",
+            "LICENSE",
+            "docs/tech-stack.md",
+            "docs/architecture.md",
+            "docs/distribution.md",
+            "docs/roadmap.md"
+          )
+          foreach ($file in $required) {
+            if (-not (Test-Path $file)) {
+              throw "Required file missing: $file"
+            }
+          }
+
+      - name: Check v2 license metadata
+        shell: pwsh
+        run: |
+          Select-String -Path "Cargo.toml" -Pattern 'license = "Apache-2.0"' -Quiet | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "Cargo workspace license must be Apache-2.0" }
+          Select-String -Path "package.json" -Pattern '"license": "Apache-2.0"' -Quiet | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "package workspace license must be Apache-2.0" }
+          Select-String -Path "apps/manager/package.json" -Pattern '"license": "Apache-2.0"' -Quiet | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "manager package license must be Apache-2.0" }
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
