@@ -35,12 +35,15 @@ jobs:
       - name: Check v2 license metadata
         shell: pwsh
         run: |
-          Select-String -Path "Cargo.toml" -Pattern 'license = "Apache-2.0"' -Quiet | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw "Cargo workspace license must be Apache-2.0" }
-          Select-String -Path "package.json" -Pattern '"license": "Apache-2.0"' -Quiet | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw "package workspace license must be Apache-2.0" }
-          Select-String -Path "apps/manager/package.json" -Pattern '"license": "Apache-2.0"' -Quiet | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw "manager package license must be Apache-2.0" }
+          if (-not (Select-String -Path "Cargo.toml" -Pattern 'license = "Apache-2.0"' -Quiet)) {
+            throw "Cargo workspace license must be Apache-2.0"
+          }
+          if (-not (Select-String -Path "package.json" -Pattern '"license": "Apache-2.0"' -Quiet)) {
+            throw "package workspace license must be Apache-2.0"
+          }
+          if (-not (Select-String -Path "apps/manager/package.json" -Pattern '"license": "Apache-2.0"' -Quiet)) {
+            throw "manager package license must be Apache-2.0"
+          }
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
