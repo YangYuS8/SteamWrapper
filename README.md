@@ -1,5 +1,9 @@
 # SteamWrapper v2
 
+<p align="center">
+  <img src="assets/brand/steamwrapper.svg" alt="SteamWrapper icon" width="128" height="128" />
+</p>
+
 [中文 README](README.zh-CN.md) | [Agent Guidelines](AGENTS.md)
 
 SteamWrapper v2 is a planned rewrite of SteamWrapper.
@@ -9,6 +13,16 @@ The goal is no longer just "put a wrapper exe into a game folder". The new goal 
 > Configure once in SteamWrapper Manager, then launch the game normally from Steam.
 
 SteamWrapper should be visible only when users configure a game. During daily play, Steam should silently call a small runner process, and users should feel like they are launching the game normally.
+
+## Brand asset
+
+The unified project icon is available at:
+
+```text
+assets/brand/steamwrapper.svg
+```
+
+It is an original Rust-inspired gear and Steam-like launch graph mark for SteamWrapper. It is not the official Steam logo.
 
 ## Goals
 
