@@ -1,6 +1,7 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { Gamepad2, HardDrive, ImageIcon, Play, Save, Settings2, ShieldCheck } from "lucide-react";
+import { HardDrive, ImageIcon, Play, Save, Settings2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import steamWrapperIcon from "@/assets/steamwrapper.svg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -66,9 +67,7 @@ export function App() {
       <div className="mx-auto flex max-w-7xl gap-6 p-6">
         <aside className="hidden w-64 shrink-0 flex-col gap-3 rounded-2xl border bg-card p-4 lg:flex">
           <div className="flex items-center gap-3 px-2 py-1">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Gamepad2 className="h-5 w-5" />
-            </div>
+            <img src={steamWrapperIcon} alt="SteamWrapper" className="h-11 w-11 rounded-xl" />
             <div>
               <div className="font-semibold">SteamWrapper</div>
               <div className="text-xs text-muted-foreground">Manager v2</div>
@@ -89,11 +88,14 @@ export function App() {
                 <ShieldCheck className="h-3.5 w-3.5" />
                 不需要 SteamEdit，不复制到每个游戏目录
               </div>
-              <div className="space-y-2">
-                <CardTitle className="text-3xl">配置一次，以后从 Steam 正常启动</CardTitle>
-                <CardDescription className="max-w-2xl text-white/70">
-                  Manager 只负责配置。日常启动时，Steam 会自动调用无界面的 Runner，然后启动你选择的汉化 exe、启动器或 mod loader。
-                </CardDescription>
+              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-2">
+                  <CardTitle className="text-3xl">配置一次，以后从 Steam 正常启动</CardTitle>
+                  <CardDescription className="max-w-2xl text-white/70">
+                    Manager 只负责配置。日常启动时，Steam 会自动调用无界面的 Runner，然后启动你选择的汉化 exe、启动器或 mod loader。
+                  </CardDescription>
+                </div>
+                <img src={steamWrapperIcon} alt="SteamWrapper" className="hidden h-24 w-24 shrink-0 rounded-3xl md:block" />
               </div>
               <div className="flex flex-wrap gap-3">
                 <Button onClick={scanLocalGames}>扫描本地 Steam 游戏</Button>
