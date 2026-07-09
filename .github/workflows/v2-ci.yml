@@ -21,6 +21,8 @@ jobs:
             "README.md",
             "README.zh-CN.md",
             "LICENSE",
+            "assets/brand/steamwrapper.svg",
+            "apps/manager/src/assets/steamwrapper.svg",
             "docs/tech-stack.md",
             "docs/architecture.md",
             "docs/distribution.md",
