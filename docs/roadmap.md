@@ -8,12 +8,14 @@
 - [x] Manager / Runner 分离
 - [x] Manager 改为 Tauri v2 + React + shadcn/ui 布局
 - [x] TOML profile 配置模型
-- [x] Runner 支持 `--appid <id> -- %command%` 入口骨架
-- [x] Manager 生成 Steam Launch Options 骨架
-- [ ] Runner 启动目标 exe / launcher 的完整错误处理
-- [ ] Windows root-process 等待
-- [ ] 日志目录与错误提示
-- [ ] 基础 README 与使用教程
+- [x] Runner 支持 `--appid <id> -- %command%` 入口
+- [x] Manager 生成 Steam Launch Options
+- [x] Manager 保存基础 profile 到稳定数据目录
+- [x] Runner 从稳定数据目录读取 `profiles.toml`
+- [x] Runner 启动目标 exe / launcher 的基础错误处理
+- [x] Windows root-process 等待基线
+- [x] 日志目录与 Runner 错误日志
+- [x] 基础 README 与使用教程
 
 ## v2.1 - Windows 安装与本地 Steam 游戏库
 
@@ -23,11 +25,11 @@
 - [ ] Windows setup.exe 发布流程
 - [ ] Windows portable zip 发布流程
 - [ ] 首次启动复制 Runner 到 `%LOCALAPPDATA%\\SteamWrapper\\bin\\`
-- [ ] 扫描 Steam 安装目录
-- [ ] 读取 `libraryfolders.vdf`
-- [ ] 扫描 Steam Library 与 `appmanifest_<appid>.acf`
-- [ ] 读取本地 Steam 封面缓存
-- [ ] 封面缺失时显示占位图，不联网
+- [x] 扫描 Steam 安装目录基础实现
+- [x] 读取 `libraryfolders.vdf` 基础实现
+- [x] 扫描 Steam Library 与 `appmanifest_<appid>.acf` 基础实现
+- [x] 读取本地 Steam 封面缓存基础实现
+- [x] 封面缺失时显示占位图，不联网
 
 ## v2.2 - Windows 一键应用到 Steam
 
