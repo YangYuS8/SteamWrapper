@@ -14,7 +14,10 @@ pub fn launch_profile(profile: &Profile) -> anyhow::Result<u8> {
     }
 
     if !working_dir.exists() {
-        bail!("working directory does not exist: {}", working_dir.display());
+        bail!(
+            "working directory does not exist: {}",
+            working_dir.display()
+        );
     }
 
     let mut command = Command::new(&target);
@@ -36,7 +39,9 @@ pub fn launch_profile(profile: &Profile) -> anyhow::Result<u8> {
         WaitMode::Root | WaitMode::Job | WaitMode::ProcessName | WaitMode::ProcessGroup => {
             // v2.0 provides the reliable root-process baseline.
             // Job Object, process-name and process-group strategies are planned follow-ups.
-            let status = child.wait().context("failed while waiting for target process")?;
+            let status = child
+                .wait()
+                .context("failed while waiting for target process")?;
             Ok(normalize_exit_code(status.code()))
         }
     }

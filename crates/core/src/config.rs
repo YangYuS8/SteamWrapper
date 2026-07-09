@@ -47,7 +47,9 @@ impl SteamWrapperConfig {
     pub fn find_profile_by_appid(&self, appid: &str) -> Option<(&str, &Profile)> {
         self.profiles
             .iter()
-            .find(|(key, profile)| key.as_str() == appid || profile.app_id.as_deref() == Some(appid))
+            .find(|(key, profile)| {
+                key.as_str() == appid || profile.app_id.as_deref() == Some(appid)
+            })
             .map(|(key, profile)| (key.as_str(), profile))
     }
 

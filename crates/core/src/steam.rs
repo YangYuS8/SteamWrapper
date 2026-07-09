@@ -48,14 +48,18 @@ pub fn scan_local_steam_games() -> Vec<LocalSteamGame> {
                 continue;
             }
 
-            let name = parse_vdf_value(&text, "name")
-                .unwrap_or_else(|| format!("Steam App {appid}"));
+            let name =
+                parse_vdf_value(&text, "name").unwrap_or_else(|| format!("Steam App {appid}"));
             let install_dir_name = parse_vdf_value(&text, "installdir");
-            let install_dir = install_dir_name
-                .as_deref()
-                .map(|dir| steamapps.join("common").join(dir).to_string_lossy().to_string());
-            let cover_path = find_local_cover(&steam_dir, &appid)
-                .map(|path| path.to_string_lossy().to_string());
+            let install_dir = install_dir_name.as_deref().map(|dir| {
+                steamapps
+                    .join("common")
+                    .join(dir)
+                    .to_string_lossy()
+                    .to_string()
+            });
+            let cover_path =
+                find_local_cover(&steam_dir, &appid).map(|path| path.to_string_lossy().to_string());
 
             games.push(LocalSteamGame {
                 appid,
@@ -172,7 +176,10 @@ fn find_local_cover(steam_dir: &Path, appid: &str) -> Option<PathBuf> {
 
         let files: Vec<PathBuf> = entries.flatten().map(|entry| entry.path()).collect();
         for prefix in &preferred {
-            if let Some(path) = files.iter().find(|path| file_stem_starts_with(path, prefix)) {
+            if let Some(path) = files
+                .iter()
+                .find(|path| file_stem_starts_with(path, prefix))
+            {
                 return Some(path.clone());
             }
         }
@@ -209,6 +216,9 @@ mod tests {
 "installdir" "Example""#;
 
         assert_eq!(parse_vdf_value(text, "appid"), Some("123456".to_string()));
-        assert_eq!(parse_vdf_value(text, "name"), Some("Example Game".to_string()));
+        assert_eq!(
+            parse_vdf_value(text, "name"),
+            Some("Example Game".to_string())
+        );
     }
 }
