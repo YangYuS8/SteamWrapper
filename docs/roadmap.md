@@ -4,31 +4,44 @@
 
 目标：先完成 Windows 用户的核心体验。
 
-- [ ] Rust workspace 基础结构
-- [ ] Manager / Runner 分离
-- [ ] TOML profile 配置
-- [ ] Runner 支持 `--appid <id> -- %command%`
-- [ ] Manager 生成 Steam Launch Options
-- [ ] Runner 启动目标 exe / launcher
+- [x] Rust workspace 基础结构
+- [x] Manager / Runner 分离
+- [x] Manager 改为 Tauri v2 + React + shadcn/ui 布局
+- [x] TOML profile 配置模型
+- [x] Runner 支持 `--appid <id> -- %command%` 入口骨架
+- [x] Manager 生成 Steam Launch Options 骨架
+- [ ] Runner 启动目标 exe / launcher 的完整错误处理
 - [ ] Windows root-process 等待
 - [ ] 日志目录与错误提示
 - [ ] 基础 README 与使用教程
 
-## v2.1 - Windows 一键应用到 Steam
+## v2.1 - Windows 安装与本地 Steam 游戏库
+
+目标：让普通 Windows 玩家通过安装程序点点点完成安装，并在 Manager 里看到本地 Steam 游戏。
+
+- [x] Tauri NSIS 安装器配置骨架
+- [ ] Windows setup.exe 发布流程
+- [ ] Windows portable zip 发布流程
+- [ ] 首次启动复制 Runner 到 `%LOCALAPPDATA%\\SteamWrapper\\bin\\`
+- [ ] 扫描 Steam 安装目录
+- [ ] 读取 `libraryfolders.vdf`
+- [ ] 扫描 Steam Library 与 `appmanifest_<appid>.acf`
+- [ ] 读取本地 Steam 封面缓存
+- [ ] 封面缺失时显示占位图，不联网
+
+## v2.2 - Windows 一键应用到 Steam
 
 目标：用户只在 Manager 里操作，不需要手动打开 Steam 属性。
 
-- [ ] 扫描 Steam 安装目录
 - [ ] 识别 Steam userdata
 - [ ] 支持多 Steam 用户选择
-- [ ] 扫描 Steam Library 与 appmanifest
 - [ ] 读取当前 LaunchOptions
 - [ ] 写入新的 LaunchOptions
 - [ ] 修改前备份 Steam 本地配置
 - [ ] 一键恢复原启动选项
 - [ ] 避免在 Steam 运行时直接写入配置
 
-## v2.2 - Windows 兼容性增强
+## v2.3 - Windows 兼容性增强
 
 目标：覆盖更多 launcher / 汉化补丁 / mod loader 场景。
 
@@ -47,6 +60,7 @@
 - [ ] Linux profile 路径处理
 - [ ] process_group 等待模式
 - [ ] Linux Steam Library 扫描
+- [ ] Linux 本地 Steam 封面缓存读取
 - [ ] Linux Launch Options 生成
 - [ ] AppImage 或 tar.gz 发布
 
