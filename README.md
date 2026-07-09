@@ -1,5 +1,7 @@
 # SteamWrapper v2
 
+[中文 README](README.zh-CN.md) | [Agent Guidelines](AGENTS.md)
+
 SteamWrapper v2 is a planned rewrite of SteamWrapper.
 
 The goal is no longer just "put a wrapper exe into a game folder". The new goal is:
@@ -75,10 +77,15 @@ Selected stack:
 
 See:
 
+- `AGENTS.md`
 - `docs/tech-stack.md`
 - `docs/architecture.md`
 - `docs/distribution.md`
 - `docs/roadmap.md`
+
+## License
+
+Apache-2.0
 
 ## Status
 
