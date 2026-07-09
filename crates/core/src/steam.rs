@@ -48,12 +48,14 @@ pub fn scan_local_steam_games() -> Vec<LocalSteamGame> {
                 continue;
             }
 
-            let name = parse_vdf_value(&text, "name").unwrap_or_else(|| format!("Steam App {appid}"));
+            let name = parse_vdf_value(&text, "name")
+                .unwrap_or_else(|| format!("Steam App {appid}"));
             let install_dir_name = parse_vdf_value(&text, "installdir");
             let install_dir = install_dir_name
                 .as_deref()
                 .map(|dir| steamapps.join("common").join(dir).to_string_lossy().to_string());
-            let cover_path = find_local_cover(&steam_dir, &appid).map(|path| path.to_string_lossy().to_string());
+            let cover_path = find_local_cover(&steam_dir, &appid)
+                .map(|path| path.to_string_lossy().to_string());
 
             games.push(LocalSteamGame {
                 appid,
@@ -184,7 +186,10 @@ fn file_stem_starts_with(path: &Path, prefix: &str) -> bool {
         return false;
     };
 
-    if !matches!(ext.to_ascii_lowercase().as_str(), "jpg" | "jpeg" | "png" | "webp") {
+    if !matches!(
+        ext.to_ascii_lowercase().as_str(),
+        "jpg" | "jpeg" | "png" | "webp"
+    ) {
         return false;
     }
 
