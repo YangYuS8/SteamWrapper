@@ -2,21 +2,23 @@
 
 ## 总体选择
 
-SteamWrapper v2 采用 Rust workspace 重构。
+SteamWrapper v2 采用 Rust + Tauri 重构。
 
 核心理由：
 
-- 生成原生可执行文件，普通用户无需安装 .NET Runtime。
-- 适合实现轻量、可信、无后台常驻的系统工具。
-- 可以同时覆盖 Windows、Linux 与未来 SteamOS / Steam Deck。
-- Manager 与 Runner 可以共享同一套配置模型。
+- Runner 生成原生可执行文件，普通用户无需安装 .NET Runtime。
+- Manager 使用 Tauri v2，可以获得更友好的中文界面、Web UI 生态和更好的视觉表现。
+- Manager 可以展示本地 Steam 游戏列表与本地封面缓存。
+- Runner 仍然保持轻量、无界面、无后台常驻。
+- 架构上可以同时覆盖 Windows、Linux 与未来 SteamOS / Steam Deck。
 
 ## Workspace
 
 ```text
 crates/core
 crates/runner
-crates/manager
+apps/manager
+apps/manager/src-tauri
 ```
 
 ### steamwrapper-core
@@ -26,6 +28,7 @@ crates/manager
 - profile 数据结构；
 - TOML 配置读写；
 - Steam Launch Options 生成；
+- 后续 Steam Library / appmanifest 解析；
 - 跨平台通用规则。
 
 依赖：
@@ -57,27 +60,81 @@ crates/manager
 - Linux：使用 process group / session 等待。
 - SteamOS：优先保留 Steam / Proton 展开的原始 `%command%` 环境。
 
-### steamwrapper-manager
+### SteamWrapper Manager
 
 职责：
 
 - 图形化配置；
 - 扫描/添加 Steam 游戏；
+- 读取本地 Steam 游戏库与本地封面缓存；
 - 选择真正启动的 exe / launcher；
 - 生成 Steam Launch Options；
 - 后续自动写入 Steam 本地配置并备份。
 
-GUI 选择：
+技术栈：
 
-- 初期采用 `egui/eframe`。
+- Tauri v2
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui
+- lucide-react
+- @tanstack/react-query
 
-原因：
+选择原因：
 
-- Rust 原生；
-- 不引入 WebView；
-- 跨平台；
-- 足够完成配置器需求；
-- 比 Tauri/Electron 更轻量。
+- 中文字体和中文排版比 egui 更容易处理；
+- 可以用 shadcn/ui 快速做出玩家友好的界面；
+- 可以自然展示 Steam 游戏封面、卡片、状态提示和配置表单；
+- 不需要像 Electron 一样打包完整 Chromium；
+- Tauri 后端可以直接调用 Rust core 逻辑。
+
+## Windows 分发
+
+主推：
+
+```text
+SteamWrapper-v2.x.x-win-x64-setup.exe
+```
+
+备选：
+
+```text
+SteamWrapper-v2.x.x-win-x64-portable.zip
+```
+
+安装路径建议：
+
+```text
+%LOCALAPPDATA%\Programs\SteamWrapper\
+```
+
+用户数据建议：
+
+```text
+%LOCALAPPDATA%\SteamWrapper\
+  profiles.toml
+  bin\SteamWrapperRunner.exe
+  logs\
+  backups\
+  cache\
+```
+
+Runner 应该被安装或复制到稳定路径，Steam Launch Options 不应该引用临时解压目录。
+
+## 本地封面策略
+
+第一阶段只读取本地 Steam 缓存，不接入在线封面服务。
+
+候选位置：
+
+```text
+<Steam安装目录>\appcache\librarycache\
+<Steam安装目录>\userdata\<steamid>\config\grid\
+```
+
+找不到封面时，Manager 显示占位图，不报错、不联网。
 
 ## 明确不选
 
@@ -85,9 +142,13 @@ GUI 选择：
 
 旧版可以继续维护，但 v2 不再选择 C# 作为主实现。主要原因是普通用户会感知到运行时依赖或更大的 self-contained 发布包。
 
-### Electron / Tauri
+### egui/eframe
 
-SteamWrapper 的 GUI 只负责配置，不需要完整 Web 技术栈。使用 Electron/Tauri 会让工具显得过重。
+egui 适合极简配置器，但 SteamWrapper Manager 需要中文友好、封面展示、卡片布局和更强的玩家向引导，因此改为 Tauri。
+
+### Electron
+
+SteamWrapper 的 GUI 只负责配置，不需要完整 Chromium 运行时。Electron 对这个项目过重。
 
 ### Python
 
@@ -97,7 +158,8 @@ SteamWrapper 的 GUI 只负责配置，不需要完整 Web 技术栈。使用 El
 
 短期：
 
-- Windows x64 zip
+- Windows x64 NSIS setup.exe
+- Windows x64 portable zip
 - 内含 `SteamWrapperManager.exe` 与 `SteamWrapperRunner.exe`
 
 中期：
