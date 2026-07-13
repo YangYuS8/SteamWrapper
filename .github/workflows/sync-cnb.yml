@@ -22,7 +22,7 @@ jobs:
       - name: Push current ref to CNB
         env:
           CNB_GIT_TOKEN: ${{ secrets.CNB_GIT_TOKEN }}
-          CNB_REMOTE_URL: ${{ vars.CNB_REMOTE_URL }}
+          CNB_REMOTE_URL: https://cnb.cool/Nesoriel/SteamWrapper
         run: |
           set -euo pipefail
           test -n "${CNB_GIT_TOKEN:-}" || { echo "CNB_GIT_TOKEN is not configured" >&2; exit 1; }
