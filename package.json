@@ -8,6 +8,9 @@
     "build": "pnpm --filter steamwrapper-manager build",
     "tauri:dev": "pnpm --filter steamwrapper-manager tauri:dev",
     "tauri:build": "pnpm --filter steamwrapper-manager tauri:build",
-    "lint": "pnpm --filter steamwrapper-manager lint"
+    "lint": "pnpm --filter steamwrapper-manager lint",
+    "e2e:browser": "pnpm --filter steamwrapper-manager-e2e e2e:browser",
+    "e2e:native": "pnpm --filter steamwrapper-manager-e2e e2e:native",
+    "e2e:native:build": "pnpm --filter steamwrapper-manager-e2e e2e:native:build"
   }
 }

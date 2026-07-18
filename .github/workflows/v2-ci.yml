@@ -94,3 +94,75 @@ jobs:
 
       - name: Cargo test
         run: cargo test --workspace
+
+  e2e-browser:
+    name: E2E Browser (Ubuntu)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install frontend dependencies
+        run: CI=true pnpm install --frozen-lockfile
+
+      - name: Type-check E2E workspace
+        run: pnpm --filter steamwrapper-manager-e2e exec tsc --noEmit
+
+      - name: Run Browser Mode E2E
+        run: pnpm e2e:browser
+
+      - name: Upload Browser Mode artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-browser-artifacts
+          path: apps/manager-e2e/artifacts/browser
+          if-no-files-found: ignore
+
+  e2e-native-windows:
+    name: E2E Native (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install frontend dependencies
+        run: CI=true pnpm install --frozen-lockfile
+
+      - name: Type-check E2E workspace
+        run: pnpm --filter steamwrapper-manager-e2e exec tsc --noEmit
+
+      - name: Build Native Mode test binary
+        run: pnpm e2e:native:build
+
+      - name: Run Native Mode E2E
+        run: pnpm e2e:native
+
+      - name: Upload Native Mode artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-native-windows-artifacts
+          path: apps/manager-e2e/artifacts/native
+          if-no-files-found: ignore

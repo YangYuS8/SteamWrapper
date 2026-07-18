@@ -8,6 +8,7 @@ node_modules/
 # Frontend / Tauri build outputs
 /apps/manager/dist/
 /apps/manager/src-tauri/gen/
+/apps/manager-e2e/artifacts/
 
 # Local SteamWrapper runtime data
 profiles.toml
