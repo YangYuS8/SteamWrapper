@@ -78,7 +78,9 @@ jobs:
         run: corepack enable
 
       - name: Install frontend dependencies
-        run: CI=true pnpm install --frozen-lockfile
+        env:
+          CI: "true"
+        run: pnpm install --frozen-lockfile
 
       - name: Type-check manager frontend
         run: pnpm --filter steamwrapper-manager lint
@@ -112,7 +114,9 @@ jobs:
         run: corepack enable
 
       - name: Install frontend dependencies
-        run: CI=true pnpm install --frozen-lockfile
+        env:
+          CI: "true"
+        run: pnpm install --frozen-lockfile
 
       - name: Type-check E2E workspace
         run: pnpm --filter steamwrapper-manager-e2e exec tsc --noEmit
@@ -148,7 +152,9 @@ jobs:
         run: corepack enable
 
       - name: Install frontend dependencies
-        run: CI=true pnpm install --frozen-lockfile
+        env:
+          CI: "true"
+        run: pnpm install --frozen-lockfile
 
       - name: Type-check E2E workspace
         run: pnpm --filter steamwrapper-manager-e2e exec tsc --noEmit
