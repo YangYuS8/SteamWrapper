@@ -97,6 +97,33 @@ jobs:
       - name: Cargo test
         run: cargo test --workspace
 
+      - name: Build Windows NSIS with Runner resource
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cargo build --release --package steamwrapper-runner
+          if (-not (Test-Path target/release/steamwrapper-runner.exe)) { throw "Release Runner was not built" }
+          $env:STEAMWRAPPER_RUNNER_SKIP_BUILD = "1"
+          pnpm --filter steamwrapper-manager stage:runner
+          if (-not (Test-Path apps/manager/src-tauri/resources/runner/SteamWrapperRunner.exe)) { throw "Runner was not staged for Tauri resources" }
+          pnpm --filter steamwrapper-manager tauri build --bundles nsis
+          $bundle = Get-ChildItem target/release/bundle/nsis -Filter *.exe | Select-Object -First 1
+          if (-not $bundle) { throw "NSIS bundle was not produced" }
+          $sevenZip = (Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
+          if (-not $sevenZip) { $sevenZip = Join-Path $env:ProgramFiles "7-Zip\7z.exe" }
+          if (-not (Test-Path $sevenZip)) { throw "7-Zip is required to inspect the NSIS bundle" }
+          $extract = Join-Path $env:RUNNER_TEMP "steamwrapper-nsis-$env:GITHUB_RUN_ID"
+          & $sevenZip x -y "-o$extract" $bundle.FullName | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "Could not extract NSIS bundle" }
+          Get-ChildItem $extract -Recurse -File -Filter *.7z | ForEach-Object {
+            & $sevenZip x -y "-o$($_.DirectoryName)" $_.FullName | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "Could not extract bundled payload: $($_.FullName)" }
+          }
+          $runner = Get-ChildItem $extract -Recurse -File -Filter SteamWrapperRunner.exe | Where-Object Length -gt 0 | Select-Object -First 1
+          if (-not $runner) { throw "NSIS bundle does not contain a non-empty SteamWrapperRunner.exe" }
+          if ((cargo tree -p steamwrapper-manager -e normal) -match 'tauri-plugin-wdio') { throw "Release graph must not contain WDIO plugins" }
+          if (Get-ChildItem apps/manager/dist -Recurse -File | Select-String -Pattern 'wdioTauri|@wdio/tauri-plugin' -Quiet) { throw "Release frontend must not contain WDIO code" }
+
   e2e-browser:
     name: E2E Browser (Ubuntu)
     runs-on: ubuntu-latest

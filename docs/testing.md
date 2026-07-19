@@ -34,6 +34,15 @@ pnpm e2e:native:build
 
 `e2e` Cargo feature 才会编译和注册 `tauri-plugin-wdio` 与 `tauri-plugin-wdio-webdriver`。其权限同样只在 `tauri.e2e.conf.json` 中加入。正式 `tauri build` 与 `.github/workflows/release.yml` 不传该 feature/config，因此 Release 不包含嵌入式 WebDriver server 或 WDIO execute bridge。
 
+## Runner 分发与稳定安装测试
+
+Runner 资源不使用 Tauri sidecar 执行模型。它通过 Tauri v2 官方 `bundle.resources` 打入 Manager 分发包，再由 Manager 复制到稳定用户数据目录；Steam Launch Options 只引用稳定目录。
+
+- `apps/manager/src-tauri/src/runner_manager.rs` 的 Rust 单元测试覆盖首次安装、摘要相同不覆盖、损坏修复、缺失随包资源报错、临时文件清理、模拟 Windows 文件占用时保留旧 Runner，以及 `profiles.toml` / `logs` / `backups` / `cache` 不被触碰。
+- Browser Mode mock `get_runner_status`、安装和修复命令，覆盖设置页健康、缺失、安装成功和修复失败提示。
+- Native Mode 从空的临时 `LOCALAPPDATA` / `XDG_DATA_HOME` 启动，验证真实 Runner 自动写入 `SteamWrapper/bin/`、文件非空、摘要健康、重复安装不复制、损坏后可修复，以及 Launch Options 指向该实际文件。
+- Native E2E 的测试构建显式 stage debug Runner；正式 Release 则显式 stage release Runner。fixture、staging 文件和打包产物都不提交。
+
 ## CI
 
 `v2-ci.yml` 中 Browser job 在 Ubuntu 执行；Windows Native job 先构建带 `e2e` feature 的 debug binary，再通过 embedded provider 运行真实 IPC 测试。两个 job 都先执行 E2E TypeScript 检查，并上传诊断 artifact。
@@ -41,7 +50,7 @@ pnpm e2e:native:build
 ## 限制
 
 - Windows Native Mode 是合并门禁；Linux 本地 Native Mode 需要已安装 WebKitGTK/WebKitWebDriver，具体以对应环境的 E2E 运行结果为准。
-- 不自动驱动 Steam 客户端、不测试 NSIS 安装向导，也不覆盖 Runner 的进程级等待链路。
+- 不自动驱动 Steam 客户端、不测试 NSIS 安装向导，也不覆盖 Runner 的进程级等待链路；Release workflow 仅静态解压验证 NSIS 中包含真实 Runner。
 - Browser Mode 是 renderer 测试，不能替代真实 Rust IPC 验证。
 
 官方依据：Tauri v2 WebDriver 指南与 WebdriverIO `@wdio/tauri-service` 1.2.0 的 Browser Mode、Plugin Setup 文档。

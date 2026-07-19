@@ -117,6 +117,8 @@ SteamWrapper-v2.x.x-win-x64-portable.zip
 %LOCALAPPDATA%\SteamWrapper\backups\       # Steam 配置备份
 ```
 
+Manager 安装包内会携带与当前 Windows 构建对应的 Runner；首次打开 Manager 时会自动安装到第二个稳定路径。以后 Manager 安装目录或 portable 解压目录可以更新、移动或删除，Steam 启动项仍只依赖稳定数据目录。若 Runner 被删除、损坏或升级不一致，可在“设置”页安装或修复；这不会覆盖 `profiles.toml`、日志、备份或缓存。
+
 Steam 启动选项应该引用稳定的 Runner 路径，不应该引用临时解压目录。
 
 更新时应直接运行新版安装包覆盖旧版本，并保留 `%LOCALAPPDATA%\SteamWrapper\` 下的用户配置、日志和备份。卸载时默认只删除程序本体，用户数据应提供明确选项再清理。
