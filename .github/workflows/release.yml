@@ -82,7 +82,25 @@ jobs:
           CI: "true"
         run: pnpm install --frozen-lockfile
 
+      - name: Build and stage Runner resource
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --release --package steamwrapper-runner
+          expected_runner="target/release/steamwrapper-runner"
+          staged_runner="apps/manager/src-tauri/resources/runner/steamwrapper-runner"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            expected_runner="${expected_runner}.exe"
+            staged_runner="apps/manager/src-tauri/resources/runner/SteamWrapperRunner.exe"
+          fi
+          test -s "$expected_runner"
+          STEAMWRAPPER_RUNNER_SKIP_BUILD=1 pnpm --filter steamwrapper-manager stage:runner
+          test -s "$staged_runner"
+
       - name: Run quality gates
+        env:
+          STEAMWRAPPER_RUNNER_SKIP_BUILD: "1"
+          VITE_STEAMWRAPPER_E2E: "0"
         run: |
           pnpm --filter steamwrapper-manager lint
           pnpm --filter steamwrapper-manager build
@@ -91,7 +109,49 @@ jobs:
           cargo test --workspace
 
       - name: Build Tauri bundle
+        env:
+          STEAMWRAPPER_RUNNER_SKIP_BUILD: "1"
         run: pnpm --filter steamwrapper-manager tauri build --bundles ${{ matrix.target.bundle }}
+
+      - name: Verify Windows NSIS contains Runner
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $bundle = Get-ChildItem target/release/bundle/nsis -Filter *.exe | Select-Object -First 1
+          if (-not $bundle) { throw "NSIS bundle was not produced" }
+          $sevenZip = (Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
+          if (-not $sevenZip) { $sevenZip = Join-Path $env:ProgramFiles "7-Zip\7z.exe" }
+          if (-not (Test-Path $sevenZip)) { throw "7-Zip is required to inspect the NSIS bundle" }
+          $extract = Join-Path $env:RUNNER_TEMP "steamwrapper-nsis-$env:GITHUB_RUN_ID"
+          & $sevenZip x -y "-o$extract" $bundle.FullName | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "Could not extract NSIS bundle" }
+          Get-ChildItem $extract -Recurse -File -Filter *.7z | ForEach-Object {
+            & $sevenZip x -y "-o$($_.DirectoryName)" $_.FullName | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "Could not extract bundled payload: $($_.FullName)" }
+          }
+          $runner = Get-ChildItem $extract -Recurse -File -Filter SteamWrapperRunner.exe | Where-Object Length -gt 0 | Select-Object -First 1
+          if (-not $runner) { throw "NSIS bundle does not contain a non-empty SteamWrapperRunner.exe" }
+
+      - name: Verify Linux bundle contains Runner resource
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          appimage="$(find target/release/bundle/appimage -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
+          test -n "$appimage"
+          extract_dir="$(mktemp -d)"
+          (
+            cd "$extract_dir"
+            "$appimage" --appimage-extract >/dev/null
+          )
+          find "$extract_dir/squashfs-root" -type f -path '*/runner/steamwrapper-runner' -size +0c -print -quit | grep -q .
+
+      - name: Verify release excludes E2E runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! cargo tree -p steamwrapper-manager -e normal | grep -Eq 'tauri-plugin-wdio|tauri-plugin-wdio-webdriver'
+          pnpm --filter steamwrapper-manager verify:release-e2e-isolation
 
       - name: Collect artifacts
         shell: bash

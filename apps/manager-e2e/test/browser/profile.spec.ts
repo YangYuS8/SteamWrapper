@@ -51,4 +51,20 @@ describe("Browser Mode: 配置", () => {
     await $("[data-testid='save-profile']").click();
     await expect(dialogStatus()).toHaveText(expect.stringContaining("保存失败"));
   });
+
+  it("Runner 不可用时保存配置会明确提示，不伪造可用启动选项", async () => {
+    await openFixtureGame();
+    const save = await browser.tauri.mock("save_profile");
+    const launchOption = await browser.tauri.mock("generate_launch_option");
+    const profiles = await browser.tauri.mock("list_profiles");
+    await save.mockResolvedValue(undefined);
+    await launchOption.mockRejectedValue(new Error("Runner 尚未安装"));
+    await profiles.mockResolvedValue([]);
+
+    await $("[data-testid='target-path']").setValue("C:\\fixture.exe");
+    await $("[data-testid='save-profile']").click();
+
+    await expect(dialogStatus()).toHaveText(expect.stringContaining("Runner 尚不可用"));
+    await expect($("[data-testid='launch-option']")).toHaveValue("");
+  });
 });

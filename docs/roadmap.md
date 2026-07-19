@@ -99,14 +99,14 @@ v2 的目标平台从一开始就包括：
 - [ ] 新版安装包覆盖安装并保留用户配置
 - [ ] Manager 内“检查更新”入口
 - [ ] 标准卸载入口：默认保留用户数据，可选清理用户数据
-- [ ] 首次启动复制 Runner 到稳定数据目录
+- [x] 首次启动复制 Runner 到稳定数据目录
 
 ## v2.6 - Windows 分发与进程等待增强
 
 目标：补齐 Windows 安装体验与复杂 launcher 等待模式。
 
 - [x] Tauri NSIS 安装器配置骨架
-- [ ] 首次启动复制 Runner 到 `%LOCALAPPDATA%\\SteamWrapper\\bin\\`
+- [x] 首次启动复制 Runner 到 `%LOCALAPPDATA%\\SteamWrapper\\bin\\`
 - [ ] Windows Job Object 等待模式
 - [ ] Manager 内测试启动
 - [ ] 配置导入导出

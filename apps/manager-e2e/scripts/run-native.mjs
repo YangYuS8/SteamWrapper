@@ -1,4 +1,5 @@
-import { copyFile, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { copyFile, mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
@@ -11,6 +12,9 @@ const steamApps = join(fixtureRoot, "Steam", "steamapps");
 const duplicateSteamApps = join(fixtureRoot, "Steam Extra", "steamapps");
 const gameDir = join(steamApps, "common", "中文 Test Game");
 const coverDir = join(fixtureRoot, "Steam", "appcache", "librarycache");
+const appDataRoot = process.platform === "win32" ? "local-app-data" : "xdg-data";
+const runnerFileName = process.platform === "win32" ? "SteamWrapperRunner.exe" : "steamwrapper-runner";
+const runnerPath = join(fixtureRoot, appDataRoot, "SteamWrapper", "bin", runnerFileName);
 
 async function write(relativePath, content = "") {
   const path = join(fixtureRoot, relativePath);
@@ -32,6 +36,7 @@ for (const [appid, name, installDir] of [
 }
 await write("Steam Extra/steamapps/appmanifest_123456.acf", `"AppState"\n{\n  "appid" "123456"\n  "name" "Duplicate Test Game"\n  "installdir" "Duplicate Test Game"\n  "StateFlags" "4"\n}\n`);
 await write("Steam/appcache/librarycache/123456_library_600x900.png", "fixture cover");
+if (existsSync(runnerPath)) throw new Error(`Native E2E fixture must start without a stable Runner: ${runnerPath}`);
 
 const child = spawn(
   process.execPath,
@@ -46,7 +51,6 @@ const exitCode = await new Promise((resolveExit) => child.once("exit", (code) =>
 
 await mkdir(join(packageDir, "artifacts", "native", "fixture"), { recursive: true });
 const artifactFixtureDir = join(packageDir, "artifacts", "native", "fixture");
-const appDataRoot = process.platform === "win32" ? "local-app-data" : "xdg-data";
 const profilesPath = join(fixtureRoot, appDataRoot, "SteamWrapper", "profiles.toml");
 try {
   const artifactProfilesPath = join(artifactFixtureDir, "profiles.toml");
@@ -54,6 +58,17 @@ try {
   await writeFile(
     artifactProfilesPath,
     (await readFile(artifactProfilesPath, "utf8")).replaceAll(fixtureRoot, "<fixture>"),
+  );
+} catch (error) {
+  if (error?.code !== "ENOENT") throw error;
+}
+try {
+  await writeFile(
+    join(artifactFixtureDir, "runner.json"),
+    `${JSON.stringify({
+      stable_path: runnerPath.replaceAll(fixtureRoot, "<fixture>"),
+      bytes: (await stat(runnerPath)).size,
+    }, null, 2)}\n`,
   );
 } catch (error) {
   if (error?.code !== "ENOENT") throw error;

@@ -144,7 +144,36 @@ portable 更新方式应足够直白：下载新版 zip，解压覆盖 Manager�
 
 ## Runner 分发策略
 
-Manager 可以通过安装包附带 Runner，后续首次启动时复制到稳定路径。
+Manager 的正式安装包会通过 Tauri v2 官方 `bundle.resources` 机制携带与当前平台匹配的预构建 Runner。构建阶段先显式执行：
+
+```bash
+cargo build --release --package steamwrapper-runner
+```
+
+官方机制说明：<https://v2.tauri.app/develop/resources/>。`bundle.resources` 适用于随包只读资源；本项目不使用 `externalBin` / sidecar 执行模型，因为 Manager 不负责直接启动 Runner。
+
+再将产物放入仅用于打包的 staging 目录。Windows 资源文件名统一为：
+
+```text
+runner/SteamWrapperRunner.exe
+```
+
+它是安装包内的只读分发资源，不是 Steam Launch Options 的目标。Manager 首次启动以及设置页的“安装 / 修复 Runner”会执行：
+
+```text
+随包 Runner
+→ 写入临时文件
+→ flush + SHA-256 校验
+→ 原子替换
+→ %LOCALAPPDATA%\SteamWrapper\bin\SteamWrapperRunner.exe
+```
+
+- 摘要一致时不重复复制；缺失、损坏或摘要不一致时才安装/修复。
+- 更新过程中只触碰 `bin/SteamWrapperRunner.exe`；`profiles.toml`、`logs/`、`backups/` 与 `cache/` 保持原样。
+- Windows 若旧 Runner 正被 Steam 占用，原子替换会失败并保留旧文件；Manager 在设置页显示可理解的错误，用户退出游戏后可重新修复。
+- portable 包也复用同一机制：Manager 的位置可移动，稳定 Runner 与用户数据不会依赖解压目录。
+
+Release workflow 会验证 Windows NSIS 安装包解压后存在非空的 `SteamWrapperRunner.exe`，并验证正式前端/Cargo 依赖树不包含 WDIO 或嵌入式 WebDriver。
 
 Runner 不应该做成 Tauri GUI，也不应该依赖 WebView。它是被 Steam 调用的无界面原生程序。
 

@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420",
-    "build": "tsc && vite build",
+    "build": "pnpm stage:runner && tsc && vite build",
+    "stage:runner": "node scripts/stage-runner.mjs",
+    "verify:release-e2e-isolation": "node scripts/verify-release-e2e-isolation.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

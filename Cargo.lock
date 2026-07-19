@@ -3203,12 +3203,14 @@ version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
+ "sha2",
  "steamwrapper-core",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-wdio",
  "tauri-plugin-wdio-webdriver",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

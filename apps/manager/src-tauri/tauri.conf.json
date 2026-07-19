@@ -29,6 +29,9 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "resources": {
+      "resources/runner/": "runner/"
+    },
     "windows": {
       "nsis": {
         "displayLanguageSelector": false,
