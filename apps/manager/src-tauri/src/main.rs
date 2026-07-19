@@ -1,9 +1,12 @@
+mod runner_manager;
+
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 use steamwrapper_core::{
     app_data_dir, build_launch_option, default_profiles_path, default_runner_path, ensure_app_dirs,
     scan_local_steam_games, LocalSteamGame, Platform, Profile, SteamWrapperConfig, WaitMode,
 };
+use tauri::{path::BaseDirectory, Manager};
 
 #[derive(Debug, Deserialize)]
 struct SaveProfileRequest {
@@ -39,10 +42,53 @@ struct RunnerLogEntry {
     content: String,
 }
 
+fn bundled_runner_paths(app: &tauri::AppHandle) -> Result<runner_manager::RunnerPaths, String> {
+    let runner_name = if cfg!(target_os = "windows") {
+        "SteamWrapperRunner.exe"
+    } else {
+        "steamwrapper-runner"
+    };
+    let bundled = app
+        .path()
+        .resolve(format!("runner/{runner_name}"), BaseDirectory::Resource)
+        .map_err(|err| format!("无法定位随包 Runner 资源：{err}"))?;
+
+    Ok(runner_manager::RunnerPaths::new(
+        bundled,
+        default_runner_path(),
+    ))
+}
+
 #[tauri::command]
-fn generate_launch_option(appid: String) -> String {
-    let runner_path = default_runner_path();
-    build_launch_option(runner_path, &appid)
+fn get_runner_status(app: tauri::AppHandle) -> Result<runner_manager::RunnerStatus, String> {
+    ensure_app_dirs().map_err(|err| err.to_string())?;
+    let paths = bundled_runner_paths(&app)?;
+    Ok(runner_manager::inspect_runner(&paths))
+}
+
+#[tauri::command]
+fn install_runner(app: tauri::AppHandle) -> Result<runner_manager::RunnerInstallOutcome, String> {
+    ensure_app_dirs().map_err(|err| err.to_string())?;
+    let paths = bundled_runner_paths(&app)?;
+    runner_manager::install_or_repair(&paths)
+}
+
+#[tauri::command]
+fn repair_runner(app: tauri::AppHandle) -> Result<runner_manager::RunnerInstallOutcome, String> {
+    install_runner(app)
+}
+
+#[tauri::command]
+fn generate_launch_option(app: tauri::AppHandle, appid: String) -> Result<String, String> {
+    let paths = bundled_runner_paths(&app)?;
+    let status = runner_manager::inspect_runner(&paths);
+    if !status.healthy {
+        return Err(status
+            .last_error
+            .unwrap_or_else(|| "Runner 尚未安装或需要修复，请先在设置页完成安装。".to_string()));
+    }
+
+    Ok(build_launch_option(default_runner_path(), &appid))
 }
 
 #[tauri::command]
@@ -56,18 +102,23 @@ fn scan_local_steam_games_command() -> Vec<LocalSteamGame> {
 }
 
 #[tauri::command]
-fn list_profiles() -> Result<Vec<ConfiguredProfile>, String> {
+fn list_profiles(app: tauri::AppHandle) -> Result<Vec<ConfiguredProfile>, String> {
     let profiles_path = default_profiles_path();
     if !profiles_path.exists() {
         return Ok(Vec::new());
     }
 
+    let runner_healthy = bundled_runner_paths(&app)
+        .map(|paths| runner_manager::inspect_runner(&paths).healthy)
+        .unwrap_or(false);
     let config = SteamWrapperConfig::load(&profiles_path).map_err(|err| err.to_string())?;
     let mut profiles: Vec<ConfiguredProfile> = config
         .profiles
         .into_iter()
         .map(|(appid, profile)| ConfiguredProfile {
-            launch_option: build_launch_option(default_runner_path(), &appid),
+            launch_option: runner_healthy
+                .then(|| build_launch_option(default_runner_path(), &appid))
+                .unwrap_or_default(),
             appid,
             name: profile.name,
             game_dir: profile.game_dir.to_string_lossy().to_string(),
@@ -169,7 +220,21 @@ fn main() {
         eprintln!("failed to create SteamWrapper app directories: {err}");
     }
 
-    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            if let Err(err) = ensure_app_dirs() {
+                eprintln!("failed to create SteamWrapper app directories: {err}");
+                return Ok(());
+            }
+
+            let result = bundled_runner_paths(&app.handle())
+                .and_then(|paths| runner_manager::install_or_repair(&paths).map(|_| ()));
+            if let Err(err) = result {
+                eprintln!("failed to install SteamWrapper Runner: {err}");
+            }
+            Ok(())
+        });
 
     #[cfg(feature = "e2e")]
     let builder = builder
@@ -181,8 +246,11 @@ fn main() {
             generate_launch_option,
             get_default_runner_path,
             get_app_paths,
+            get_runner_status,
+            install_runner,
             list_profiles,
             list_runner_logs,
+            repair_runner,
             scan_local_steam_games_command,
             save_profile
         ])
