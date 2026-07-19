@@ -100,6 +100,7 @@ jobs:
       - name: Run quality gates
         env:
           STEAMWRAPPER_RUNNER_SKIP_BUILD: "1"
+          VITE_STEAMWRAPPER_E2E: "0"
         run: |
           pnpm --filter steamwrapper-manager lint
           pnpm --filter steamwrapper-manager build
