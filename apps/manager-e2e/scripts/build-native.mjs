@@ -18,7 +18,7 @@ const child = spawn(
   ],
   {
     cwd: workspaceDir,
-    env: { ...process.env, VITE_STEAMWRAPPER_E2E: "1" },
+    env: { ...process.env, VITE_STEAMWRAPPER_E2E: "1", STEAMWRAPPER_RUNNER_PROFILE: "debug" },
     stdio: "inherit",
   },
 );

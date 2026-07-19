@@ -56,6 +56,17 @@ type RunnerLogEntry = {
   content: string;
 };
 
+type RunnerStatus = {
+  installed: boolean;
+  healthy: boolean;
+  path: string;
+  bundled_version: string | null;
+  installed_version: string | null;
+  needs_install: boolean;
+  needs_update: boolean;
+  last_error: string | null;
+};
+
 type ViewKey = "library" | "configured" | "logs" | "settings";
 
 const navItems = [
@@ -84,6 +95,9 @@ export function App() {
   const [profiles, setProfiles] = useState<ConfiguredProfile[]>([]);
   const [logs, setLogs] = useState<RunnerLogEntry[]>([]);
   const [paths, setPaths] = useState<AppPaths | null>(null);
+  const [runnerStatus, setRunnerStatus] = useState<RunnerStatus | null>(null);
+  const [runnerBusy, setRunnerBusy] = useState(false);
+  const [runnerError, setRunnerError] = useState("");
   const [selectedGame, setSelectedGame] = useState<LocalSteamGame | null>(null);
   const [targetPath, setTargetPath] = useState("");
   const [launchOption, setLaunchOption] = useState("");
@@ -96,6 +110,7 @@ export function App() {
     void refreshProfiles();
     void refreshLogs();
     void refreshPaths();
+    void refreshRunnerStatus();
   }, []);
 
   async function refreshProfiles() {
@@ -125,10 +140,46 @@ export function App() {
     }
   }
 
-  async function generateLaunchOption(appid: string) {
-    const option = await invoke<string>("generate_launch_option", { appid });
-    setLaunchOption(option);
-    setStatusText("已生成启动选项");
+  async function refreshRunnerStatus() {
+    try {
+      const value = await invoke<RunnerStatus>("get_runner_status");
+      setRunnerStatus(value);
+      setRunnerError(value.last_error ?? "");
+    } catch (error) {
+      const message = `检查 Runner 失败：${String(error)}`;
+      setRunnerError(message);
+      setStatusText(message);
+    }
+  }
+
+  async function installOrRepairRunner(command: "install_runner" | "repair_runner") {
+    setRunnerBusy(true);
+    setRunnerError("");
+    try {
+      const outcome = await invoke<{ changed: boolean; status: RunnerStatus }>(command);
+      setRunnerStatus(outcome.status);
+      setRunnerError(outcome.status.last_error ?? "");
+      setStatusText(outcome.changed ? "Runner 已安装到稳定路径" : "Runner 已是当前版本，无需重复复制");
+    } catch (error) {
+      const message = `Runner 操作失败：${String(error)}`;
+      setRunnerError(message);
+      setStatusText(message);
+    } finally {
+      setRunnerBusy(false);
+    }
+  }
+
+  async function generateLaunchOption(appid: string): Promise<boolean> {
+    try {
+      const option = await invoke<string>("generate_launch_option", { appid });
+      setLaunchOption(option);
+      setStatusText("已生成启动选项");
+      return true;
+    } catch (error) {
+      const message = `无法生成可用启动选项：${String(error)}`;
+      setStatusText(message);
+      return false;
+    }
   }
 
   async function scanLocalGames() {
@@ -190,7 +241,11 @@ export function App() {
     setTargetPath(profile.target);
     setLaunchOption(profile.launch_option);
     setConfigOpen(true);
-    setStatusText(`正在编辑：${profile.name}`);
+    setStatusText(
+      runnerStatus?.healthy
+        ? `正在编辑：${profile.name}`
+        : "Runner 尚不可用，请先到设置页安装或修复后再生成 Launch Options",
+    );
   }
 
   function openGameConfig(game: LocalSteamGame) {
@@ -227,9 +282,9 @@ export function App() {
         },
       });
 
-      await generateLaunchOption(selectedGame.appid);
+      const launchOptionReady = await generateLaunchOption(selectedGame.appid);
       await refreshProfiles();
-      setStatusText("配置已保存");
+      setStatusText(launchOptionReady ? "配置已保存" : "配置已保存，但 Runner 尚不可用，请先在设置页安装或修复 Runner");
     } catch (error) {
       setStatusText(`保存失败：${String(error)}`);
     }
@@ -313,26 +368,66 @@ export function App() {
             <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
               <div>
                 <CardTitle>设置</CardTitle>
-                <CardDescription>查看 SteamWrapper 的稳定数据目录。后续检查更新也会放在这里。</CardDescription>
+                <CardDescription>查看稳定数据目录和 Steam 启动所需的 Runner 状态。</CardDescription>
               </div>
-              <Button data-testid="refresh-paths" variant="secondary" onClick={() => void refreshPaths()}>
-                <RefreshCcw className="mr-2 h-4 w-4" />
-                刷新
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button data-testid="refresh-runner-status" variant="secondary" onClick={() => void refreshRunnerStatus()}>
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  检查 Runner
+                </Button>
+                <Button data-testid="refresh-paths" variant="secondary" onClick={() => void refreshPaths()}>
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  刷新路径
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="grid gap-3 md:grid-cols-2">
-              {paths ? (
-                <>
-                  <PathCard label="用户数据目录" value={paths.app_data_dir} />
-                  <PathCard label="profiles.toml" value={paths.profiles_path} />
-                  <PathCard label="Runner 稳定路径" value={paths.runner_path} />
-                  <PathCard label="日志目录" value={paths.logs_dir} />
-                  <PathCard label="备份目录" value={paths.backups_dir} />
-                  <PathCard label="缓存目录" value={paths.cache_dir} />
-                </>
-              ) : (
-                <EmptyState title="路径信息未加载" description="点击刷新重新读取。" />
-              )}
+            <CardContent className="space-y-5">
+              <section className="rounded-xl border bg-white/[0.03] p-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">SteamWrapper Runner</div>
+                    <div data-testid="runner-status" className="text-sm text-muted-foreground">
+                      Runner 状态：{runnerStatus?.healthy ? "已安装" : runnerStatus?.needs_install ? "未安装" : runnerStatus?.needs_update ? "需要更新" : "检查失败"}
+                    </div>
+                    <div data-testid="runner-path" className="break-all text-xs text-muted-foreground">
+                      Runner 路径：{runnerStatus?.path ?? paths?.runner_path ?? "正在读取……"}
+                    </div>
+                    <div data-testid="runner-version" className="break-all text-xs text-muted-foreground">
+                      随包摘要：{runnerStatus?.bundled_version?.slice(0, 12) ?? "未知"}
+                      {runnerStatus?.installed_version ? ` · 已安装摘要：${runnerStatus.installed_version.slice(0, 12)}` : ""}
+                    </div>
+                    {runnerError && (
+                      <div data-testid="runner-error" className="text-xs text-red-300">
+                        {runnerError}
+                      </div>
+                    )}
+                  </div>
+                  {!runnerStatus?.healthy && (
+                    <Button
+                      data-testid={runnerStatus?.needs_install ? "runner-install" : "runner-repair"}
+                      disabled={runnerBusy}
+                      onClick={() => void installOrRepairRunner(runnerStatus?.needs_install ? "install_runner" : "repair_runner")}
+                    >
+                      <RefreshCcw className="mr-2 h-4 w-4" />
+                      {runnerBusy ? "正在处理……" : runnerStatus?.needs_install ? "安装 Runner" : "重新安装 / 修复 Runner"}
+                    </Button>
+                  )}
+                </div>
+              </section>
+              <div className="grid gap-3 md:grid-cols-2">
+                {paths ? (
+                  <>
+                    <PathCard label="用户数据目录" value={paths.app_data_dir} />
+                    <PathCard label="profiles.toml" value={paths.profiles_path} />
+                    <PathCard label="Runner 稳定路径" value={paths.runner_path} />
+                    <PathCard label="日志目录" value={paths.logs_dir} />
+                    <PathCard label="备份目录" value={paths.backups_dir} />
+                    <PathCard label="缓存目录" value={paths.cache_dir} />
+                  </>
+                ) : (
+                  <EmptyState title="路径信息未加载" description="点击刷新重新读取。" />
+                )}
+              </div>
             </CardContent>
           </Card>
         );

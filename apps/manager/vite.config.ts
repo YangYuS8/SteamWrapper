@@ -3,6 +3,9 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  define: {
+    __STEAMWRAPPER_E2E__: JSON.stringify(process.env.VITE_STEAMWRAPPER_E2E === "1"),
+  },
   plugins: [react()],
   resolve: {
     alias: {
