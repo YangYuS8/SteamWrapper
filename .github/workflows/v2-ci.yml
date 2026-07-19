@@ -124,11 +124,9 @@ jobs:
           $runner = Get-ChildItem $extract -Recurse -File -Filter SteamWrapperRunner.exe | Where-Object Length -gt 0 | Select-Object -First 1
           if (-not $runner) { throw "NSIS bundle does not contain a non-empty SteamWrapperRunner.exe" }
           if ((cargo tree -p steamwrapper-manager -e normal) -match 'tauri-plugin-wdio') { throw "Release graph must not contain WDIO plugins" }
-          $releaseDist = Join-Path $env:RUNNER_TEMP "steamwrapper-release-dist-$env:GITHUB_RUN_ID"
           $env:VITE_STEAMWRAPPER_E2E = "0"
           pnpm --filter steamwrapper-manager build
-          Copy-Item apps/manager/dist $releaseDist -Recurse
-          if (Get-ChildItem $releaseDist -Recurse -File | Select-String -Pattern 'wdioTauri|@wdio/tauri-plugin' -Quiet) { throw "Release frontend must not contain WDIO code" }
+          pnpm --filter steamwrapper-manager verify:release-e2e-isolation
 
   e2e-browser:
     name: E2E Browser (Ubuntu)

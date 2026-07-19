@@ -151,7 +151,7 @@ jobs:
         run: |
           set -euo pipefail
           ! cargo tree -p steamwrapper-manager -e normal | grep -Eq 'tauri-plugin-wdio|tauri-plugin-wdio-webdriver'
-          ! grep -RIlE 'wdioTauri|@wdio/tauri-plugin' apps/manager/dist
+          pnpm --filter steamwrapper-manager verify:release-e2e-isolation
 
       - name: Collect artifacts
         shell: bash
