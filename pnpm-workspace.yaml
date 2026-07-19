@@ -1,5 +1,11 @@
 packages:
   - "apps/*"
+allowBuilds:
+  edgedriver: false
+  esbuild: true
+  geckodriver: false
+overrides:
+  '@wdio/native-utils': 2.5.0
 minimumReleaseAgeExclude:
   - '@rolldown/binding-android-arm64@1.1.5'
   - '@rolldown/binding-darwin-arm64@1.1.5'

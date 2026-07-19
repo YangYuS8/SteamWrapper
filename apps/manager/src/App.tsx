@@ -26,8 +26,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const appWindow = getCurrentWindow();
-
 type LocalSteamGame = {
   appid: string;
   name: string;
@@ -101,18 +99,30 @@ export function App() {
   }, []);
 
   async function refreshProfiles() {
-    const items = await invoke<ConfiguredProfile[]>("list_profiles");
-    setProfiles(items);
+    try {
+      const items = await invoke<ConfiguredProfile[]>("list_profiles");
+      setProfiles(items);
+    } catch (error) {
+      setStatusText(`读取配置失败：${String(error)}`);
+    }
   }
 
   async function refreshLogs() {
-    const items = await invoke<RunnerLogEntry[]>("list_runner_logs");
-    setLogs(items);
+    try {
+      const items = await invoke<RunnerLogEntry[]>("list_runner_logs");
+      setLogs(items);
+    } catch (error) {
+      setStatusText(`读取日志失败：${String(error)}`);
+    }
   }
 
   async function refreshPaths() {
-    const value = await invoke<AppPaths>("get_app_paths");
-    setPaths(value);
+    try {
+      const value = await invoke<AppPaths>("get_app_paths");
+      setPaths(value);
+    } catch (error) {
+      setStatusText(`读取路径失败：${String(error)}`);
+    }
   }
 
   async function generateLaunchOption(appid: string) {
@@ -122,10 +132,14 @@ export function App() {
   }
 
   async function scanLocalGames() {
-    setStatusText("正在扫描本地 Steam 游戏库……");
-    const scanned = await invoke<LocalSteamGame[]>("scan_local_steam_games_command");
-    setGames(scanned);
-    setStatusText(scanned.length > 0 ? `已找到 ${scanned.length} 个本地 Steam 游戏` : "没有扫描到本地 Steam 游戏");
+    setStatusText("正在扫描本地 Steam 游戏……");
+    try {
+      const scanned = await invoke<LocalSteamGame[]>("scan_local_steam_games_command");
+      setGames(scanned);
+      setStatusText(scanned.length > 0 ? `已找到 ${scanned.length} 个本地 Steam 游戏` : "没有扫描到本地 Steam 游戏");
+    } catch (error) {
+      setStatusText(`扫描失败：${String(error)}`);
+    }
   }
 
   async function chooseTargetPath() {
@@ -203,18 +217,22 @@ export function App() {
       return;
     }
 
-    await invoke("save_profile", {
-      request: {
-        appid: selectedGame.appid,
-        name: selectedGame.name,
-        game_dir: selectedGame.install_dir,
-        target: targetPath.trim(),
-      },
-    });
+    try {
+      await invoke("save_profile", {
+        request: {
+          appid: selectedGame.appid,
+          name: selectedGame.name,
+          game_dir: selectedGame.install_dir,
+          target: targetPath.trim(),
+        },
+      });
 
-    await generateLaunchOption(selectedGame.appid);
-    await refreshProfiles();
-    setStatusText("配置已保存");
+      await generateLaunchOption(selectedGame.appid);
+      await refreshProfiles();
+      setStatusText("配置已保存");
+    } catch (error) {
+      setStatusText(`保存失败：${String(error)}`);
+    }
   }
 
   function renderContent() {
@@ -227,7 +245,7 @@ export function App() {
                 <CardTitle>已配置游戏</CardTitle>
                 <CardDescription>这里读取本机 profiles.toml，点击条目可以继续编辑。</CardDescription>
               </div>
-              <Button variant="secondary" onClick={() => void refreshProfiles()}>
+              <Button data-testid="refresh-profiles" variant="secondary" onClick={() => void refreshProfiles()}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 刷新
               </Button>
@@ -239,6 +257,7 @@ export function App() {
                 profiles.map((profile) => (
                   <button
                     key={profile.appid}
+                    data-testid={`configured-profile-${profile.appid}`}
                     className="w-full rounded-xl border bg-white/[0.03] p-4 text-left transition hover:border-ring hover:bg-white/[0.05]"
                     onClick={() => openConfiguredProfile(profile)}
                     type="button"
@@ -268,7 +287,7 @@ export function App() {
                 <CardTitle>日志</CardTitle>
                 <CardDescription>显示 logs 目录下最近的 Runner 日志，便于排查启动失败。</CardDescription>
               </div>
-              <Button variant="secondary" onClick={() => void refreshLogs()}>
+              <Button data-testid="refresh-logs" variant="secondary" onClick={() => void refreshLogs()}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 刷新
               </Button>
@@ -278,7 +297,7 @@ export function App() {
                 <EmptyState title="暂无日志" description="Runner 启动过游戏后，这里会显示日志文件。" />
               ) : (
                 logs.map((log) => (
-                  <div key={log.path} className="rounded-xl border bg-white/[0.03] p-4">
+                  <div key={log.path} data-testid={`runner-log-${log.file_name}`} className="rounded-xl border bg-white/[0.03] p-4">
                     <div className="font-medium">{log.file_name}</div>
                     <div className="mt-1 break-all text-xs text-muted-foreground">{log.path}</div>
                     <pre className="mt-3 max-h-64 overflow-auto rounded-lg bg-black/30 p-3 text-xs text-muted-foreground">{log.content || "日志为空"}</pre>
@@ -290,13 +309,13 @@ export function App() {
         );
       case "settings":
         return (
-          <Card>
+          <Card data-testid="app-paths">
             <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
               <div>
                 <CardTitle>设置</CardTitle>
                 <CardDescription>查看 SteamWrapper 的稳定数据目录。后续检查更新也会放在这里。</CardDescription>
               </div>
-              <Button variant="secondary" onClick={() => void refreshPaths()}>
+              <Button data-testid="refresh-paths" variant="secondary" onClick={() => void refreshPaths()}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 刷新
               </Button>
@@ -332,8 +351,10 @@ export function App() {
                   <p className="max-w-2xl text-sm text-muted-foreground">按照步骤完成配置；真正的配置表单会在点击游戏后悬浮打开。</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <Button onClick={scanLocalGames}>扫描本地 Steam 游戏</Button>
-                  <Button variant="secondary" onClick={createManualGame}>
+                  <Button data-testid="scan-games" onClick={scanLocalGames}>
+                    扫描本地 Steam 游戏
+                  </Button>
+                  <Button data-testid="manual-add-game" variant="secondary" onClick={createManualGame}>
                     手动添加游戏
                   </Button>
                 </div>
@@ -364,6 +385,7 @@ export function App() {
                 games.map((game) => (
                   <Card
                     key={game.appid}
+                    data-testid={`game-card-${game.appid}`}
                     className={cn(
                       "group cursor-pointer overflow-hidden transition hover:-translate-y-0.5 hover:border-ring hover:bg-white/[0.03]",
                       selectedGame?.appid === game.appid && "ring-1 ring-ring",
@@ -403,7 +425,7 @@ export function App() {
   }
 
   return (
-    <main className="flex h-screen overflow-hidden bg-background text-foreground">
+    <main data-testid="manager-root" className="flex h-screen overflow-hidden bg-background text-foreground">
       <aside
         className={cn(
           "hidden h-full shrink-0 flex-col border-r bg-slate-950/95 transition-[width] duration-200 lg:flex",
@@ -427,6 +449,7 @@ export function App() {
             return (
               <button
                 key={item.key}
+                data-testid={`nav-${item.key}`}
                 className={cn(
                   "flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm transition",
                   sidebarCollapsed && "justify-center px-0",
@@ -467,17 +490,17 @@ export function App() {
               <div className="mt-0.5 text-[11px] text-muted-foreground">配置一次，以后从 Steam 正常启动</div>
             </div>
           </div>
-          <div data-tauri-drag-region className="hidden flex-1 text-xs text-muted-foreground lg:block">
+          <div data-testid="status-text" data-tauri-drag-region className="hidden flex-1 text-xs text-muted-foreground lg:block">
             {statusText}
           </div>
           <div className="flex items-center gap-1">
-            <WindowButton label="最小化" onClick={() => void appWindow.minimize()}>
+            <WindowButton label="最小化" onClick={() => void getCurrentWindow().minimize()}>
               <Minus className="h-4 w-4" />
             </WindowButton>
-            <WindowButton label="最大化或还原" onClick={() => void appWindow.toggleMaximize()}>
+            <WindowButton label="最大化或还原" onClick={() => void getCurrentWindow().toggleMaximize()}>
               <Square className="h-3.5 w-3.5" />
             </WindowButton>
-            <WindowButton label="关闭" danger onClick={() => void appWindow.close()}>
+            <WindowButton label="关闭" danger onClick={() => void getCurrentWindow().close()}>
               <X className="h-4 w-4" />
             </WindowButton>
           </div>
@@ -489,7 +512,7 @@ export function App() {
       </div>
 
       {isConfigOpen && selectedGame && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
+        <div data-testid="config-dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
           <Card className="w-full max-w-2xl border-white/10 bg-slate-950 shadow-2xl shadow-black/50">
             <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
               <div>
@@ -516,12 +539,13 @@ export function App() {
                 <span className="text-sm font-medium">真正要启动的程序</span>
                 <div className="flex gap-2">
                   <input
+                    data-testid="target-path"
                     className="h-10 min-w-0 flex-1 rounded-md border bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
                     value={targetPath}
                     onChange={(event) => setTargetPath(event.target.value)}
                     placeholder="例如 Game_CHS.exe 或 launcher.exe"
                   />
-                  <Button variant="secondary" onClick={() => void chooseTargetPath()} type="button">
+                  <Button data-testid="choose-target" variant="secondary" onClick={() => void chooseTargetPath()} type="button">
                     <FolderOpen className="mr-2 h-4 w-4" />
                     浏览
                   </Button>
@@ -529,7 +553,7 @@ export function App() {
               </label>
 
               <div className="flex flex-wrap gap-3">
-                <Button onClick={saveCurrentProfile}>
+                <Button data-testid="save-profile" onClick={saveCurrentProfile}>
                   <Save className="mr-2 h-4 w-4" />
                   保存并生成启动选项
                 </Button>
@@ -546,6 +570,7 @@ export function App() {
               <label className="space-y-2 block">
                 <span className="text-sm font-medium">Launch Options</span>
                 <textarea
+                  data-testid="launch-option"
                   className="min-h-28 w-full rounded-md border bg-background p-3 font-mono text-xs outline-none focus:ring-1 focus:ring-ring"
                   value={launchOption}
                   onChange={(event) => setLaunchOption(event.target.value)}
@@ -553,7 +578,7 @@ export function App() {
                 />
               </label>
 
-              <div className="text-xs text-muted-foreground">{statusText}</div>
+              <div data-testid="status-text" className="text-xs text-muted-foreground">{statusText}</div>
             </CardContent>
           </Card>
         </div>
