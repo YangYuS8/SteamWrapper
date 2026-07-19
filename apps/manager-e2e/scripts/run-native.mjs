@@ -33,11 +33,15 @@ for (const [appid, name, installDir] of [
 await write("Steam Extra/steamapps/appmanifest_123456.acf", `"AppState"\n{\n  "appid" "123456"\n  "name" "Duplicate Test Game"\n  "installdir" "Duplicate Test Game"\n  "StateFlags" "4"\n}\n`);
 await write("Steam/appcache/librarycache/123456_library_600x900.png", "fixture cover");
 
-const child = spawn(process.platform === "win32" ? "pnpm.cmd" : "pnpm", ["exec", "wdio", "run", "wdio.native.conf.ts"], {
-  cwd: packageDir,
-  env: { ...process.env, STEAMWRAPPER_E2E_ROOT: fixtureRoot },
-  stdio: "inherit",
-});
+const child = spawn(
+  process.execPath,
+  [resolve(packageDir, "node_modules/@wdio/cli/bin/wdio.js"), "run", "wdio.native.conf.ts"],
+  {
+    cwd: packageDir,
+    env: { ...process.env, STEAMWRAPPER_E2E_ROOT: fixtureRoot },
+    stdio: "inherit",
+  },
+);
 const exitCode = await new Promise((resolveExit) => child.once("exit", (code) => resolveExit(code ?? 1)));
 
 await mkdir(join(packageDir, "artifacts", "native", "fixture"), { recursive: true });
