@@ -240,18 +240,11 @@ mod tests {
     fn job_object_waits_for_descendants_after_launcher_exits() {
         let root = TempDir::new("job-object");
         let marker = root.path().join("descendant-finished.txt");
-        let descendant_script = root.path().join("descendant.ps1");
-        fs::write(
-            &descendant_script,
-            format!(
-                "Start-Sleep -Milliseconds 400\nSet-Content -NoNewline -LiteralPath '{}' -Value done\n",
-                marker.to_string_lossy().replace('\'', "''")
-            ),
-        )
-        .expect("write descendant fixture script");
+        let test_binary = std::env::current_exe().expect("resolve current test binary");
         let script = format!(
-            "Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile','-File','{}'); exit 7",
-            descendant_script.to_string_lossy().replace('\'', "''")
+            "$env:STEAMWRAPPER_JOB_TEST_MARKER='{}'; Start-Process -WindowStyle Hidden -FilePath '{}' -ArgumentList @('--exact','platform::tests::job_object_descendant_fixture','--nocapture'); exit 7",
+            marker.to_string_lossy().replace('\'', "''"),
+            test_binary.to_string_lossy().replace('\'', "''")
         );
         let profile = Profile {
             name: "job object fixture".to_string(),
@@ -274,6 +267,17 @@ mod tests {
             "runner returned before the descendant process exited"
         );
         assert_eq!(fs::read_to_string(marker).unwrap(), "done");
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn job_object_descendant_fixture() {
+        let Some(marker) = std::env::var_os("STEAMWRAPPER_JOB_TEST_MARKER") else {
+            return;
+        };
+
+        std::thread::sleep(Duration::from_millis(400));
+        fs::write(marker, "done").expect("write Job Object descendant marker");
     }
 }
 
