@@ -241,10 +241,12 @@ mod tests {
         let root = TempDir::new("job-object");
         let marker = root.path().join("descendant-finished.txt");
         let test_binary = std::env::current_exe().expect("resolve current test binary");
+        let pid_path = root.path().join("descendant.pid");
         let script = format!(
-            "$env:STEAMWRAPPER_JOB_TEST_MARKER='{}'; Start-Process -WindowStyle Hidden -FilePath '{}' -ArgumentList @('--exact','platform::tests::job_object_descendant_fixture','--nocapture'); exit 7",
+            "$env:STEAMWRAPPER_JOB_TEST_MARKER='{}'; $process = Start-Process -PassThru -WindowStyle Hidden -FilePath '{}' -ArgumentList @('--exact','platform::tests::job_object_descendant_fixture','--nocapture'); $process.Id | Set-Content -NoNewline -LiteralPath '{}'; exit 7",
             marker.to_string_lossy().replace('\'', "''"),
-            test_binary.to_string_lossy().replace('\'', "''")
+            test_binary.to_string_lossy().replace('\'', "''"),
+            pid_path.to_string_lossy().replace('\'', "''")
         );
         let profile = Profile {
             name: "job object fixture".to_string(),
@@ -266,7 +268,18 @@ mod tests {
             started.elapsed() >= Duration::from_millis(300),
             "runner returned before the descendant process exited"
         );
-        assert_eq!(fs::read_to_string(marker).unwrap(), "done");
+        assert_eq!(
+            fs::read_to_string(&marker).unwrap_or_else(|err| {
+                let pid = fs::read_to_string(&pid_path)
+                    .map(|value| value.trim().to_string())
+                    .unwrap_or_else(|pid_err| format!("unavailable: {pid_err}"));
+                panic!(
+                    "Job Object descendant did not create marker {}: {err}; descendant pid: {pid}",
+                    marker.display()
+                )
+            }),
+            "done"
+        );
     }
 
     #[cfg(target_os = "windows")]

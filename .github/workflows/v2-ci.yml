@@ -4,7 +4,7 @@ on:
   push:
     branches: ["v2"]
   pull_request:
-    branches: ["v2"]
+    branches: ["v2", "feat/runner-process-lifecycle"]
   workflow_dispatch:
 
 jobs:
