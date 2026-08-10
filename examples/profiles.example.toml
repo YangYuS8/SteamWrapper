@@ -19,4 +19,5 @@ target = "Launcher.exe"
 working_dir = "."
 args = []
 wait_mode = "process_name"
+# 填写操作系统实际暴露的精确进程名；Linux 名称最多 15 个字符。
 process_name = "RealGame.exe"

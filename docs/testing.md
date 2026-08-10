@@ -41,12 +41,12 @@ Runner 资源不使用 Tauri sidecar 执行模型。它通过 Tauri v2 官方 `b
 - `apps/manager/src-tauri/src/runner_manager.rs` 的 Rust 单元测试覆盖首次安装、摘要相同不覆盖、损坏修复、缺失随包资源报错、临时文件清理、模拟 Windows 文件占用时保留旧 Runner，以及 `profiles.toml` / `logs` / `backups` / `cache` 不被触碰。
 - Browser Mode mock `get_runner_status`、安装和修复命令，覆盖设置页健康、缺失、安装成功和修复失败提示。
 - Native E2E 从空的临时 `LOCALAPPDATA` / `XDG_DATA_HOME` 启动，验证真实 Runner 自动写入 `SteamWrapper/bin/`、文件非空、摘要健康、重复安装不复制、损坏后可修复，以及 Launch Options 指向该实际文件。
-- Runner 单元/进程测试验证 Linux `process_group` 会在 launcher 先退出后继续等待仍处于同一组的派生进程，并保留 launcher 退出码；未实现的 `process_name` 与错误平台上的 `job` 会在启动目标前明确失败。Native E2E 同时验证 Manager 保存的 Windows profile 默认使用 `job`，Linux profile 默认使用 `process_group`。
+- Runner 单元/进程测试验证 Linux `process_group` 会在 launcher 先退出后继续等待仍处于同一组的派生进程，并保留 launcher 退出码；两平台 `process_name` 都覆盖新出现的精确进程名与缺少名称时的启动前失败，启动前同名进程排除和同名进程短暂替换边界目前由 Linux 集成测试覆盖。错误平台上的 `job` 同样会在启动目标前明确失败。Native E2E 同时验证 Manager 保存的 Windows profile 默认使用 `job`，Linux profile 默认使用 `process_group`。
 - Native E2E 的测试构建显式 stage debug Runner；正式 Release 则显式 stage release Runner。fixture、staging 文件和打包产物都不提交。
 
 ## CI
 
-`v2-ci.yml` 中 Browser job 在 Ubuntu 执行；Windows Native job 先构建带 `e2e` feature 的 debug binary，再通过 embedded provider 运行真实 IPC 测试。Check 矩阵还会分别执行 Linux `process_group` 与 Windows Job Object 的 launcher 派生进程集成测试。E2E job 都先执行 TypeScript 检查，并上传诊断 artifact。
+`v2-ci.yml` 中 Browser job 在 Ubuntu 执行；Windows Native job 先构建带 `e2e` feature 的 debug binary，再通过 embedded provider 运行真实 IPC 测试。Check 矩阵还会分别执行 Linux `process_group`、Windows Job Object 与两平台 `process_name` 的 launcher 派生进程集成测试。E2E job 都先执行 TypeScript 检查，并上传诊断 artifact。
 
 ## 限制
 

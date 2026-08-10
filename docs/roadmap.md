@@ -69,7 +69,7 @@ v2 的目标平台从一开始就包括：
 - [ ] 尽量保留 Steam 展开的 `%command%` 环境
 - [ ] Windows 游戏通过 Proton 启动的自定义 launcher 场景
 - [ ] 原版 / 汉化版 / mod loader 多目标切换
-- [ ] `process_name` 等待模式
+- [x] `process_name` 基础等待模式
 - [ ] Linux / SteamOS 日志路径与错误提示优化
 - [ ] Steam Deck 用户教程与故障排查文档
 
