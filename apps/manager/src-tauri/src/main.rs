@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 use steamwrapper_core::{
     app_data_dir, build_launch_option, default_profiles_path, default_runner_path, ensure_app_dirs,
-    scan_local_steam_games, LocalSteamGame, Platform, Profile, SteamWrapperConfig, WaitMode,
+    scan_local_steam_games, LocalSteamGame, Platform, Profile, SteamWrapperConfig,
 };
 use tauri::{path::BaseDirectory, Manager};
 
@@ -207,7 +207,7 @@ fn save_profile(request: SaveProfileRequest) -> Result<(), String> {
         target: PathBuf::from(request.target),
         working_dir: Some(PathBuf::from(".")),
         args: Vec::new(),
-        wait_mode: WaitMode::Root,
+        wait_mode: platform.default_wait_mode(),
         process_name: None,
     };
 

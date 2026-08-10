@@ -99,6 +99,26 @@ jobs:
       - name: Cargo test
         run: cargo test --workspace
 
+      - name: Run Linux process-group integration test
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(cargo test -p steamwrapper-runner process_group_waits_for_descendants_after_launcher_exits -- --nocapture 2>&1)"
+          printf '%s\n' "$output"
+          grep -Eq 'running 1 test' <<< "$output"
+          grep -Eq 'test result: ok\. 1 passed;' <<< "$output"
+
+      - name: Run Windows Job Object integration test
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $output = cargo test -p steamwrapper-runner job_object_waits_for_descendants_after_launcher_exits -- --nocapture 2>&1 | Out-String
+          Write-Output $output
+          if ($LASTEXITCODE -ne 0) { throw "Windows Job Object integration test failed" }
+          if ($output -notmatch 'running 1 test') { throw "Windows Job Object integration test did not run exactly one test" }
+          if ($output -notmatch 'test result: ok\. 1 passed;') { throw "Windows Job Object integration test did not pass" }
+
       - name: Build Windows NSIS with Runner resource
         if: runner.os == 'Windows'
         shell: pwsh

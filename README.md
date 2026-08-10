@@ -87,8 +87,8 @@ Selected stack:
 - Config format: TOML
 - Windows packaging: NSIS setup.exe first, portable zip second
 - Linux packaging: AppImage or tar.gz planned in v2
-- Windows process waiting: Job Object planned
-- Linux process waiting: process group/session planned
+- Windows process waiting: Job Object for newly saved profiles
+- Linux process waiting: POSIX process group for newly saved profiles
 - SteamOS / Proton support: planned in v2, not a separate v3 track
 
 See:

@@ -76,6 +76,11 @@ describe("Native Mode: 隔离数据目录", () => {
       },
     }));
     const beforeInstall = await readFile(paths.profiles_path, "utf8");
+    expect(beforeInstall).toContain(
+      process.platform === "win32"
+        ? "wait_mode = \"job\""
+        : "wait_mode = \"process_group\"",
+    );
     const install = await browser.tauri.execute(({ core }) => core.invoke("install_runner")) as { changed: boolean; status: RunnerStatus };
     expect(install.changed).toBe(false);
     expect(await readFile(paths.profiles_path, "utf8")).toBe(beforeInstall);

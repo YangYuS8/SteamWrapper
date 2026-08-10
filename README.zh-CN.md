@@ -87,8 +87,8 @@ apps/
 - 配置格式：TOML
 - Windows 分发：优先 NSIS setup.exe，其次 portable zip
 - Linux 分发：规划 AppImage 或 tar.gz
-- Windows 进程等待：规划使用 Job Object
-- Linux 进程等待：规划使用 process group / session
+- Windows 进程等待：新建配置默认使用 Job Object
+- Linux 进程等待：新建配置默认使用 POSIX process group
 - SteamOS / Proton 支持：纳入 v2，不再作为独立 v3 路线
 
 ## Windows 安装方式

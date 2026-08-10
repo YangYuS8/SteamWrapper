@@ -9,6 +9,15 @@ pub enum Platform {
     SteamOs,
 }
 
+impl Platform {
+    pub fn default_wait_mode(self) -> WaitMode {
+        match self {
+            Self::Windows => WaitMode::Job,
+            Self::Linux | Self::SteamOs => WaitMode::ProcessGroup,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WaitMode {
@@ -64,5 +73,20 @@ impl Profile {
             Some(path) => self.game_dir.join(path),
             None => self.game_dir.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn platforms_choose_group_aware_default_wait_modes() {
+        assert_eq!(Platform::Windows.default_wait_mode(), WaitMode::Job);
+        assert_eq!(Platform::Linux.default_wait_mode(), WaitMode::ProcessGroup);
+        assert_eq!(
+            Platform::SteamOs.default_wait_mode(),
+            WaitMode::ProcessGroup
+        );
     }
 }

@@ -87,10 +87,12 @@ wait_mode = "job"
 | 模式 | 用途 |
 | --- | --- |
 | `root` | 只等待直接启动的目标进程 |
-| `job` | Windows 默认目标，使用 Job Object 等待进程组 |
-| `process_name` | launcher 启动真正游戏后自己退出时使用 |
-| `process_group` | Linux / SteamOS 目标，等待进程组或 session |
+| `job` | Windows 默认模式，使用 Job Object 等待未主动脱离 Job 的 launcher 派生进程 |
+| `process_name` | 预留模式；当前 Runner 会明确拒绝，避免退化为错误的 root 等待 |
+| `process_group` | Linux / SteamOS 默认模式，等待仍留在同一 POSIX 进程组的派生进程退出 |
 | `none` | 启动后立即退出 |
+
+Manager 新建 profile 时会按当前平台选择默认等待模式：Windows 使用 `job`，Linux 使用 `process_group`。Windows Runner 使用 GUI subsystem 且创建目标时附加 `CREATE_NO_WINDOW`，正常启动不应弹出控制台窗口。`root` 仍保留给只需要等待直接目标进程的特殊配置。主动使用 breakaway、重新建立 session/process group 或 daemonize 的 launcher 仍可能脱离这些默认等待边界，后续需由 `process_name` 或 Proton 专用策略处理。
 
 ## 项目分层
 
