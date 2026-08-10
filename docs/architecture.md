@@ -88,11 +88,15 @@ wait_mode = "job"
 | --- | --- |
 | `root` | 只等待直接启动的目标进程 |
 | `job` | Windows 默认模式，使用 Job Object 等待未主动脱离 Job 的 launcher 派生进程 |
-| `process_name` | 预留模式；当前 Runner 会明确拒绝，避免退化为错误的 root 等待 |
+| `process_name` | launcher 自身退出后，等待本次启动后出现的指定进程名；适合脱离默认组边界的特殊 launcher |
 | `process_group` | Linux / SteamOS 默认模式，等待仍留在同一 POSIX 进程组的派生进程退出 |
 | `none` | 启动后立即退出 |
 
-Manager 新建 profile 时会按当前平台选择默认等待模式：Windows 使用 `job`，Linux 使用 `process_group`。Windows Runner 使用 GUI subsystem 且创建目标时附加 `CREATE_NO_WINDOW`，正常启动不应弹出控制台窗口。`root` 仍保留给只需要等待直接目标进程的特殊配置。主动使用 breakaway、重新建立 session/process group 或 daemonize 的 launcher 仍可能脱离这些默认等待边界，后续需由 `process_name` 或 Proton 专用策略处理。
+Manager 新建 profile 时会按当前平台选择默认等待模式：Windows 使用 `job`，Linux 使用 `process_group`。Windows Runner 使用 GUI subsystem 且创建目标时附加 `CREATE_NO_WINDOW`，正常启动不应弹出控制台窗口。`root` 仍保留给只需要等待直接目标进程的特殊配置。主动使用 breakaway、重新建立 session/process group 或 daemonize 的 launcher 可以按实际进程名改用 `process_name`；Proton 命令包装仍由后续专用策略处理。
+
+`process_name` 会先记录启动前已经存在的同名进程，只跟踪之后新出现的 `(PID, start_time)` 身份，避免等待用户此前已打开的同名程序；launcher 返回后最多等待 30 秒发现目标，目标名称连续消失 500ms 后视为结束，发现目标后的等待上限为 24 小时。进程名匹配采用操作系统暴露的精确名称；Linux 名称存在 15 字符限制，配置时应填写系统实际显示的名称。
+
+同一时间若其他程序又启动了新的同名进程，Runner 无法从名称本身判断业务归属，也会一并等待；因此 `process_name` 只应作为复杂 launcher 的显式兼容选项，不替代默认的 Job Object / process group。
 
 ## 项目分层
 
