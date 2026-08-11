@@ -22,4 +22,3 @@ thiserror = "2"
 toml = "1"
 tracing = "0.1"
 tracing-subscriber = "0.3"
-process-wrap = { version = "9.1.0", default-features = false, features = ["std", "creation-flags", "job-object", "process-group"] }
