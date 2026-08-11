@@ -337,7 +337,7 @@ mod tests {
             working_dir: Some(PathBuf::from(".")),
             args: vec![
                 "-c".to_string(),
-                "(\"$1\" 0.2; sleep 0.15; \"$1\" 0.35) & exit 7".to_string(),
+                "(\"$1\" 0.5; sleep 0.15; \"$1\" 0.5) & exit 7".to_string(),
                 "steamwrapper-process-name-replacement-test".to_string(),
                 named_process.to_string_lossy().to_string(),
             ],
@@ -350,7 +350,7 @@ mod tests {
 
         assert_eq!(exit_code, 7);
         assert!(
-            started.elapsed() >= Duration::from_millis(450),
+            started.elapsed() >= Duration::from_millis(900),
             "runner returned before the replacement process exited"
         );
     }
