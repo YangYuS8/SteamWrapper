@@ -51,12 +51,12 @@ v2 的目标平台从一开始就包括：
 
 目标：把 Linux 与 SteamOS 纳入 v2 基础能力，而不是作为 v3 Preview。
 
-- [ ] Linux profile 路径处理与默认数据目录确认
-- [ ] Linux Steam 安装目录与 Library 扫描完善
-- [ ] Linux 本地 Steam 封面缓存读取完善
-- [ ] Linux Launch Options 生成
-- [ ] Linux Runner 启动原生目标程序
-- [ ] `process_group` / session 等待模式
+- [x] Linux profile 路径处理与默认数据目录确认
+- [x] Linux Steam 安装目录与 Library 扫描基础实现
+- [x] Linux 本地 Steam 封面缓存读取基础实现
+- [x] Linux Launch Options 生成
+- [x] Linux Runner 启动原生目标程序
+- [x] 同组派生进程的 `process_group` 基础等待模式
 - [ ] SteamOS 用户目录与只读系统约束梳理
 - [ ] Steam Deck 桌面模式配置教程
 - [ ] AppImage 或 tar.gz 预览分发
@@ -107,7 +107,7 @@ v2 的目标平台从一开始就包括：
 
 - [x] Tauri NSIS 安装器配置骨架
 - [x] 首次启动复制 Runner 到 `%LOCALAPPDATA%\\SteamWrapper\\bin\\`
-- [ ] Windows Job Object 等待模式
+- [x] Windows Job Object 基础等待模式
 - [ ] Manager 内测试启动
 - [ ] 配置导入导出
 
