@@ -240,22 +240,21 @@ mod tests {
     fn job_object_waits_for_descendants_after_launcher_exits() {
         let root = TempDir::new("job-object");
         let marker = root.path().join("descendant-finished.txt");
+        fs::write(root.path().join("job-object-fixture.enabled"), "enabled")
+            .expect("enable Job Object fixture");
         let test_binary = std::env::current_exe().expect("resolve current test binary");
-        let pid_path = root.path().join("descendant.pid");
-        let script = format!(
-            "$env:STEAMWRAPPER_JOB_TEST_MARKER='{}'; $process = Start-Process -PassThru -WindowStyle Hidden -FilePath '{}' -ArgumentList @('--exact','platform::tests::job_object_descendant_fixture','--nocapture'); $process.Id | Set-Content -NoNewline -LiteralPath '{}'; exit 7",
-            marker.to_string_lossy().replace('\'', "''"),
-            test_binary.to_string_lossy().replace('\'', "''"),
-            pid_path.to_string_lossy().replace('\'', "''")
-        );
         let profile = Profile {
             name: "job object fixture".to_string(),
             app_id: Some("job-object-fixture".to_string()),
             platform: Some(Platform::Windows),
             game_dir: root.path().to_path_buf(),
-            target: PathBuf::from("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"),
+            target: test_binary,
             working_dir: Some(PathBuf::from(".")),
-            args: vec!["-NoProfile".to_string(), "-Command".to_string(), script],
+            args: vec![
+                "--exact".to_string(),
+                "platform::tests::job_object_launcher_fixture".to_string(),
+                "--nocapture".to_string(),
+            ],
             wait_mode: WaitMode::Job,
             process_name: None,
         };
@@ -268,29 +267,40 @@ mod tests {
             started.elapsed() >= Duration::from_millis(300),
             "runner returned before the descendant process exited"
         );
-        assert_eq!(
-            fs::read_to_string(&marker).unwrap_or_else(|err| {
-                let pid = fs::read_to_string(&pid_path)
-                    .map(|value| value.trim().to_string())
-                    .unwrap_or_else(|pid_err| format!("unavailable: {pid_err}"));
-                panic!(
-                    "Job Object descendant did not create marker {}: {err}; descendant pid: {pid}",
-                    marker.display()
-                )
-            }),
-            "done"
-        );
+        assert_eq!(fs::read_to_string(marker).unwrap(), "done");
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn job_object_launcher_fixture() {
+        let working_dir = std::env::current_dir().expect("resolve fixture working directory");
+        if !working_dir.join("job-object-fixture.enabled").exists() {
+            return;
+        }
+
+        Command::new(std::env::current_exe().expect("resolve descendant test binary"))
+            .args([
+                "--exact",
+                "platform::tests::job_object_descendant_fixture",
+                "--nocapture",
+            ])
+            .spawn()
+            .expect("start Job Object descendant fixture");
+
+        std::process::exit(7);
     }
 
     #[cfg(target_os = "windows")]
     #[test]
     fn job_object_descendant_fixture() {
-        let Some(marker) = std::env::var_os("STEAMWRAPPER_JOB_TEST_MARKER") else {
+        let working_dir = std::env::current_dir().expect("resolve fixture working directory");
+        if !working_dir.join("job-object-fixture.enabled").exists() {
             return;
-        };
+        }
 
         std::thread::sleep(Duration::from_millis(400));
-        fs::write(marker, "done").expect("write Job Object descendant marker");
+        fs::write(working_dir.join("descendant-finished.txt"), "done")
+            .expect("write Job Object descendant marker");
     }
 }
 
