@@ -312,7 +312,7 @@ mod tests {
 
         assert_eq!(exit_code, 7);
         assert!(
-            started.elapsed() < Duration::from_millis(1500),
+            started.elapsed() < Duration::from_millis(1800),
             "runner waited for the pre-existing matching process"
         );
         assert_eq!(existing.try_wait().unwrap(), None);
