@@ -1,174 +1,139 @@
-# AGENTS.md
+# SteamWrapper v2 — Agent Guide
 
-This file defines development rules for AI agents working on SteamWrapper v2.
+## First read
 
-## Project direction
+Before changing anything, read the relevant source and tests, then check the live worktree:
 
-SteamWrapper v2 is not a simple per-game executable wrapper anymore.
+```bash
+git status --short --branch
+cargo test --workspace
+```
 
-The product goal is:
+Current implementation facts come from Rust source, manifests, scripts and CI. Product intent comes from the documents under `docs/`. Do not treat old commits, issue descriptions, or a roadmap checkbox as proof that behavior exists.
 
-> Configure once in SteamWrapper Manager, then launch the game normally from Steam.
+## Product boundary
 
-Daily gameplay must be invisible to the user:
+> Configure a game once in SteamWrapper Manager, then launch it normally from Steam.
 
-- Users configure games in `SteamWrapperManager`.
-- Steam calls `SteamWrapperRunner` through Launch Options.
-- Runner starts the configured target executable or launcher.
-- Runner waits for the game to exit so Steam can count play time.
+- `SteamWrapperManager` is configuration UI only.
+- Steam invokes the headless `SteamWrapperRunner` through Launch Options.
+- Runner starts the selected target and waits according to the saved profile.
+- Normal successful game launch must not show Manager UI.
 
-## Architecture
+The compatibility contracts are non-negotiable:
 
-Current v2 layout:
+```text
+profiles.toml
+"<stable-runner-path>" --appid "<appid>" -- %command%
+```
+
+Do not alter TOML serialization, stable user-data locations, Runner CLI meaning, or the preserved `%command%` position merely to simplify UI work.
+
+## Current layout
 
 ```text
 crates/
-  core/      # shared config, profile, Steam library and launch option logic
-  runner/    # native headless runtime called by Steam
+  core/          # framework-neutral profile, TOML, Steam, cover, Launch Options logic
+  manager-core/  # framework-neutral Manager service orchestration
+  runner/        # native headless Steam runtime
 
 apps/
-  manager/   # Tauri v2 + React + shadcn/ui configuration app
+  manager-dioxus/      # Dioxus 0.7.10 Desktop Manager
+    e2e/               # WDIO Dioxus Native E2E, test-only Node tooling
 ```
 
-Keep this separation strict.
+The retired Tauri / React Manager is deliberately absent. Do not reintroduce Tauri, React, Vite, Tailwind, shadcn, Electron, or a fake IPC layer without explicit user approval.
+
+## Layer rules
 
 ### `crates/core`
 
 Allowed:
 
-- Shared profile data structures.
-- TOML config loading/saving.
+- Profile data structures and TOML read/write.
 - Steam Launch Options generation.
-- Steam library/appmanifest parsing.
-- Local Steam cover cache discovery.
-- Platform-neutral business logic.
+- Steam library / appmanifest parsing and local cover cache discovery.
+- Platform-neutral business rules.
 
-Not allowed:
+Forbidden:
 
-- Tauri-specific APIs.
-- React/frontend code.
-- Windows-only process APIs.
-- Linux-only process APIs.
+- Dioxus / desktop framework dependencies.
+- UI models or UI event logic.
+- Windows-only or Linux-only process APIs.
+
+### `crates/manager-core`
+
+Allowed:
+
+- Stable Manager paths and directories.
+- Profile list/save, game scanning, logs, Launch Options.
+- Bundled Runner inspection, atomic install, and repair.
+- Typed Rust service APIs consumed directly by the Manager.
+
+Forbidden:
+
+- Dioxus, WebView, Node, WDIO, or frontend dependencies.
+- Runner process launching / waiting semantics.
+- A second Profile or Steam DTO hierarchy.
 
 ### `crates/runner`
 
 Allowed:
 
-- Headless runtime entrypoint.
-- CLI parsing such as `--appid <id> -- %command%`.
-- Target process launch.
-- Platform-specific process waiting.
-- Runtime logging and error handling.
+- Headless CLI parsing such as `--appid <id> -- %command%`.
+- Target process launch, platform waiting, runtime logging and errors.
 
 Rules:
 
-- Runner must remain native and headless.
-- Runner must not depend on Tauri, WebView, React, or frontend assets.
-- Runner must start quickly because Steam launches it during normal gameplay.
-- Runner must not show UI during normal successful launches.
+- Remain native, headless and independent of GUI / WebView assets.
+- Start quickly; do not add background services.
+- Do not claim Job Object, process-group, `process_name`, Proton, or windowless guarantees unless source and platform tests prove them.
+- Fix lifecycle semantics in Runner / platform modules with real process tests, never in Manager.
 
-### `apps/manager`
+### `apps/manager-dioxus`
 
 Allowed:
 
-- Tauri v2 app shell.
-- React + TypeScript frontend.
-- Tailwind CSS + shadcn/ui components.
-- Chinese-first user interface.
-- Local Steam game library display.
-- Local Steam cover cache display.
-- Profile editing.
-- Launch Options generation and future apply/restore workflow.
+- Dioxus 0.7.10 Desktop app shell, RSX, local CSS, and Dioxus-supported file selection.
+- Chinese-first player UI: game library, local covers, profile editing, Launch Options, logs, paths, Runner install / repair.
 
 Rules:
 
-- Manager is for configuration only.
-- Do not put gameplay runtime logic in Manager.
-- Keep UI text clear for non-technical Windows players.
-- Prefer friendly Chinese copy over developer jargon.
+- Call `steamwrapper-manager-core` through `src/services.rs`; no Tauri-command-shaped wrappers or fake IPC.
+- Keep gameplay/runtime process behavior out of Manager.
+- Use card-based, non-terminal-like UI; missing cover is a friendly placeholder, not an error.
+- Keep `apps/manager-dioxus/assets/steamwrapper.svg` byte-identical to `assets/brand/steamwrapper.svg`.
 
-## Technology choices
+## Technical choices
 
-Use:
+- Rust: `core`, `manager-core`, `runner`, Dioxus Manager.
+- Dioxus Desktop: pinned to `0.7.10`; research official docs/source before changing versions or APIs.
+- CSS: native local assets; do not add a Node frontend runtime for UI styling.
+- TOML: persisted profile format.
+- pnpm: only for `apps/manager-dioxus/e2e` Native E2E tooling.
 
-- Rust for `core` and `runner`.
-- Tauri v2 for `manager`.
-- React + TypeScript + Vite for the frontend.
-- Tailwind CSS + shadcn/ui for UI.
-- TOML for user profiles.
-- pnpm for frontend package management.
+Do not add Electron, Python runtime components, online cover APIs, daemons, DLL injection, Steam client modification, DRM bypasses, or third-party logos without explicit discussion.
 
-Do not introduce without discussion:
+## Runner resources and distribution
 
-- Electron.
-- C#/.NET for v2 runtime code.
-- Python runtime components.
-- Online cover APIs.
-- Background services or daemons.
-- DLL injection or Steam client modification.
-
-## Brand assets
-
-The unified project icon is:
+Canonical brand asset:
 
 ```text
 assets/brand/steamwrapper.svg
 ```
 
-Manager frontend copy for direct import is:
+Bundle the platform Runner using the Dioxus resource entries in `apps/manager-dioxus/Dioxus.toml`. Stage it before bundle commands:
 
-```text
-apps/manager/src/assets/steamwrapper.svg
+```bash
+STEAMWRAPPER_RUNNER_PROFILE=release apps/manager-dioxus/scripts/stage-runner.sh
 ```
 
-Rules:
+- Linux resource: `steamwrapper-runner`.
+- Windows resource: `SteamWrapperRunner.exe`.
+- Generated `resources/runner/` content is ignored; never commit staged binaries.
+- Manager copies the read-only bundle resource to a stable user-data `bin` path. Launch Options must never reference an AppImage, NSIS extraction, or portable temporary path.
 
-- Treat this SVG as the canonical v2 project mark.
-- It is an original Rust-inspired gear and Steam-like launch graph mark.
-- It is not the official Steam logo and must not be described as such.
-- Do not replace it with official Steam, Rust, or third-party trademarked logos.
-- Use the root `assets/brand/steamwrapper.svg` in README, docs and release materials.
-- Use the frontend copy inside `apps/manager/src/assets/` for Manager UI imports.
-
-## Licensing
-
-SteamWrapper v2 uses Apache-2.0.
-
-When adding Rust crates or package metadata, use:
-
-```toml
-license = "Apache-2.0"
-```
-
-When adding npm package metadata, use:
-
-```json
-"license": "Apache-2.0"
-```
-
-Do not reintroduce MIT metadata in v2 files unless the project owner explicitly changes the license again.
-
-## Windows distribution rules
-
-Primary Windows distribution:
-
-```text
-SteamWrapper-v2.x.x-win-x64-setup.exe
-```
-
-Secondary distribution:
-
-```text
-SteamWrapper-v2.x.x-win-x64-portable.zip
-```
-
-Manager install path target:
-
-```text
-%LOCALAPPDATA%\Programs\SteamWrapper\
-```
-
-Stable user data path:
+Windows stable data:
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\
@@ -179,128 +144,97 @@ Stable user data path:
   cache\
 ```
 
-Steam Launch Options should reference the stable Runner path, not a temporary portable extraction path:
+Linux / SteamOS stable data:
 
 ```text
-%LOCALAPPDATA%\SteamWrapper\bin\SteamWrapperRunner.exe
+$XDG_DATA_HOME/SteamWrapper/
+  profiles.toml
+  bin/steamwrapper-runner
+  logs/
+  backups/
+  cache/
 ```
 
-## Steam integration rules
-
-Default workflow:
-
-- Do not require SteamEdit.
-- Do not copy the full wrapper into every game directory.
-- Generate Launch Options using Runner.
-- Preserve `%command%` after `--` for future compatibility.
-
-Launch Options format:
-
-```text
-"<stable-runner-path>" --appid "<appid>" -- %command%
-```
-
-Future one-click apply behavior must:
-
-- Detect whether Steam is running.
-- Avoid blindly writing Steam config while Steam may overwrite it.
-- Backup config before editing.
-- Preserve and restore previous Launch Options.
-- Support multiple Steam users when possible.
-
-## Local Steam library and cover rules
-
-First version must be offline-friendly.
-
-Allowed cover sources:
-
-```text
-<Steam install dir>\appcache\librarycache\
-<Steam install dir>\userdata\<steamid>\config\grid\
-```
-
-Rules:
-
-- Do not fetch online cover images by default.
-- Do not require SteamGridDB or other third-party APIs for v2.0/v2.1.
-- Missing cover image is not an error.
-- Show a friendly placeholder if no local cover is found.
-
-## UI rules
-
-The Manager targets normal Windows players, not only developers.
-
-UI language:
-
-- Chinese-first for now.
-- Avoid exposing raw technical details unless needed.
-- Prefer words like “应用到 Steam”, “恢复原设置”, “测试启动”, “选择真正启动的程序”.
-
-Visual direction:
-
-- Use card-based game list.
-- Show local Steam cover images when available.
-- Use the SteamWrapper SVG project icon in the sidebar, hero area and future About page.
-- Keep the primary flow obvious.
-- Avoid terminal-like workflows for normal users.
+Use `~/.local/share/SteamWrapper/` when `XDG_DATA_HOME` is unset.
 
 ## Safety boundaries
 
-SteamWrapper must not:
+SteamWrapper may read local Steam metadata/covers, generate Launch Options, install its own stable Runner, and later apply/restore local Steam configuration with backup.
 
-- Inject DLLs.
-- Patch Steam.
-- Patch game binaries.
-- Bypass DRM.
-- Hide background services.
-- Upload user data.
-- Contact online services for cover images in the first version.
+SteamWrapper must not inject DLLs, patch Steam or game binaries, bypass DRM, hide a service, upload user data, or contact online cover services in the first version.
 
-SteamWrapper may:
+Future one-click Steam integration must detect Steam running, support multi-user data where possible, back up before mutation, preserve previous Launch Options, and restore them safely.
 
-- Read local Steam library metadata.
-- Read local Steam cover cache.
-- Generate Steam Launch Options.
-- Backup and restore local Steam configuration in future versions.
-- Launch a user-selected local executable.
+## Tests and validation
 
-## Validation commands
+For behavior changes, add a focused test first and observe it fail for the intended missing behavior. Then make the minimal implementation pass. Do not use a passing test added after the fact as evidence.
 
-Before considering a change ready, run or rely on Actions for:
+Run the narrow gate first, then the full gate:
 
 ```bash
-pnpm install --no-frozen-lockfile
-pnpm --filter steamwrapper-manager lint
-pnpm --filter steamwrapper-manager build
+pnpm install --frozen-lockfile
+pnpm --filter steamwrapper-manager-dioxus-e2e exec tsc --noEmit
+
+cargo test -p steamwrapper-manager-core
+cargo test -p steamwrapper-manager-dioxus --test ui_contract
+cargo build -p steamwrapper-manager-dioxus --features e2e
+pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
+
 cargo fmt --all -- --check
 cargo check --workspace
 cargo test --workspace
+cd apps/manager-dioxus && dx check && dx build --release
 ```
 
-If a command fails, fix the root cause instead of weakening CI.
+For Linux AppImage:
 
-## Commit style
+```bash
+STEAMWRAPPER_RUNNER_PROFILE=release apps/manager-dioxus/scripts/stage-runner.sh
+cd apps/manager-dioxus
+dx bundle --release --package-types appimage --out-dir ../../release-artifacts
+```
 
-Prefer Conventional Commit prefixes:
+Extract the actual AppImage and prove it contains non-empty `SteamWrapperManager/steamwrapper-runner`. Windows NSIS must be built and inspected on Windows. Linux success is not Windows or Steam Deck evidence.
 
-- `feat:` for new functionality.
-- `fix:` for bug fixes.
-- `docs:` for documentation.
-- `build:` for build/dependency changes.
-- `ci:` for workflow changes.
-- `refactor:` for structure changes without behavior changes.
-- `chore:` for maintenance.
+Native E2E requirements:
+
+- Uses `@wdio/dioxus-service` embedded provider.
+- Cargo `e2e` feature may include `wdio-dioxus-embedded-driver`; normal release graph must not.
+- Always use isolated temporary `STEAM_DIR`, `STEAMWRAPPER_E2E_ROOT`, `XDG_DATA_HOME`, and `LOCALAPPDATA` values.
+- Never drive a real Steam library or user data directory.
+- Never commit test artifacts, browser data, logs, or staged Runner binaries.
+
+## Documentation and CI
+
+When behavior, architecture, packaging, test commands or delivery boundaries change, update the relevant current docs in the same task:
+
+- `README.md` / `README.zh-CN.md`
+- `docs/architecture.md`
+- `docs/tech-stack.md`
+- `docs/distribution.md`
+- `docs/testing.md`
+- `docs/roadmap.md`
+- `skills/dioxus-manager/SKILL.md`
+
+Keep these documents honest about platform evidence. A passing Linux build does not justify checking off Windows, SteamOS, Proton, one-click Steam integration, portable zip, tar.gz, or release-channel delivery.
+
+CI / release workflows must stage the current-platform Runner, run Dioxus gates, and inspect actual bundle contents. Do not weaken gates or fabricate release / test results.
+
+## Git discipline
+
+- Work on `v2`, never modify `main`.
+- Re-check `git status` before edits and before delivery.
+- Keep changes within the requested scope; no drive-by refactors.
+- Do not commit, push, or rewrite history unless asked.
+- Prefer Conventional Commit prefixes: `feat:`, `fix:`, `docs:`, `build:`, `ci:`, `refactor:`, `chore:`.
+- Never print, commit, or copy credentials, tokens, `.env` contents, or generated user data.
 
 ## Current priority
 
-The current v2 priority order is:
-
 1. Keep CI green.
 2. Make Manager boot reliably.
-3. Implement local Steam library scanning.
-4. Implement local cover cache lookup.
-5. Make Runner launch configured targets robustly.
-6. Bring Linux / SteamOS support into the v2 LTS line.
-7. Add Steam Launch Options apply/restore flow.
-8. Add player-friendly install/update/uninstall workflows.
-9. Add Windows setup.exe, portable zip, Linux preview, and CNB/GitHub release workflow.
+3. Validate local Steam library and cover scanning.
+4. Make Runner launch / wait semantics robust with real process evidence.
+5. Bring Linux / SteamOS support into v2 LTS with honest platform verification.
+6. Add safe Steam Launch Options apply / restore.
+7. Add player-friendly installation, update, uninstall, portable, and GitHub/CNB delivery paths.

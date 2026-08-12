@@ -1,0 +1,24 @@
+{
+  "name": "steamwrapper-manager-dioxus-e2e",
+  "private": true,
+  "version": "0.2.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "e2e:native": "node scripts/run-native.mjs",
+    "e2e:clean": "node scripts/clean-artifacts.mjs"
+  },
+  "devDependencies": {
+    "@types/mocha": "10.0.10",
+    "@types/node": "26.1.2",
+    "@wdio/cli": "9.29.1",
+    "@wdio/dioxus-service": "1.0.0",
+    "@wdio/globals": "9.29.1",
+    "@wdio/local-runner": "9.29.1",
+    "@wdio/mocha-framework": "9.29.1",
+    "@wdio/spec-reporter": "9.29.1",
+    "@wdio/types": "9.29.1",
+    "expect-webdriverio": "5.7.0",
+    "typescript": "6.0.3"
+  }
+}

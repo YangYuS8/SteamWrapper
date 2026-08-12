@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Install Linux Tauri dependencies
+      - name: Install Linux desktop dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -31,7 +31,7 @@ jobs:
             librsvg2-dev \
             patchelf
 
-      - name: Check required project docs
+      - name: Check required project docs and assets
         shell: pwsh
         run: |
           $required = @(
@@ -40,8 +40,11 @@ jobs:
             "README.zh-CN.md",
             "LICENSE",
             "assets/brand/steamwrapper.svg",
-            "apps/manager/src/assets/steamwrapper.svg",
-            "apps/manager/src-tauri/icons/icon.png",
+            "apps/manager-dioxus/assets/steamwrapper.svg",
+            "apps/manager-dioxus/assets/icons/steamwrapper.png",
+            "apps/manager-dioxus/assets/icons/steamwrapper.ico",
+            "apps/manager-dioxus/Dioxus.toml",
+            "apps/manager-dioxus/scripts/stage-runner.sh",
             "docs/tech-stack.md",
             "docs/architecture.md",
             "docs/distribution.md",
@@ -62,33 +65,49 @@ jobs:
           if (-not (Select-String -Path "package.json" -Pattern '"license": "Apache-2.0"' -Quiet)) {
             throw "package workspace license must be Apache-2.0"
           }
-          if (-not (Select-String -Path "apps/manager/package.json" -Pattern '"license": "Apache-2.0"' -Quiet)) {
-            throw "manager package license must be Apache-2.0"
+          if (-not (Select-String -Path "apps/manager-dioxus/e2e/package.json" -Pattern '"license": "Apache-2.0"' -Quiet)) {
+            throw "Dioxus Manager E2E package license must be Apache-2.0"
           }
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Setup Dioxus CLI
+        uses: taiki-e/install-action@v2
+        with:
+          tool: dioxus-cli@0.7.10
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 24.18.0
 
       - name: Enable pnpm
         run: corepack enable
 
-      - name: Install frontend dependencies
+      - name: Install frontend and E2E dependencies
         env:
           CI: "true"
         run: pnpm install --frozen-lockfile
 
-      - name: Type-check manager frontend
-        run: pnpm --filter steamwrapper-manager lint
+      - name: Type-check Dioxus native E2E suite
+        run: pnpm --filter steamwrapper-manager-dioxus-e2e exec tsc --noEmit
 
-      - name: Build manager frontend
-        env:
-          VITE_STEAMWRAPPER_E2E: "0"
-        run: pnpm --filter steamwrapper-manager build
+      - name: Stage Manager Runner resource
+        shell: pwsh
+        run: |
+          $env:STEAMWRAPPER_RUNNER_PROFILE = "release"
+          if ($IsWindows) {
+            cargo build --release --package steamwrapper-runner
+            $resourceDir = "apps/manager-dioxus/resources/runner"
+            New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
+            Copy-Item target/release/steamwrapper-runner.exe "$resourceDir/SteamWrapperRunner.exe" -Force
+            New-Item -ItemType File -Force -Path "$resourceDir/steamwrapper-runner" | Out-Null
+            if (-not (Test-Path "$resourceDir/SteamWrapperRunner.exe" -PathType Leaf)) { throw "Windows Runner was not staged" }
+          } else {
+            bash apps/manager-dioxus/scripts/stage-runner.sh
+            test -s apps/manager-dioxus/resources/runner/steamwrapper-runner
+          }
 
       - name: Cargo fmt
         run: cargo fmt --all -- --check
@@ -98,6 +117,27 @@ jobs:
 
       - name: Cargo test
         run: cargo test --workspace
+
+      - name: Check Dioxus project
+        working-directory: apps/manager-dioxus
+        run: dx check
+
+      - name: Build Dioxus Manager
+        working-directory: apps/manager-dioxus
+        run: dx build --release
+
+      - name: Run Dioxus native E2E
+        run: |
+          cargo build -p steamwrapper-manager-dioxus --features e2e
+          pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
+
+      - name: Upload Dioxus native E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dioxus-native-e2e-${{ matrix.os }}
+          path: apps/manager-dioxus/e2e/artifacts/native
+          if-no-files-found: ignore
 
       - name: Run Linux process-group integration test
         if: runner.os == 'Linux'
@@ -136,107 +176,56 @@ jobs:
             if ($output -notmatch 'test result: ok\. 1 passed;') { throw "process_name integration test did not pass: $test" }
           }
 
-      - name: Build Windows NSIS with Runner resource
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cargo build --release --package steamwrapper-runner
-          if (-not (Test-Path target/release/steamwrapper-runner.exe)) { throw "Release Runner was not built" }
-          $env:STEAMWRAPPER_RUNNER_SKIP_BUILD = "1"
-          pnpm --filter steamwrapper-manager stage:runner
-          if (-not (Test-Path apps/manager/src-tauri/resources/runner/SteamWrapperRunner.exe)) { throw "Runner was not staged for Tauri resources" }
-          pnpm --filter steamwrapper-manager tauri build --bundles nsis
-          $bundle = Get-ChildItem target/release/bundle/nsis -Filter *.exe | Select-Object -First 1
-          if (-not $bundle) { throw "NSIS bundle was not produced" }
-          $sevenZip = (Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
-          if (-not $sevenZip) { $sevenZip = Join-Path $env:ProgramFiles "7-Zip\7z.exe" }
-          if (-not (Test-Path $sevenZip)) { throw "7-Zip is required to inspect the NSIS bundle" }
-          $extract = Join-Path $env:RUNNER_TEMP "steamwrapper-nsis-$env:GITHUB_RUN_ID"
-          & $sevenZip x -y "-o$extract" $bundle.FullName | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw "Could not extract NSIS bundle" }
-          Get-ChildItem $extract -Recurse -File -Filter *.7z | ForEach-Object {
-            & $sevenZip x -y "-o$($_.DirectoryName)" $_.FullName | Out-Null
-            if ($LASTEXITCODE -ne 0) { throw "Could not extract bundled payload: $($_.FullName)" }
-          }
-          $runner = Get-ChildItem $extract -Recurse -File -Filter SteamWrapperRunner.exe | Where-Object Length -gt 0 | Select-Object -First 1
-          if (-not $runner) { throw "NSIS bundle does not contain a non-empty SteamWrapperRunner.exe" }
-          if ((cargo tree -p steamwrapper-manager -e normal) -match 'tauri-plugin-wdio') { throw "Release graph must not contain WDIO plugins" }
-          $env:VITE_STEAMWRAPPER_E2E = "0"
-          pnpm --filter steamwrapper-manager build
-          pnpm --filter steamwrapper-manager verify:release-e2e-isolation
 
-  e2e-browser:
-    name: E2E Browser (Ubuntu)
+  bundle-linux:
+    name: Bundle Linux AppImage
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - name: Enable pnpm
-        run: corepack enable
-
-      - name: Install frontend dependencies
-        env:
-          CI: "true"
-        run: pnpm install --frozen-lockfile
-
-      - name: Type-check E2E workspace
-        run: pnpm --filter steamwrapper-manager-e2e exec tsc --noEmit
-
-      - name: Run Browser Mode E2E
-        run: pnpm e2e:browser
-
-      - name: Upload Browser Mode artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: e2e-browser-artifacts
-          path: apps/manager-e2e/artifacts/browser
-          if-no-files-found: ignore
-
-  e2e-native-windows:
-    name: E2E Native (Windows)
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - name: Setup Dioxus CLI
+        uses: taiki-e/install-action@v2
         with:
-          node-version: 24
+          tool: dioxus-cli@0.7.10
 
-      - name: Enable pnpm
-        run: corepack enable
+      - name: Stage Linux Runner resource
+        shell: bash
+        run: STEAMWRAPPER_RUNNER_PROFILE=release apps/manager-dioxus/scripts/stage-runner.sh
 
-      - name: Install frontend dependencies
-        env:
-          CI: "true"
-        run: pnpm install --frozen-lockfile
+      - name: Build AppImage
+        working-directory: apps/manager-dioxus
+        run: dx bundle --release --package-types appimage --out-dir ../../release-artifacts
 
-      - name: Type-check E2E workspace
-        run: pnpm --filter steamwrapper-manager-e2e exec tsc --noEmit
+      - name: Verify AppImage contains Runner resource
+        shell: bash
+        run: |
+          set -euo pipefail
+          appimage="$(find release-artifacts -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
+          test -n "$appimage"
+          extract_dir="$(mktemp -d)"
+          (
+            cd "$extract_dir"
+            "$appimage" --appimage-extract >/dev/null
+          )
+          find "$extract_dir/squashfs-root" -type f -path '*/SteamWrapperManager/steamwrapper-runner' -size +0c -print -quit | grep -q .
 
-      - name: Build Native Mode test binary
-        run: pnpm e2e:native:build
-
-      - name: Run Native Mode E2E
-        run: pnpm e2e:native
-
-      - name: Upload Native Mode artifacts
-        if: always()
+      - name: Upload Linux AppImage
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-native-windows-artifacts
-          path: apps/manager-e2e/artifacts/native
-          if-no-files-found: ignore
+          name: SteamWrapper-linux-appimage
+          path: release-artifacts/*.AppImage
+          if-no-files-found: error

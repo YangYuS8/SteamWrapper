@@ -2,14 +2,12 @@
 
 ## 核心目标
 
-v2 是 SteamWrapper 的长期支持主线。Windows、Linux、SteamOS / Steam Deck 都纳入 v2 路线；除非以后出现必须破坏兼容性的架构原因，否则不再单独规划 v3 主线。
+v2 是 SteamWrapper 的长期支持主线。Windows、Linux、SteamOS / Steam Deck 均属于 v2 范围；除非未来有必须破坏兼容性的架构证据，否则不另开 v3。
 
-用户只需要在 SteamWrapper Manager 里配置一次。以后启动游戏时，用户仍然只从 Steam 点击“开始游戏”。
-
-SteamWrapper 的 GUI 不参与日常启动流程。
+玩家只需在 SteamWrapper Manager 配置一次，之后始终从 Steam 点击“开始游戏”。Manager 不参与日常启动流程。
 
 ```text
-SteamWrapperManager：配置时可见，Tauri GUI
+SteamWrapperManager：配置时可见，Dioxus Desktop GUI
 SteamWrapperRunner：游玩时无感，Rust 原生无界面程序
 ```
 
@@ -22,7 +20,7 @@ Steam Launch Options 调用 SteamWrapperRunner
 ↓
 Runner 读取 profiles.toml
 ↓
-Runner 根据 --appid 找到对应 profile
+Runner 根据 --appid 找到 profile
 ↓
 Runner 启动真正的 exe / launcher
 ↓
@@ -31,47 +29,82 @@ Runner 等待游戏退出
 Runner 退出，Steam 停止统计本次游玩时间
 ```
 
-## Manager 配置流程
+Manager 的配置路径：
 
 ```text
 用户打开 SteamWrapper Manager
 ↓
-Manager 扫描本地 Steam Library
+扫描本地 Steam Library 与 appmanifest_<appid>.acf
 ↓
-Manager 读取 appmanifest_<appid>.acf
+查找本地封面缓存
 ↓
-Manager 尝试读取本地 Steam 封面缓存
+选择游戏与真正要启动的 exe / launcher
 ↓
-用户选择游戏与真正要启动的 exe / launcher
+保存 profile 并生成或应用 Steam Launch Options
 ↓
-Manager 生成或应用 Steam Launch Options
-↓
-用户以后直接从 Steam 启动游戏
+以后仍从 Steam 启动游戏
 ```
 
-## 为什么使用 Launch Options
-
-v2 默认不再依赖 SteamEdit，也不再要求把完整 wrapper 放入每个游戏目录。
-
-Manager 生成的启动选项示例：
+## Launch Options 合约
 
 ```text
-"C:\Users\<User>\AppData\Local\SteamWrapper\bin\SteamWrapperRunner.exe" --appid "123456" -- %command%
+"<stable-runner-path>" --appid "123456" -- %command%
 ```
 
-其中：
+- `--appid` 稳定定位 profile；
+- `--` 之后保留 Steam 原始命令；
+- `%command%` 为未来 Steam / Proton 包装保留；
+- Launch Options 只能指向稳定 Runner 路径，不能指向临时安装或解压目录。
 
-- `--appid` 用于稳定定位 profile；
-- `--` 后面保留 Steam 原始命令；
-- `%command%` 让 Runner 能在未来兼容原始 Steam / Proton 启动环境；
-- Runner 路径应该稳定，不应指向临时解压目录。
+`profiles.toml` 的 v2 格式、Runner CLI 和上述启动选项是兼容性边界；迁移 GUI 时不得改变它们。
 
-## 配置模型
+## 分层
+
+```text
+apps/manager-dioxus
+  Dioxus Desktop、RSX、原生 CSS、玩家可见 UI
+                ↓ 直接 Rust 调用
+crates/manager-core
+  ManagerServices、稳定路径、profile、扫描、日志、Runner 安装/修复
+                ↓
+crates/core
+  Profile / TOML、Steam Library、封面缓存、Launch Options、跨平台规则
+
+crates/runner
+  独立 CLI、目标启动、平台等待、运行日志
+```
+
+### `crates/core`
+
+`core` 是唯一的通用数据和业务规则来源：Profile、TOML、Steam 目录与 appmanifest 解析、本地封面发现和 Launch Options。它不得依赖 Dioxus、Tauri、React、WebView 或平台进程等待 API。
+
+### `crates/manager-core`
+
+`manager-core` 是新的 UI 框架无关 Manager service 层，不是 RPC 层。它直接组合 `core`，提供：
+
+- 当前平台稳定数据路径与目录创建；
+- Profile 读取、保存和 Launch Options 生成；
+- Steam 本地游戏扫描与日志列表；
+- Runner 摘要检查、原子安装和修复。
+
+Dioxus UI 直接调用它；不得复制旧 Tauri command 形状或创造伪 IPC。
+
+### `apps/manager-dioxus`
+
+Dioxus Desktop 0.7.10 配置器承担玩家可见流程：本地游戏扫描、封面卡片、手动添加、目标程序选择、profile 编辑、Launch Options、已配置游戏、日志和设置。CSS 是原生本地资源；品牌 SVG 必须保持 `assets/brand/steamwrapper.svg` 的副本一致。
+
+`Dioxus.toml` 显式声明 `resources/runner`。构建时按平台 stage Runner；Manager 首次启动或设置页修复时才把只读 bundle 资源复制到稳定用户数据位置。
+
+### `crates/runner`
+
+Runner 始终独立、原生、无界面，不能依赖 Dioxus 或 GUI 生命周期。Manager 仅安装和检查其分发资源，绝不把启动、等待或平台进程控制搬进 GUI。
+
+## Profile 示例
 
 ```toml
 version = 2
 
-[profiles."123456"]
+[profiles.123456]
 name = "Example Game"
 app_id = "123456"
 platform = "windows"
@@ -86,113 +119,54 @@ wait_mode = "job"
 
 | 模式 | 用途 |
 | --- | --- |
-| `root` | 只等待直接启动的目标进程 |
-| `job` | Windows 默认模式，使用 Job Object 等待未主动脱离 Job 的 launcher 派生进程 |
-| `process_name` | launcher 自身退出后，等待本次启动后出现的指定进程名；适合脱离默认组边界的特殊 launcher |
-| `process_group` | Linux / SteamOS 默认模式，等待仍留在同一 POSIX 进程组的派生进程退出 |
+| `root` | 仅等待直接启动的目标进程 |
+| `job` | Windows 默认；Job Object 等待未主动脱离的 launcher 派生进程 |
+| `process_name` | launcher 退出后等待本次启动出现的指定进程名 |
+| `process_group` | Linux / SteamOS 默认；等待同一 POSIX 进程组的派生进程 |
 | `none` | 启动后立即退出 |
 
-Manager 新建 profile 时会按当前平台选择默认等待模式：Windows 使用 `job`，Linux 使用 `process_group`。Windows Runner 使用 GUI subsystem 且创建目标时附加 `CREATE_NO_WINDOW`，正常启动不应弹出控制台窗口。`root` 仍保留给只需要等待直接目标进程的特殊配置。主动使用 breakaway、重新建立 session/process group 或 daemonize 的 launcher 可以按实际进程名改用 `process_name`；Proton 命令包装仍由后续专用策略处理。
+新 profile 的默认值为 Windows `job`、Linux `process_group`。`process_name` 会排除启动前已存在的同名 `(PID, start_time)`，但无法从名称识别业务归属；只能作为复杂 launcher 的显式兼容方案。Proton 包装留待平台专用策略完善。
 
-`process_name` 会先记录启动前已经存在的同名进程，只跟踪之后新出现的 `(PID, start_time)` 身份，避免等待用户此前已打开的同名程序；launcher 返回后最多等待 30 秒发现目标，目标名称连续消失 500ms 后视为结束，发现目标后的等待上限为 24 小时。进程名匹配采用操作系统暴露的精确名称；Linux 名称存在 15 字符限制，配置时应填写系统实际显示的名称。
+## 分发与稳定安装
 
-同一时间若其他程序又启动了新的同名进程，Runner 无法从名称本身判断业务归属，也会一并等待；因此 `process_name` 只应作为复杂 launcher 的显式兼容选项，不替代默认的 Job Object / process group。
-
-## 项目分层
-
-```text
-crates/
-  core/
-    config
-    profile
-    launch_option
-    steam_library
-    local_cover_cache
-
-  runner/
-    platform/windows
-    platform/unix
-
-apps/
-  manager/
-    src/                 # React + shadcn/ui frontend
-    src-tauri/           # Tauri commands and bundling
-```
-
-`core` 不应该依赖 Windows API、Linux API、Tauri 或前端框架。
-
-平台差异集中在：
-
-- Steam 安装位置；
-- Steam 用户目录；
-- LaunchOptions 写入方式；
-- 进程等待方式；
-- Proton / SteamOS 启动环境；
-- 本地封面缓存路径差异。
-
-## 分发与安装模型
-
-Windows 普通用户主推 NSIS 安装程序：
-
-```text
-SteamWrapper-v2.x.x-win-x64-setup.exe
-```
-
-高级用户提供 portable zip：
-
-```text
-SteamWrapper-v2.x.x-win-x64-portable.zip
-```
-
-建议路径：
+Windows：
 
 ```text
 %LOCALAPPDATA%\Programs\SteamWrapper\      # Manager 安装目录
 %LOCALAPPDATA%\SteamWrapper\bin\           # Runner 稳定路径
-%LOCALAPPDATA%\SteamWrapper\profiles.toml  # 用户配置
+%LOCALAPPDATA%\SteamWrapper\profiles.toml  # 配置
 %LOCALAPPDATA%\SteamWrapper\logs\          # 日志
-%LOCALAPPDATA%\SteamWrapper\backups\       # Steam 配置备份
+%LOCALAPPDATA%\SteamWrapper\backups\       # 备份
 ```
 
-portable 版首次启动时，也应该引导用户把 Runner 复制到稳定路径，避免 Steam Launch Options 指向被移动或删除的解压目录。
-
-Linux / SteamOS 的 v2 目标是 AppImage 或 tar.gz 预览分发，并使用 XDG 数据目录保存 profiles、Runner、日志与备份。SteamOS 需要额外考虑只读系统、桌面模式操作路径和 Steam Deck 用户教程。
-
-## 本地封面策略
-
-第一阶段只读取本地 Steam 缓存，不接入在线封面服务。
-
-候选来源：
+Linux / SteamOS 使用：
 
 ```text
-<Steam安装目录>\appcache\librarycache\
-<Steam安装目录>\userdata\<steamid>\config\grid\
+$XDG_DATA_HOME/SteamWrapper/
+  profiles.toml
+  bin/steamwrapper-runner
+  logs/
+  backups/
+  cache/
 ```
 
-封面读取失败时：
+未设置 `XDG_DATA_HOME` 时使用 `~/.local/share/SteamWrapper/`。Runner 资源校验后原子写入稳定路径；更新只触碰 Runner，不覆盖 profile、日志、备份和缓存。
 
-- 不联网；
-- 不报错；
-- 显示默认占位图；
-- 允许用户继续配置游戏。
+## 本地封面与安全边界
 
-## 设计边界
+首阶段只读取：
 
-SteamWrapper v2 不做：
+```text
+<Steam 安装目录>/appcache/librarycache/
+<Steam 安装目录>/userdata/<steamid>/config/grid/
+```
 
-- 不注入 DLL；
-- 不修改 Steam 客户端；
-- 不破解游戏；
-- 不绕过 DRM；
-- 不常驻后台；
-- 第一阶段不联网拉取封面。
+封面丢失时显示占位图，不联网、不阻止配置。
 
-SteamWrapper v2 只做：
+SteamWrapper 不注入 DLL、不补丁 Steam/游戏、不绕过 DRM、不常驻后台，也不上传用户数据。
 
-- 配置自定义启动目标；
-- 读取本地 Steam 游戏库；
-- 读取本地 Steam 封面缓存；
-- 生成或应用 Steam Launch Options；
-- 运行时启动目标程序；
-- 等待目标退出以配合 Steam 统计时间；
-- 提供可恢复的配置变更。
+## Manager 技术边界
+
+旧 Tauri / React Manager 与其 E2E 已移除。当前唯一的 Manager 实现和交付目标是 `apps/manager-dioxus`；不得重新引入旧 command adapter、Node 前端运行时或第二套 UI 状态模型。
+
+Windows NSIS、Linux AppImage 和 SteamOS 实机均需在对应平台的 CI / 设备上继续验证；本机 Linux 通过的检查不能伪装成 Windows 或 Steam Deck 实机证据。

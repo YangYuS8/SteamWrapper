@@ -1,0 +1,33 @@
+[application]
+name = "SteamWrapper"
+asset_dir = "assets"
+out_dir = "dist"
+
+[bundle]
+identifier = "top.yangyus8.steamwrapper"
+publisher = "SteamWrapper"
+icon = ["assets/icons/steamwrapper.png"]
+short_description = "SteamWrapper Manager"
+long_description = "为 Steam 游戏配置稳定的启动目标与 Launch Options。"
+category = "Game"
+resources = ["resources/runner/SteamWrapperRunner.exe", "resources/runner/steamwrapper-runner"]
+
+[windows]
+webview_install_mode = { type = "DownloadBootstrapper", silent = true }
+icon_path = "assets/icons/steamwrapper.ico"
+
+[windows.nsis]
+install_mode = "CurrentUser"
+languages = ["SimpChinese"]
+
+[windows.wix]
+upgrade_code = "79483db6-ea14-4da3-995d-23fb6d1a1aaf"
+
+[linux]
+identifier = "top.yangyus8.steamwrapper"
+
+[bundle.deb]
+depends = ["libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37"]
+
+[bundle.rpm]
+requires = ["webkit2gtk4.1"]

@@ -6,45 +6,30 @@
 
 [中文 README](README.zh-CN.md) | [Agent Guidelines](AGENTS.md)
 
-SteamWrapper v2 is a planned rewrite of SteamWrapper.
-
-The goal is no longer just "put a wrapper exe into a game folder". The new goal is:
+SteamWrapper v2 is the Rust-native rewrite of SteamWrapper.
 
 > Configure once in SteamWrapper Manager, then launch the game normally from Steam.
 
-SteamWrapper should be visible only when users configure a game. During daily play, Steam should silently call a small runner process, and users should feel like they are launching the game normally.
-
-## Brand asset
-
-The unified project icon is available at:
-
-```text
-assets/brand/steamwrapper.svg
-```
-
-It is an original Rust-inspired gear and Steam-like launch graph mark for SteamWrapper. It is not the official Steam logo.
+The Manager is visible only during configuration. For daily play, Steam calls the headless `SteamWrapperRunner` through Launch Options; the Runner loads the selected profile, launches the real executable or launcher, and waits for the game to exit.
 
 ## Goals
 
-- No .NET Runtime requirement.
+- No .NET Runtime or Electron requirement.
 - No SteamEdit requirement in the default workflow.
-- No need to copy a full wrapper program into every game folder.
-- GUI is used only for configuration.
-- Runtime launcher is headless and started automatically by Steam.
-- v2 is the long-term support line for Windows, Linux, and SteamOS / Steam Deck.
-- Windows users should install with a setup wizard or use a portable zip; Linux and SteamOS packaging are planned in the v2 line.
-- Installation, updates, and uninstallation should stay simple for normal players. Releases are planned for both GitHub and CNB so mainland China users have a convenient download channel.
-- Game cover images should be loaded from the local Steam library/cache first; no online cover service is required for the first version.
+- No full wrapper copied into every game directory.
+- A Dioxus Desktop Manager for configuration and an independent native Runner for play.
+- v2 LTS scope: Windows, Linux, SteamOS / Steam Deck desktop mode.
+- Local Steam metadata and covers only in the first stage; no online cover service is required.
 
 ## Product shape
 
 ```text
-SteamWrapperManager.exe   # Tauri GUI/configuration app
-SteamWrapperRunner.exe    # native headless runner called by Steam Launch Options
-profiles.toml             # shared game profiles
-logs/                     # runtime logs
-backups/                  # Steam config backups, future use
-cache/                    # local metadata/cache, future use
+SteamWrapperManager(.exe)  # Dioxus Desktop configuration app
+SteamWrapperRunner(.exe)   # native headless runner called by Steam Launch Options
+profiles.toml              # shared game profiles
+logs/                      # runtime logs
+backups/                   # future Steam config backups
+cache/                     # local metadata/cache
 ```
 
 Typical flow:
@@ -55,49 +40,68 @@ Install SteamWrapper
 → scan local Steam games
 → select a Steam game profile
 → select the real target exe / launcher
-→ apply or copy the generated Steam Launch Options
+→ copy the generated Steam Launch Options
 → from then on, launch directly from Steam
 ```
 
-Generated Launch Options example:
+Launch Options compatibility contract:
 
 ```text
 "C:\Users\<User>\AppData\Local\SteamWrapper\bin\SteamWrapperRunner.exe" --appid "123456" -- %command%
 ```
 
-## Technical direction
+The stable Runner path and `%command%` portion are deliberately preserved.
 
-The v2 branch is being laid out as a Rust + Tauri workspace:
+## Architecture
 
 ```text
-crates/
-  core/      # shared config, profile and launch option logic
-  runner/    # native headless runtime entrypoint called by Steam
+apps/manager-dioxus  # Dioxus 0.7.10 Desktop + CSS UI
+        ↓ direct typed Rust calls
+crates/manager-core  # framework-neutral Manager services
+        ↓
+crates/core          # TOML, Steam metadata/covers, Launch Options
 
-apps/
-  manager/   # Tauri v2 + React + shadcn/ui configuration app
+crates/runner        # independent native headless runtime
 ```
 
-Selected stack:
+The Manager does not emulate Tauri IPC: it directly consumes the Rust service layer. `core` stays GUI-neutral; `runner` stays independent from WebView/UI lifecycle.
 
-- Runner/Core language: Rust
-- Manager desktop shell: Tauri v2
-- Manager frontend: React + TypeScript + Vite
-- UI system: Tailwind CSS + shadcn/ui
-- Config format: TOML
-- Windows packaging: NSIS setup.exe first, portable zip second
-- Linux packaging: AppImage or tar.gz planned in v2
-- Windows process waiting: Job Object for newly saved profiles
-- Linux process waiting: POSIX process group for newly saved profiles
-- SteamOS / Proton support: planned in v2, not a separate v3 track
+## Development
 
-See:
+`just` is the local entrypoint:
 
-- `AGENTS.md`
-- `docs/tech-stack.md`
-- `docs/architecture.md`
-- `docs/distribution.md`
-- `docs/roadmap.md`
+```bash
+just dev          # start the Desktop Manager with hot reload and real local data
+just dev-sandbox  # start it with disposable Steam and user-data directories
+just verify       # run Rust, Dioxus, and Native E2E gates
+just bundle-linux # stage the Runner and create release-artifacts/*.AppImage
+```
+
+Run `just --list` for every recipe. The equivalent lower-level validation commands remain available:
+
+```bash
+pnpm install --frozen-lockfile
+cargo fmt --all -- --check
+cargo check --workspace
+cargo test --workspace
+
+cd apps/manager-dioxus
+dx check
+dx build --release
+```
+
+Native E2E uses an isolated local Steam and user-data fixture. It does not touch the real Steam library or user profile:
+
+```bash
+cargo build -p steamwrapper-manager-dioxus --features e2e
+pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
+```
+
+See `docs/architecture.md`, `docs/tech-stack.md`, `docs/distribution.md`, `docs/testing.md`, and `docs/roadmap.md` for constraints and platform coverage.
+
+## Brand asset
+
+The canonical project mark is `assets/brand/steamwrapper.svg`. It is an original Rust-inspired gear and launch-graph mark for SteamWrapper, not the official Steam logo.
 
 ## License
 
@@ -105,4 +109,4 @@ Apache-2.0
 
 ## Status
 
-This branch is an early v2 layout branch. The original C# implementation on `main` remains the stable legacy version for now.
+The `v2` branch remains early-stage. The original C# implementation on `main` is still the legacy stable version.

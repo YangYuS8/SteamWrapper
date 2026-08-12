@@ -5,11 +5,10 @@ node_modules/
 /target/
 **/*.rs.bk
 
-# Frontend / Tauri build outputs
-/apps/manager/dist/
-/apps/manager/src-tauri/resources/
-/apps/manager/src-tauri/gen/
-/apps/manager-e2e/artifacts/
+# Dioxus desktop build outputs
+/apps/manager-dioxus/resources/runner/
+/apps/manager-dioxus/dist/
+/apps/manager-dioxus/e2e/artifacts/
 
 # Local SteamWrapper runtime data
 profiles.toml
