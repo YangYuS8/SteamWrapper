@@ -104,6 +104,13 @@ fn manager_uses_a_frameless_desktop_shell_with_a_fixed_sidebar_and_scrollable_wo
     assert!(app.contains("window.drag()"));
     assert!(app.contains("window.toggle_maximized()"));
     assert!(app.contains("window.close()"));
+    assert!(app.contains("fn Sidebar(mut active_view: Signal<View>) -> Element"));
+    assert!(app.contains("Sidebar { active_view }"));
+    assert!(app.contains("\"data-testid\": \"sidebar\""));
+    assert!(app.contains("\"data-testid\": \"sidebar-toggle\""));
+    assert!(app.contains("onerror: move |_| failed.set(true)"));
+    assert!(app.contains("封面暂不可用"));
+    assert!(app.contains("本地缓存优先，官方 Steam CDN 回退"));
     assert!(app.contains("class: \"app-titlebar\""));
     assert!(app.contains("\"data-testid\": \"app-titlebar\""));
     assert!(app.contains("\"data-testid\": \"window-minimize\""));
@@ -111,8 +118,18 @@ fn manager_uses_a_frameless_desktop_shell_with_a_fixed_sidebar_and_scrollable_wo
     assert!(app.contains("\"data-testid\": \"window-close\""));
     assert!(app.contains("class: \"window-control window-control--close\""));
     assert!(css.contains(".manager-shell { display: flex; height: 100vh;"));
-    assert!(css.contains(".sidebar { position: relative;"));
-    assert!(css.contains(".workspace { display: flex; min-width: 0; min-height: 0;"));
+    assert!(css.contains(".app-titlebar { height: 38px;"));
+    assert!(css.contains("background: #0a1625"));
+    assert!(css.contains(".app-frame { position: relative;"));
+    assert!(css.contains(".sidebar { position: absolute;"));
+    assert!(css.contains("transition: transform .18s cubic-bezier(.2, .8, .2, 1)"));
+    assert!(css.contains(".sidebar--collapsed { transform: translateX(-188px); }"));
+    assert!(css.contains(".sidebar--collapsed .brand img, .sidebar--collapsed .nav-button, .sidebar--collapsed .sidebar-toggle { transform: translateX(188px); }"));
+    assert!(css.contains(
+        ".workspace { display: flex; min-width: 0; min-height: 0; flex: 1; margin-left: 264px;"
+    ));
+    assert!(css.contains("transition: margin-left .18s cubic-bezier(.2, .8, .2, 1)"));
+    assert!(css.contains(".sidebar--collapsed + .workspace { margin-left: 76px; }"));
     assert!(css.contains(".content { min-height: 0; flex: 1;"));
     assert!(css.contains("scroll-behavior: smooth"));
     assert!(css.contains("overscroll-behavior: contain"));

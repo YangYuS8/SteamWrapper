@@ -36,7 +36,7 @@ Manager 的配置路径：
 ↓
 扫描本地 Steam Library 与 appmanifest_<appid>.acf
 ↓
-查找本地封面缓存
+查找本地封面缓存；缺失时按已知 AppID 绑定公开 Steam CDN 封面 URL
 ↓
 选择游戏与真正要启动的 exe / launcher
 ↓
@@ -76,7 +76,7 @@ crates/runner
 
 ### `crates/core`
 
-`core` 是唯一的通用数据和业务规则来源：Profile、TOML、Steam 目录与 appmanifest 解析、本地封面发现和 Launch Options。它不得依赖 Dioxus、Tauri、React、WebView 或平台进程等待 API。
+`core` 是唯一的通用数据和业务规则来源：Profile、TOML、Steam 目录与 appmanifest 解析、本地优先的封面发现与 AppID 驱动的 Steam CDN 回退 URL、Launch Options。它不得依赖 Dioxus、Tauri、React、WebView 或平台进程等待 API。
 
 ### `crates/manager-core`
 
@@ -152,16 +152,16 @@ $XDG_DATA_HOME/SteamWrapper/
 
 未设置 `XDG_DATA_HOME` 时使用 `~/.local/share/SteamWrapper/`。Runner 资源校验后原子写入稳定路径；更新只触碰 Runner，不覆盖 profile、日志、备份和缓存。
 
-## 本地封面与安全边界
+## 封面与安全边界
 
-首阶段只读取：
+Manager 优先读取本机 Steam 缓存：
 
 ```text
 <Steam 安装目录>/appcache/librarycache/
 <Steam 安装目录>/userdata/<steamid>/config/grid/
 ```
 
-封面丢失时显示占位图，不联网、不阻止配置。
+本地缓存缺失时，`core` 根据已从本地 manifest 读取的 AppID 生成公开 Steam CDN 的 `library_600x900.jpg` URL；Dioxus 只把该 URL 交给图片控件加载。此请求不含 Steam 用户名、库清单、profile 或 API Key，也不引入第三方封面服务或把新图片写入用户数据。离线、限流、缺失资源或图片加载失败时，UI 退回“封面暂不可用”占位，不阻止扫描或配置。
 
 SteamWrapper 不注入 DLL、不补丁 Steam/游戏、不绕过 DRM、不常驻后台，也不上传用户数据。
 

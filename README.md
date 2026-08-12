@@ -19,7 +19,7 @@ The Manager is visible only during configuration. For daily play, Steam calls th
 - No full wrapper copied into every game directory.
 - A Dioxus Desktop Manager for configuration and an independent native Runner for play.
 - v2 LTS scope: Windows, Linux, SteamOS / Steam Deck desktop mode.
-- Local Steam metadata and covers only in the first stage; no online cover service is required.
+- Local Steam metadata and cover cache first; missing covers use the public Steam CDN asset for the known AppID without sending library data or requiring an API key.
 
 ## Product shape
 

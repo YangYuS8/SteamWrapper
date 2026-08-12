@@ -26,7 +26,7 @@ SteamWrapper v2 是长期支持主线。Windows、Linux、SteamOS / Steam Deck �
 - [x] `manager-core`：从 UI 框架抽离路径、Profile、Launch Options、日志和 Runner 服务
 - [x] Dioxus Desktop Manager（Dioxus 0.7.10 + RSX + CSS）
 - [x] 本地 Steam 安装目录、`libraryfolders.vdf` 与 `appmanifest_<appid>.acf` 扫描
-- [x] 本地 Steam cover cache 读取与缺失占位
+- [x] 本地 Steam cover cache 读取；缓存缺失时按本地 AppID 使用公开 Steam CDN 封面回退，加载失败保留占位
 - [x] 过滤 Proton / Steam Linux Runtime / Steamworks Redistributables
 - [x] AppID 去重
 - [x] 游戏库、已配置游戏、日志、设置与折叠侧边栏

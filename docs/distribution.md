@@ -127,16 +127,22 @@ release workflow 应：
 
 Linux AppImage 的本机验证不代表 Windows NSIS 或 Steam Deck 已验证；这些必须在各自 CI 或设备中取得实际证据。
 
-## 本地封面策略
+## 封面策略
 
-第一阶段不接入在线 API。Manager 只读取：
+Manager 优先读取本机 Steam 缓存：
 
 ```text
 <Steam 安装目录>/appcache/librarycache/
 <Steam 安装目录>/userdata/<steamid>/config/grid/
 ```
 
-没有封面时显示占位图即可。
+缓存缺失时，它只使用已从本地 manifest 读取的 AppID 访问公开 Steam CDN：
+
+```text
+https://cdn.cloudflare.steamstatic.com/steam/apps/<appid>/library_600x900.jpg
+```
+
+该请求不包含 Steam 用户名、库清单、profile 或任何 API Key；公开 CDN 的响应可按其 HTTP 缓存策略复用。应用不写入新封面文件，离线、限流、404 或图片加载失败时保留“封面暂不可用”占位，并继续允许配置游戏。不得把此有限回退扩展为第三方封面 API 或用户库数据上传。
 
 ## 发布渠道
 

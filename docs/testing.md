@@ -75,7 +75,7 @@ XDG_DATA_HOME
 LOCALAPPDATA
 ```
 
-fixture 包含中文路径与空格路径、一个本地 Steam game manifest 和本地 cover。测试启动真实 Manager 后覆盖：
+fixture 包含中文路径与空格路径、一个本地 Steam game manifest，且故意不写本地 cover cache。测试启动真实 Manager 后会断言该 AppID 使用公开 Steam CDN 封面 URL；测试只验证 URL 生成与 DOM 绑定，不依赖外网图片加载。
 
 - 默认游戏库和手动添加入口；
 - 首次启动把 bundle Runner 安装到稳定 `SteamWrapper/bin/`；

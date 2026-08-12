@@ -12,7 +12,8 @@ const fixtureRoot = await mkdtemp(join(tmpdir(), "steamwrapper-dioxus-e2e-"));
 const steamRoot = join(fixtureRoot, "Steam");
 const steamApps = join(steamRoot, "steamapps");
 const gameDir = join(steamApps, "common", "中文 Test Game");
-const coverDir = join(steamRoot, "appcache", "librarycache");
+const localCoverPath = join(steamRoot, "appcache", "librarycache", "123456_library_600x900.png");
+
 const appDataRoot = process.platform === "win32" ? "local-app-data" : "xdg-data";
 const runnerFileName = process.platform === "win32" ? "SteamWrapperRunner.exe" : "steamwrapper-runner";
 const runnerPath = join(fixtureRoot, appDataRoot, "SteamWrapper", "bin", runnerFileName);
@@ -62,7 +63,10 @@ async function preserveFixtureArtifacts() {
 
 try {
   await mkdir(gameDir, { recursive: true });
-  await mkdir(coverDir, { recursive: true });
+  if (existsSync(localCoverPath)) {
+    throw new Error(`Native E2E fixture must omit the local cover cache: ${localCoverPath}`);
+  }
+
   await write(
     "Steam/steamapps/libraryfolders.vdf",
     `"libraryfolders"\n{\n  "0"\n  {\n    "path" "${steamRoot.replaceAll("\\", "\\\\")}"\n  }\n}\n`,
@@ -71,7 +75,7 @@ try {
     "Steam/steamapps/appmanifest_123456.acf",
     `"AppState"\n{\n  "appid" "123456"\n  "name" "中文 Test Game"\n  "installdir" "中文 Test Game"\n  "StateFlags" "4"\n}\n`,
   );
-  await write("Steam/appcache/librarycache/123456_library_600x900.png", "fixture cover");
+
 
   if (existsSync(runnerPath)) throw new Error(`Native E2E fixture must start without a stable Runner: ${runnerPath}`);
   if (!existsSync(binaryPath)) {

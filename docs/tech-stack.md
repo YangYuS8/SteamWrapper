@@ -29,7 +29,7 @@ apps/manager-dioxus/e2e     # WDIO Dioxus Native E2E（仅测试工具）
 - Profile 数据结构与 TOML 读写；
 - Steam Launch Options 生成；
 - Steam Library / `appmanifest` 解析；
-- 本地 Steam 封面缓存发现；
+- 本地 Steam 封面缓存发现，以及缓存缺失时按本地 AppID 生成的公开 Steam CDN 回退 URL；
 - 跨平台通用规则。
 
 依赖保持为 `serde`、`toml`、`thiserror` 等通用 Rust crate；禁止 UI 或平台进程 API 反向渗透。
@@ -69,7 +69,7 @@ apps/manager-dioxus/e2e     # WDIO Dioxus Native E2E（仅测试工具）
 - `@wdio/dioxus-service` 1.0.0 + embedded provider 仅用于 Native E2E；
 - `wdio-dioxus-embedded-driver` 1.0.0 仅在 Cargo `e2e` feature 编译。
 
-UI 职责：扫描 / 添加游戏、读取本地封面、选择目标程序、保存 profile、生成 Launch Options、查看已配置游戏 / 日志 / 稳定路径、安装或修复 Runner。
+UI 职责：扫描 / 添加游戏、显示本地优先且 CDN 回退的封面、选择目标程序、保存 profile、生成 Launch Options、查看已配置游戏 / 日志 / 稳定路径、安装或修复 Runner。
 
 正式 Rust dependency graph 不含 WDIO bridge 或 embedded driver；测试 feature 与 release bundle 必须分离。
 

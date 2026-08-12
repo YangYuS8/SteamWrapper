@@ -14,7 +14,7 @@ Steam 通过 Launch Options 调用无界面的 `SteamWrapperRunner`；Runner 从
 - 默认不依赖 SteamEdit，不修改 Steam 客户端，不复制完整 wrapper 到游戏目录。
 - Manager 仅负责配置；游玩时无需打开它。
 - v2 是长期支持主线，覆盖 Windows、Linux、SteamOS / Steam Deck 桌面模式。
-- 首阶段完全离线：只读取本地 Steam 游戏库和本地封面缓存，不请求在线封面服务。
+- 扫描优先读取本地 Steam 游戏库和封面缓存；缓存缺失时仅按已知 AppID 直连公开 Steam CDN 封面，不上传库清单、不需要 API Key。
 - 面向普通玩家：配置、安装、更新与恢复流程应清晰而非终端化。
 
 ## 产品形态
@@ -92,16 +92,16 @@ $XDG_DATA_HOME/SteamWrapper/
 
 未设置 `XDG_DATA_HOME` 时使用 `~/.local/share/SteamWrapper/`。
 
-## 本地封面策略
+## 封面策略
 
-只读取本机 Steam 缓存：
+优先读取本机 Steam 缓存：
 
 ```text
 <Steam 安装目录>/appcache/librarycache/
 <Steam 安装目录>/userdata/<steamid>/config/grid/
 ```
 
-找不到封面时显示占位图，不联网、不报错，仍允许配置游戏。
+缓存缺失时，Manager 仅用本地 manifest 已有的 AppID 请求公开 Steam CDN 的 `library_600x900.jpg`。不查询玩家资料、不上传游戏库、不需要 API Key；CDN 的正常 HTTP 缓存会复用封面响应。离线、限流或该 App 没有该资源时，卡片改为友好的“封面暂不可用”占位，不影响扫描或配置。
 
 ## Dioxus Manager 开发
 
@@ -158,7 +158,7 @@ SteamWrapper v2 不做：
 - DRM 绕过；
 - 隐藏后台服务；
 - 用户数据上传；
-- 首阶段在线封面抓取。
+- 第三方在线封面服务或玩家库数据上传。
 
 ## 品牌资源
 

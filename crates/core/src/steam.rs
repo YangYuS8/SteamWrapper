@@ -67,8 +67,9 @@ fn scan_steam_games_in(steam_dir: &Path) -> Vec<LocalSteamGame> {
                     .to_string_lossy()
                     .to_string()
             });
-            let cover_path =
-                find_local_cover(&steam_dir, &appid).map(|path| path.to_string_lossy().to_string());
+            let cover_path = find_local_cover(&steam_dir, &appid)
+                .map(|path| path.to_string_lossy().to_string())
+                .or_else(|| official_steam_cover_url(&appid));
 
             let game = LocalSteamGame {
                 appid: appid.clone(),
@@ -230,6 +231,12 @@ fn find_local_cover(steam_dir: &Path, appid: &str) -> Option<PathBuf> {
     None
 }
 
+fn official_steam_cover_url(appid: &str) -> Option<String> {
+    (!appid.is_empty() && appid.chars().all(|character| character.is_ascii_digit())).then(|| {
+        format!("https://cdn.cloudflare.steamstatic.com/steam/apps/{appid}/library_600x900.jpg")
+    })
+}
+
 fn file_stem_starts_with(path: &Path, prefix: &str) -> bool {
     let Some(ext) = path.extension().and_then(|ext| ext.to_str()) else {
         return false;
@@ -263,6 +270,30 @@ mod tests {
             parse_vdf_value(text, "name"),
             Some("Example Game".to_string())
         );
+    }
+
+    #[test]
+    fn falls_back_to_the_official_steam_cdn_when_no_local_cover_exists() {
+        let temp_dir = unique_temp_dir();
+        let steamapps = temp_dir.join("steamapps");
+        fs::create_dir_all(steamapps.join("common")).unwrap();
+        write_manifest(&steamapps, "123456", "Example Game", "Example Game");
+
+        let games = scan_steam_games_in(&temp_dir);
+
+        assert_eq!(games.len(), 1);
+        assert_eq!(
+            games[0].cover_path.as_deref(),
+            Some("https://cdn.cloudflare.steamstatic.com/steam/apps/123456/library_600x900.jpg")
+        );
+
+        fs::remove_dir_all(temp_dir).unwrap();
+    }
+
+    #[test]
+    fn does_not_generate_a_cdn_cover_for_an_empty_or_non_numeric_appid() {
+        assert_eq!(official_steam_cover_url(""), None);
+        assert_eq!(official_steam_cover_url("manual-123"), None);
     }
 
     #[test]

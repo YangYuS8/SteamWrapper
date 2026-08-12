@@ -67,8 +67,7 @@ pub fn App() -> Element {
     let drag_window = window.clone();
     let minimize_window = window.clone();
     let maximize_window = window.clone();
-    let mut active_view = use_signal(View::default);
-    let mut sidebar_collapsed = use_signal(|| false);
+    let active_view = use_signal(View::default);
     let mut games = use_signal(Vec::<LocalSteamGame>::new);
     let mut profiles = use_signal(Vec::<ConfiguredProfile>::new);
     let mut logs = use_signal(Vec::<RunnerLogEntry>::new);
@@ -163,30 +162,7 @@ pub fn App() -> Element {
             }
 
             div { class: "app-frame",
-                aside { class: if sidebar_collapsed() { "sidebar sidebar--collapsed" } else { "sidebar" },
-                    div { class: "brand",
-                        img { src: BRAND, alt: "SteamWrapper" }
-                        if !sidebar_collapsed() {
-                            div {
-                                strong { "SteamWrapper" }
-                                span { "Manager v2 · Dioxus preview" }
-                            }
-                        }
-                    }
-                    nav { class: "navigation",
-                        NavButton { label: "游戏库", icon: "▦", active: active_view() == View::Library,
-                            onclick: move |_| active_view.set(View::Library) }
-                        NavButton { label: "已配置游戏", icon: "✓", active: active_view() == View::Configured,
-                            onclick: move |_| active_view.set(View::Configured) }
-                        NavButton { label: "日志", icon: "≡", active: active_view() == View::Logs,
-                            onclick: move |_| active_view.set(View::Logs) }
-                        NavButton { label: "设置", icon: "⚙", active: active_view() == View::Settings,
-                            onclick: move |_| active_view.set(View::Settings) }
-                    }
-                    button { class: "sidebar-toggle", onclick: move |_| sidebar_collapsed.toggle(),
-                        if sidebar_collapsed() { "›" } else { "‹  折叠侧边栏" }
-                    }
-                }
+                Sidebar { active_view }
 
                 section { class: "workspace",
                     header { class: "workspace-toolbar",
@@ -350,6 +326,41 @@ fn NavButton(
 }
 
 #[component]
+fn Sidebar(mut active_view: Signal<View>) -> Element {
+    let mut collapsed = use_signal(|| false);
+
+    rsx! {
+        aside {
+            class: if collapsed() { "sidebar sidebar--collapsed" } else { "sidebar" },
+            "data-testid": "sidebar",
+            div { class: "brand",
+                img { src: BRAND, alt: "SteamWrapper" }
+                div { class: "brand-copy",
+                    strong { "SteamWrapper" }
+                    span { "Manager v2 · Dioxus preview" }
+                }
+            }
+            nav { class: "navigation",
+                NavButton { label: "游戏库", icon: "▦", active: active_view() == View::Library,
+                    onclick: move |_| active_view.set(View::Library) }
+                NavButton { label: "已配置游戏", icon: "✓", active: active_view() == View::Configured,
+                    onclick: move |_| active_view.set(View::Configured) }
+                NavButton { label: "日志", icon: "≡", active: active_view() == View::Logs,
+                    onclick: move |_| active_view.set(View::Logs) }
+                NavButton { label: "设置", icon: "⚙", active: active_view() == View::Settings,
+                    onclick: move |_| active_view.set(View::Settings) }
+            }
+            button {
+                class: "sidebar-toggle",
+                "data-testid": "sidebar-toggle",
+                onclick: move |_| collapsed.toggle(),
+                if collapsed() { "›" } else { "‹  折叠侧边栏" }
+            }
+        }
+    }
+}
+
+#[component]
 fn LibraryView(
     games: Vec<LocalSteamGame>,
     selected_appid: Option<String>,
@@ -360,7 +371,7 @@ fn LibraryView(
     rsx! {
         section { class: "hero-card",
             div { class: "hero-copy",
-                span { class: "eyebrow", "本地扫描 · 不联网拉取封面" }
+                span { class: "eyebrow", "本地扫描 · 本地缓存优先，官方 Steam CDN 回退" }
                 h1 { "游戏库" }
                 p { "按照步骤完成配置；选择游戏后填写真正需要启动的 exe 或 launcher。" }
             }
@@ -409,13 +420,19 @@ fn LibraryView(
 
 #[component]
 fn GameCover(game: LocalSteamGame) -> Element {
-    let image_url = game.cover_path.as_deref().and_then(file_url);
+    let mut failed = use_signal(|| false);
+    let image_url = game.cover_path.as_deref().and_then(cover_url);
+
     rsx! {
-        div { class: "game-cover",
-            if let Some(url) = image_url {
-                img { src: url, alt: "{game.name} 的本地封面" }
+        div { class: "game-cover", "data-testid": "game-cover-{game.appid}",
+            if let Some(url) = image_url.filter(|_| !failed()) {
+                img {
+                    src: url,
+                    alt: "{game.name} 的封面",
+                    onerror: move |_| failed.set(true),
+                }
             } else {
-                div { class: "cover-placeholder", span { "▧" } small { "本地封面缓存未找到" } }
+                div { class: "cover-placeholder", span { "▧" } small { "封面暂不可用" } }
             }
         }
     }
@@ -696,6 +713,13 @@ fn file_url(path: &str) -> Option<String> {
     Some(url)
 }
 
+fn cover_url(path: &str) -> Option<String> {
+    if path.starts_with("https://") {
+        return Some(path.to_string());
+    }
+    file_url(path)
+}
+
 fn path_info(path: &str) -> PathInfo {
     let path = Path::new(path);
     let name = path
@@ -732,7 +756,7 @@ fn chrono_free_nonce() -> u128 {
 
 #[cfg(test)]
 mod tests {
-    use super::{file_url, path_info, short_hash};
+    use super::{cover_url, file_url, path_info, short_hash};
 
     #[test]
     fn extracts_a_manual_game_name_and_directory_from_a_target_path() {
@@ -749,5 +773,11 @@ mod tests {
     #[test]
     fn missing_cover_path_does_not_become_a_broken_url() {
         assert!(file_url("/path/that/does/not/exist.png").is_none());
+    }
+
+    #[test]
+    fn official_cover_url_is_used_without_local_file_canonicalization() {
+        let url = "https://cdn.cloudflare.steamstatic.com/steam/apps/123456/library_600x900.jpg";
+        assert_eq!(cover_url(url), Some(url.to_string()));
     }
 }

@@ -15,6 +15,18 @@ describe("SteamWrapper Dioxus Manager", () => {
     await expect($("[data-testid='window-close']")).toBeDisplayed();
   });
 
+  it("collapses only the sidebar overlay without rebuilding the workspace", async () => {
+    const sidebar = await $("[data-testid='sidebar']");
+    const toggle = await $("[data-testid='sidebar-toggle']");
+
+    await toggle.click();
+    await expect(sidebar).toHaveElementClass("sidebar--collapsed");
+    await expect($("[data-testid='scan-games']")).toBeDisplayed();
+
+    await toggle.click();
+    await expect(sidebar).not.toHaveElementClass("sidebar--collapsed");
+  });
+
   it("installs the bundled Runner into the stable user-data path on first start", async () => {
     await $("[data-testid='nav-设置']").click();
     const status = await $("[data-testid='runner-status']");

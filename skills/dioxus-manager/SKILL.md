@@ -18,7 +18,7 @@ Maintain the v2 Manager at `apps/manager-dioxus` without weakening the data, Run
 ## When to Use
 
 - Editing the Dioxus Manager UI, Dioxus bundle metadata, native E2E, or Manager Runner staging.
-- Changing Manager-facing profile, Steam scan, local cover, log, path, or Runner repair behavior.
+- Changing Manager-facing profile, Steam scan, local-first cover/CDN fallback, log, path, or Runner repair behavior.
 - Updating CI/release steps that build `SteamWrapperManager`.
 
 Do not use this skill for Runner process lifecycle work; use the Runner's Rust tests and platform modules directly.
@@ -84,6 +84,13 @@ Extract the AppImage and prove a non-empty `SteamWrapperManager/steamwrapper-run
 - The Rust `e2e` feature alone may include `wdio-dioxus-embedded-driver`; a normal dependency graph must not.
 - The E2E runner must use temporary `STEAM_DIR`, `STEAMWRAPPER_E2E_ROOT`, `XDG_DATA_HOME`, and `LOCALAPPDATA` fixture directories. Never point an automated test at a real Steam library or user data directory.
 - Artifacts and staged Runner resources are ignored; never commit binaries, fixture profiles, browser data, or logs.
+
+## Cover Fallback Rules
+
+- Prefer an existing local Steam cover cache. If it is missing, use only the AppID already obtained from the local appmanifest to form the public Steam CDN `library_600x900.jpg` URL.
+- Do not call a third-party metadata API, request a Steam API key, transmit a Steam account/library identifier, or write fetched covers to a new persistent cache without explicit product approval.
+- Preserve the player flow when offline, rate-limited, missing a CDN asset, or when image loading fails: render the friendly cover placeholder and allow configuration to continue.
+- Native E2E must use a fixture with no local cover and assert the generated CDN URL in the DOM; it must not make test success depend on external image delivery.
 
 ## Pitfalls
 
