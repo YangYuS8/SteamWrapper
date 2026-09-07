@@ -122,4 +122,8 @@ smoke 使用 `net10.0-windows10.0.26100.0`、x64、unpackaged、.NET/Windows App
 
 后续实现已通过 C# 配置/服务测试和 `winui:contracts`：C# 单字段编辑由 Rust 全量比较语义，真实 Runner 验证中文路径、精确 argv/cwd、job/root 等待差别、退出码与缺失目标日志。证据位于忽略的 `target/winui-contracts/`；原生预览记录见 [首个切片验收](winui-preview-validation.md)。这些结果不代表新安装器、干净系统运行或真实 Steam 时长已验收。
 
+后续补齐 Native E2E 启动失败日志后，本机 Windows 再次通过 3 个 spec / 6 项测试，退出码 0 且无 Manager 残留；日志为 `target/native-e2e-wrapper-1f429cd320e1437f98e8be2331c68c0f/native-e2e.log`。用户授权的真实 galgame 已进行原生 Steam、直接 Runner 和启动项对照；Steam 创建 Runner 的 OS Error 3 尚未解决，详见 [真实 Steam 验证](real-steam-validation.md)。
+
 组件精简与发布保护的证据在 `target/winui-component-study/integrated-publish.json`、`publish-regression-before.log` 和 `publish-regression-after.log`。此次已验证构建、布局与发布恢复；精简后最终产物另行通过沙盒原生窗口、配置读取、picker 打开/取消、保存和稳定 Runner 就绪复核。旧 226.23 MiB 产物的 6 轮启动/内存数据没有作为新产物复测结果，干净 Windows 系统也尚未测试。Windows CI 在上传预览前运行 `Test-WinUIPublish.ps1`，同时完成发布与 5 项发布回归。
+
+提交 `3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)与 [v2 完整门禁](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786)均已通过。后者包含 Windows/Ubuntu Native E2E、各平台 Runner 独立进程测试及 Linux AppImage 构建、实际解包检查和上传。远程运行中发现的 Linux `libxdo` 缺失、Native E2E 无显示环境、AppImage 解包校验相对路径问题已修复并经新提交完整运行确认；未降低门禁要求。CNB 同步成功。以上记录对应代码提交，不将后续仅文档提交的运行状态提前写为通过。

@@ -83,7 +83,7 @@ WinUI 的主要代价是自包含依赖体积，以及 Windows 特定的构建�
 
 两端共用独立 Rust Runner。更换 Manager 不会直接提高 Steam 时长记录、Job 等待或游戏兼容性；这些必须继续在 Runner 与实际 Steam 上验证。
 
-下一步应完成 WinUI 的干净 Windows 11 安装/更新/卸载、缩放/键盘/中文 IME/屏幕阅读器，以及真实 Steam 启动和退出验收。当前结果足以支持技术路线，尚不足以宣布 Windows 正式版可发布。完整未完成项见 [预览验收](winui-preview-validation.md)。
+后续真实 galgame 对照中，原生 Steam 启动和直接 Runner 启动通过，但 Steam 创建 Runner 四次均报 OS Error 3；尚不能归因于 Manager 框架或 Runner 等待模式。下一步先定位这项启动阻塞，再完成包装运行的状态/时长、干净 Windows 11 安装/更新/卸载及完整原生输入/可访问性验收。当前结果足以支持技术路线，尚不足以宣布 Windows 正式版可发布。详见 [真实 Steam 验证](real-steam-validation.md)与[预览验收](winui-preview-validation.md)。
 
 ## 复查入口与本机证据
 

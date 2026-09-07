@@ -36,7 +36,7 @@ mise run winui:sandbox
 
 `winui:test` 包含配置保真/冲突/替换失败和本地 Steam/稳定 Runner 安装测试。`winui:contracts` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](../tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
 
-新增 Windows CI 保留旧工作流，依次运行上述测试与目录发布。托管 Windows Server 2025 构建不是 Windows 11 干净系统验收；远程 CI 尚未执行。完整验收范围如下，不能把已实现测试外推到未测平台或真实 Steam。
+新增 Windows CI 保留旧工作流，依次运行上述测试与目录发布；`3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)已实际通过。托管 Windows Server 2025 构建不是 Windows 11 干净系统验收。完整验收范围如下，不能把已实现测试外推到未测平台或真实 Steam；已进行的真实 galgame 对照与尚未解决的 Steam→Runner 失败见 [真实 Steam 验证](real-steam-validation.md)。
 
 | 范围 | 有效证据 |
 | --- | --- |
@@ -165,4 +165,4 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 
 官方依据：Dioxus 0.7.10 Desktop / CLI 文档，`@wdio/dioxus-service` 1.0.0 的 embedded provider 与 bridge setup 文档。
 
-2026-09-07 Windows 本机已完成 Rust workspace、Runner 进程测试、Dioxus check/release build 和 3 个 spec / 6 项 Native E2E 验证。安装环境、过程中修正的 Windows 测试/工具入口问题及证据范围见 [开发环境记录](windows-development.md#本机安装与验证记录)。这不替代 NSIS 或真实 Steam 验收。
+2026-09-07 Windows 本机已完成 Rust workspace、Runner 进程测试、Dioxus check/release build 和 3 个 spec / 6 项 Native E2E 验证。提交 `3d322db` 的 [v2 完整 CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786)也已通过 Windows、Ubuntu 和 Linux AppImage 全部门禁。安装环境、过程中修正的工具/CI 问题及证据范围见 [开发环境记录](windows-development.md#本机安装与验证记录)。这不替代 NSIS 或真实 Steam 验收；[真实游戏对照](real-steam-validation.md)仍存在 Steam 创建 Runner 失败。

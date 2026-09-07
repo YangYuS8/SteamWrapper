@@ -27,14 +27,16 @@
 | 复制 | 点击复制后，剪贴板与稳定 Runner 启动命令逐字一致，包含 `--appid "480" -- %command%` |
 | UI 错误保存 | 输入不存在的 exe 后保存被拒绝，旧配置 SHA-256 不变；显示可理解的错误提示 |
 | 重新读取 | 未保存修改弹出离开保护；放弃本次错误输入后重新加载，已保存游戏仍在列表中 |
-| 远程 CI | 已新增工作流并审查语法，未 push、未远程运行；Server 2025 构建不是 Windows 11 干净系统验收 |
+| 远程 CI | 已推送至 `v2`；`3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)通过 C#、跨语言/Runner、发布及 5 项目录回归并上传预览。Server 2025 构建不是 Windows 11 干净系统验收 |
 | 组件精简后的发布 | locked restore / Release self-contained publish 通过；保留依赖版本和摘要不变，PRI、WinUI、.NET、picker 投影和 Runner 齐全 |
 | `Test-WinUIPublish.ps1` | 5 项通过：旧文件无残留、缺失资源保留旧版、锁住候选时回滚、成功替换仅含新文件、越界拒绝 |
 | 精简产物原生复核 | 实际打开中文配置，原生 picker 打开/取消成功；保存后显示成功，生成的命令仍指向沙盒稳定 Runner。证据目录：`target/ui-comparison-5523059ad7ac4b60a91e86f7ee931cee` |
 
 回归过程先观察到缺失行为，再修复：最初 C# 服务抛出未实现异常；Rust 断言捕获未进行的单字段编辑；另修复显式 root、Windows 无效 process_group、沙盒库越界及带括号 VDF 名称问题。实际启动发现缺少 PRI 资源索引，修复 SDK 构建开关后窗口正常加载；发布检查也加入应用 PRI，避免只检查 EXE 的假通过。
 
-契约证据目录：`target/winui-contracts/bec08e11a3bc44bfbe8ce050e82dbd4a/results`。本轮原生测试目录：`target/winui/sandbox/9373d81fc50e4c8f97e1fd3fc17f93ac`。测试均使用隔离 `STEAM_DIR`、`LOCALAPPDATA`、`XDG_DATA_HOME`、`STEAMWRAPPER_E2E_ROOT`；未操作真实 Steam 库。
+契约证据目录：`target/winui-contracts/bec08e11a3bc44bfbe8ce050e82dbd4a/results`。本轮原生测试目录：`target/winui/sandbox/9373d81fc50e4c8f97e1fd3fc17f93ac`。上述配置、契约及沙盒原生测试均使用隔离 `STEAM_DIR`、`LOCALAPPDATA`、`XDG_DATA_HOME`、`STEAMWRAPPER_E2E_ROOT`；未操作真实 Steam 库。
+
+后续在用户授权的真实 galgame 上完成了 WinUI 配置、原生 Steam 启动及直接 Runner 对照。**Steam 从启动选项创建 Runner 四次均报 OS Error 3，完整闭环未通过**；原启动项已恢复，35 个游戏文件与 4 份既有存档的原哈希不变。详见 [真实 Steam 验证](real-steam-validation.md)。
 
 后续发布回归先证明旧脚本保留唯一哨兵文件，再验证全新目录替换不会残留旧依赖。锁文件用例还捕获 `Move-Item` 创建空目标后失败的问题；改为同父目录 `Directory.Move` 后，已验证旧版字节恢复及候选目录保留。证据：`target/winui-component-study/publish-regression-before.log`、`publish-regression-after.log`、`integrated-publish.json`。
 
@@ -56,6 +58,6 @@ mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
 
 ## 尚未完成的验收
 
-真实 Steam 状态/时长、完整键盘与中文 IME、缩放/高对比度/屏幕阅读器矩阵、干净 Windows 11 VM、安装器、签名、更新与卸载、自动应用/恢复 Steam 启动项。当前目标为 Windows 11 24H2（26100）x64，未验证 Windows 10 或 ARM64。
+真实 Steam→Runner 链路已测试但失败，包装运行的状态/时长未验收；另有完整键盘与中文 IME、缩放/高对比度/屏幕阅读器矩阵、干净 Windows 11 VM、安装器、签名、更新与卸载、自动应用/恢复 Steam 启动项尚未完成。当前目标为 Windows 11 24H2（26100）x64，未验证 Windows 10 或 ARM64。
 
 配置编辑支持 Rust 输出的显式 profile 表；内联/点号布局可读取但会拒绝保存。协作写锁和两次字节检查不能消除非协作外部编辑器在最终检查与替换之间的竞态。未知或同版本不同内容的已有 Runner 不会被强制覆盖，需要匹配版本的安装包处理。
