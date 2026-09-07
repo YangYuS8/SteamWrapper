@@ -62,7 +62,7 @@ tests/fixtures            # 真实 Runner 消费的受控进程，仅测试
 
 项目工具由 mise 管理，.NET SDK 10.0.400、Rust 1.98.1；本机重启后 MSVC/SDK 已复检。Manager 使用 Windows App SDK 2.4.0 对应的组件集：直接固定 `Microsoft.WindowsAppSDK.WinUI` 2.3.6、`Microsoft.WindowsAppSDK.InteractiveExperiences` 2.1.6 与 SDK.BuildTools 10.0.26100.7705。组件包版本不等于框架名称中的“WinUI 3”；显式固定 InteractiveExperiences 避免回落到 WinUI 包的最低依赖 2.1.3。保留依赖的版本和摘要与原 2.4.0 总包锁文件一致。
 
-按需组件引用是 Windows App SDK 官方支持的自包含部署方式。Manager 不引用未使用的 AI、ML、Search、Widgets 和 DWrite 组件，也不通过手动删除发布 DLL 精简。最终新目录为 171.196 MiB（179,511,987 字节、457 文件，未压缩），原 226.23 MiB 版本的启动/内存基准仍作为历史结果保留；精简后未重测这些指标。[官方组件包说明](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/release-notes/windows-app-sdk-1-8#version-180-18250907003)、[本机比较与发布验证](windows-manager-comparison.md)
+按需组件引用是 Windows App SDK 官方支持的自包含部署方式。Manager 不引用未使用的 AI、ML、Search、Widgets 和 DWrite 组件，也不通过手动删除发布 DLL 精简。精简后目录约 171 MiB（457 文件，未压缩），最新产物字节数见[预览验收](winui-preview-validation.md)；原 226.23 MiB 版本的启动/内存基准仍作为历史结果保留，精简后未重测这些指标。[官方组件包说明](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/release-notes/windows-app-sdk-1-8#version-180-18250907003)、[本机比较与发布验证](windows-manager-comparison.md)
 
 目标仍为 Windows 11 24H2（26100）x64，自包含且关闭 trimming。服务使用 net10.0、测试使用 MSTest 4.4.0 / Test SDK 18.9.0，各项目有 NuGet 锁文件。Manager 项目直接维护，无需 alpha 模板或 WinApp MSIX 调试身份包。发布先生成全新目录并校验，再替换旧产物，防止旧依赖残留；命令、五项发布回归及未完成的原生/干净系统验收见 [Windows 开发环境](windows-development.md)。
 

@@ -6,8 +6,21 @@ namespace SteamWrapper.Application.Services;
 
 public sealed record RunnerStatus(bool IsReady, bool CanInstall, string Message, string? InstalledVersion = null, string? BundledVersion = null);
 
-public sealed class RunnerInstaller(DataPaths paths, string bundledDirectory)
+public sealed class RunnerInstaller
 {
+    private readonly DataPaths paths;
+    private readonly string bundledDirectory;
+    private readonly Func<FileStream, string> finalPath;
+
+    public RunnerInstaller(DataPaths paths, string bundledDirectory) : this(paths, bundledDirectory, SharedDataFileLocation.ReadFinalPath) { }
+
+    internal RunnerInstaller(DataPaths paths, string bundledDirectory, Func<FileStream, string> finalPath)
+    {
+        this.paths = paths;
+        this.bundledDirectory = bundledDirectory;
+        this.finalPath = finalPath;
+    }
+
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(StringComparer.OrdinalIgnoreCase);
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private string Stable => Path.GetFullPath(paths.RunnerPath);
@@ -31,12 +44,13 @@ public sealed class RunnerInstaller(DataPaths paths, string bundledDirectory)
         cancellationToken.ThrowIfCancellationRequested();
         try
         {
+            VerifyProfilesLocation();
             var bundle = ReadManifest(Path.Combine(bundledDirectory, "runner-manifest.json"));
             if (bundle.ContractVersion != 2 || !Hash(Bundled).Equals(bundle.Sha256, StringComparison.OrdinalIgnoreCase))
                 return new(new(false, false, "随包 Runner 的版本或文件校验失败，请重新下载完整安装包。"));
             if (!File.Exists(Stable))
                 return new(new(false, true, "尚未安装启动组件。保存配置后可安装到稳定目录。", BundledVersion: bundle.Version), bundle);
-            var currentHash = Hash(Stable);
+            var currentHash = Hash(Stable, verifyLocation: true);
             if (currentHash.Equals(bundle.Sha256, StringComparison.OrdinalIgnoreCase))
                 return new(new(true, false, "启动组件已就绪。", bundle.Version, bundle.Version), bundle, bundle, currentHash);
 
@@ -83,6 +97,7 @@ public sealed class RunnerInstaller(DataPaths paths, string bundledDirectory)
             using (var source = new FileStream(Bundled, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var destination = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
+                SharedDataFileLocation.Verify(destination, finalPath);
                 source.CopyTo(destination);
                 destination.Flush(flushToDisk: true);
             }
@@ -95,15 +110,16 @@ public sealed class RunnerInstaller(DataPaths paths, string bundledDirectory)
             SaveRelease(bundle);
             cancellationToken.ThrowIfCancellationRequested();
             hadRunner = File.Exists(Stable);
-            if ((hadRunner ? Hash(Stable) : null) != before.CurrentHash)
+            if ((hadRunner ? Hash(Stable, verifyLocation: true) : null) != before.CurrentHash)
                 throw new IOException("启动组件已被其他程序修改，请重新检查。");
             if (hadRunner) File.Replace(temporary, Stable, backup);
             else File.Move(temporary, Stable);
             swapped = true;
             // Finish or roll back this short commit even if cancellation arrives after replacement.
             WriteAtomically(ManifestPath, JsonSerializer.SerializeToUtf8Bytes(bundle, JsonOptions));
-            if (!Hash(Stable).Equals(bundle.Sha256, StringComparison.OrdinalIgnoreCase))
+            if (!Hash(Stable, verifyLocation: true).Equals(bundle.Sha256, StringComparison.OrdinalIgnoreCase))
                 throw new IOException("已安装启动组件的复读校验失败。");
+            VerifyProfilesLocation();
             DeleteIfPresent(backup);
             return new(true, false, "启动组件已安装到稳定目录。", bundle.Version, bundle.Version);
         }
@@ -154,10 +170,18 @@ public sealed class RunnerInstaller(DataPaths paths, string bundledDirectory)
         return manifest;
     }
 
-    private static string Hash(string path)
+    private string Hash(string path, bool verifyLocation = false)
     {
         using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (verifyLocation) SharedDataFileLocation.Verify(file, finalPath);
         return Convert.ToHexStringLower(SHA256.HashData(file));
+    }
+
+    private void VerifyProfilesLocation()
+    {
+        if (!File.Exists(paths.ProfilesPath)) return;
+        using var file = new FileStream(paths.ProfilesPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        SharedDataFileLocation.Verify(file, finalPath);
     }
 
     private static void WriteAtomically(string path, byte[] bytes)

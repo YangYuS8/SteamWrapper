@@ -34,21 +34,26 @@ mise run winui:publish
 mise run winui:sandbox
 ```
 
-`winui:test` 包含配置保真/冲突/替换失败和本地 Steam/稳定 Runner 安装测试。`winui:contracts` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](../tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
+`winui:test` 包含配置保真/冲突/替换失败、本地 Steam、稳定 Runner 安装与共享文件位置测试。`winui:contracts` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](../tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
 
-新增 Windows CI 保留旧工作流，依次运行上述测试与目录发布；`3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)已实际通过。托管 Windows Server 2025 构建不是 Windows 11 干净系统验收。完整验收范围如下，不能把已实现测试外推到未测平台或真实 Steam；已进行的真实 galgame 对照与尚未解决的 Steam→Runner 失败见 [真实 Steam 验证](real-steam-validation.md)。
+新增 Windows CI 保留旧工作流，依次运行上述测试与目录发布；`3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)已实际通过。托管 Windows Server 2025 构建不是 Windows 11 干净系统验收。完整验收范围如下，不能把 fixture 结果外推到未测平台或真实 Steam；本机单款 galgame 已另行通过 Steam 闭环，过程与边界见 [真实 Steam 验证](real-steam-validation.md)。
 
 | 范围 | 有效证据 |
 | --- | --- |
 | TOML 兼容 | C# 读取 Rust fixture、只改一个字段、保存后由 Rust 断言未编辑语义；包括省略 wait_mode=root、新建 job、别名键、未知字段/版本和所有现存枚举 |
 | 保存安全 | 原子替换失败、备份失败、多写者/外部修改冲突、中断与旧文件保留；不以序列化成功代替无损保存 |
 | 配置到运行 | C# 保存的配置驱动真实 Rust Runner fixture，断言 argv、cwd、launcher/child 等待与错误；不能只比较 TOML 文本 |
+| 共享数据位置 | 核验现存 Runner/profile 与安装候选的句柄最终路径；重定向返回非就绪，候选失败保留旧文件，真实 junction 和合法路径形式仍可用 |
 | WinUI 操作 | 真实原生窗口、原生 picker、取消、中文输入、键盘、缩放及错误恢复；旧 Dioxus DOM/RSX 断言不适用 |
 | Windows 发布 | 干净 Windows 11 x64 VM 上自包含安装、稳定 Runner、覆盖更新/占用/降级保护、移动 Manager、卸载后既有启动项仍可用 |
 | Steam apply/restore | 脱敏多用户 VDF fixture、Steam 运行保护、备份/复读、冲突和中断恢复、保留其他设置；私有格式需先核验 |
 | 最终游玩体验 | 测试者在真实 Steam 人工记录运行状态、退出和时长更新；注明游戏、launcher、系统版本，不能由 fixture 结果替代 |
 
 常规自动化使用隔离 Steam/用户数据。真实 Steam 验收须有用户明确授权；本次用户已授权不损坏游戏文件的 galgame 测试。原启动项、文件完整性与存档保护需单独记录，未解决的云同步冲突不能由测试流程自动选择覆盖。真实用户数据、完整 Steam 配置和本机测试备份不进入提交或 CI 产物。具体配置边界见 [主方案](windows-v2-design.md#4-配置保真是第一个门槛)。
+
+真实验收中的 Manager 应从正常 Windows 资源管理器打开完整发布目录中的 `SteamWrapper.Manager.exe`，完成配置与稳定 Runner 安装后关闭，再由 Steam 启动游戏。本机 Codex 进程环境曾把字面上的 AppData 路径映射到包的 `LocalCache`；shell 或 Manager 没有 package identity，并不能排除此重定向。最终文件句柄路径才揭示两种视图不同。具体步骤见 [共享数据路径与真实 Steam 验收](windows-development.md#共享数据路径与真实-steam-验收)，常规 mise/sandbox 流程保持。
+
+2026-09-07 的实际记录：`The NOexistenceN of you AND me`（AppID 2873080）在 12:46:03 形成 `Steam 4268 → Runner 4624 → 游戏 19752 → Unity 12996`，从标题界面正常退出后，Steam 在 12:53:33 记录三个子进程全部 exit 0；UI 回到“开始”、云显示最新，显示时长 11.2 → 11.4 小时，启动项已恢复为空。正常 Explorer 启动同一 Manager、在真实稳定目录配置安装后，原命令格式即成功，无需改动引号或斜杠规则。最终独立核对确认 35/35 个游戏文件及 4/4 份原存档 SHA-256 与初始基线一致，存档句柄路径未被重定向。此结果限于本机该款游戏，不扩大为其他游戏、干净 VM 或安装器通过。
 
 ## 当前实现分层
 
@@ -148,6 +153,12 @@ fixture 包含中文路径与空格路径、一个本地 Steam game manifest，�
 
 ## Runner 稳定安装验证
 
+WinUI 的 [RunnerInstaller](../apps/manager-winui/SteamWrapper.Application/Services/RunnerInstaller.cs)在判定就绪前核验现存 Runner 与存在的 `profiles.toml`，并核验安装候选与安装后文件位置；缺少 profile 不影响独立健康检查。[位置检查](../apps/manager-winui/SteamWrapper.Application/Services/SharedDataFileLocation.cs)比较文件句柄最终路径与显式文件链接解析后的逻辑路径，发现重定向时返回非就绪并提示从资源管理器重新打开 Manager。现有 UI 仅在安装服务就绪后展示可复制启动项，Launch Options 字符串契约与 ProfileStore 保存算法未修改。
+
+本次新增 9 条 [位置回归](../apps/manager-winui/SteamWrapper.Application.Tests/RunnerLocationTests.cs)：已安装 Runner 重定向、升级候选重定向且保留旧 Runner/清单/配置、首次安装候选重定向、仅 profile 重定向、路径查询失败、普通原生句柄、真实 junction 升级、中文/大小写/扩展前缀及 DOS/UNC 前缀规范化。四种重定向场景先观察旧实现错误返回就绪，再验证修复；最终 `mise run winui:test` 43/43 通过，`winui:contracts` 通过。红/绿证据位于忽略的 `target/runner-location-tests/`，本轮契约结果位于 `target/winui-contracts/bfad46a031ff4713b378d875f6f2f621/results`。
+
+服务测试后另行验证了新版发布产物的原生行为：受重定向的工具环境启动 Manager 后出现位置警告，保存不展示启动项或复制按钮；普通 Explorer 启动新版 Manager 后保存成功，生成完全一致的既有启动项。该原生复核与上述服务/进程证据分别记录，不替代干净 VM 或安装器验证。
+
 `manager-core` 的 Rust 测试覆盖 Runner 路径、摘要相同不覆盖、缺失 / 损坏修复、原子替换失败与不触碰 `profiles.toml` / `logs` / `backups` / `cache` 的边界。Dioxus Native E2E 从空的稳定目录启动，检查真实 Runner 文件被安装并由设置页显示为健康。
 
 Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两平台的 `process_name` 边界。`process_name` 仅按进程名匹配，无法判断并发同名业务归属；它不是默认等待模式。
@@ -159,10 +170,10 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 ## 限制
 
 - Linux 本机 Native E2E 的通过不能替代 Windows WebView2、NSIS 或 Steam Deck 实机验证。
-- 不自动驱动真实 Steam 客户端；一键写入 / 恢复 Launch Options 仍是后续功能。
+- 常规自动化不操作真实 Steam；真实验收需要用户授权并记录恢复。一键写入 / 恢复 Launch Options 仍是后续产品功能。
 - Native E2E 覆盖受控本地 fixture，不覆盖真实 Proton、breakaway、Unix daemonize / 新 session 行为。
 - Dioxus Browser Mode 不适用于当前直接 Rust service 架构；本项目用 Native E2E 覆盖真实 UI 与 service 边界。
 
 官方依据：Dioxus 0.7.10 Desktop / CLI 文档，`@wdio/dioxus-service` 1.0.0 的 embedded provider 与 bridge setup 文档。
 
-2026-09-07 Windows 本机已完成 Rust workspace、Runner 进程测试、Dioxus check/release build 和 3 个 spec / 6 项 Native E2E 验证。提交 `3d322db` 的 [v2 完整 CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786)也已通过 Windows、Ubuntu 和 Linux AppImage 全部门禁。安装环境、过程中修正的工具/CI 问题及证据范围见 [开发环境记录](windows-development.md#本机安装与验证记录)。这不替代 NSIS 或真实 Steam 验收；[真实游戏对照](real-steam-validation.md)仍存在 Steam 创建 Runner 失败。
+2026-09-07 Windows 本机已完成 Rust workspace、Runner 进程测试、Dioxus check/release build 和 3 个 spec / 6 项 Native E2E 验证。提交 `3d322db` 的 [v2 完整 CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786)也已通过 Windows、Ubuntu 和 Linux AppImage 全部门禁。安装环境、过程中修正的工具/CI 问题及证据范围见 [开发环境记录](windows-development.md#本机安装与验证记录)。这些门禁不替代 NSIS、干净 Windows VM 或真实 Steam 验收；本机另行完成的单款 [真实游戏闭环](real-steam-validation.md)仍有其明确测试范围。

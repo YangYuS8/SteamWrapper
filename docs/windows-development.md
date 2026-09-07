@@ -69,7 +69,7 @@ mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -Sk
 
 完整命令包含 5 项检查：旧哨兵文件不残留、缺失资源保留旧版、锁住候选时回滚、成功替换只含新文件、越界路径拒绝。测试文件均在 `target/winui` 中；运行前关闭发布目录中的预览。
 
-沙盒每次在 `target/winui/sandbox/<id>` 创建示例 Steam manifest、LOCALAPPDATA、XDG_DATA_HOME，并设置 STEAMWRAPPER_E2E_ROOT。示例游戏不带真实游戏程序，选择受控测试 exe 即可验证配置。产物普通运行会使用真实用户目录；自动化只使用沙盒入口。不要从发布目录单独拷出 EXE。
+沙盒每次在 `target/winui/sandbox/<id>` 创建示例 Steam manifest、LOCALAPPDATA、XDG_DATA_HOME，并设置 STEAMWRAPPER_E2E_ROOT。示例游戏不带真实游戏程序，选择受控测试 exe 即可验证配置。脱离沙盒的产物会尝试使用常规用户数据位置；实际文件视图仍需按下节检查。常规自动化使用沙盒入口。不要从发布目录单独拷出 EXE。
 
 旧实现与环境诊断入口：
 
@@ -91,6 +91,21 @@ mise.exe exec -- cargo test --locked -p steamwrapper-runner
 
 本机 PowerShell 的 `mise` 激活函数会吞掉 `exec` 的裸 `--` 分隔符，因此一次性调用使用 `mise.exe`；`mise run ...` 不受此问题影响。没有为此修改用户 PowerShell 配置。
 
+## 共享数据路径与真实 Steam 验收
+
+Manager 和 Steam 启动的 Runner 必须看到同一份 `%LOCALAPPDATA%\SteamWrapper\profiles.toml` 与 `bin\SteamWrapperRunner.exe`。本机发现：从 Codex 的进程环境启动 shell 或 Manager 时，字面上的常规 AppData 路径可以落到 Codex 包的 `LocalCache` 私有目录；文件存在、摘要匹配、直接运行成功都不足以证明普通 Steam 可访问它。shell 或 Manager 报告没有 package identity，也不能否认这种文件视图差异。此次差异由文件句柄的最终路径确认。
+
+[共享文件位置检查](../apps/manager-winui/SteamWrapper.Application/Services/SharedDataFileLocation.cs)在判定 Runner 就绪前核验现有 Runner 与存在的 profile，并在复制安装候选前、安装完成时核验对应文件。句柄最终路径与解析显式 junction/symlink 后的逻辑路径不符时，服务返回非就绪并提示从资源管理器重新打开 Manager；配置编辑算法和 Launch Options 格式不变。比较接受合法链接、大小写差异及 `\\?\` / UNC 前缀；缺少 profile 不影响独立 Runner 健康检查。此检查证明共享位置一致性，不替代真实 Steam 启动验收。
+
+有用户授权后，真实验收按普通玩家的启动方式执行：
+
+1. 记录所选游戏原启动项，准备文件完整性基线和存档保护；存在未解决的云同步冲突时停止。
+2. 关闭 Manager，在正常 Windows 资源管理器地址栏打开本仓库 `target\winui\publish` 的完整目录，再双击 `SteamWrapper.Manager.exe`。保留完整发布目录；从 Codex shell 调用进程启动 API 不能作为已经脱离其文件视图的证据。
+3. 在该 Manager 中完成配置与稳定 Runner 安装，确认没有共享位置警告。复制既有格式的启动项到 Steam，关闭 Manager，再从 Steam 启动所选游戏；分别记录 Runner/游戏进程、标题界面、退出后 Steam 状态与显示时长。
+4. 测试结束恢复原启动项，复查游戏文件与原存档。UI 回到“开始”或云显示最新，不能代替文件完整性核对。
+
+日常开发仍使用上面的 mise 与沙盒命令。通过本机普通 Explorer 的一次真实游戏验收，不等于干净 Windows VM、安装器、覆盖更新或卸载验收。
+
 ## WinUI 验证的边界
 
 官方 CLI 模板能够通过 .NET 创建 WinUI/XAML 项目。0.0.6-alpha 的创建后操作会无条件更新三个 NuGet 包，`UseLatestWindowsAppSDK=false` 未约束这些操作；脚本在生成后用 XML 固定实际包引用和最低系统版本，再发布。不能只凭模板参数宣称版本已经固定。[WinUI 官方快速入门](https://learn.microsoft.com/en-us/windows/apps/get-started/start-here)
@@ -109,6 +124,7 @@ smoke 使用 `net10.0-windows10.0.26100.0`、x64、unpackaged、.NET/Windows App
 | WinUI 固定依赖后的自包含发布 | 通过；目录包含非空 EXE、`coreclr.dll` 和 `Microsoft.UI.Xaml.dll`；未启用裁剪 |
 | Manager 组件精简后的 fresh publish | 通过；171.196 MiB / 179,511,987 字节 / 457 文件，旧 AI/ML 等依赖无残留，Runner 清单摘要匹配 |
 | `Test-WinUIPublish.ps1` | 5 项通过；先复现旧发布保留哨兵的失败，再验证新发布与错误恢复 |
+| 共享数据位置保护的 `winui:test` / `winui:contracts` | 43/43 C# 用例通过，其中 9 条新增位置回归；Runner 与 profile 重定向先复现失败再修复，原生句柄与真实 junction 正例通过；跨语言及受控 Runner 契约通过 |
 | `cargo fmt --all -- --check`、`cargo check --locked --workspace` | 通过 |
 | `cargo test --locked --workspace` | 全部通过，包括 Windows Runner 的 6 项测试 |
 | 冻结 pnpm 安装、E2E TypeScript 检查 | 通过 |
@@ -120,9 +136,13 @@ smoke 使用 `net10.0-windows10.0.26100.0`、x64、unpackaged、.NET/Windows App
 
 完整验证任务最初遇错停止；最后的路径断言修正后，仅重跑受影响的 TypeScript 和 E2E，其余已通过检查未重复。日志保留在忽略的 `target/windows-verify.log`、`target/windows-runner-test.log`、`target/windows-e2e.log` 和 `target/winui-toolchain-build.log`。
 
-后续实现已通过 C# 配置/服务测试和 `winui:contracts`：C# 单字段编辑由 Rust 全量比较语义，真实 Runner 验证中文路径、精确 argv/cwd、job/root 等待差别、退出码与缺失目标日志。证据位于忽略的 `target/winui-contracts/`；原生预览记录见 [首个切片验收](winui-preview-validation.md)。这些结果不代表新安装器、干净系统运行或真实 Steam 时长已验收。
+后续实现已通过 C# 配置/服务测试和 `winui:contracts`：C# 单字段编辑由 Rust 全量比较语义，真实 Runner 验证中文路径、精确 argv/cwd、job/root 等待差别、退出码与缺失目标日志。证据位于忽略的 `target/winui-contracts/`；原生预览记录见 [首个切片验收](winui-preview-validation.md)。这些 fixture 结果本身不代表新安装器、干净系统运行或真实 Steam 时长验收；真实游戏结果单独记录如下。
 
-后续补齐 Native E2E 启动失败日志后，本机 Windows 再次通过 3 个 spec / 6 项测试，退出码 0 且无 Manager 残留；日志为 `target/native-e2e-wrapper-1f429cd320e1437f98e8be2331c68c0f/native-e2e.log`。用户授权的真实 galgame 已进行原生 Steam、直接 Runner 和启动项对照；Steam 创建 Runner 的 OS Error 3 尚未解决，详见 [真实 Steam 验证](real-steam-validation.md)。
+后续补齐 Native E2E 启动失败日志后，本机 Windows 再次通过 3 个 spec / 6 项测试，退出码 0 且无 Manager 残留；日志为 `target/native-e2e-wrapper-1f429cd320e1437f98e8be2331c68c0f/native-e2e.log`。
+
+用户授权的真实 galgame `The NOexistenceN of you AND me`（AppID 2873080）已完成本机 Steam 闭环：2026-09-07 12:46:03 从 Steam 启动 Runner 和游戏，标题界面正常退出后，Steam 在 12:53:33 记录 Runner、游戏与 Unity 子进程全部 exit 0；UI 回到“开始”、云显示最新，累计时长显示从 11.2 变为 11.4 小时，原空启动项已恢复。此前 OS Error 3 对应的是 Codex 私有 AppData 文件视图；通过正常 Explorer 打开同一 Manager、在真实稳定目录安装后，原启动项格式未作修改即成功。最终 35/35 个游戏文件与 4/4 份原存档的 SHA-256 均与初始基线一致；存档句柄最终路径也确认未被重定向。详见 [真实 Steam 验证](real-steam-validation.md)。
+
+新增位置保护的发布产物已完成两种启动上下文的原生复核：从受重定向的工具环境打开时显示位置警告，保存后不显示启动项或复制按钮；从普通 Explorer 打开新版 Manager（PID 13644，父进程 11316 为 `explorer.exe`）后保存成功，生成完全一致的既有命令格式。这是本机窗口与共享路径证据，干净 Windows VM、安装器和卸载边界仍未验收。
 
 组件精简与发布保护的证据在 `target/winui-component-study/integrated-publish.json`、`publish-regression-before.log` 和 `publish-regression-after.log`。此次已验证构建、布局与发布恢复；精简后最终产物另行通过沙盒原生窗口、配置读取、picker 打开/取消、保存和稳定 Runner 就绪复核。旧 226.23 MiB 产物的 6 轮启动/内存数据没有作为新产物复测结果，干净 Windows 系统也尚未测试。Windows CI 在上传预览前运行 `Test-WinUIPublish.ps1`，同时完成发布与 5 项发布回归。
 

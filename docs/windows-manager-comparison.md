@@ -83,7 +83,7 @@ WinUI 的主要代价是自包含依赖体积，以及 Windows 特定的构建�
 
 两端共用独立 Rust Runner。更换 Manager 不会直接提高 Steam 时长记录、Job 等待或游戏兼容性；这些必须继续在 Runner 与实际 Steam 上验证。
 
-后续真实 galgame 对照中，原生 Steam 启动和直接 Runner 启动通过，但 Steam 创建 Runner 四次均报 OS Error 3；尚不能归因于 Manager 框架或 Runner 等待模式。下一步先定位这项启动阻塞，再完成包装运行的状态/时长、干净 Windows 11 安装/更新/卸载及完整原生输入/可访问性验收。当前结果足以支持技术路线，尚不足以宣布 Windows 正式版可发布。详见 [真实 Steam 验证](real-steam-validation.md)与[预览验收](winui-preview-validation.md)。
+后续真实 galgame 对照已定位早先 OS Error 3：开发宿主将 AppData 文件写入私有视图，普通 Steam 无法访问。由资源管理器打开 Manager 完成正常位置安装后，同一条命令已通过一个 Unity galgame 的 Steam → Runner → 游戏闭环、正常退出和时长更新。新增位置检查后，C# 测试为 43/43，跨语言/Runner 契约及两种启动上下文的原生复核通过；Runner 和启动项格式未改变。这个问题不能归因于 UI 框架或 Job 等待模式。下一步补充真实自定义 launcher/其他引擎、干净 Windows 11 安装/更新/卸载及完整原生输入/可访问性验收。当前结果足以支持技术路线，尚不足以宣布 Windows 正式版可发布。详见 [真实 Steam 验证](real-steam-validation.md)与[预览验收](winui-preview-validation.md)。
 
 ## 复查入口与本机证据
 
@@ -105,4 +105,4 @@ mise.exe exec -- pwsh -NoProfile -File scripts/windows/Measure-ManagerComparison
 - 资源测量：`target/manager-comparison/e9cb1333d8c64656b25f50e9536779a0`。
 - 最终组件发布：`target/winui-component-study/integrated-publish.json`；发布回归：同目录下 `publish-regression-before.log`、`publish-regression-after.log`。
 
-`target` 证据为本机临时产物，不进入提交。报告、资源测量脚本和发布回归脚本保留在仓库中。干净 Windows 11 安装及真实 Steam 时长验收仍未完成。
+`target` 证据为本机临时产物，不进入提交。报告、资源测量脚本和发布回归脚本保留在仓库中。上述组件比较体积保留历史值；位置检查修复后的新产物为 179,515,507 字节 / 457 文件，未重复资源基准。真实 Steam 时长已在一款游戏上验收，干净 Windows 11 安装验收仍未完成。
