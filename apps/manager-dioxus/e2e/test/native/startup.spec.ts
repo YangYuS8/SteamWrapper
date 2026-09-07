@@ -1,4 +1,5 @@
 import { $, expect } from "@wdio/globals";
+import { join } from "node:path";
 
 describe("SteamWrapper Dioxus Manager", () => {
   it("starts with the player-facing library flow", async () => {
@@ -32,6 +33,7 @@ describe("SteamWrapper Dioxus Manager", () => {
     const status = await $("[data-testid='runner-status']");
     await expect(status).toHaveText(expect.stringContaining("已安装"));
     const runnerPath = await $("[data-testid='runner-path']");
-    await expect(runnerPath).toHaveText(expect.stringContaining("SteamWrapper/bin"));
+    const runnerFileName = process.platform === "win32" ? "SteamWrapperRunner.exe" : "steamwrapper-runner";
+    await expect(runnerPath).toHaveText(expect.stringContaining(join("SteamWrapper", "bin", runnerFileName)));
   });
 });

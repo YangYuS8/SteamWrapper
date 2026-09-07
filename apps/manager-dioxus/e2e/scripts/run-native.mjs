@@ -84,9 +84,10 @@ try {
     );
   }
 
+  const wdioCliPath = fileURLToPath(new URL("../bin/wdio.js", import.meta.resolve("@wdio/cli")));
   const child = spawn(
-    process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-    ["exec", "wdio", "run", "wdio.native.conf.ts"],
+    process.execPath,
+    [wdioCliPath, "run", "wdio.native.conf.ts"],
     {
       cwd: e2eDir,
       env: {
@@ -99,7 +100,10 @@ try {
       stdio: "inherit",
     },
   );
-  const exitCode = await new Promise((resolveExit) => child.once("exit", (code) => resolveExit(code ?? 1)));
+  const exitCode = await new Promise((resolveExit, reject) => {
+    child.once("error", reject);
+    child.once("exit", (code) => resolveExit(code ?? 1));
+  });
   await preserveFixtureArtifacts();
   process.exitCode = exitCode;
 } finally {

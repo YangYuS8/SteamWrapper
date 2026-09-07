@@ -53,7 +53,11 @@ fn saves_and_lists_profiles_without_changing_the_v2_toml_contract() {
     assert!(raw.contains("[profiles.123456]"));
     assert!(raw.contains("app_id = \"123456\""));
     assert!(raw.contains("target = \"launcher.sh\""));
-    assert!(raw.contains("wait_mode = \"process_group\""));
+    if cfg!(target_os = "windows") {
+        assert!(raw.contains("wait_mode = \"job\""));
+    } else {
+        assert!(raw.contains("wait_mode = \"process_group\""));
+    }
 
     let profiles = service.list_profiles().expect("list profiles");
     assert_eq!(profiles.len(), 1);
