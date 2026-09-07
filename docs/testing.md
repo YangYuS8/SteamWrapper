@@ -94,7 +94,9 @@ cargo build -p steamwrapper-manager-dioxus --features e2e
 pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
 ```
 
-Linux 打包前需准备 WebKitGTK、GTK3、AppIndicator、librsvg 与 `patchelf`。平台 bundle 由对应平台运行：
+Linux 构建、测试和打包前需准备 WebKitGTK、GTK3、`libxdo-dev`、AppIndicator、librsvg 与 `patchelf`。当前 Dioxus Desktop 通过 `muda` 的默认 `libxdo` feature 链接 X11 库；Ubuntu 需要安装开发包 `libxdo-dev`，否则 Manager 测试和 AppImage 构建会在链接阶段报 `unable to find library -lxdo`。CI Check、AppImage 和 release 的 Linux 依赖列表均包含该包。[Ubuntu 包说明](https://packages.ubuntu.com/noble/amd64/libxdo-dev)
+
+平台 bundle 由对应平台运行：
 
 ```bash
 # Linux
