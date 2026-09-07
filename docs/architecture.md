@@ -76,6 +76,8 @@ crates/runner                               # 由 Steam 独立启动
 
 `SteamScanner` 只读本地 VDF 和封面；`RunnerInstaller` 使用摘要绑定的版本清单、稳定路径和原子替换，拒绝无法确认的新旧覆盖。UI 不负责游戏进程控制。`tests/contracts` 与测试专用进程 fixture 验证 C# 编辑和实际 Rust 消费，不进入 Manager 包。
 
+`ProfileSteamInstallation` 按 AppID 关联只读 Steam 安装位置，作为 Manager 的显示信息；它不写入 TOML，也不把发现的目录覆盖到 `game_dir`。后者仍表示实际运行文件夹，可以位于 Steam 库外；Runner 的目标与工作目录解析规则不变。两个位置的用途、迁移及成就边界见 [汉化目录分离](translated-games.md)。
+
 以下保留的 Dioxus 管理链使用独立的旧保存实现：
 
 ```text
@@ -187,6 +189,6 @@ SteamWrapper 不注入 DLL、不补丁 Steam/游戏、不绕过 DRM、不常驻�
 
 ## Manager 技术边界
 
-旧 Tauri / React Manager 与其 E2E 已移除。当前唯一的 Manager 实现仍是 `apps/manager-dioxus`；它是迁移基线。目标 WinUI 在 C# 内实现 Windows 配置服务，不新增 C ABI 或后台 helper；Runner 保持独立 Rust 程序。WinUI 的本地封面策略、旧管理链退役条件和验收顺序以 [Windows 设计](windows-v2-design.md)为准。
+旧 Tauri / React Manager 与其 E2E 已移除。`apps/manager-winui` 已提供 Windows 配置预览，`apps/manager-dioxus` 保留为迁移基线。WinUI 在 C# 内实现 Windows 配置服务，不新增 C ABI 或后台 helper；Runner 保持独立 Rust 程序。WinUI 的本地封面策略、旧管理链退役条件和验收顺序以 [Windows 设计](windows-v2-design.md)为准。
 
 Windows NSIS、Linux AppImage 和 SteamOS 实机均需在对应平台的 CI / 设备上继续验证；本机 Linux 通过的检查不能伪装成 Windows 或 Steam Deck 实机证据。

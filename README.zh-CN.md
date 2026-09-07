@@ -8,6 +8,8 @@ SteamWrapper 解决 Windows 汉化游戏或自定义启动器的 Steam 游玩状
 
 Steam 通过 Launch Options 调用无界面的 `SteamWrapperRunner`；Runner 从稳定数据目录读取 profile，启动用户选择的汉化 exe 或启动器并按模式等待。真实 Steam 状态与时长是否符合预期仍需客户端验收，不能仅凭进程测试承诺所有游戏兼容。
 
+WinUI 预览分别显示 Steam 安装位置与实际运行文件夹。可保留官方安装供 Steam 更新和校验，将完整汉化版放到库外运行；迁移、存档及成就限制见 [官方安装与汉化版分开存放](docs/translated-games.md)。SteamWrapper 不会补出游戏缺失的成就逻辑。
+
 ## 产品目标
 
 - 目标是玩家无需手动配置运行时；未来 C# Manager 可随包携带 .NET，Runner 继续保持 Rust 原生程序。

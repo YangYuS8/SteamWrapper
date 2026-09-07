@@ -3,7 +3,7 @@ using System.Text;
 
 namespace SteamWrapper.Application.Services;
 
-public sealed record SteamGame(string AppId, string Name, string GameDirectory, string? CoverPath);
+public sealed record SteamGame(string AppId, string Name, string GameDirectory, string? CoverPath, bool InstallationAmbiguous = false);
 public sealed record SteamScanResult(IReadOnlyList<SteamGame> Games, IReadOnlyList<string> Warnings, string? SteamRoot);
 
 public sealed class SteamScanner(Func<string, string?>? environment = null)
@@ -76,7 +76,16 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
                         var gameDirectory = Path.GetFullPath(Path.Combine(common, install));
                         if (!DataPaths.IsWithin(gameDirectory, common)) throw new FormatException("游戏目录超出 Steam 库。");
                         if (!Directory.Exists(gameDirectory)) continue;
-                        games.TryAdd(appId, new SteamGame(appId, name, gameDirectory, FindCover(root, appId)));
+                        if (games.TryGetValue(appId, out var known))
+                        {
+                            if (!string.Equals(known.GameDirectory, gameDirectory, StringComparison.OrdinalIgnoreCase))
+                            {
+                                games[appId] = known with { InstallationAmbiguous = true };
+                                if (!known.InstallationAmbiguous)
+                                    warnings.Add($"AppID {appId} 对应多个安装目录，无法确认 Steam 安装位置；实际运行文件夹仍可自行选择。");
+                            }
+                        }
+                        else games.Add(appId, new SteamGame(appId, name, gameDirectory, FindCover(root, appId)));
                     }
                     catch (Exception ex) when (IsReadError(ex)) { warnings.Add($"已跳过清单 {Path.GetFileName(manifest)}：{ex.Message}"); }
                 }

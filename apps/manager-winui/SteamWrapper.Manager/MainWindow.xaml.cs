@@ -14,6 +14,7 @@ public sealed partial class MainWindow : Window
     private readonly RunnerInstaller runner;
     private readonly List<TextBox> arguments = [];
     private readonly Dictionary<TextBox, ProfileTextValue> textValues = [];
+    private IReadOnlyList<SteamGame> installedGames = [];
     private ProfileSnapshot? snapshot;
     private ProfileData? editing;
     private bool isNew, loading, dirty, busy, selecting, allowClose, confirming;
@@ -42,6 +43,8 @@ public sealed partial class MainWindow : Window
         try
         {
             snapshot = await store.LoadAsync();
+            try { installedGames = (await new SteamScanner().ScanAsync()).Games; }
+            catch (Exception) { installedGames = []; }
             editing = null;
             dirty = false;
             RefreshProfiles();
@@ -106,6 +109,7 @@ public sealed partial class MainWindow : Window
         SetText(GameDirectoryInput, profile.GameDirectory);
         SetText(TargetInput, profile.Target);
         SetText(WorkingDirectoryInput, profile.WorkingDirectory ?? "");
+        RefreshSteamInstallation();
         SetText(ProcessNameInput, profile.ProcessName ?? "");
         WaitModeInput.SelectedItem = WaitModeInput.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == profile.WaitMode);
         arguments.Clear();
@@ -136,6 +140,7 @@ public sealed partial class MainWindow : Window
         var dialog = new AddGameDialog(this) { XamlRoot = Root.XamlRoot };
         await dialog.ShowAsync();
         if (!dialog.Manual && dialog.SelectedGame is null) return;
+        installedGames = dialog.DiscoveredGames;
         var game = dialog.SelectedGame;
         if (game is not null)
         {
@@ -146,7 +151,7 @@ public sealed partial class MainWindow : Window
         selecting = true;
         ProfilesList.SelectedItem = null;
         selecting = false;
-        Edit(new ProfileData(game?.AppId ?? "", game?.Name ?? "", game?.AppId, "windows", game?.GameDirectory ?? "", "", null, [], "job", null), true);
+        Edit(new ProfileData(game?.AppId ?? "", game?.Name ?? "", game?.AppId, "windows", game is { InstallationAmbiguous: false } ? game.GameDirectory : "", "", null, [], "job", null), true);
     }
 
     private async void Reload_Click(object sender, RoutedEventArgs e)
@@ -158,7 +163,7 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            var selected = await new FolderPicker(AppWindow.Id) { CommitButtonText = "选择游戏文件夹" }.PickSingleFolderAsync();
+            var selected = await new FolderPicker(AppWindow.Id) { CommitButtonText = "选择实际运行文件夹" }.PickSingleFolderAsync();
             if (selected is not null) GameDirectoryInput.Text = selected.Path;
         }
         catch (Exception ex) { ShowStatus("无法打开文件夹选择器：" + ex.Message, InfoBarSeverity.Error); }
@@ -198,7 +203,18 @@ public sealed partial class MainWindow : Window
     }
 
     private void AddArgument_Click(object sender, RoutedEventArgs e) { AddArgument(""); MarkDirty(); }
-    private void FieldChanged(object sender, TextChangedEventArgs e) => MarkDirty();
+    private void FieldChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!loading && ReferenceEquals(sender, AppIdInput)) RefreshSteamInstallation();
+        MarkDirty();
+    }
+    private void RefreshSteamInstallation()
+    {
+        if (editing is null) return;
+        var profile = isNew ? editing with { AppId = AppIdInput.Text.Trim() } : editing;
+        SteamInstallationInput.Text = ProfileSteamInstallation.Find(profile, installedGames)?.GameDirectory
+            ?? "暂时无法确认 Steam 安装位置；可继续配置实际运行文件夹。";
+    }
     private void WaitMode_Changed(object sender, SelectionChangedEventArgs e) => MarkDirty();
     private void MarkDirty()
     {
@@ -231,7 +247,7 @@ public sealed partial class MainWindow : Window
                 ProcessName = Optional(ReadText(ProcessNameInput), editing.ProcessName)
             };
             if (!Path.IsPathFullyQualified(updated.GameDirectory) || !Directory.Exists(updated.GameDirectory))
-                throw new InvalidOperationException("请选择已存在的游戏文件夹（完整路径）。");
+                throw new InvalidOperationException("请选择已存在的实际运行文件夹（完整路径）。");
             var target = Path.IsPathRooted(updated.Target) ? updated.Target : Path.Combine(updated.GameDirectory, updated.Target);
             if (!File.Exists(target) || !string.Equals(Path.GetExtension(target), ".exe", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("请选择已存在的 .exe 程序。");

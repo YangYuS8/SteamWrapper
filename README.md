@@ -12,6 +12,8 @@ SteamWrapper helps Windows players launch translated games or custom launchers t
 
 The Manager is visible only during configuration. For daily play, Steam calls the headless `SteamWrapperRunner` through Launch Options; the Runner loads the selected profile, launches the real executable or launcher, and waits for the game to exit.
 
+The WinUI preview distinguishes Steam's installation location from the actual runtime folder. Keep a translated copy outside the Steam library while preserving the official installation for updates and verification; see [directory separation, saves and achievement compatibility](docs/translated-games.md). SteamWrapper does not supply missing achievement logic.
+
 ## Goals
 
 - Aim for a Windows install that requires no manual runtime setup; a C# Manager may bundle .NET. Runner remains a native Rust executable.

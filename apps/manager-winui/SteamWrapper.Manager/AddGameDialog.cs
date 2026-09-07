@@ -16,6 +16,7 @@ internal sealed class AddGameDialog : ContentDialog
     private bool closed;
     public SteamGame? SelectedGame { get; private set; }
     public bool Manual { get; private set; }
+    public IReadOnlyList<SteamGame> DiscoveredGames => scanned;
 
     public AddGameDialog(Window owner)
     {

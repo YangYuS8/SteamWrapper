@@ -39,17 +39,22 @@
               <StackPanel Spacing="16">
                 <TextBox x:Name="NameInput" Header="游戏名称" TextChanged="FieldChanged" AutomationProperties.AutomationId="ProfileName"/>
                 <TextBox x:Name="AppIdInput" Header="Steam AppID" PlaceholderText="例如 123456" TextChanged="FieldChanged" AutomationProperties.AutomationId="AppId"/>
+                <StackPanel Spacing="6">
+                  <TextBox x:Name="SteamInstallationInput" Header="Steam 安装位置" IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.AutomationId="SteamInstallationDirectory"/>
+                  <TextBlock Text="由 Steam 管理，此处仅用于查看。" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
                 <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                  <TextBox x:Name="GameDirectoryInput" Header="游戏文件夹" TextChanged="FieldChanged" AutomationProperties.AutomationId="GameDirectory"/>
-                  <Button Grid.Column="1" Content="浏览…" VerticalAlignment="Bottom" Click="GameDirectory_Click" AutomationProperties.Name="选择游戏文件夹"/>
+                  <TextBox x:Name="GameDirectoryInput" Header="实际运行文件夹" TextChanged="FieldChanged" AutomationProperties.AutomationId="GameDirectory"/>
+                  <Button Grid.Column="1" Content="浏览…" VerticalAlignment="Bottom" Click="GameDirectory_Click" AutomationProperties.Name="选择实际运行文件夹"/>
                 </Grid>
+                <TextBlock Text="可选择 Steam 库外的汉化目录。工作目录留空时使用此文件夹。" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                   <TextBox x:Name="TargetInput" Header="要运行的程序" PlaceholderText="选择汉化程序或启动器 .exe" TextChanged="FieldChanged" AutomationProperties.AutomationId="Target"/>
                   <Button Grid.Column="1" Content="选择程序…" VerticalAlignment="Bottom" Click="Target_Click" AutomationProperties.AutomationId="ChooseTarget"/>
                 </Grid>
                 <Expander x:Name="Advanced" Header="高级设置" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                   <StackPanel Spacing="16">
-                    <TextBox x:Name="WorkingDirectoryInput" Header="工作目录（留空使用游戏文件夹）" TextChanged="FieldChanged"/>
+                    <TextBox x:Name="WorkingDirectoryInput" Header="工作目录（留空使用实际运行文件夹）" TextChanged="FieldChanged"/>
                     <StackPanel Spacing="8"><TextBlock Text="启动参数"/><TextBlock Text="每项是一个参数，含空格无需另加引号。" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/><StackPanel x:Name="ArgumentRows" Spacing="8"/><Button Content="添加参数" Click="AddArgument_Click"/></StackPanel>
                     <ComboBox x:Name="WaitModeInput" Header="何时结束 Steam 运行状态" HorizontalAlignment="Stretch" SelectionChanged="WaitMode_Changed">
                       <ComboBoxItem Content="等待程序及其子进程（推荐）" Tag="job"/>

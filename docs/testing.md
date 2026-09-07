@@ -36,6 +36,8 @@ mise run winui:sandbox
 
 `winui:test` 包含配置保真/冲突/替换失败、本地 Steam、稳定 Runner 安装与共享文件位置测试。`winui:contracts` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](../tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
 
+目录分离新增 AppID 关联、库外运行路径保留和真实双库安装冲突回归，本轮 C# 共 49/49 通过。原生隔离保存、重新扫描和歧义新建配置也已验证；详见 [目录分离验证记录](translated-games.md#本机实施与研究记录)。这些结果不代表真实汉化迁移或成就触发通过。
+
 新增 Windows CI 保留旧工作流，依次运行上述测试与目录发布；`3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)已实际通过。托管 Windows Server 2025 构建不是 Windows 11 干净系统验收。完整验收范围如下，不能把 fixture 结果外推到未测平台或真实 Steam；本机单款 galgame 已另行通过 Steam 闭环，过程与边界见 [真实 Steam 验证](real-steam-validation.md)。
 
 | 范围 | 有效证据 |
