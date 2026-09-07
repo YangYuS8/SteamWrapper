@@ -30,7 +30,10 @@ jobs:
             libxdo-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            xvfb \
+            xauth \
+            dbus-daemon
 
       - name: Check required project docs and assets
         shell: pwsh
@@ -94,6 +97,9 @@ jobs:
       - name: Type-check Dioxus native E2E suite
         run: pnpm --filter steamwrapper-manager-dioxus-e2e exec tsc --noEmit
 
+      - name: Test native E2E startup diagnostics
+        run: pnpm --filter steamwrapper-manager-dioxus-e2e run test:tooling
+
       - name: Stage Manager Runner resource
         shell: pwsh
         run: |
@@ -127,10 +133,16 @@ jobs:
         working-directory: apps/manager-dioxus
         run: dx build --release
 
-      - name: Run Dioxus native E2E
-        run: |
-          cargo build -p steamwrapper-manager-dioxus --features e2e
-          pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
+      - name: Build Dioxus native E2E
+        run: cargo build -p steamwrapper-manager-dioxus --features e2e
+
+      - name: Run Dioxus native E2E (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" dbus-run-session -- pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
+
+      - name: Run Dioxus native E2E (Windows)
+        if: runner.os == 'Windows'
+        run: pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
 
       - name: Upload Dioxus native E2E artifacts
         if: always()
@@ -216,7 +228,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          appimage="$(find release-artifacts -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
+          appimage="$(find "$GITHUB_WORKSPACE/release-artifacts" -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
           test -n "$appimage"
           extract_dir="$(mktemp -d)"
           (

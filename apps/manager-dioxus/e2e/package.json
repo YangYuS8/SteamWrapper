@@ -5,6 +5,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
+    "test:tooling": "node --test test/tooling/*.test.mjs",
     "e2e:native": "node scripts/run-native.mjs",
     "e2e:clean": "node scripts/clean-artifacts.mjs"
   },

@@ -10,6 +10,7 @@ const fixtureRoot = process.env.STEAMWRAPPER_E2E_ROOT;
 if (!fixtureRoot) throw new Error("STEAMWRAPPER_E2E_ROOT is required; use pnpm e2e:native.");
 
 const appEnv = {
+  RUST_BACKTRACE: "1",
   STEAMWRAPPER_E2E_ROOT: fixtureRoot,
   STEAM_DIR: resolve(fixtureRoot, "Steam"),
   XDG_DATA_HOME: resolve(fixtureRoot, "xdg-data"),
@@ -45,7 +46,7 @@ export const config = {
   ],
   services: [
     [
-      "@wdio/dioxus-service",
+      resolve(packageDir, "scripts/dioxus-service.mjs"),
       { driverProvider: "embedded", startTimeout: 120_000, statusPollTimeout: 15_000 },
     ],
   ],

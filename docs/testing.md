@@ -80,6 +80,7 @@ just bundle-linux # stage Runner 并打 Linux AppImage
 ```bash
 pnpm install --frozen-lockfile
 pnpm --filter steamwrapper-manager-dioxus-e2e exec tsc --noEmit
+pnpm --filter steamwrapper-manager-dioxus-e2e run test:tooling
 
 cargo fmt --all -- --check
 cargo check --workspace
@@ -95,6 +96,12 @@ pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
 ```
 
 Linux 构建、测试和打包前需准备 WebKitGTK、GTK3、`libxdo-dev`、AppIndicator、librsvg 与 `patchelf`。当前 Dioxus Desktop 通过 `muda` 的默认 `libxdo` feature 链接 X11 库；Ubuntu 需要安装开发包 `libxdo-dev`，否则 Manager 测试和 AppImage 构建会在链接阶段报 `unable to find library -lxdo`。CI Check、AppImage 和 release 的 Linux 依赖列表均包含该包。[Ubuntu 包说明](https://packages.ubuntu.com/noble/amd64/libxdo-dev)
+
+无桌面会话的 Linux CI 还需安装 `xvfb`、`xauth` 和 `dbus-daemon`，在虚拟 X 显示与临时 D-Bus 会话中运行 Native E2E；仅编译或打包不需要启动显示服务。GTK 初始化需要可用显示，但历史 CI 的退出码 101 没有保留下来的 stderr，不能据此认定具体 panic 原因。Linux Check 使用下列命令，Windows 保留直接运行 pnpm：[xvfb-run](https://manpages.ubuntu.com/manpages/questing/man1/xvfb-run.1.html)、[dbus-run-session](https://manpages.debian.org/unstable/dbus-daemon/dbus-run-session.1.en.html)。
+
+```bash
+xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" dbus-run-session -- pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
+```
 
 平台 bundle 由对应平台运行：
 
@@ -136,6 +143,8 @@ fixture 包含中文路径与空格路径、一个本地 Steam game manifest，�
 - Launch Options 保持 `--appid "123456" -- %command%` 协议。
 
 成功或失败后的 WDIO 日志与脱敏 fixture artifact 位于 `apps/manager-dioxus/e2e/artifacts/`，该目录不提交；CI 负责上传。测试结束会清理临时目录，不能读取或修改用户真实 Steam 配置。
+
+`scripts/dioxus-service.mjs` 继续使用锁定的 Dioxus service，只补充启动失败时的清理：WDIO 在 `onPrepare` 失败后不会调用 `onComplete`，包装会先完成该钩子以刷新 app stdout/stderr 日志，再保留原错误退出。测试 app 启用 `RUST_BACKTRACE=1`。`test:tooling` 用不启动 GUI 的 Node 子进程验证早退 101 的 stdout/stderr 附件，以及失败后再次运行时日志进入新的输出目录；后者已观察旧服务失败、包装后通过。这些工具回归不代替 Linux GTK/WebKit 的真实 Native E2E。
 
 ## Runner 稳定安装验证
 
