@@ -1,6 +1,15 @@
 # Dependencies
 node_modules/
 
+# .NET / WinUI build output
+/apps/manager-winui/**/bin/
+/apps/manager-winui/**/obj/
+/tests/fixtures/**/bin/
+/tests/fixtures/**/obj/
+/tests/contracts/**/bin/
+/tests/contracts/**/obj/
+TestResults/
+
 # Rust
 /target/
 **/*.rs.bk

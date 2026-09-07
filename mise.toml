@@ -1,0 +1,52 @@
+[tools]
+dotnet = "10.0.400"
+"github:DioxusLabs/dioxus" = { version = "0.7.10", matching = "dx-" }
+just = "1.58.0"
+node = "24.18.0"
+pnpm = "11.10.0"
+powershell = "7.6.5"
+rust = { version = "1.98.1", components = ["rustfmt", "clippy"] }
+
+[tasks."windows:setup"]
+description = "Install the official MSVC and Windows SDK components (UAC may be required)"
+run = "pwsh -NoProfile -File scripts/windows/Install-BuildTools.ps1"
+
+[tasks."windows:templates"]
+description = "Install the pinned official WinUI CLI template (alpha tooling)"
+run = "pwsh -NoProfile -File scripts/windows/Install-WinUITemplates.ps1"
+
+[tasks."windows:doctor"]
+description = "Check the project SDKs and load the Windows native build environment"
+run = "pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor"
+
+[tasks."windows:winui-smoke"]
+description = "Build an isolated self-contained WinUI app under target (no Steam data or MSIX registration)"
+run = "pwsh -NoProfile -File scripts/windows/Test-WinUIBuild.ps1"
+
+[tasks."windows:rust-test"]
+description = "Run the Rust workspace tests with MSVC and isolated test fixtures"
+run = "pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action RustTest"
+
+[tasks."windows:verify"]
+description = "Run the existing Rust, Dioxus and Native E2E quality gates on Windows"
+run = "pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify"
+
+[tasks."winui:build"]
+description = "Build the native WinUI Manager and stage its independent Rust Runner"
+run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build"
+
+[tasks."winui:test"]
+description = "Run isolated C# configuration, Steam scanner and Runner installation tests"
+run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test"
+
+[tasks."winui:contracts"]
+description = "Verify C# and Rust profile round trips and real headless Runner consumption"
+run = "pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1"
+
+[tasks."winui:publish"]
+description = "Publish the self-contained Windows x64 WinUI preview directory"
+run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish"
+
+[tasks."winui:sandbox"]
+description = "Build and open WinUI with a disposable Steam library and data directories"
+run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox"

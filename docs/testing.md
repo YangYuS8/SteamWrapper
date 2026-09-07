@@ -1,18 +1,68 @@
 # 测试
 
-SteamWrapper v2 采用分层验证，避免把桌面测试堆成一团粗糙、不可审计的混乱物。
+SteamWrapper v2 按行为、服务、UI 与安装包分层验证。WinUI 预览已有 C#、跨语言与实际 Runner 测试；Dioxus 基线门禁保留。Windows 最终交付仍按 [重设计的阶段门槛](windows-v2-design.md#8-实施顺序与停止条件)验收。
 
-## 分层
+两套 Windows Manager 的同输入配置探针、原生保存补测及资源测量见 [实测比较](windows-manager-comparison.md)。资源复测脚本为 `scripts/windows/Measure-ManagerComparison.ps1`；需先准备两端 release 产物，并在其他构建和测试结束后顺序运行。
+
+## 按改动选择验证
+
+先读取受影响代码和测试，选择能证明本次结果的检查。无需每次编辑前运行整个 workspace，也无需为文档或纯样式调整新增匹配源码字符串的测试。
+
+| 本次改动 | 本地验证范围 |
+| --- | --- |
+| 文档 / AGENTS / 技能 | 审核 diff、链接、指令冲突和技能元数据；不要求编译 UI 或生成安装包 |
+| core / manager-core 行为 | 先写能复现缺失行为的测试并观察预期失败，再修改实现；运行受影响 crate 测试；共享契约或跨 crate 影响时运行 workspace 检查和测试 |
+| Runner 启动 / 等待 | 对应平台的真实进程回归测试；CLI / TOML / 公共模块变化再扩展到 workspace |
+| Dioxus 交互 / service 接线 | 相关 Rust 测试、`dx check` / 构建，以及覆盖该行为的隔离 Native E2E |
+| WinUI / C# 服务 | `mise run winui:test`；配置协议或 Runner 分发变化增加 `winui:contracts`；UI 变化使用 `winui:publish` 与隔离原生交互 |
+| 纯视觉调整 | 构建并在隔离 Desktop 预览中检查受影响界面；按影响选择现有测试，不用固定 CSS 字符串代替视觉验收 |
+| E2E 工具或依赖 | frozen lockfile 安装、TypeScript 检查、受影响 Native E2E |
+| 打包 / 发布 / 工具链或共享构建变化 | 完整质量门禁、当前平台 release Runner staging、实际安装包解包检查 |
+
+CI / release 工作流仍执行各自完整门禁。上表限定日常本地工作量，不删减 CI。已通过的检查只在新改动、失败或未解决疑点出现时重跑；缺少工具时记录阻塞，不把未运行写成通过。
+
+行为回归优先验证外部结果。现有 `ui_contract` 包含源码文本断言，只能证明声明存在，不能证明窗口、可访问性、布局或原生文件选择实际可用。
+
+## WinUI 迁移的新增验收
+
+先验证 C# 配置服务与 Rust Runner 的既有文件协议，再证明 UI 和安装器。已有入口：
+
+```powershell
+mise run winui:test
+mise run winui:contracts
+mise run winui:publish
+mise run winui:sandbox
+```
+
+`winui:test` 包含配置保真/冲突/替换失败和本地 Steam/稳定 Runner 安装测试。`winui:contracts` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](../tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
+
+新增 Windows CI 保留旧工作流，依次运行上述测试与目录发布。托管 Windows Server 2025 构建不是 Windows 11 干净系统验收；远程 CI 尚未执行。完整验收范围如下，不能把已实现测试外推到未测平台或真实 Steam。
+
+| 范围 | 有效证据 |
+| --- | --- |
+| TOML 兼容 | C# 读取 Rust fixture、只改一个字段、保存后由 Rust 断言未编辑语义；包括省略 wait_mode=root、新建 job、别名键、未知字段/版本和所有现存枚举 |
+| 保存安全 | 原子替换失败、备份失败、多写者/外部修改冲突、中断与旧文件保留；不以序列化成功代替无损保存 |
+| 配置到运行 | C# 保存的配置驱动真实 Rust Runner fixture，断言 argv、cwd、launcher/child 等待与错误；不能只比较 TOML 文本 |
+| WinUI 操作 | 真实原生窗口、原生 picker、取消、中文输入、键盘、缩放及错误恢复；旧 Dioxus DOM/RSX 断言不适用 |
+| Windows 发布 | 干净 Windows 11 x64 VM 上自包含安装、稳定 Runner、覆盖更新/占用/降级保护、移动 Manager、卸载后既有启动项仍可用 |
+| Steam apply/restore | 脱敏多用户 VDF fixture、Steam 运行保护、备份/复读、冲突和中断恢复、保留其他设置；私有格式需先核验 |
+| 最终游玩体验 | 测试者在真实 Steam 人工记录运行状态、退出和时长更新；注明游戏、launcher、系统版本，不能由 fixture 结果替代 |
+
+常规自动化使用隔离 Steam/用户数据。真实 Steam 验收须有用户明确授权；本次用户已授权不损坏游戏文件的 galgame 测试。原启动项、文件完整性与存档保护需单独记录，未解决的云同步冲突不能由测试流程自动选择覆盖。真实用户数据、完整 Steam 配置和本机测试备份不进入提交或 CI 产物。具体配置边界见 [主方案](windows-v2-design.md#4-配置保真是第一个门槛)。
+
+## 当前实现分层
 
 | 层 | 命令 | 验证内容 |
 | --- | --- | --- |
 | Rust domain / service | `cargo test --workspace` | TOML、VDF、路径、Steam 过滤、封面、Launch Options、Manager service、Runner 等待模式 |
-| Dioxus contract | `cargo test -p steamwrapper-manager-dioxus --test ui_contract` | 玩家主流程、原生文件选择、canonical 品牌、bundle Runner 声明、启动时 Runner 安装边界 |
+| Dioxus contract | `cargo test -p steamwrapper-manager-dioxus --test ui_contract` | 玩家流程、文件选择、service 和 bundle 的源码声明及品牌一致性；不证明真实原生交互 |
 | Dioxus build | `dx check` / `dx build --release` | Dioxus 0.7.10 项目、RSX、静态资源和 release 客户端构建 |
 | Dioxus Native E2E | `pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native` | 真实 Dioxus binary、真实 `manager-core`、隔离 Steam / profile / Runner fixture |
 | 平台 bundle | `dx bundle --release --package-types …` | NSIS / AppImage 随包 Runner resource 与安装器产物 |
 
 ## 本地命令
+
+Windows 环境由 mise 管理，使用 `mise run windows:doctor` 检查、`mise run windows:verify` 执行现有质量门禁。安装与 WinUI 编译验证见 [Windows 开发环境](windows-development.md)。以下 `just`/底层命令保留为现有流程；WinUI smoke 不替代应用或 Steam 验收。
 
 优先使用根目录 `justfile`：
 
@@ -93,7 +143,7 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 
 ## CI
 
-`v2-ci.yml` 在 Windows / Ubuntu Check 矩阵中执行 Rust 格式、check、test、Dioxus check / release build、Native E2E 和各自平台 Runner 进程测试。Linux bundle job 产出 AppImage 并解包验证 Runner resource；Windows job 产出 NSIS 并检查其中的 `SteamWrapperRunner.exe`。
+`v2-ci.yml` 配置了 Windows / Ubuntu Check 矩阵，执行 Rust 格式、check、test、Dioxus check / release build、Native E2E 和各自平台 Runner 进程测试；其 Linux bundle job 构建 AppImage 并解包检查 Runner。Windows NSIS 构建与内容检查配置在 `release.yml`。工作流声明不代表最近一次运行通过，实际结果须另行核验。
 
 ## 限制
 
@@ -103,3 +153,5 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 - Dioxus Browser Mode 不适用于当前直接 Rust service 架构；本项目用 Native E2E 覆盖真实 UI 与 service 边界。
 
 官方依据：Dioxus 0.7.10 Desktop / CLI 文档，`@wdio/dioxus-service` 1.0.0 的 embedded provider 与 bridge setup 文档。
+
+2026-09-07 Windows 本机已完成 Rust workspace、Runner 进程测试、Dioxus check/release build 和 3 个 spec / 6 项 Native E2E 验证。安装环境、过程中修正的 Windows 测试/工具入口问题及证据范围见 [开发环境记录](windows-development.md#本机安装与验证记录)。这不替代 NSIS 或真实 Steam 验收。

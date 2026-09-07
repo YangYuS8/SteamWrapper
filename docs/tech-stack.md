@@ -1,118 +1,75 @@
-# SteamWrapper v2 技术栈选型
+# SteamWrapper v2 技术栈
 
-## 总体选择
+## 目标方案
 
-SteamWrapper v2 采用全 Rust 主线：`core`、`manager-core`、`runner` 与 Dioxus Desktop Manager 都由 Rust 构建。Manager 使用 **Dioxus 0.7.10**，而不是继续扩展 Tauri + React。
+采用 **C# / XAML WinUI 3 Manager + C# 应用服务 + 独立 Rust Runner**，先做好 Windows。详见 [产品与架构重设计](windows-v2-design.md)及 [WinUI 技术评估](winui3-assessment.md)。WinUI 配置预览已实现并可自包含构建；Dioxus 0.7.10 及其发布链保留，尚未通过完整 Windows 替换门槛。
 
-选择依据不是“Rust 看起来更纯粹”这种幼稚理由，而是已验证的边界：早期 Manager 的 Profile、Steam 扫描、路径、Launch Options 与 Runner 安装逻辑可抽成不依赖桌面框架的 `manager-core`；Dioxus 可直接调用该 typed Rust service，避免 Tauri command / IPC DTO 与 React 状态之间的重复层。
+| 部分 | 目标选择 | 原因与约束 |
+| --- | --- | --- |
+| Manager UI | WinUI 3、C#、XAML | Windows 原生窗口、输入、文件选择与可访问性；中文优先 |
+| Manager 服务 | 小型、可独立测试的 C# 应用服务 | 管理配置、Steam 发现、Runner 安装与日志；不调用 Rust FFI，不设后台 helper |
+| 日常运行 | 独立 Rust Runner | 保持现有 CLI 和进程控制边界，Manager 不参与正常游戏启动 |
+| 持久配置 | 现有 profiles.toml v2 | C# 实现同一协议；必须通过读改写、未知数据保护与实际 Rust 消费验证 |
+| 封面 | WinUI 首版仅读取本地缓存 | 缺失时占位，配置/启动不依赖网络 |
+| 发布 | unpackaged 自包含目录 + 每用户安装器 | 携带 .NET/Windows App SDK，玩家无需准备运行时；Runner 安装到稳定用户路径 |
+| 平台 | 首先验证受支持的 Windows 11 x64 | Windows 10、ARM64、Linux/SteamOS 新功能另评估，不提前承诺 |
 
-- Runner 仍生成原生可执行文件，普通用户无需 .NET Runtime。
-- Dioxus Desktop 能提供 Windows、Linux 的原生窗口、文件选择、CSS 布局和 bundle resources。
-- Manager 不再依赖 Node、React、Vite、Tailwind、shadcn 或 Tauri 运行时；pnpm 仅保留给隔离的 WDIO Native E2E 工具。
-- Runner 保持轻量、无界面、无后台常驻。
-- v2 继续覆盖 Windows、Linux、SteamOS / Steam Deck。
+现有 Rust 管理层的存在不要求新 UI 加一层 ABI。C# TOML 使用固定版本 Tomlyn 2.10.1 读取语法树并按跨度修改字段，其他源码原样保留；仅生成 Rust 可读的 TOML 1.0 字符串子集，不使用 TOML 1.1 全模型序列化。字段、默认值、旧别名键、路径和参数由已通过的跨语言/真实 Runner 契约约束。[Tomlyn 包](https://www.nuget.org/packages/Tomlyn/2.10.1)、[低层语法接口](https://github.com/xoofx/Tomlyn/blob/2.10.1/site/docs/low-level.md)
 
-## Workspace
+不为语言统一同时重写 Runner。C# NativeAOT 是可行备选，若将来考虑，应先证明完整 CLI/TOML 和 Windows 进程行为，再比较实际包体、性能与维护成本。[NativeAOT 官方说明](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/)
+
+## 当前仓库布局
 
 ```text
-crates/core                 # 跨平台 domain：TOML、Steam、封面、Launch Options
-crates/manager-core         # 框架无关的 Manager service
-crates/runner               # Steam 启动的原生无界面运行器
+crates/core                 # Rust TOML、Steam、封面、Launch Options
+crates/manager-core         # 现有 Dioxus 使用的 Manager service
+crates/runner               # Steam 调用的原生无界面运行器
 apps/manager-dioxus         # Dioxus 0.7.10 Desktop Manager
-apps/manager-dioxus/e2e     # WDIO Dioxus Native E2E（仅测试工具）
+apps/manager-dioxus/e2e     # WDIO Native E2E，仅测试工具
+apps/manager-winui         # WinUI UI、C# Application 和 MSTest 测试
+tests/contracts           # C# / Rust 共享契约和测试驱动
+tests/fixtures            # 真实 Runner 消费的受控进程，仅测试
 ```
 
-### `steamwrapper-core`
+迁移期间保留现有代码和 CI；WinUI 达到配置、运行与交付门槛后再切换默认 Manager，并按实际调用关系清理旧管理层。
 
-职责：
+### Rust 核心与服务
 
-- Profile 数据结构与 TOML 读写；
-- Steam Launch Options 生成；
-- Steam Library / `appmanifest` 解析；
-- 本地 Steam 封面缓存发现，以及缓存缺失时按本地 AppID 生成的公开 Steam CDN 回退 URL；
-- 跨平台通用规则。
+`steamwrapper-core` 定义现有 Profile/TOML、Steam 扫描、封面 URL 和 Launch Options；不依赖 UI 或平台进程 API。Runner 继续依赖 core 的配置与路径语义。
 
-依赖保持为 `serde`、`toml`、`thiserror` 等通用 Rust crate；禁止 UI 或平台进程 API 反向渗透。
+`steamwrapper-manager-core` 组合稳定路径、保存/列表、Steam 扫描、日志及 Runner 安装/修复，是 Dioxus 直接调用的 Rust API。该链不引入第二套 Rust Profile，也不改成 IPC server；其“全 Rust 管理服务”边界不约束新的 C# 服务实现。
 
-### `steamwrapper-manager-core`
+当前 profile 保存会重建高级字段，core 直接写配置文件；不能把这些行为复制成新 Manager 的设计要求。兼容的是玩家配置的含义，不是保留覆盖数据的缺陷。
 
-职责：
+### Runner
 
-- 稳定用户数据路径与目录准备；
-- Profile 列表、保存、Launch Options；
-- 本地 Steam 游戏扫描与 Runner 日志；
-- 随包 Runner 的摘要检查、原子安装与修复。
+`steamwrapper-runner` 使用 `clap`、`anyhow`、`tracing` 和 `steamwrapper-core`，独立启动 profile 的 target/args 并按模式等待。它不依赖 GUI、WebView 或 .NET，不常驻后台。
 
-它是普通 Rust API，不是 IPC server：Dioxus 直接调用，且不定义第二套 Profile / Steam DTO。
+新 Windows 配置默认 Job Object，Linux 新配置默认 POSIX process group；旧 TOML 省略 wait_mode 时为 root。当前 `%command%` 仅接收和记录，未自动执行/转发；Proton 包装尚未完成。Runner 生命周期测试与真实 Steam 状态/时长验收是不同证据。
 
-### `steamwrapper-runner`
+### 当前 Dioxus Manager
 
-职责：
+- Dioxus `0.7.10` + desktop feature、RSX 和本地 CSS；版本/API 修改先核验官方文档。
+- UI 经 `src/services.rs` 直接调用 manager-core，无伪 Tauri IPC。
+- 当前封面本地优先、AppID Steam CDN 回退；新 WinUI 本地封面目标不代表当前网络代码已改。
+- `Dioxus.toml` 管理图标、metadata 与 Runner resources；构建前 stage 当前平台 Runner。
+- `@wdio/dioxus-service` 1.0.0 embedded provider、`wdio-dioxus-embedded-driver` 1.0.0 仅用于 e2e feature；release 不带测试 bridge。
+- pnpm 仅用于 Native E2E，不作为 UI 产品运行时。
 
-- 被 Steam Launch Options 自动调用；
-- 无界面运行；
-- 根据 `--appid` 查找 profile；
-- 启动真正的游戏 exe / launcher；
-- 等待目标进程退出，使 Steam 正确统计游玩时间。
+具体流程见 [Dioxus 技能](../skills/dioxus-manager/SKILL.md)。新 WinUI 不使用该技能的 DOM/RSX 或 bundle 步骤。
 
-依赖：`clap`、`anyhow`、`tracing`、`steamwrapper-core`。
+## 工具链与交付
 
-平台策略：Windows 默认 Job Object，Linux 默认 POSIX process group；SteamOS / Proton 要保留 Steam 展开的 `%command%` 环境，具体包装策略仍待平台测试。
+项目工具由 mise 管理，.NET SDK 10.0.400、Rust 1.98.1；本机重启后 MSVC/SDK 已复检。Manager 使用 Windows App SDK 2.4.0 对应的组件集：直接固定 `Microsoft.WindowsAppSDK.WinUI` 2.3.6、`Microsoft.WindowsAppSDK.InteractiveExperiences` 2.1.6 与 SDK.BuildTools 10.0.26100.7705。组件包版本不等于框架名称中的“WinUI 3”；显式固定 InteractiveExperiences 避免回落到 WinUI 包的最低依赖 2.1.3。保留依赖的版本和摘要与原 2.4.0 总包锁文件一致。
 
-### `SteamWrapper Manager`
+按需组件引用是 Windows App SDK 官方支持的自包含部署方式。Manager 不引用未使用的 AI、ML、Search、Widgets 和 DWrite 组件，也不通过手动删除发布 DLL 精简。最终新目录为 171.196 MiB（179,511,987 字节、457 文件，未压缩），原 226.23 MiB 版本的启动/内存基准仍作为历史结果保留；精简后未重测这些指标。[官方组件包说明](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/release-notes/windows-app-sdk-1-8#version-180-18250907003)、[本机比较与发布验证](windows-manager-comparison.md)
 
-技术栈：
+目标仍为 Windows 11 24H2（26100）x64，自包含且关闭 trimming。服务使用 net10.0、测试使用 MSTest 4.4.0 / Test SDK 18.9.0，各项目有 NuGet 锁文件。Manager 项目直接维护，无需 alpha 模板或 WinApp MSIX 调试身份包。发布先生成全新目录并校验，再替换旧产物，防止旧依赖残留；命令、五项发布回归及未完成的原生/干净系统验收见 [Windows 开发环境](windows-development.md)。
 
-- Dioxus `0.7.10` + `desktop` feature；
-- RSX 组件与原生 CSS；
-- `Dioxus.toml` 统一 bundle metadata、图标与 `resources/runner`；
-- `@wdio/dioxus-service` 1.0.0 + embedded provider 仅用于 Native E2E；
-- `wdio-dioxus-embedded-driver` 1.0.0 仅在 Cargo `e2e` feature 编译。
+现有 Dioxus 构建使用 `dx check`、`dx build --release` 和 NSIS/AppImage bundle；Runner 名称为 Windows `SteamWrapperRunner.exe`、Linux `steamwrapper-runner`。这些命令只对应现有实现，不能证明 WinUI 安装器正确。[测试](testing.md)和 [分发](distribution.md)分别记录当前命令与目标验收。
 
-UI 职责：扫描 / 添加游戏、显示本地优先且 CDN 回退的封面、选择目标程序、保存 profile、生成 Launch Options、查看已配置游戏 / 日志 / 稳定路径、安装或修复 Runner。
+## 不选的方向
 
-正式 Rust dependency graph 不含 WDIO bridge 或 embedded driver；测试 feature 与 release bundle 必须分离。
+本轮不恢复已移除的 Tauri/React，不引入 Electron、Node UI runtime 或 Python 产品组件。也不因全 Rust、通用跨平台或追求单 EXE，放大 Windows 配置工具的首发范围。
 
-## Dioxus Agent 开发约定
-
-- 版本固定在 `0.7.10`，升级必须先复核官方 API、CLI 与 bundle 行为。
-- 开发先用 `dx check`，生产构建用 `dx build --release`。
-- bundle 资源必须在 `[bundle].resources` 显式声明；`asset_dir` 只解决 UI asset，不等于随包 Runner。
-- 不要把 Dioxus UI 伪装成 Tauri command client；直接调用 `manager-core`。
-- HTML / CSS 是适合玩家桌面 UI 的选择，不因“全 Rust”而退回难用的即时模式 GUI。
-- 选择目标程序使用 Dioxus 的本地文件 input；不加入 Node runtime 或前端框架。
-
-## Windows 与 Linux 分发
-
-目标发布物：
-
-```text
-SteamWrapper-v2.x.x-win-x64-setup.exe
-SteamWrapper-v2.x.x-win-x64-portable.zip
-SteamWrapper-v2.x.x-linux-x64.AppImage
-SteamWrapper-v2.x.x-linux-x64.tar.gz
-```
-
-Windows 使用 Dioxus NSIS CurrentUser 安装器，建议安装到 `%LOCALAPPDATA%\Programs\SteamWrapper\`；Linux / SteamOS 预览使用 AppImage 或 tar.gz。Manager bundle 中只读 Runner 资源由平台 CI stage：Linux 为 `steamwrapper-runner`，Windows 为 `SteamWrapperRunner.exe`，随后由 Manager 安装到稳定数据路径。
-
-## 不选的方案
-
-### Tauri + React
-
-该实现已随迁移完成而移除。重新引入它会恢复 command adapter、Node 构建与两套状态 / 数据模型成本；当前 Manager 只采用 Dioxus 路线。
-
-### egui / eframe
-
-egui 适合极简工具，但 SteamWrapper Manager 需要中文友好、封面卡片、引导式配置与表单。Dioxus 的 WebView CSS 布局更合适。
-
-### Electron
-
-Manager 只负责配置，不值得携带完整 Chromium。
-
-### Python 与 C#/.NET runtime
-
-不利于此项目面向普通玩家的跨平台分发、体积和维护边界。旧 C# 版本仍按旧版稳定实现维护，不是 v2 技术主线。
-
-## 已知限制
-
-Dioxus bundle 与 Native E2E 已在本机 Linux 路径验证；Windows NSIS、Windows Runner resource、SteamOS / Steam Deck 实机和 Proton 行为须依赖对应 CI / 设备验证。不要拿本机 Linux 成功假装跨平台发布已完成。
+C ABI、管理 helper、全 C# Runner、MSIX 各有适用条件，保留在技术评估中；当前选择只解决实际需要的 UI、配置安全和独立游戏生命周期边界。

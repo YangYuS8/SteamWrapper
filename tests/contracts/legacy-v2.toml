@@ -1,0 +1,66 @@
+# This is synthetic, deliberately varied historical v2 data, read by both languages.
+version = 2
+future_top_level = { enabled = true, revision = 12, label = "保留我" }
+future_timestamp = 2026-09-07T08:30:00+08:00
+
+[profiles."translated-game"]
+name = '汉化游戏 "测试"'
+app_id = "480"
+platform = "windows"
+game_dir = 'C:\游戏 Library\Original Game'
+target = 'patch\旧版.exe'
+working_dir = 'data files\中文'
+args = ['--title', '中文 with spaces', 'a"b', 'C:\尾部\', '', '''line one
+line two''']
+wait_mode = "process_name"
+process_name = "game.exe"
+future_profile_flag = "keep this"
+
+[profiles."translated-game".future_settings]
+quality = 7
+labels = ["甲", "乙"]
+
+[profiles.legacy]
+name = "旧版本未指定等待方式"
+app_id = "481"
+game_dir = 'C:\Legacy'
+target = "launcher.exe"
+
+[profiles.linux-game]
+name = "Linux existing profile"
+app_id = "482"
+platform = "linux"
+game_dir = "/home/player/Game Library"
+target = "./start.sh"
+working_dir = "data"
+args = ["--language", "zh_CN"]
+wait_mode = "process_group"
+
+[profiles.steamdeck-game]
+name = "SteamOS existing profile"
+app_id = "483"
+platform = "steam_os"
+game_dir = "/home/deck/Games/game"
+target = "start.sh"
+args = []
+wait_mode = "none"
+
+[profiles.windows-job]
+name = "已有 Job 配置"
+app_id = "484"
+platform = "windows"
+game_dir = 'C:\Games\Job'
+target = "launcher.exe"
+wait_mode = "job"
+
+[profiles.explicit-root]
+name = "显式 Root 配置"
+app_id = "485"
+platform = "windows"
+game_dir = 'C:\Games\Root'
+target = "game.exe"
+wait_mode = "root"
+
+[[future_entries]]
+name = "preserve unrelated array of tables"
+values = [1, 2, 3]

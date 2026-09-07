@@ -2,7 +2,7 @@
 
 ## 核心目标
 
-v2 是 SteamWrapper 的长期支持主线。Windows、Linux、SteamOS / Steam Deck 均属于 v2 范围；除非未来有必须破坏兼容性的架构证据，否则不另开 v3。
+v2 当前以 Windows 为优先平台，新的 [产品与架构设计](windows-v2-design.md)采用 WinUI 3/C# Manager、自有 C# 配置服务和独立 Rust Runner，通过既有 TOML/CLI 配合。`apps/manager-winui` 已实现配置预览；Dioxus / Rust 管理链仍作为迁移基线保留。保留已有 Linux 契约，暂缓 Linux / SteamOS / Proton 扩展。
 
 玩家只需在 SteamWrapper Manager 配置一次，之后始终从 Steam 点击“开始游戏”。Manager 不参与日常启动流程。
 
@@ -26,7 +26,7 @@ Runner 启动真正的 exe / launcher
 ↓
 Runner 等待游戏退出
 ↓
-Runner 退出，Steam 停止统计本次游玩时间
+Runner 退出；Steam 状态和时长是否符合预期需在客户端实际验收
 ```
 
 Manager 的配置路径：
@@ -40,7 +40,7 @@ Manager 的配置路径：
 ↓
 选择游戏与真正要启动的 exe / launcher
 ↓
-保存 profile 并生成或应用 Steam Launch Options
+保存 profile 并生成 Steam Launch Options（应用到 Steam 尚未实现）
 ↓
 以后仍从 Steam 启动游戏
 ```
@@ -58,7 +58,25 @@ Manager 的配置路径：
 
 `profiles.toml` 的 v2 格式、Runner CLI 和上述启动选项是兼容性边界；迁移 GUI 时不得改变它们。
 
+当前 Runner 接收并记录 `steam_command`，实际执行 profile 的 target/args，不执行或自动追加原命令。不能因 UI 迁移改变该语义。
+
 ## 分层
+
+WinUI 预览：
+
+```text
+apps/manager-winui/SteamWrapper.Manager       # XAML、窗口状态、原生 picker、剪贴板
+                 ↓ C# 调用
+apps/manager-winui/SteamWrapper.Application   # 配置、本地 Steam、Runner 安装
+                 ↓ profiles.toml / stable Runner 文件
+crates/runner                               # 由 Steam 独立启动
+```
+
+`ProfileStore` 使用 Tomlyn 语法跨度仅修改编辑字段，保留其他文本和未知数据。新建配置显式写入默认 job；旧缺省 root 不会被补成 job。保存具有协作写锁、字节版本冲突检测、同目录刷新临时文件及原子替换备份。内联/点号 profile 可读但拒绝修改；非协作编辑器仍存在最终检查到替换之间的竞态窗口。
+
+`SteamScanner` 只读本地 VDF 和封面；`RunnerInstaller` 使用摘要绑定的版本清单、稳定路径和原子替换，拒绝无法确认的新旧覆盖。UI 不负责游戏进程控制。`tests/contracts` 与测试专用进程 fixture 验证 C# 编辑和实际 Rust 消费，不进入 Manager 包。
+
+以下保留的 Dioxus 管理链使用独立的旧保存实现：
 
 ```text
 apps/manager-dioxus
@@ -76,7 +94,7 @@ crates/runner
 
 ### `crates/core`
 
-`core` 是唯一的通用数据和业务规则来源：Profile、TOML、Steam 目录与 appmanifest 解析、本地优先的封面发现与 AppID 驱动的 Steam CDN 回退 URL、Launch Options。它不得依赖 Dioxus、Tauri、React、WebView 或平台进程等待 API。
+在现有 Rust 管理链中，`core` 提供 Profile、TOML、Steam 目录与 appmanifest 解析、本地优先的封面发现与 AppID 驱动的 Steam CDN 回退 URL、Launch Options。它不得依赖 Dioxus、Tauri、React、WebView 或平台进程等待 API。目标 C# Manager 按同一协议实现配置服务，由跨语言往返与 Runner 消费测试约束兼容性，不通过 FFI 复用该管理链。
 
 ### `crates/manager-core`
 
@@ -88,6 +106,8 @@ crates/runner
 - Runner 摘要检查、原子安装和修复。
 
 Dioxus UI 直接调用它；不得复制旧 Tauri command 形状或创造伪 IPC。
+
+当前保存服务重建 profile，覆盖高级字段；core 保存使用直接文件写入。这些是已知迁移风险，不是新设计认可的配置语义。WinUI 必须实现保留未编辑字段、未知数据保护、原子写入和冲突处理，详见 [配置保真门槛](windows-v2-design.md#4-配置保真是第一个门槛)。
 
 ### `apps/manager-dioxus`
 
@@ -125,7 +145,7 @@ wait_mode = "job"
 | `process_group` | Linux / SteamOS 默认；等待同一 POSIX 进程组的派生进程 |
 | `none` | 启动后立即退出 |
 
-新 profile 的默认值为 Windows `job`、Linux `process_group`。`process_name` 会排除启动前已存在的同名 `(PID, start_time)`，但无法从名称识别业务归属；只能作为复杂 launcher 的显式兼容方案。Proton 包装留待平台专用策略完善。
+当前 Manager 新建 profile 的默认值为 Windows `job`、Linux `process_group`；旧 TOML 省略 `wait_mode` 时 Rust 解析器默认 `root`，不能在迁移时重新解释。`process_name` 会排除启动前已存在的同名 `(PID, start_time)`，但无法从名称识别业务归属；只能作为复杂 launcher 的显式兼容方案。Proton 包装留待平台专用策略完善。
 
 ## 分发与稳定安装
 
@@ -167,6 +187,6 @@ SteamWrapper 不注入 DLL、不补丁 Steam/游戏、不绕过 DRM、不常驻�
 
 ## Manager 技术边界
 
-旧 Tauri / React Manager 与其 E2E 已移除。当前唯一的 Manager 实现和交付目标是 `apps/manager-dioxus`；不得重新引入旧 command adapter、Node 前端运行时或第二套 UI 状态模型。
+旧 Tauri / React Manager 与其 E2E 已移除。当前唯一的 Manager 实现仍是 `apps/manager-dioxus`；它是迁移基线。目标 WinUI 在 C# 内实现 Windows 配置服务，不新增 C ABI 或后台 helper；Runner 保持独立 Rust 程序。WinUI 的本地封面策略、旧管理链退役条件和验收顺序以 [Windows 设计](windows-v2-design.md)为准。
 
 Windows NSIS、Linux AppImage 和 SteamOS 实机均需在对应平台的 CI / 设备上继续验证；本机 Linux 通过的检查不能伪装成 Windows 或 Steam Deck 实机证据。

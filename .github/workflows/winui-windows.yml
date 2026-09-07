@@ -1,0 +1,82 @@
+name: WinUI Windows preview
+
+on:
+  push:
+    branches: ["v2"]
+  pull_request:
+    branches: ["v2"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: winui-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  winui:
+    name: Contracts and self-contained Windows x64 preview
+    # The hosted image is Windows Server 2025, not a clean Windows 11 client.
+    # This build gate does not replace Windows 11 UI and real-Steam acceptance.
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+      MISE_TASK_RUN_AUTO_INSTALL: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install project-pinned WinUI development tools
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
+        with:
+          version: "2026.9.1"
+          install_args: "dotnet rust powershell"
+          # Rust is delegated to rustup; avoid restoring an isolated mise cache
+          # whose referenced rustup toolchain may not exist on this fresh host.
+          cache: false
+
+      - name: Verify native prerequisites and SDK pin
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $components = (Get-Content -LiteralPath '.vsconfig' -Raw | ConvertFrom-Json).components
+          $installation = & $vswhere -latest -products '*' -requires $components -property installationPath
+          if ($LASTEXITCODE -ne 0 -or -not $installation) {
+            throw 'The hosted image lacks the MSVC/Windows SDK components in .vsconfig; update the image or provision it non-interactively before running this workflow.'
+          }
+          $expectedSdk = (Get-Content -LiteralPath 'global.json' -Raw | ConvertFrom-Json).sdk.version
+          $actualSdk = & mise.exe exec -- dotnet --version
+          if ($LASTEXITCODE -ne 0 -or $actualSdk.Trim() -ne $expectedSdk) { throw 'The .NET SDK does not match global.json.' }
+          Write-Output "Visual Studio: $installation"
+          Write-Output ".NET SDK: $actualSdk"
+
+      - name: Test C# configuration and Windows services
+        run: mise.exe run winui:test
+
+      - name: Verify Rust interoperability and real Runner consumption
+        run: mise.exe run winui:contracts
+
+      - name: Publish self-contained preview and verify safe replacement
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
+
+      - name: Upload preview directory
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: SteamWrapper-WinUI-preview-windows-x64
+          path: target/winui/publish/
+          if-no-files-found: error
+
+      - name: Upload isolated contract evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: WinUI-Windows-contract-evidence
+          path: target/winui-contracts/**/results/
+          if-no-files-found: ignore

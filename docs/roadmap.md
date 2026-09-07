@@ -2,92 +2,61 @@
 
 ## 路线原则
 
-SteamWrapper v2 是长期支持主线。Windows、Linux、SteamOS / Steam Deck 与 Windows 游戏经 Proton 启动的 launcher 场景均在 v2 范围内；无必须破坏兼容性的理由时不另开 v3。
+按最早 v2 的 Windows 优先原则重新安排：**Windows 可用配置与启动闭环 → 安全一键应用/恢复与 Windows 稳定化 → 再评估跨平台**。新 Manager 采用 WinUI 3/C# 和 C# 配置服务，Rust Runner 独立；TOML、稳定路径和 CLI 不变。
 
-开发顺序保持渐进：先守住 Profile / Runner 闭环，再扩展 Steam 一键应用、分发与平台兼容性。
+[Windows v2 重设计](windows-v2-design.md)是当前实施方案，[WinUI 评估](winui3-assessment.md)记录技术依据。WinUI 配置预览已实现，Dioxus 保留作为迁移基线。以下阶段是验收顺序，不重新解释已发布版本号；当前证据见 [预览验收](winui-preview-validation.md)。
 
-## v2.0 - 无感启动基础闭环
+## A. Windows 工具链与配置契约
 
-- [x] Rust workspace 基础结构
-- [x] Manager / Runner 分离
-- [x] TOML profile 配置模型
-- [x] Runner 支持 `--appid <id> -- %command%` 入口
-- [x] Manager 生成 Steam Launch Options
-- [x] Manager 保存 profile 到稳定数据目录
-- [x] Runner 从稳定数据目录读取 `profiles.toml`
-- [x] Runner 启动目标 exe / launcher 的基础错误处理
-- [x] root-process 等待基线
-- [x] 日志目录与 Runner 错误日志
+- [x] 追溯原始需求、评估 WinUI、明确产品与架构边界
+- [x] mise 固定开发工具，安装 MSVC/Windows SDK，完成独立 WinUI 自包含构建验证
+- [x] 在 Windows 跑通现有 Rust Runner 的 6 项测试，包括 Job Object 与进程名等待
+- [x] C# 读取/单字段编辑/Rust 消费验证：完整字段、缺省、旧别名键、未知数据、中文与路径参数
+- [x] 配置原子保存、替换失败保留、备份和编辑冲突验证（非协作编辑器仍有最终检查竞态）
+- [x] C# 生成配置交给真实 Runner fixture，验证 argv、cwd 和等待
+- [x] 增量加入 Windows 构建与契约 CI，保留现有工作流；远程运行尚未验证
 
-## v2.1 - Dioxus Manager 与本地 Steam 游戏库
+## B. WinUI 完整配置切片
 
-目标：让玩家在 Rust-native Manager 中看到本机 Steam 游戏并完成可靠配置。
+- [x] 建立 WinUI 窗口与独立可测试的 C# 应用服务，不新增 FFI/helper
+- [x] 已配置游戏首页、添加游戏、搜索与手动选择 Steam 路径
+- [x] 原生选择 target，保留高级参数与工作目录，保存兼容 TOML
+- [x] 本地封面或友好占位，无网络封面前置条件
+- [x] 安装/修复稳定 Runner，失败时保留配置与原二进制
+- [x] 生成并复制精确启动项，明确原值保留和手动恢复引导
+- [ ] 原生交互、中文输入、键盘、缩放、取消及错误恢复验收
 
-- [x] `manager-core`：从 UI 框架抽离路径、Profile、Launch Options、日志和 Runner 服务
-- [x] Dioxus Desktop Manager（Dioxus 0.7.10 + RSX + CSS）
-- [x] 本地 Steam 安装目录、`libraryfolders.vdf` 与 `appmanifest_<appid>.acf` 扫描
-- [x] 本地 Steam cover cache 读取；缓存缺失时按本地 AppID 使用公开 Steam CDN 封面回退，加载失败保留占位
-- [x] 过滤 Proton / Steam Linux Runtime / Steamworks Redistributables
-- [x] AppID 去重
-- [x] 游戏库、已配置游戏、日志、设置与折叠侧边栏
-- [x] 手动添加游戏与本地目标程序选择
-- [x] Profile 编辑与 Launch Options 生成
-- [x] Runner 首次稳定安装与设置页修复
-- [x] Dioxus Native E2E：真实 binary、隔离 fixture、扫描 / profile / Runner 验收
-- [x] 删除旧 Tauri / React Manager、其 E2E 与旧构建依赖
+## C. Windows 可用预览与替换门槛
 
-## v2.2 - Linux / SteamOS 基础支持
+- [ ] 关闭 Manager 后，从真实 Steam 启动/退出受控游戏并记录状态与时长结果
+- [ ] launcher 提前退出、子进程等待、中文路径、启动失败和日志可诊断
+- [ ] Windows 11 x64 干净 VM 验证自包含目录及每用户安装器，无手动运行时准备
+- [ ] 覆盖更新、Manager 移动、Runner 占用和版本冲突不破坏配置/启动项
+- [ ] 卸载默认保留仍被启动项引用的 Runner 和用户数据
+- [ ] 记录安装体积、启动时间、已验证游戏及已知限制；提供中文使用与恢复说明
+- [ ] 达到以上门槛后切换默认 Manager 与发布链；按依赖退役 Dioxus/旧管理链及被替代的工作流
 
-- [x] Linux profile 路径与默认数据目录
-- [x] Linux Steam Library 扫描与本地 cover cache
-- [x] Linux Launch Options
-- [x] Linux Runner 启动原生目标程序
-- [x] `process_group` 基础等待模式
-- [x] Linux AppImage bundle 与随包 Runner 资源本机验证
-- [ ] SteamOS 用户目录与只读系统约束梳理
-- [ ] Steam Deck 桌面模式配置教程
-- [ ] Steam Deck 实机验证
+预览可先采用手动复制启动项。生成/复制不能标记为已写入 Steam，fixture 通过不能标记真实 Steam 时长已验证。
 
-## v2.3 - SteamOS / Proton 兼容性
+## D. Windows 安全一键应用与恢复
 
-- [ ] Proton 命令包装策略
-- [ ] 保留 Steam 展开的 `%command%` 环境的实机验收
-- [ ] Windows 游戏经 Proton 启动的自定义 launcher
-- [ ] 原版 / 汉化版 / mod loader 多目标切换
-- [x] `process_name` 基础等待模式
-- [ ] Linux / SteamOS 日志路径与错误提示优化
-- [ ] Steam Deck 用户教程与故障排查
+- [ ] 核验 Steam 本地配置，识别游戏和多用户，展示原值与将写入值
+- [ ] Steam 运行时阻止写入，并在实际写入前复检
+- [ ] 备份、无关数据保留、原子写入、复读验证和中断恢复
+- [ ] 检测外部更改，恢复时不覆盖用户后来设置或其他游戏数据
+- [ ] 扩大真实 Windows launcher 测试，必要时完善显式等待策略
+- [ ] 完成稳定版验收后再将一键应用作为默认玩家流程
 
-## v2.4 - 一键应用到 Steam 与恢复
+此阶段优先于 Linux/SteamOS/Proton 扩展。portable、国内镜像与更新入口可按 Windows 交付需要安排；不因发布矩阵扩展阻塞主流程。
 
-- [ ] 识别 Steam userdata 与多用户选择
-- [ ] 读取当前 LaunchOptions
-- [ ] 写入新的 LaunchOptions
-- [ ] 修改前备份 Steam 本地配置
-- [ ] 一键恢复原启动选项
-- [ ] Steam 运行时阻止盲写
-- [ ] Windows / Linux / SteamOS 平台策略
+## 后续评估
 
-## v2.5 - 玩家友好的安装、更新与卸载
+- Windows 10、ARM64、portable ZIP、MSIX、更新渠道和签名方案；必须分别取得产物/平台证据。
+- 导入导出、多目标切换和批量恢复；按玩家实际需求决定。
+- Linux、SteamOS、Proton；另立需求和支持矩阵，不作为 Windows 首发门槛。
 
-- [x] Dioxus NSIS / AppImage bundle 配置与 CI 验收路径
-- [x] release Runner stage 与 bundle resource 验证路径
-- [ ] Windows NSIS 实机 / CI 实际产物验证
-- [ ] Windows portable zip 发布流程
-- [x] Linux AppImage 本机产物验证
-- [ ] Linux tar.gz 发布流程
-- [ ] GitHub Release 与 CNB Release 双渠道
-- [ ] SHA256 与中文更新说明的正式发布验证
-- [ ] 覆盖安装与保留用户数据的实机验证
-- [ ] Manager 内“检查更新”入口
-- [ ] 标准卸载入口与可选清理用户数据
+## 现有实现记录与证据边界
 
-## v2.x 长期方向
+当前源码已有 Rust core/manager-core/Runner、Dioxus 0.7.10 UI、本地 Steam 扫描、CDN 封面回退、TOML 保存、稳定 Runner 安装、启动项生成、平台进程代码及 Dioxus Native E2E/打包工作流。它们构成迁移参考，不证明本次 Windows 已通过。
 
-- [ ] Windows x64 / Linux x86_64 / SteamOS 发布矩阵稳定化
-- [ ] CNB 国内镜像与中文下载说明
-- [ ] Profile 导入、导出与迁移
-- [ ] 一键恢复所有已修改游戏
-- [ ] 安全说明与反误报说明
-- [ ] 中英双语文档
-- [ ] Steam Deck 简化配置流程
+旧路线的 Dioxus、Linux/AppImage 勾选是历史实现记录，可在 `31a609d:docs/roadmap.md` 查阅；不继续混放在新路线作为当前验收。已有 Linux 代码和 CI 保留，新增范围延期。WinUI 配置预览和契约已实现，详见 [环境记录](windows-development.md)；一键应用/恢复与新安装器仍未实现。
