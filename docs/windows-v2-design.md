@@ -1,6 +1,6 @@
 # Windows v2 产品与架构重设计
 
-日期：2026-09-07。状态：用户授权实施后，WinUI 配置预览、C# 配置安全服务和跨语言/真实 Runner 契约已落地，远程 WinUI CI 通过。[真实 galgame 测试](real-steam-validation.md)已完成一个 Unity 游戏的 Steam → Runner → 游戏闭环，包含正常退出、Steam 状态和时长更新；早先 OS Error 3 已定位为开发宿主的 AppData 重定向，新增实际文件位置检查。真实自定义 launcher、安装器和干净系统验收尚未完成。本文是 Windows 实施的主方案，取代上一版评估中的 `manager-ffi` 默认路线；Dioxus 代码和 CI 仍保留为迁移基线。
+日期：2026-09-08。状态：用户授权实施后，WinUI 配置预览、C# 配置安全服务和跨语言/真实 Runner 契约已落地，远程 WinUI CI 通过。[真实 galgame 测试](real-steam-validation.md)已完成一个 Unity 游戏及库外独立汉化版 9-nine 第二部的 Steam → Runner → 游戏闭环，包含正常退出、Steam 状态和时长更新；第二部还验证了中文开场。早先 OS Error 3 已定位为开发宿主的 AppData 重定向，新增实际文件位置检查。真实自定义 launcher 先退、安装器和干净系统验收尚未完成。本文是 Windows 实施的主方案，取代上一版评估中的 `manager-ffi` 默认路线；Dioxus 代码和 CI 仍保留为迁移基线。
 
 ## 1. 回到最初要解决的问题
 
