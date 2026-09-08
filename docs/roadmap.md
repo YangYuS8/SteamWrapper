@@ -28,7 +28,7 @@
 
 ## C. Windows 可用预览与替换门槛
 
-- [ ] 关闭 Manager 后，从真实 Steam 启动/退出受控游戏并记录状态与时长结果
+- [x] 关闭 Manager 后，从真实 Steam 启动/退出并记录状态与时长；本机 Unity 游戏与 9-nine 第二、三、四部及新章通过，见 [逐游戏证据与限制](real-steam-validation.md)
 - [ ] launcher 提前退出、子进程等待、中文路径、启动失败和日志可诊断
 - [ ] Windows 11 x64 干净 VM 验证自包含目录及每用户安装器，无手动运行时准备
 - [ ] 覆盖更新、Manager 移动、Runner 占用和版本冲突不破坏配置/启动项

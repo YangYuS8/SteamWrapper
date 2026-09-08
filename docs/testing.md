@@ -36,9 +36,9 @@ mise run winui:sandbox
 
 `winui:test` 包含配置保真/冲突/替换失败、本地 Steam、稳定 Runner 安装与共享文件位置测试。`winui:contracts` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](../tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
 
-目录分离新增 AppID 关联、库外运行路径保留和真实双库安装冲突回归，本轮 C# 共 49/49 通过。原生隔离保存、重新扫描和歧义新建配置也已验证；详见 [目录分离验证记录](translated-games.md#本机实施与研究记录)。这些结果不代表真实汉化迁移或成就触发通过。
+目录分离新增 AppID 关联、库外运行路径保留和真实双库安装冲突回归，该实现轮 C# 共 49/49 通过。原生隔离保存、重新扫描和歧义新建配置也已验证；详见 [目录分离验证记录](translated-games.md)。这些隔离结果本身不代表真实汉化迁移或成就触发通过。
 
-新增 Windows CI 保留旧工作流，依次运行上述测试与目录发布；`3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)已实际通过。托管 Windows Server 2025 构建不是 Windows 11 干净系统验收。完整验收范围如下，不能把 fixture 结果外推到未测平台或真实 Steam；本机单款 galgame 已另行通过 Steam 闭环，过程与边界见 [真实 Steam 验证](real-steam-validation.md)。
+新增 Windows CI 保留旧工作流，依次运行上述测试与目录发布；`3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)已实际通过。托管 Windows Server 2025 构建不是 Windows 11 干净系统验收。完整验收范围如下，不能把 fixture 结果外推到未测平台或真实 Steam；本机 Unity 游戏及 9-nine 四部独立汉化版已另行通过 Steam 闭环，过程与边界见 [真实 Steam 验证](real-steam-validation.md)。
 
 | 范围 | 有效证据 |
 | --- | --- |
@@ -56,6 +56,8 @@ mise run winui:sandbox
 真实验收中的 Manager 应从正常 Windows 资源管理器打开完整发布目录中的 `SteamWrapper.Manager.exe`，完成配置与稳定 Runner 安装后关闭，再由 Steam 启动游戏。本机 Codex 进程环境曾把字面上的 AppData 路径映射到包的 `LocalCache`；shell 或 Manager 没有 package identity，并不能排除此重定向。最终文件句柄路径才揭示两种视图不同。具体步骤见 [共享数据路径与真实 Steam 验收](windows-development.md#共享数据路径与真实-steam-验收)，常规 mise/sandbox 流程保持。
 
 2026-09-07 的实际记录：`The NOexistenceN of you AND me`（AppID 2873080）在 12:46:03 形成 `Steam 4268 → Runner 4624 → 游戏 19752 → Unity 12996`，从标题界面正常退出后，Steam 在 12:53:33 记录三个子进程全部 exit 0；UI 回到“开始”、云显示最新，显示时长 11.2 → 11.4 小时，启动项已恢复为空。正常 Explorer 启动同一 Manager、在真实稳定目录配置安装后，原命令格式即成功，无需改动引号或斜杠规则。最终独立核对确认 35/35 个游戏文件及 4/4 份原存档 SHA-256 与初始基线一致，存档句柄路径未被重定向。此结果限于本机该款游戏，不扩大为其他游戏、干净 VM 或安装器通过。
+
+2026-09-08 的隔离目录实测：9-nine 第二、三、四部和新章分别从 Steam 经稳定 Runner 运行库外汉化版，均确认中文开场、正常退出、Steam 运行状态和显示时长更新。第一部当前包直接启动即报产品 ID 检查处理启动失败，未到标题，未开展 Steam 路径验收。此轮修正实际用户配置与测试记录，没有产品源码改动，因此未重复编译和自动化全门禁。自然成就触发、汉化存档云同步、真实 launcher 先退仍未验证。
 
 ## 当前实现分层
 
