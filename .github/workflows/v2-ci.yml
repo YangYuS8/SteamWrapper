@@ -65,10 +65,10 @@ jobs:
             "apps/manager-dioxus/assets/icons/steamwrapper.ico",
             "apps/manager-dioxus/Dioxus.toml",
             "apps/manager-dioxus/scripts/stage-runner.sh",
-            "docs/tech-stack.md",
-            "docs/architecture.md",
-            "docs/distribution.md",
-            "docs/roadmap.md"
+            "docs/src/content/docs/development/stack.md",
+            "docs/src/content/docs/development/architecture.md",
+            "docs/src/content/docs/development/distribution.md",
+            "docs/src/content/docs/project/roadmap.md"
           )
           foreach ($file in $required) {
             if (-not (Test-Path $file)) {

@@ -2,7 +2,7 @@
 
 [English](CONTRIBUTING.md) | 简体中文
 
-SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成。修改产品边界前，请阅读 [README](README.zh-CN.md)、[架构](docs/architecture.zh-CN.md)和[路线](docs/roadmap.zh-CN.md)。WinUI Manager 仍是预览；在 Windows 交付门槛通过前，Dioxus 与现有工作流保留为迁移基线。
+SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成。修改产品边界前，请阅读 [README](README.zh-CN.md)、[架构](https://yangyus8.top/SteamWrapper/zh-cn/development/architecture/)和[路线](https://yangyus8.top/SteamWrapper/zh-cn/project/roadmap/)。WinUI Manager 仍是预览；在 Windows 交付门槛通过前，Dioxus 与现有工作流保留为迁移基线。
 
 ## 问题与提案
 
@@ -16,16 +16,18 @@ SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成
 
 v2 的拉取请求应以 `v2` 为目标分支。GitHub 默认分支目前是 `main`，创建 PR 时请明确检查 base。不要将 `main` 上的旧版实现混入 v2 改动。
 
-使用仓库的 `mise.toml` 和 `mise.lock` 管理开发工具，保持 .NET 版本与 `global.json` 一致。官方 MSVC/SDK 前置条件及 mise 命令见 [Windows 开发环境](docs/windows-development.zh-CN.md)。WinUI 改动先执行：
+使用仓库的 `mise.toml` 和 `mise.lock` 管理开发工具，保持 .NET 版本与 `global.json` 一致。官方 MSVC/SDK 前置条件及 mise 命令见 [Windows 开发环境](https://yangyus8.top/SteamWrapper/zh-cn/development/windows/)。WinUI 改动先执行：
 
 ```powershell
 mise run winui:test
 mise run winui:contracts
 ```
 
-根据[测试文档](docs/testing.zh-CN.md)选择其他检查。纯文档改动需要翻译及链接复核，不必人为执行全量构建。现有 CI 和发布门禁仍适用，不应削弱检查来掩盖失败。请准确区分通过、失败、受阻和未运行。
+根据[测试文档](https://yangyus8.top/SteamWrapper/zh-cn/development/testing/)选择其他检查。纯文档改动需要翻译及链接复核，不必人为执行全量构建。现有 CI 和发布门禁仍适用，不应削弱检查来掩盖失败。请准确区分通过、失败、受阻和未运行。
 
 ## 实现边界
+
+文档站改动须运行 `mise run docs:check` 和 `mise run docs:build`，在生产预览中检查两种语言的搜索与导航。完整流程见[文档维护指南](https://yangyus8.top/SteamWrapper/zh-cn/development/documentation/)；纯文字编辑无需构建桌面应用。
 
 - Manager 负责配置；Steam 启动独立无界面 Runner，正常游戏启动不得显示 Manager。
 - 保持 TOML 兼容性、稳定数据路径、Runner CLI 含义及 `"<stable-runner-path>" --appid "<appid>" -- %command%`。
@@ -38,7 +40,7 @@ mise run winui:contracts
 
 自动化测试必须使用一次性 Steam 和用户数据 fixture。未得到明确授权，不得用他人的真实游戏库测试。日常测试不得修补、替换、通过 Steam 校验、卸载或清理游戏文件；Steam 校验可能覆盖第三方汉化。
 
-经授权进行真实验收时，保存所选游戏原有 Launch Options，测试后恢复，并按[真实验收流程](docs/real-steam-validation.zh-CN.md)比较文件清单和哈希。遇到未解决的存档或云冲突必须停止。不要上传凭据、账号配置、存档、游戏二进制或未脱敏的个人路径。生成的用户数据和本机证据不得提交。
+经授权进行真实验收时，保存所选游戏原有 Launch Options，测试后恢复，并按[真实验收流程](https://yangyus8.top/SteamWrapper/zh-cn/project/validation/steam/)比较文件清单和哈希。遇到未解决的存档或云冲突必须停止。不要上传凭据、账号配置、存档、游戏二进制或未脱敏的个人路径。生成的用户数据和本机证据不得提交。
 
 ## 拉取请求
 

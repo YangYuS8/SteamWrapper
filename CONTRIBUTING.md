@@ -2,7 +2,7 @@
 
 English | [简体中文](CONTRIBUTING.zh-CN.md)
 
-SteamWrapper v2 is a Windows-first configuration Manager and an independent Rust Runner. Read the [README](README.md), [architecture](docs/architecture.md), and [roadmap](docs/roadmap.md) before changing a product boundary. The WinUI Manager is a preview; Dioxus and its existing workflows remain the migration baseline until the Windows delivery gates pass.
+SteamWrapper v2 is a Windows-first configuration Manager and an independent Rust Runner. Read the [README](README.md), [architecture](https://yangyus8.top/SteamWrapper/development/architecture/), and [roadmap](https://yangyus8.top/SteamWrapper/project/roadmap/) before changing a product boundary. The WinUI Manager is a preview; Dioxus and its existing workflows remain the migration baseline until the Windows delivery gates pass.
 
 ## Issues and proposals
 
@@ -16,16 +16,18 @@ Discuss changes to profile formats, Runner CLI behavior, supported platforms, pa
 
 Target `v2` for v2 pull requests. The repository's GitHub default branch is currently `main`, so check the pull request base explicitly. Do not mix the legacy implementation on `main` into a v2 change.
 
-Manage development tools through the checked-in `mise.toml` and `mise.lock`; keep the .NET pin aligned with `global.json`. Follow [Windows development](docs/windows-development.md) for the official MSVC/SDK prerequisites and mise commands. For WinUI changes, start with:
+Manage development tools through the checked-in `mise.toml` and `mise.lock`; keep the .NET pin aligned with `global.json`. Follow [Windows development](https://yangyus8.top/SteamWrapper/development/windows/) for the official MSVC/SDK prerequisites and mise commands. For WinUI changes, start with:
 
 ```powershell
 mise run winui:test
 mise run winui:contracts
 ```
 
-Choose further checks from [testing](docs/testing.md). Documentation-only changes need translation and link review, not an artificial full build. Existing CI and release gates still apply; do not weaken a gate to hide a failure. Report passed, failed, blocked, and not-run checks accurately.
+Choose further checks from [testing](https://yangyus8.top/SteamWrapper/development/testing/). Documentation-only changes need translation and link review, not an artificial full build. Existing CI and release gates still apply; do not weaken a gate to hide a failure. Report passed, failed, blocked, and not-run checks accurately.
 
 ## Implementation boundaries
+
+For documentation-site changes, run `mise run docs:check` and `mise run docs:build`. Review both languages in the production preview, including search and navigation. See the [documentation workflow](https://yangyus8.top/SteamWrapper/development/documentation/); application builds are not required for prose-only edits.
 
 - Manager configures profiles; Steam starts the independent, headless Runner. A normal game launch must not show Manager.
 - Preserve TOML compatibility, stable data paths, Runner CLI meaning, and `"<stable-runner-path>" --appid "<appid>" -- %command%`.
@@ -38,7 +40,7 @@ Choose further checks from [testing](docs/testing.md). Documentation-only change
 
 Automated tests must use disposable Steam and user-data fixtures. Do not run tests against another person's real library without their explicit authorization. Never patch, replace, verify through Steam, uninstall, or clear game files as a routine test step. Steam verification can replace third-party translations.
 
-For an authorized live acceptance session, preserve the selected game's previous Launch Options, restore them afterward, and compare file inventories/hashes according to the [live validation procedure](docs/real-steam-validation.md). Stop on unresolved save or cloud conflicts. Do not upload credentials, account configuration, saves, game binaries, or unredacted personal paths. Keep generated user data and local evidence out of commits.
+For an authorized live acceptance session, preserve the selected game's previous Launch Options, restore them afterward, and compare file inventories/hashes according to the [live validation procedure](https://yangyus8.top/SteamWrapper/project/validation/steam/). Stop on unresolved save or cloud conflicts. Do not upload credentials, account configuration, saves, game binaries, or unredacted personal paths. Keep generated user data and local evidence out of commits.
 
 ## Pull requests
 

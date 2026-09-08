@@ -4,6 +4,10 @@
   "license": "Apache-2.0",
   "packageManager": "pnpm@11.10.0+sha512.0b7f8b98060031904c017e3a41eb187a16d40eeb829b95c4f8cb03681761fc4ab53dd219115b9b447f4dce1a05a214764461e7d3703392a9f32f9511ce8c86c8",
   "scripts": {
+    "docs:dev": "pnpm --filter steamwrapper-docs dev",
+    "docs:check": "pnpm --filter steamwrapper-docs check",
+    "docs:build": "pnpm --filter steamwrapper-docs build",
+    "docs:preview": "pnpm --filter steamwrapper-docs preview",
     "brand:generate": "node scripts/generate-brand.mjs",
     "brand:check": "node scripts/generate-brand.mjs --check",
     "e2e:native": "pnpm --filter steamwrapper-manager-dioxus-e2e e2e:native",

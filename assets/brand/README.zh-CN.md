@@ -22,4 +22,5 @@ mise run brand:check
 渲染使用固定版本的开发依赖 `@resvg/resvg-js`；分发的应用不依赖 Node.js。
 
 WinUI 将 ICO 嵌入可执行文件并加载为窗口图标；Dioxus 在界面使用同源 SVG，
-在安装包中使用 PNG/ICO。这遵循微软的[图标构建指南](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction)。
+在安装包中使用 PNG/ICO。文档站生成的 `docs/public/favicon.svg` 与原始 SVG 一致，
+供页眉和首页使用。这遵循微软的[图标构建指南](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction)。

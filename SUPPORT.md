@@ -2,7 +2,7 @@
 
 English | [简体中文](SUPPORT.zh-CN.md)
 
-Start with the [README](README.md), [Windows development/setup notes](docs/windows-development.md), and [translated-game directory guidance](docs/translated-games.md). The [live validation record](docs/real-steam-validation.md) states exactly which local scenarios passed and which limits remain.
+Start with the [README](README.md), [Windows development/setup notes](https://yangyus8.top/SteamWrapper/development/windows/), and [translated-game directory guidance](https://yangyus8.top/SteamWrapper/guides/translated-games/). The [live validation record](https://yangyus8.top/SteamWrapper/project/validation/steam/) states exactly which local scenarios passed and which limits remain.
 
 Use [GitHub Issues](https://github.com/YangYuS8/SteamWrapper/issues) for a bug, feature proposal, or configuration question. Search existing reports and choose the matching template. Template files are maintained on `v2`; GitHub's live template chooser uses the default branch. GitHub Discussions is not enabled for this repository as of 2026-09-08. This repository does not advertise a dedicated support service or guaranteed response time.
 

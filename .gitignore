@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+/docs/.astro/
+/docs/dist/
 
 # .NET / WinUI build output
 /apps/manager-winui/**/bin/

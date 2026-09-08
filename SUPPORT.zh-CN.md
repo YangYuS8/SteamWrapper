@@ -2,7 +2,7 @@
 
 [English](SUPPORT.md) | 简体中文
 
-请先阅读 [README](README.zh-CN.md)、[Windows 开发与环境说明](docs/windows-development.zh-CN.md)及[汉化游戏目录指导](docs/translated-games.zh-CN.md)。[真实验收记录](docs/real-steam-validation.zh-CN.md)明确说明了通过的本机场景和剩余限制。
+请先阅读 [README](README.zh-CN.md)、[Windows 开发与环境说明](https://yangyus8.top/SteamWrapper/zh-cn/development/windows/)及[汉化游戏目录指导](https://yangyus8.top/SteamWrapper/zh-cn/guides/translated-games/)。[真实验收记录](https://yangyus8.top/SteamWrapper/zh-cn/project/validation/steam/)明确说明了通过的本机场景和剩余限制。
 
 缺陷、功能提案或配置疑问可提交到 [GitHub Issues](https://github.com/YangYuS8/SteamWrapper/issues)。先搜索已有报告，再选择相应模板。模板文件在 `v2` 中维护，GitHub 实际模板选择器使用默认分支。2026-09-08 检查时，仓库未启用 GitHub Discussions。仓库没有公布专职支持服务或保证响应时间。
 

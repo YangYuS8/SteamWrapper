@@ -1,46 +1,20 @@
-<a id="文档"></a>
-
-# Documentation
+# Documentation source
 
 English | [简体中文](README.zh-CN.md)
 
-SteamWrapper's primary documentation is English. Every page in this directory has a complete Simplified Chinese counterpart named `*.zh-CN.md`; use the language link at the top of a page to switch. Commands, configuration keys, paths, and historical measurements retain their original meaning in both languages.
+Read the published [SteamWrapper documentation](https://yangyus8.top/SteamWrapper/) or its [Simplified Chinese version](https://yangyus8.top/SteamWrapper/zh-cn/).
 
-Start with the [project overview](../README.md), then choose the relevant guide below. Current design, implemented behavior, and dated validation are separate: a plan or earlier passing result does not establish that a later build or every platform has passed.
+This directory is the Astro Starlight workspace. Canonical Markdown lives in `src/content/docs/`; the matching `zh-cn/` subtree contains complete translations. `guides/` is for players, `development/` covers implementation and maintenance, and `project/` preserves design decisions and dated evidence. Do not duplicate full guides in the root README.
 
-<a id="产品与开发"></a>
+```sh
+mise install node pnpm
+mise exec -c "pnpm install --frozen-lockfile"
+mise run docs:dev
+mise run docs:check
+mise run docs:build
+mise run docs:preview
+```
 
-## Product and development
+Run these commands from the repository root. The local URL includes `/SteamWrapper/`. Search is available after build in the production preview. Generated `.astro/` and `dist/` directories are ignored.
 
-| Guide | Purpose |
-| --- | --- |
-| [Architecture](architecture.md) | Manager, services, independent Runner, file contracts, stable data, and display language settings. |
-| [Windows v2 design](windows-v2-design.md) | Windows-first requirements, configuration fidelity, delivery gates, and deferred scope. |
-| [Technology stack](tech-stack.md) | Current implementation, tooling, retained Dioxus baseline, and rejected directions. |
-| [Windows development](windows-development.md) | mise-managed setup, build/test commands, and shared-data-path checks. |
-| [Testing](testing.md) | Choose relevant automated, native, package, and authorized live Steam checks. |
-| [Distribution](distribution.md) | Preview packaging, stable Runner installation, update/uninstall boundaries, and release gates. |
-| [Roadmap](roadmap.md) | Implementation priorities and work still required before replacing the baseline. |
-| [Separate translated games](translated-games.md) | Keep official Steam installs and independent translations separate; understand launch, achievement, save, and cloud limits. |
-
-<a id="研究与带日期的证据"></a>
-
-## Research and dated evidence
-
-These records retain their original dates and measurements. Later results are identified separately; local evidence under ignored `target/` paths is not included in a repository checkout.
-
-| Record | Purpose |
-| --- | --- |
-| [WinUI 3 assessment](winui3-assessment.md) | Migration alternatives, dependencies, deployment, and initial validation plan. |
-| [Windows Manager comparison](windows-manager-comparison.md) | Same-input configuration tests, native checks, and bounded resource measurements. |
-| [WinUI preview validation](winui-preview-validation.md) | Initial configuration-slice evidence and subsequent coverage. |
-| [Real Steam validation](real-steam-validation.md) | Authorized game-specific observations, historical failures, later retests, and remaining limits. |
-| [Astra instruction audit](astra-instruction-audit.md) | The dated instruction-research and repository-guidance changes. |
-
-<a id="社区与自动化"></a>
-
-## Community and automation
-
-Read [contributing](../CONTRIBUTING.md), the [Code of Conduct](../CODE_OF_CONDUCT.md), [security reporting](../SECURITY.md), or [support](../SUPPORT.md) as appropriate. [AGENTS.md](../AGENTS.md) contains repository automation instructions; it is not a user guide.
-
-This implementation is developed on `v2`. GitHub's default branch remains `main`; the community files and templates shown by GitHub can therefore differ from the ones in this branch.
+See the complete [documentation maintenance guide](src/content/docs/development/documentation.md) for authoring, translation, link conventions, validation and GitHub Pages deployment. [legacy-routes.json](legacy-routes.json) maps old document names to the new routes; builds generate static redirect pages that preserve query strings and section fragments when JavaScript is available. These redirects cannot change GitHub's own `blob/` URLs.

@@ -37,6 +37,7 @@ const outputs = new Map([
   ['apps/manager-dioxus/assets/steamwrapper.svg', svg],
   ['apps/manager-dioxus/assets/icons/steamwrapper.png', png],
   ['apps/manager-dioxus/assets/icons/steamwrapper.ico', ico],
+  ['docs/public/favicon.svg', svg],
 ]);
 let stale = false;
 for (const [relative, bytes] of outputs) {

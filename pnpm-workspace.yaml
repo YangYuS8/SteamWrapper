@@ -1,4 +1,5 @@
 packages:
+  - "docs"
   - "apps/*"
   - "apps/*/e2e"
 allowBuilds:

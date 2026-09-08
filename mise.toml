@@ -35,6 +35,22 @@ run = "pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify"
 description = "Build the native WinUI Manager and stage its independent Rust Runner"
 run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build"
 
+[tasks."docs:dev"]
+description = "Start the bilingual Starlight documentation server"
+run = "pnpm --filter steamwrapper-docs dev"
+
+[tasks."docs:check"]
+description = "Check documentation locale pairs, frontmatter and Astro types"
+run = "pnpm --filter steamwrapper-docs check"
+
+[tasks."docs:build"]
+description = "Build static documentation and check generated links and assets"
+run = "pnpm --filter steamwrapper-docs build"
+
+[tasks."docs:preview"]
+description = "Preview the production documentation with local search"
+run = "pnpm --filter steamwrapper-docs preview"
+
 [tasks."brand:generate"]
 description = "Regenerate packaged SVG, PNG and ICO assets from the canonical icon"
 run = "node scripts/generate-brand.mjs"
