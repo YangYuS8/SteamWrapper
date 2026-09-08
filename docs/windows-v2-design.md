@@ -1,6 +1,8 @@
 # Windows v2 产品与架构重设计
 
-日期：2026-09-08。状态：用户授权实施后，WinUI 配置预览、C# 配置安全服务和跨语言/真实 Runner 契约已落地，实现基线的远程 WinUI CI 通过。[真实 galgame 测试](real-steam-validation.md)已完成一个 Unity 游戏及库外独立汉化版 9-nine 第二、三、四部和新章的 Steam → Runner → 游戏闭环，包含正常退出、Steam 状态和时长更新；四部汉化版均验证了中文开场。第一部当前独立包直接启动即报产品 ID 检查处理启动失败，未进入 Steam 验收。早先 OS Error 3 已定位为开发宿主的 AppData 重定向，新增实际文件位置检查。真实自定义 launcher 先退、安装器和干净系统验收尚未完成。本文是 Windows 实施的主方案，取代上一版评估中的 `manager-ffi` 默认路线；Dioxus 代码和 CI 仍保留为迁移基线。
+日期：2026-09-08。状态：用户授权实施后，WinUI 配置预览、C# 配置安全服务和跨语言/真实 Runner 契约已落地，实现基线的远程 WinUI CI 通过。[真实 galgame 测试](real-steam-validation.md)已完成一个 Unity 游戏及库外独立汉化版 9-nine 五部的 Steam → Runner → 游戏闭环，包含正常退出、Steam 状态和时长更新；五部均验证了中文开场。第一部恢复 CHS 入口后，另验证了本机该启动器先退、实际游戏与 Runner 继续等待的场景；原始入口早先的产品 ID 检查失败记录保留。
+
+早先 OS Error 3 已定位为开发宿主的 AppData 重定向，新增实际文件位置检查。更广泛的启动器兼容性、安装器和干净系统验收尚未完成。本文是 Windows 实施的主方案，取代上一版评估中的 `manager-ffi` 默认路线；Dioxus 代码和 CI 仍保留为迁移基线。
 
 ## 1. 回到最初要解决的问题
 
@@ -101,6 +103,8 @@ TOML 库选型以这个往返试验决定，不先锁定未经验证的包。测
 [当前 Runner](../crates/runner/src/main.rs)启动 profile 的 `target` 与 `args`；`steam_command` 被接收并记录，未被执行或自动追加。保留 `%command%` 是兼容契约，**不等于已有原命令转发**。不能借迁移同时启动原 exe、自动回退原游戏或更改参数语义。
 
 Windows 新配置默认 `job`。真实测试需验证 launcher 先退、子进程后退、目标无法启动、中文/空格路径、argv/cwd、Runner 错误退出和日志。`root` 仅等直接子进程；`process_name` 是显式兼容选择，不能证明同名进程属于该游戏。
+
+本机第一部 CHS 场景已通过真实先退验收：14:15:55 启动器退出后，实际游戏和 Runner 继续约 2 分 21 秒，至 14:18:15 普通退出，Steam 时长 36 → 38 分钟。UI 确认使用 `job`，独立进程观察无采样错误或元数据失败，最终无残留。此记录不直接证明 Job 成员，也不扩大为任意启动器保证。当前 [Windows 实现](../crates/runner/src/platform/windows.rs)等 Job 完成后返回启动器退出状态；这次日志的 CHS/Runner exit 0 不能解释为实际游戏 exit 0。
 
 Job Object 不能覆盖任意脱离行为：子进程是否入 job 受创建方式、breakaway 和父 job 等条件影响；完成端口的一般通知也不能被笼统当成必达事件。异常场景需查询和验证实际进程状态，不能只根据使用了某个 API 宣称正确。[Windows Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)
 
