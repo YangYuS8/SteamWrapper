@@ -105,7 +105,7 @@ WinUI 已显示只读 Steam 安装位置和独立可编辑的实际运行文件�
 
 | 作品 / AppID | 当前运行验证结果 |
 | --- | --- |
-| Episode 1 / 976390 | 普通资源管理器直接启动失败，未到标题；Steam → Runner 路径未测 |
+| Episode 1 / 976390 | 原始入口直接启动失败；后续补回 Defender 隔离的汉化入口，恢复后尚未运行；Steam → Runner 路径未测 |
 | Episode 2 / 1033420 | Steam → Runner 启动中文开场并正常退出，通过 |
 | Episode 3 / 1142830 | Steam → Runner 启动中文开场并正常退出，通过 |
 | Episode 4 / 1424660 | Steam → Runner 启动中文开场并正常退出，通过 |
@@ -124,3 +124,5 @@ WinUI 已显示只读 Steam 安装位置和独立可编辑的实际运行文件�
 包含隐藏文件的目录检查没有找到另一汉化入口或启动脚本；另两个 EXE 分别是升级器和卸载器。随包说明未指出一个明确缺失的启动依赖。[原汉化发布帖](https://bbs2.kdays.net/read/64426)与[发行方支持页](https://www.clearrave.co.jp/support/)中未找到该完整错误的明确解释。当前只能定位到游戏自身产品 ID 检查处理启动阶段，不能据消息单独认定许可证无效、缺少某个 DLL 或 Windows 版本不兼容；该错误在没有 Runner 的直接路径出现，也不是 Runner 故障的证据。
 
 第一部记录位于同一忽略目录的 `976390/direct-resumed-observation.json` 和 `entry-audit/episode1-product-id-assessment.md`。尚需核实该汉化包适配的发行版本及原渠道完整安装要求；本轮未执行升级器、安装器，未调整产品检查、解包或修补游戏文件。
+
+当日后续查询 Defender 记录确认，另一入口 `nine_kokoiro_chs.exe` 在建立文件基线之前已被隔离。按用户新授权，已从隔离区导出并补回这个入口及两个随包补丁文件，全部为补回缺失位置、没有覆盖已有程序或存档。恢复后的入口尚未执行，不能据此计入正常启动或成就通过；检测标签和静态加载器特征也不足以确认误报。具体范围见 [隔离记录与恢复](real-steam-validation.md#2026-09-08第一部-defender-隔离记录与文件恢复)。

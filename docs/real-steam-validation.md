@@ -4,7 +4,7 @@
 
 **当前结论：9-nine Episode 2、Episode 3、Episode 4 和 NewEpisode 均通过 Steam → 稳定 Runner → 独立目录汉化游戏 → 正常退出闭环。** 四部都已看到中文开场剧情，Steam 分别记录游戏与 Runner 退出码均为 0，显示时长增加。Episode 4 顶部菜单仍为日语；NewEpisode 主菜单英文、顶部菜单日文、退出确认中文，不能写成界面全部汉化。
 
-Episode 1 在用户处理安全提示后，从普通资源管理器启动即报“产品 ID 检查处理启动失败”，未到标题；未创建其 Runner 配置，也未进行 Steam 包装测试。四部成功对象的 Manager 配置已保存，但测试结束后 Steam 启动选项均恢复原空值，尚未持久应用汉化启动命令。昨日入口缺失、云冲突及四部错误保留为历史证据；成就自然触发和汉化存档的 Steam 云同步仍未验证。
+Episode 1 从普通资源管理器运行 `nine_kokoiro.exe` 时报“产品 ID 检查处理启动失败”，未到标题。后续查明 Defender 在建立本轮基线之前已隔离其另一个汉化入口，现已按用户要求恢复三个缺失文件，但恢复后的入口尚未运行；未创建其 Runner 配置，也未进行 Steam 包装测试。四部成功对象的 Manager 配置已保存，但测试结束后 Steam 启动选项均恢复原空值，尚未持久应用汉化启动命令。成就自然触发和汉化存档的 Steam 云同步仍未验证。
 
 ## 2026-09-07 历史验证
 
@@ -238,3 +238,15 @@ Episode 1 的 11:30 安全提示也是历史检查点：用户处理后，11:36:
 - `1890120/direct-resumed-observation.json`、`observer-new-resumed-folder-*` 与 `OBSERVATIONS.md`：两种 Windows 提示、用户处理、标题语言以及分段观察到正常退出的证据。
 - Ep3/Ep4/NewEpisode 的 `steam-resumed-observation.json`、`steam-gameprocess-resumed-scoped.txt`、`compare-resumed-after-steam-summary.json`：各自的中文剧情、Steam 退出码和文件对照；Ep1 的 `direct-resumed-observation.json`：直接启动错误与退出。
 - `external-saves/*-final-resumed.json`、`launch-options-final-resumed.json`、`resumed-final-scope-summary.json`：恢复后最终外部存档、原空启动选项和各部最新文件摘要汇总，区别于 11:02 暂停点。
+
+## 2026-09-08：第一部 Defender 隔离记录与文件恢复
+
+用户随后明确要求恢复第一部被 Defender 处理的文件。只读检测记录确认，当日 09:32 已隔离 `nine_kokoiro_chs.exe`，09:33 还处理了随包的 `nine_kokoiro_Patch.exe` 和汉化补丁 `Setup.exe`；旧路径所在盘符与当前汉化目录不同。这些事件早于 10:29 的文件基线，因此“测试期间原文件未变”不证明基线建立时汉化包已完整。该证据确认了缺失入口被 Defender 隔离，尚不能证明它是所有启动问题的唯一原因。
+
+通过有效微软签名的 `MpCmdRun.exe`，使用三个精确原路径和各自的新恢复目录导出文件，三个调用均退出码 0；指定 `-Path` 保留隔离区副本。再按用户要求补回当前独立汉化目录的三个缺失位置，创建新文件、不覆盖已有内容；目的 SHA-256 均与导出副本相同。未向官方目录写入文件，未运行恢复的入口、补丁或安装器。
+
+恢复后的独立全量比较确认：第一部官方与汉化目录合计 147 个原文件全部未变，仅新增上述三个文件，其路径、大小和摘要全部匹配恢复记录；原 `savedata`、存档备份及检查点仍完整。这项结果证明恢复范围和原文件保护，不代表恢复后的游戏已成功启动。
+
+Defender 对这三项的检测标签分别涉及木马或勒索软件。标签不能单独证明有害，恢复成功也不能证明误报。12 KB 汉化入口的静态结构包含原游戏与汉化 DLL 名称，以及进程内存、线程操作 API；没有可信发布者签名或旧同文件基线可用于认证，因此未将它写成安全性检查通过。之前运行的是原始 `nine_kokoiro.exe`，恢复后的 `nine_kokoiro_chs.exe` 尚未重新验收。
+
+本机私有证据位于忽略目录 `target/defender-recovery/ep1-20260908-130532/`，包含限定检测记录、导出结果、三个实际恢复文件的摘要和静态检查结果；恢复文件、日志及本机安全策略工具不进入提交。
