@@ -1,0 +1,72 @@
+name: "Configuration help (English)"
+description: "Ask a question about configuring or using SteamWrapper."
+body:
+  -
+    type: "markdown"
+    attributes:
+      value: "Read the [security policy](https://github.com/YangYuS8/SteamWrapper/blob/v2/SECURITY.md) before reporting a suspected vulnerability. Do not post exploit details, credentials, saves, game binaries, full Steam configuration, or unredacted personal paths."
+  -
+    type: "input"
+    id: "version"
+    attributes:
+      label: "Version, branch, or commit"
+      description: "For example, v2 and the commit used to build it; the default branch is not necessarily v2."
+    validations:
+      required: true
+  -
+    type: "input"
+    id: "platform"
+    attributes:
+      label: "Platform"
+      description: "Windows version/build and architecture, or your specific existing Linux environment."
+    validations:
+      required: true
+  -
+    type: "dropdown"
+    id: "manager"
+    attributes:
+      label: "Manager implementation"
+      options:
+        - "WinUI preview"
+        - "Dioxus"
+        - "Runner only"
+        - "Legacy main"
+        - "Not sure"
+    validations:
+      required: true
+  -
+    type: "textarea"
+    id: "question"
+    attributes:
+      label: "Question and what you tried"
+      description: "Describe the configuration task, steps tried, and exactly where you need help."
+    validations:
+      required: true
+  -
+    type: "textarea"
+    id: "launch"
+    attributes:
+      label: "Launch details (if relevant)"
+      description: "Wait mode; whether the same target works when launched normally from its own directory; whether Manager is closed; and what Steam shows. Separate process start, title screen, normal exit, playtime, and achievements."
+  -
+    type: "textarea"
+    id: "logs"
+    attributes:
+      label: "Relevant redacted logs or screenshots"
+      description: "Optional. Share only a small relevant excerpt and remove personal paths/account information."
+  -
+    type: "checkboxes"
+    id: "checks"
+    attributes:
+      label: "Before submitting"
+      description: "[Code of Conduct](https://github.com/YangYuS8/SteamWrapper/blob/v2/CODE_OF_CONDUCT.md)"
+      options:
+        -
+          label: "I searched existing issues and the documentation."
+          required: true
+        -
+          label: "I agree to follow the project Code of Conduct."
+          required: true
+        -
+          label: "I removed private data and am not reporting a security vulnerability publicly."
+          required: true

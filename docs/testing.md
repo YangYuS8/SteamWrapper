@@ -1,31 +1,39 @@
-# 测试
+<a id="测试"></a>
 
-SteamWrapper v2 按行为、服务、UI 与安装包分层验证。WinUI 预览已有 C#、跨语言与实际 Runner 测试；Dioxus 基线门禁保留。Windows 最终交付仍按 [重设计的阶段门槛](windows-v2-design.md#8-实施顺序与停止条件)验收。
+# Testing
 
-两套 Windows Manager 的同输入配置探针、原生保存补测及资源测量见 [实测比较](windows-manager-comparison.md)。资源复测脚本为 `scripts/windows/Measure-ManagerComparison.ps1`；需先准备两端 release 产物，并在其他构建和测试结束后顺序运行。
+English | [简体中文](testing.zh-CN.md)
 
-## 按改动选择验证
+SteamWrapper v2 verifies behavior, services, UI and packages separately. The WinUI preview has C#, cross-language and real Runner tests; Dioxus baseline gates remain in place. Final Windows delivery still follows the [redesign's stage gates](windows-v2-design.md#8-实施顺序与停止条件).
 
-先读取受影响代码和测试，选择能证明本次结果的检查。无需每次编辑前运行整个 workspace，也无需为文档或纯样式调整新增匹配源码字符串的测试。
+The same-input configuration probes, native-save checks and resource measurements for both Windows Managers are in the [measured comparison](windows-manager-comparison.md). The resource-measurement script is `scripts/windows/Measure-ManagerComparison.ps1`. Prepare both release artifacts first, then run measurements sequentially after other builds and tests finish.
 
-| 本次改动 | 本地验证范围 |
+<a id="按改动选择验证"></a>
+
+## Choose checks by change
+
+Read the affected code and tests first, then choose checks that demonstrate the result of this change. Running the whole workspace before every edit is unnecessary, as are new source-string tests for documentation or purely cosmetic adjustments.
+
+| Change | Local verification scope |
 | --- | --- |
-| 文档 / AGENTS / 技能 | 审核 diff、链接、指令冲突和技能元数据；不要求编译 UI 或生成安装包 |
-| core / manager-core 行为 | 先写能复现缺失行为的测试并观察预期失败，再修改实现；运行受影响 crate 测试；共享契约或跨 crate 影响时运行 workspace 检查和测试 |
-| Runner 启动 / 等待 | 对应平台的真实进程回归测试；CLI / TOML / 公共模块变化再扩展到 workspace |
-| Dioxus 交互 / service 接线 | 相关 Rust 测试、`dx check` / 构建，以及覆盖该行为的隔离 Native E2E |
-| WinUI / C# 服务 | `mise run winui:test`；配置协议或 Runner 分发变化增加 `winui:contracts`；UI 变化使用 `winui:publish` 与隔离原生交互 |
-| 纯视觉调整 | 构建并在隔离 Desktop 预览中检查受影响界面；按影响选择现有测试，不用固定 CSS 字符串代替视觉验收 |
-| E2E 工具或依赖 | frozen lockfile 安装、TypeScript 检查、受影响 Native E2E |
-| 打包 / 发布 / 工具链或共享构建变化 | 完整质量门禁、当前平台 release Runner staging、实际安装包解包检查 |
+| Documentation / AGENTS / skills | Review diff, links, instruction conflicts and skill metadata; UI compilation and packaging are not required |
+| core / manager-core behavior | Add a test that reproduces the missing behavior and observe the expected failure before implementation; run affected crate tests; expand to workspace checks/tests when shared contracts or other crates are affected |
+| Runner launch / waiting | Real process regressions on the affected platform; expand to the workspace for CLI / TOML / shared-module changes |
+| Dioxus interaction / service wiring | Relevant Rust tests, `dx check` / build, and isolated Native E2E covering the behavior |
+| WinUI / C# services | `mise run winui:test`; add `winui:contracts` for profile-contract or Runner-distribution changes; use `winui:publish` and isolated native interaction for UI changes |
+| Purely visual changes | Build and inspect affected screens in an isolated Desktop preview; select existing tests according to impact, without using fixed CSS strings as visual acceptance |
+| E2E tooling or dependencies | Frozen-lockfile install, TypeScript check, affected Native E2E |
+| Packaging / publication / toolchain or shared builds | Full quality gates, current-platform release Runner staging, actual package extraction inspection |
 
-CI / release 工作流仍执行各自完整门禁。上表限定日常本地工作量，不删减 CI。已通过的检查只在新改动、失败或未解决疑点出现时重跑；缺少工具时记录阻塞，不把未运行写成通过。
+CI / release workflows continue to run their full gates. This table limits routine local work, not CI coverage. Repeat successful checks only when new changes, failures or unresolved questions justify it. Record missing tools as blockers; never label an unrun check as passed.
 
-行为回归优先验证外部结果。现有 `ui_contract` 包含源码文本断言，只能证明声明存在，不能证明窗口、可访问性、布局或原生文件选择实际可用。
+Behavioral regressions should verify externally observable results. Existing `ui_contract` source assertions prove that declarations exist, not that windows, accessibility, layout or native file selection work.
 
-## WinUI 迁移的新增验收
+<a id="winui-迁移的新增验收"></a>
 
-先验证 C# 配置服务与 Rust Runner 的既有文件协议，再证明 UI 和安装器。已有入口：
+## Additional WinUI migration acceptance
+
+Verify the existing file contract between C# configuration services and Rust Runner first, then demonstrate the UI and installer. Available commands:
 
 ```powershell
 mise run winui:test
@@ -34,61 +42,71 @@ mise run winui:publish
 mise run winui:sandbox
 ```
 
-`winui:test` 包含配置保真/冲突/替换失败、本地 Steam、稳定 Runner 安装与共享文件位置测试。`winui:contracts` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](../tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
+`winui:test` covers profile fidelity/conflicts/replacement failure, local Steam, stable Runner installation and shared-file locations. `winui:contracts` starts from shared historical fixtures. Rust compares the complete TOML and Profile after C# changes one field, then controlled parent/child processes verify exact argv, cwd, job/root waiting differences, exit codes and error logs for a new C# profile. See the [contract guide](../tests/contracts/README.md). Test drivers, fixtures and generated user directories do not enter the publication directory.
 
-目录分离新增 AppID 关联、库外运行路径保留和真实双库安装冲突回归，该实现轮 C# 共 49/49 通过。原生隔离保存、重新扫描和歧义新建配置也已验证；详见 [目录分离验证记录](translated-games.md)。这些隔离结果本身不代表真实汉化迁移或成就触发通过。
+Directory separation added regressions for AppID association, preservation of runtime paths outside the library, and actual installation conflicts across two libraries. That implementation passed 49/49 C# tests. Isolated native save, rescan and creation of an ambiguous profile were also verified; see the [directory-separation record](translated-games.md). These isolated results alone do not establish live translated-game migration or achievement compatibility.
 
-新增 Windows CI 保留旧工作流，依次运行上述测试与目录发布；`3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)已实际通过。托管 Windows Server 2025 构建不是 Windows 11 干净系统验收。完整验收范围如下，不能把 fixture 结果外推到未测平台或真实 Steam；本机 Unity 游戏及 9-nine 五部独立汉化版已另行通过 Steam 闭环，第一部另覆盖该 CHS 启动器先退场景，过程与边界见 [真实 Steam 验证](real-steam-validation.md)。
+The English-default / Simplified Chinese implementation subsequently passed 59/59 C# tests, including 10 new localization/preference cases. Two default-English tests first failed against the old service messages; UTF-8 BOM preference loading and nested duplicate-JSON-key rejection also failed before their fixes. The tests verify matching English/Chinese catalog keys and format arguments, language changes for existing nested status/errors, invariant diagnostics and user values, scanner/Runner messages in both languages, canonical preference persistence, preservation of unknown fields and profiles, invalid/duplicate/oversized JSON rejection, and BOM compatibility. Cross-language/Runner contracts and the final self-contained publish passed. The [later language validation](winui-preview-validation.md#later-language-work) records isolated native switching, restart persistence, preserved inputs/profile bytes, and icon checks; it is not clean-system or live Steam evidence.
 
-| 范围 | 有效证据 |
+For native localization acceptance, use a fresh isolated data root with no `ui-settings.json` and verify English regardless of the Windows display language. Open profile editing, add arguments and create a validation/status message, then switch to 简体中文 and back. Confirm that visible application-owned labels, parameter rows, wait-mode choices, existing status messages, dialogs and picker action labels use the selected language, while unsaved names, paths, arguments and generated launch options remain unchanged. Reopen the sandbox Manager to verify persistence. Check both languages' wrapping, clipping, keyboard operation and dialog layout. Inspect the published `zh-CN/SteamWrapper.Application.resources.dll`; a service/catalog test cannot establish native rendering or publication completeness.
+
+Both Managers use `ui-settings.json` beside `profiles.toml` with `language` values `en-US` / `zh-CN`. `en` / `zh-Hans` are accepted aliases with case-insensitive matching and whitespace trimming. Missing or unknown language values default to English. Successful writes refresh the UI without reloading edited profiles; failures keep the previous language and report an error. Malformed settings remain untouched. OS-owned picker wording and raw external diagnostics retain their original language. Tests must use disposable settings directories and must not change actual AppData or Steam configuration.
+
+The added Windows CI retains the old workflows and runs these tests and directory publication in order. [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718) for `3d322db` actually passed. A hosted Windows Server 2025 build is not clean Windows 11 acceptance. The full acceptance scope is below; do not extrapolate fixtures to untested platforms or live Steam. The local Unity game and all five isolated 9-nine translations separately completed the Steam flow. Episode 1 also covered its CHS launcher exiting first; see [live Steam validation](real-steam-validation.md) for the sequence and limits.
+
+| Scope | Valid evidence |
 | --- | --- |
-| TOML 兼容 | C# 读取 Rust fixture、只改一个字段、保存后由 Rust 断言未编辑语义；包括省略 wait_mode=root、新建 job、别名键、未知字段/版本和所有现存枚举 |
-| 保存安全 | 原子替换失败、备份失败、多写者/外部修改冲突、中断与旧文件保留；不以序列化成功代替无损保存 |
-| 配置到运行 | C# 保存的配置驱动真实 Rust Runner fixture，断言 argv、cwd、launcher/child 等待与错误；不能只比较 TOML 文本 |
-| 共享数据位置 | 核验现存 Runner/profile 与安装候选的句柄最终路径；重定向返回非就绪，候选失败保留旧文件，真实 junction 和合法路径形式仍可用 |
-| WinUI 操作 | 真实原生窗口、原生 picker、取消、中文输入、键盘、缩放及错误恢复；旧 Dioxus DOM/RSX 断言不适用 |
-| Windows 发布 | 干净 Windows 11 x64 VM 上自包含安装、稳定 Runner、覆盖更新/占用/降级保护、移动 Manager、卸载后既有启动项仍可用 |
-| Steam apply/restore | 脱敏多用户 VDF fixture、Steam 运行保护、备份/复读、冲突和中断恢复、保留其他设置；私有格式需先核验 |
-| 最终游玩体验 | 测试者在真实 Steam 人工记录运行状态、退出和时长更新；注明游戏、launcher、系统版本，不能由 fixture 结果替代 |
+| TOML compatibility | C# reads Rust fixtures, edits one field, and Rust checks unedited semantics after save; includes omitted wait_mode=root, new job profiles, alias keys, unknown fields/versions and all existing enum values |
+| Save safety | Atomic-replacement failure, backup failure, multiple-writer/external-change conflicts, interruption and preservation of old files; serialization success is not proof of lossless saving |
+| Configuration to runtime | Saved C# profiles drive real Rust Runner fixtures that assert argv, cwd, launcher/child waiting and errors; comparing TOML text alone is insufficient |
+| Shared-data locations | Final handle paths for existing Runner/profiles and installation candidates; redirection reports not ready, candidate failure preserves old files, real junctions and legitimate path forms remain supported |
+| WinUI interaction | Real native windows and pickers, cancellation, Chinese input, keyboard use, scaling and error recovery; old Dioxus DOM/RSX assertions do not apply |
+| Windows publication | Self-contained installation on a clean Windows 11 x64 VM, stable Runner, update/file-lock/downgrade protection, moving Manager, and existing launch options remaining usable after uninstall |
+| Steam apply/restore | Sanitized multi-user VDF fixtures, Steam-running protection, backups/rereads, conflict/interruption recovery and preservation of other settings; verify the private format first |
+| Final play experience | A tester manually records running state, exit and playtime updates in real Steam, specifying the game, launcher and OS; fixtures cannot substitute |
 
-常规自动化使用隔离 Steam/用户数据。真实 Steam 验收须有用户明确授权；本次用户已授权不损坏游戏文件的 galgame 测试。原启动项、文件完整性与存档保护需单独记录，未解决的云同步冲突不能由测试流程自动选择覆盖。真实用户数据、完整 Steam 配置和本机测试备份不进入提交或 CI 产物。具体配置边界见 [主方案](windows-v2-design.md#4-配置保真是第一个门槛)。
+Routine automation uses isolated Steam/user data. Live Steam acceptance requires explicit user authorization; this user authorized galgame tests that preserve game files. Record original launch options, file integrity and save protection separately. Tests must not decide which progress to overwrite in an unresolved cloud conflict. Real user data, full Steam configuration and local test backups do not enter commits or CI artifacts. See the [main design](windows-v2-design.md#4-配置保真是第一个门槛) for configuration boundaries.
 
-真实验收中的 Manager 应从正常 Windows 资源管理器打开完整发布目录中的 `SteamWrapper.Manager.exe`，完成配置与稳定 Runner 安装后关闭，再由 Steam 启动游戏。本机 Codex 进程环境曾把字面上的 AppData 路径映射到包的 `LocalCache`；shell 或 Manager 没有 package identity，并不能排除此重定向。最终文件句柄路径才揭示两种视图不同。具体步骤见 [共享数据路径与真实 Steam 验收](windows-development.md#共享数据路径与真实-steam-验收)，常规 mise/sandbox 流程保持。
+For live acceptance, open `SteamWrapper.Manager.exe` from its complete publication directory through normal Windows File Explorer. Configure the profile and stable Runner, close Manager, then launch through Steam. On this machine, Codex's process environment previously mapped literal AppData paths into its package `LocalCache`. A shell or Manager reporting no package identity does not rule out redirection; final file-handle paths revealed the different views. See [shared data paths and live Steam acceptance](windows-development.md#shared-data-paths-and-live-steam-acceptance). Routine mise/sandbox workflows remain unchanged.
 
-2026-09-07 的实际记录：`The NOexistenceN of you AND me`（AppID 2873080）在 12:46:03 形成 `Steam 4268 → Runner 4624 → 游戏 19752 → Unity 12996`，从标题界面正常退出后，Steam 在 12:53:33 记录三个子进程全部 exit 0；UI 回到“开始”、云显示最新，显示时长 11.2 → 11.4 小时，启动项已恢复为空。正常 Explorer 启动同一 Manager、在真实稳定目录配置安装后，原命令格式即成功，无需改动引号或斜杠规则。最终独立核对确认 35/35 个游戏文件及 4/4 份原存档 SHA-256 与初始基线一致，存档句柄路径未被重定向。此结果限于本机该款游戏，不扩大为其他游戏、干净 VM 或安装器通过。
+Actual 2026-09-07 record: `The NOexistenceN of you AND me` (AppID 2873080) formed `Steam 4268 → Runner 4624 → game 19752 → Unity 12996` at 12:46:03. Following a normal exit from the title screen, Steam recorded all three child processes exiting with code 0 at 12:53:33. The UI returned to “Play,” cloud status was up to date, displayed playtime rose from 11.2 to 11.4 hours, and launch options were restored to empty. Opening the same Manager through normal Explorer and installing/configuring in the real stable directory succeeded with the existing command format, without changing quoting or slash rules. Final independent SHA-256 checks matched 35/35 game files and 4/4 original saves to the initial baseline, with no redirection in save-handle paths. This result applies to that game on this machine, not other games, clean VMs or installers.
 
-2026-09-08 较早的隔离目录实测：9-nine 第二、三、四部和新章分别从 Steam 经稳定 Runner 运行库外汉化版，均确认中文开场、正常退出、Steam 运行状态和显示时长更新。第一部当时从现有原始入口启动即报产品 ID 检查处理启动失败，未到标题，也未开展 Steam 路径验收。该阶段失败记录保留，后续恢复 CHS 入口后的结果独立记录。
+Earlier isolated-directory testing on 2026-09-08: Episodes 2, 3, 4 and New of 9-nine each ran their out-of-library translations from Steam through the stable Runner. Chinese opening dialogue, normal exit, Steam running state and displayed playtime updates were confirmed. Episode 1 failed at the product-ID check when launched from its then-existing original entry point, before reaching the title screen; no Steam-path acceptance was performed at that stage. That failure record remains intact; results after restoring the CHS entry point are separate.
 
-第一部恢复后，14:06:56–14:08:31 普通文件夹直启和 14:15:53–14:18:15 Steam → Runner → CHS → 游戏均通过中文开场与普通退出；CHS 先退出后，游戏与 Runner 仍继续约 2 分 21 秒。UI 确认 `job`，独立观察零采样错误、零元数据失败和最终无残留，完成本机该 CHS 场景的真实 launcher 先退门槛。日志只记录 CHS 和 Runner 的 exit 0；[当前 job 实现](../crates/runner/src/platform/windows.rs)返回启动器状态，实际游戏退出码未知，不能由 UI 或进程父子关系证明 Job 成员。
+After Episode 1 recovery, normal-folder direct launch at 14:06:56–14:08:31 and Steam → Runner → CHS → game at 14:15:53–14:18:15 both passed Chinese opening dialogue and normal exit. The game and Runner continued for about 2 minutes 21 seconds after CHS exited. The UI confirmed `job`; independent observation recorded zero sampling errors, zero metadata failures and no final residual processes. This completes the real launcher-exits-first gate for this specific local CHS scenario. Logs recorded exit 0 only for CHS and Runner. The [current job implementation](../crates/runner/src/platform/windows.rs) returns the launcher's status; the actual game's exit code is unknown, and neither the UI nor parent/child process relationships prove Job membership.
 
-本次官方 68 文件、恢复的三个文件及其余非存档文件不变；启动前已有的四个存档差异单独记录，直接启动和 Steam 阶段各仅有五个 `savedata` 文件自然更新，24 份原始/检查点备份副本完整。五部共享 profile 已保存，临时 Steam 启动选项均恢复为空（第一部由字段缺失变为空字符串，语义相同）。第一部云始终开启、显示最新且无冲突，时长 36 → 38 分钟；成就 0/4，但未达到触发条件，不判定兼容失败。自然成就触发、汉化存档实际云同步、更广泛的启动器兼容性仍未验证。本轮没有产品源码改动，未重复编译和自动化全门禁。
+The 68 official files, three restored files and other non-save files remained unchanged. Four save differences already present before launch were recorded separately. Direct and Steam stages each naturally updated only five `savedata` files; all 24 original/checkpoint backup copies remained intact. Shared profiles for all five games were saved. Temporary Steam launch options were restored to empty (Episode 1 changed from an absent field to an empty string, with the same meaning). Episode 1 cloud sync stayed enabled, up to date and conflict-free; playtime rose from 36 to 38 minutes. Achievements remained 0/4, but no unlock condition was reached, so this is not a compatibility failure. Natural achievement unlocks, actual cloud synchronization of translated saves and broader launcher compatibility remain unverified. This game-validation round made no product-source changes and did not repeat compilation or full automated gates.
 
-## 当前实现分层
+<a id="当前实现分层"></a>
 
-| 层 | 命令 | 验证内容 |
+## Current verification layers
+
+| Layer | Command | Coverage |
 | --- | --- | --- |
-| Rust domain / service | `cargo test --workspace` | TOML、VDF、路径、Steam 过滤、封面、Launch Options、Manager service、Runner 等待模式 |
-| Dioxus contract | `cargo test -p steamwrapper-manager-dioxus --test ui_contract` | 玩家流程、文件选择、service 和 bundle 的源码声明及品牌一致性；不证明真实原生交互 |
-| Dioxus build | `dx check` / `dx build --release` | Dioxus 0.7.10 项目、RSX、静态资源和 release 客户端构建 |
-| Dioxus Native E2E | `pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native` | 真实 Dioxus binary、真实 `manager-core`、隔离 Steam / profile / Runner fixture |
-| 平台 bundle | `dx bundle --release --package-types …` | NSIS / AppImage 随包 Runner resource 与安装器产物 |
+| Rust domain / service | `cargo test --workspace` | TOML, VDF, paths, Steam filtering, covers, Launch Options, Manager services and Runner wait modes |
+| Dioxus contract | `cargo test -p steamwrapper-manager-dioxus --test ui_contract` | Source declarations for player flows, file selection, services, bundles and brand consistency; not real native interaction |
+| Dioxus build | `dx check` / `dx build --release` | Dioxus 0.7.10 project, RSX, static assets and release client build |
+| Dioxus Native E2E | `pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native` | Real Dioxus binary and `manager-core` with isolated Steam / profile / Runner fixtures |
+| Platform bundle | `dx bundle --release --package-types …` | Bundled Runner resources and NSIS / AppImage artifacts |
 
-## 本地命令
+<a id="本地命令"></a>
 
-Windows 环境由 mise 管理，使用 `mise run windows:doctor` 检查、`mise run windows:verify` 执行现有质量门禁。安装与 WinUI 编译验证见 [Windows 开发环境](windows-development.md)。以下 `just`/底层命令保留为现有流程；WinUI smoke 不替代应用或 Steam 验收。
+## Local commands
 
-优先使用根目录 `justfile`：
+mise manages the Windows environment. Use `mise run windows:doctor` to inspect it and `mise run windows:verify` for existing quality gates. See [Windows development](windows-development.md) for setup and WinUI compilation. The following `just`/underlying commands remain available; the WinUI smoke does not replace application or Steam acceptance.
+
+Prefer the root `justfile`:
 
 ```bash
-just dev          # 使用真实 Steam / 用户数据启动 Desktop Manager 与热重载
-just dev-sandbox  # 使用一次性 Steam / 用户数据沙箱启动
-just test         # Rust 格式、检查与测试
+just dev          # Start Desktop Manager and hot reload with real Steam / user data
+just dev-sandbox  # Start with disposable Steam / user-data fixtures
+just test         # Rust formatting, checks and tests
 just e2e          # Dioxus Native E2E
-just verify       # 全部本地质量门禁
-just bundle-linux # stage Runner 并打 Linux AppImage
+just verify       # All local quality gates
+just bundle-linux # Stage Runner and build a Linux AppImage
 ```
 
-`dev-sandbox` 不会展示真实 Steam 库，也不会保留 profile 或 Runner；它只用于安全预览 UI。`just --list` 列出所有 recipe。下列是对应的底层命令：
+`dev-sandbox` neither displays the real Steam library nor retains profiles or Runner. It is only for safe UI previews. `just --list` lists all recipes. Corresponding underlying commands:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -108,15 +126,15 @@ cargo build -p steamwrapper-manager-dioxus --features e2e
 pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
 ```
 
-Linux 构建、测试和打包前需准备 WebKitGTK、GTK3、`libxdo-dev`、AppIndicator、librsvg 与 `patchelf`。当前 Dioxus Desktop 通过 `muda` 的默认 `libxdo` feature 链接 X11 库；Ubuntu 需要安装开发包 `libxdo-dev`，否则 Manager 测试和 AppImage 构建会在链接阶段报 `unable to find library -lxdo`。CI Check、AppImage 和 release 的 Linux 依赖列表均包含该包。[Ubuntu 包说明](https://packages.ubuntu.com/noble/amd64/libxdo-dev)
+Linux builds, tests and packaging need WebKitGTK, GTK3, `libxdo-dev`, AppIndicator, librsvg and `patchelf`. Current Dioxus Desktop links X11 libraries through `muda`'s default `libxdo` feature. Ubuntu needs `libxdo-dev` or Manager tests/AppImage builds fail at link time with `unable to find library -lxdo`. Linux dependency lists for CI Check, AppImage and release all include it. [Ubuntu package details](https://packages.ubuntu.com/noble/amd64/libxdo-dev)
 
-无桌面会话的 Linux CI 还需安装 `xvfb`、`xauth` 和 `dbus-daemon`，在虚拟 X 显示与临时 D-Bus 会话中运行 Native E2E；仅编译或打包不需要启动显示服务。GTK 初始化需要可用显示，但历史 CI 的退出码 101 没有保留下来的 stderr，不能据此认定具体 panic 原因。Linux Check 使用下列命令，Windows 保留直接运行 pnpm：[xvfb-run](https://manpages.ubuntu.com/manpages/questing/man1/xvfb-run.1.html)、[dbus-run-session](https://manpages.debian.org/unstable/dbus-daemon/dbus-run-session.1.en.html)。
+Headless Linux CI also needs `xvfb`, `xauth` and `dbus-daemon` to run Native E2E with a virtual X display and temporary D-Bus session. Compilation/packaging alone do not require a display service. GTK initialization needs a usable display, but stderr from the historical CI exit 101 was not retained, so that result does not establish a specific panic cause. Linux Check uses the command below; Windows runs pnpm directly. [xvfb-run](https://manpages.ubuntu.com/manpages/questing/man1/xvfb-run.1.html), [dbus-run-session](https://manpages.debian.org/unstable/dbus-daemon/dbus-run-session.1.en.html)
 
 ```bash
 xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" dbus-run-session -- pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
 ```
 
-平台 bundle 由对应平台运行：
+Build each platform bundle on its own platform:
 
 ```bash
 # Linux
@@ -124,21 +142,23 @@ STEAMWRAPPER_RUNNER_PROFILE=release apps/manager-dioxus/scripts/stage-runner.sh
 cd apps/manager-dioxus
 dx bundle --release --package-types appimage --out-dir ../../release-artifacts
 
-# Windows（GitHub Actions Windows runner）
-# stage-runner.sh 会从 target/release/steamwrapper-runner.exe 生成
-# resources/runner/SteamWrapperRunner.exe，再运行 dx bundle --package-types nsis
+# Windows (GitHub Actions Windows runner)
+# stage-runner.sh generates resources/runner/SteamWrapperRunner.exe
+# from target/release/steamwrapper-runner.exe, then runs dx bundle --package-types nsis
 ```
 
 ## Dioxus Native E2E
 
-Native E2E 只在 `e2e` Cargo feature 下引入 `wdio-dioxus-embedded-driver`。正式 release graph 不含 WebDriver bridge 或测试 server。
+The 2026-09-08 language and icon changes passed 10 isolated Native E2E executions: the six existing cases, two language/status/error cases, and language save/restart in two separate processes. Final Windows Rust workspace check/test passed (43 tests; the C#-output contract is intentionally ignored by the generic workspace run and passed separately through `winui:contracts`). The two affected Manager packages account for 30 of those tests, including lossless unknown JSON number tokens, nested duplicate-key rejection and the shared 64-level depth limit. TypeScript, E2E tooling, Dioxus check/release build and scoped strict Clippy passed. See [distribution](distribution.md#ci--release-validation) for the independently inspected bilingual NSIS package and its limits.
+
+Native E2E includes `wdio-dioxus-embedded-driver` only under the `e2e` Cargo feature. The production release graph contains neither the WebDriver bridge nor a test server.
 
 ```bash
 cargo build -p steamwrapper-manager-dioxus --features e2e
 pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
 ```
 
-测试脚本创建一次性临时 fixture，并将下列环境都指向它：
+Test scripts create disposable temporary fixtures and point all these environment variables into them:
 
 ```text
 STEAM_DIR
@@ -147,41 +167,45 @@ XDG_DATA_HOME
 LOCALAPPDATA
 ```
 
-fixture 包含中文路径与空格路径、一个本地 Steam game manifest，且故意不写本地 cover cache。测试启动真实 Manager 后会断言该 AppID 使用公开 Steam CDN 封面 URL；测试只验证 URL 生成与 DOM 绑定，不依赖外网图片加载。
+The fixture includes Chinese/space-containing paths and a local Steam game manifest, deliberately omitting the local cover cache. After launching the real Manager, tests assert that this AppID uses a public Steam CDN cover URL. This checks URL generation and DOM binding, without depending on external image loading.
 
-- 默认游戏库和手动添加入口；
-- 首次启动把 bundle Runner 安装到稳定 `SteamWrapper/bin/`；
-- 本地 Steam 扫描与游戏配置对话框；
-- 保存 profile；
-- Launch Options 保持 `--appid "123456" -- %command%` 协议。
+- Default library and manual-add entry points.
+- First-launch installation of the bundled Runner into stable `SteamWrapper/bin/`.
+- Local Steam scanning and the game-configuration dialog.
+- Profile saving.
+- Launch Options retaining the `--appid "123456" -- %command%` contract.
 
-成功或失败后的 WDIO 日志与脱敏 fixture artifact 位于 `apps/manager-dioxus/e2e/artifacts/`，该目录不提交；CI 负责上传。测试结束会清理临时目录，不能读取或修改用户真实 Steam 配置。
+WDIO logs and sanitized fixture artifacts after success or failure are under `apps/manager-dioxus/e2e/artifacts/`, which is ignored; CI uploads them. Tests clean up temporary directories and must not read or modify real Steam configuration.
 
-`scripts/dioxus-service.mjs` 继续使用锁定的 Dioxus service，只补充启动失败时的清理：WDIO 在 `onPrepare` 失败后不会调用 `onComplete`，包装会先完成该钩子以刷新 app stdout/stderr 日志，再保留原错误退出。测试 app 启用 `RUST_BACKTRACE=1`。`test:tooling` 用不启动 GUI 的 Node 子进程验证早退 101 的 stdout/stderr 附件，以及失败后再次运行时日志进入新的输出目录；后者已观察旧服务失败、包装后通过。这些工具回归不代替 Linux GTK/WebKit 的真实 Native E2E。
+`scripts/dioxus-service.mjs` retains the locked Dioxus service and adds startup-failure cleanup. WDIO does not call `onComplete` when `onPrepare` fails, so the wrapper first runs that hook to flush app stdout/stderr logs, then exits with the original error. Test apps enable `RUST_BACKTRACE=1`. `test:tooling` uses Node child processes without launching a GUI to verify stdout/stderr attachments for early exit 101 and that a subsequent run after failure writes logs into a fresh output directory. The latter reproduced failure with the old service and passed through the wrapper. These tooling regressions do not replace real Linux GTK/WebKit Native E2E.
 
-## Runner 稳定安装验证
+<a id="runner-稳定安装验证"></a>
 
-WinUI 的 [RunnerInstaller](../apps/manager-winui/SteamWrapper.Application/Services/RunnerInstaller.cs)在判定就绪前核验现存 Runner 与存在的 `profiles.toml`，并核验安装候选与安装后文件位置；缺少 profile 不影响独立健康检查。[位置检查](../apps/manager-winui/SteamWrapper.Application/Services/SharedDataFileLocation.cs)比较文件句柄最终路径与显式文件链接解析后的逻辑路径，发现重定向时返回非就绪并提示从资源管理器重新打开 Manager。现有 UI 仅在安装服务就绪后展示可复制启动项，Launch Options 字符串契约与 ProfileStore 保存算法未修改。
+## Stable Runner installation verification
 
-本次新增 9 条 [位置回归](../apps/manager-winui/SteamWrapper.Application.Tests/RunnerLocationTests.cs)：已安装 Runner 重定向、升级候选重定向且保留旧 Runner/清单/配置、首次安装候选重定向、仅 profile 重定向、路径查询失败、普通原生句柄、真实 junction 升级、中文/大小写/扩展前缀及 DOS/UNC 前缀规范化。四种重定向场景先观察旧实现错误返回就绪，再验证修复；最终 `mise run winui:test` 43/43 通过，`winui:contracts` 通过。红/绿证据位于忽略的 `target/runner-location-tests/`，本轮契约结果位于 `target/winui-contracts/bfad46a031ff4713b378d875f6f2f621/results`。
+WinUI's [RunnerInstaller](../apps/manager-winui/SteamWrapper.Application/Services/RunnerInstaller.cs) verifies the existing Runner and any existing `profiles.toml` before reporting ready, and checks installation candidates and post-installation locations. A missing profile does not prevent an independent health check. The [location check](../apps/manager-winui/SteamWrapper.Application/Services/SharedDataFileLocation.cs) compares final file-handle paths with logical paths after explicit link resolution. Redirection reports not ready and asks the user to reopen Manager from File Explorer. The UI shows copyable launch options only after the installation service is ready. Neither the Launch Options string contract nor ProfileStore's save algorithm changed.
 
-服务测试后另行验证了新版发布产物的原生行为：受重定向的工具环境启动 Manager 后出现位置警告，保存不展示启动项或复制按钮；普通 Explorer 启动新版 Manager 后保存成功，生成完全一致的既有启动项。该原生复核与上述服务/进程证据分别记录，不替代干净 VM 或安装器验证。
+This implementation added nine [location regressions](../apps/manager-winui/SteamWrapper.Application.Tests/RunnerLocationTests.cs): redirected installed Runner; redirected upgrade candidate preserving the old Runner/manifest/profile; redirected first-install candidate; profile-only redirection; path-query failure; ordinary native handles; real junction upgrades; Chinese/case/extended-prefix handling; and DOS/UNC prefix normalization. Four redirection scenarios first demonstrated the old implementation incorrectly reporting ready, then passed after the fix. The final `mise run winui:test` result for that round was 43/43, with `winui:contracts` also passing. Red/green evidence is under ignored `target/runner-location-tests/`; that round's contracts are in `target/winui-contracts/bfad46a031ff4713b378d875f6f2f621/results`.
 
-`manager-core` 的 Rust 测试覆盖 Runner 路径、摘要相同不覆盖、缺失 / 损坏修复、原子替换失败与不触碰 `profiles.toml` / `logs` / `backups` / `cache` 的边界。Dioxus Native E2E 从空的稳定目录启动，检查真实 Runner 文件被安装并由设置页显示为健康。
+After service tests, the new publication received separate native checks. Launching Manager from the redirected tool environment displayed a location warning and did not show launch options or a copy button after saving. Launching the new Manager through ordinary Explorer saved successfully and generated the same existing launch options. These native checks are recorded separately from service/process evidence and do not replace clean VM or installer validation.
 
-Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两平台的 `process_name` 边界。`process_name` 仅按进程名匹配，无法判断并发同名业务归属；它不是默认等待模式。
+Rust `manager-core` tests cover Runner paths, no replacement when hashes match, missing/corrupt repair, atomic-replacement failure, and preservation of `profiles.toml` / `logs` / `backups` / `cache`. Dioxus Native E2E starts from an empty stable directory and checks that the real Runner is installed and shown as healthy on the settings page.
+
+Runner process tests cover Linux `process_group`, Windows Job Object and `process_name` boundaries on both platforms. `process_name` matches names only and cannot establish ownership when concurrent processes share a name; it is not the default wait mode.
 
 ## CI
 
-`v2-ci.yml` 配置了 Windows / Ubuntu Check 矩阵，执行 Rust 格式、check、test、Dioxus check / release build、Native E2E 和各自平台 Runner 进程测试；其 Linux bundle job 构建 AppImage 并解包检查 Runner。Windows NSIS 构建与内容检查配置在 `release.yml`。工作流声明不代表最近一次运行通过，实际结果须另行核验。
+`v2-ci.yml` defines a Windows / Ubuntu Check matrix for Rust formatting, check, test, Dioxus check/release build, Native E2E and platform Runner process tests. Its Linux bundle job builds an AppImage and inspects the extracted Runner. Windows NSIS build/content checks are in `release.yml`. Workflow declarations do not establish that the latest run passed; verify actual results separately.
 
-## 限制
+<a id="限制"></a>
 
-- Linux 本机 Native E2E 的通过不能替代 Windows WebView2、NSIS 或 Steam Deck 实机验证。
-- 常规自动化不操作真实 Steam；真实验收需要用户授权并记录恢复。一键写入 / 恢复 Launch Options 仍是后续产品功能。
-- Native E2E 覆盖受控本地 fixture，不覆盖真实 Proton、breakaway、Unix daemonize / 新 session 行为。
-- Dioxus Browser Mode 不适用于当前直接 Rust service 架构；本项目用 Native E2E 覆盖真实 UI 与 service 边界。
+## Limitations
 
-官方依据：Dioxus 0.7.10 Desktop / CLI 文档，`@wdio/dioxus-service` 1.0.0 的 embedded provider 与 bridge setup 文档。
+- Passing local Linux Native E2E does not replace Windows WebView2, NSIS or physical Steam Deck validation.
+- Routine automation does not operate real Steam. Live acceptance needs user authorization and recorded restoration. One-click Launch Options apply/restore remains a future product feature.
+- Native E2E covers controlled local fixtures, not real Proton, breakaway, Unix daemonize or new-session behavior.
+- Dioxus Browser Mode does not fit the current direct Rust service architecture. This project uses Native E2E to cover real UI/service boundaries.
 
-2026-09-07 Windows 本机已完成 Rust workspace、Runner 进程测试、Dioxus check/release build 和 3 个 spec / 6 项 Native E2E 验证。提交 `3d322db` 的 [v2 完整 CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786)也已通过 Windows、Ubuntu 和 Linux AppImage 全部门禁。安装环境、过程中修正的工具/CI 问题及证据范围见 [开发环境记录](windows-development.md#本机安装与验证记录)。这些门禁不替代 NSIS、干净 Windows VM 或真实 Steam 验收；本机另行完成的单款 [真实游戏闭环](real-steam-validation.md)仍有其明确测试范围。
+Official references: Dioxus 0.7.10 Desktop / CLI documentation and the embedded-provider/bridge-setup documentation for `@wdio/dioxus-service` 1.0.0.
+
+Local Windows completed Rust workspace, Runner process, Dioxus check/release build and three specs / six Native E2E tests on 2026-09-07. Commit `3d322db` also passed all Windows, Ubuntu and Linux AppImage gates in [full v2 CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786). See the [development environment record](windows-development.md#local-installation-and-verification-record) for installation, tooling/CI fixes and evidence boundaries. These gates do not replace NSIS, a clean Windows VM or live Steam acceptance; the separately completed local [live-game flow](real-steam-validation.md) has its own explicit scope.

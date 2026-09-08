@@ -19,11 +19,16 @@ const appEnv = {
 
 export const config = {
   runner: "local",
-  specs: ["./test/native/**/*.spec.ts"],
+  specs: process.env.STEAMWRAPPER_E2E_LANGUAGE_PHASE
+    ? ["./test/native/language-persistence.spec.ts"]
+    : ["./test/native/**/*.spec.ts"],
+  exclude: process.env.STEAMWRAPPER_E2E_LANGUAGE_PHASE ? [] : ["./test/native/language-persistence.spec.ts"],
   maxInstances: 1,
   maxInstancesPerCapability: 1,
   logLevel: process.env.DEBUG ? "debug" : "info",
-  outputDir: "./artifacts/native/logs",
+  outputDir: process.env.STEAMWRAPPER_E2E_LANGUAGE_PHASE
+    ? `./artifacts/native/language-${process.env.STEAMWRAPPER_E2E_LANGUAGE_PHASE}`
+    : "./artifacts/native/logs",
   waitforTimeout: 15_000,
   connectionRetryTimeout: 120_000,
   connectionRetryCount: 2,

@@ -1,3 +1,4 @@
+use crate::{ErrorCode, ManagerError};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
@@ -41,7 +42,7 @@ pub struct RunnerStatus {
     pub installed_version: Option<String>,
     pub needs_install: bool,
     pub needs_update: bool,
-    pub last_error: Option<String>,
+    pub last_error: Option<ManagerError>,
 }
 
 #[derive(Debug, Serialize)]
@@ -67,7 +68,7 @@ pub fn inspect_runner(paths: &RunnerPaths) -> RunnerStatus {
                     .flatten(),
                 needs_install: !installed,
                 needs_update: false,
-                last_error: Some(format!("无法读取随包 Runner：{err}")),
+                last_error: Some(ManagerError::new(ErrorCode::BundledRunnerRead, err)),
             };
         }
     };
@@ -107,19 +108,19 @@ pub fn inspect_runner(paths: &RunnerPaths) -> RunnerStatus {
             installed_version: None,
             needs_install: false,
             needs_update: true,
-            last_error: Some(format!("无法检查已安装 Runner：{err}")),
+            last_error: Some(ManagerError::new(ErrorCode::InstalledRunnerRead, err)),
         },
     }
 }
 
-pub fn install_or_repair(paths: &RunnerPaths) -> Result<RunnerInstallOutcome, String> {
+pub fn install_or_repair(paths: &RunnerPaths) -> Result<RunnerInstallOutcome, ManagerError> {
     install_or_repair_with_replace(paths, replace_file)
 }
 
 fn install_or_repair_with_replace<F>(
     paths: &RunnerPaths,
     replace: F,
-) -> Result<RunnerInstallOutcome, String>
+) -> Result<RunnerInstallOutcome, ManagerError>
 where
     F: FnOnce(&Path, &Path) -> io::Result<()>,
 {
@@ -135,14 +136,14 @@ where
         status
             .last_error
             .clone()
-            .unwrap_or_else(|| "随包 Runner 不可用".to_string())
+            .unwrap_or_else(|| ManagerError::new(ErrorCode::RunnerUnavailable, ""))
     })?;
 
     copy_runner_atomically(paths.bundled(), paths.stable(), &expected_hash, replace).map_err(
         |err| {
-            format!(
-                "无法安装或修复 Runner 到 {}：{err}",
-                paths.stable().display()
+            ManagerError::new(
+                ErrorCode::RunnerInstall,
+                format!("{}: {err}", paths.stable().display()),
             )
         },
     )?;
@@ -151,7 +152,7 @@ where
     if !status.healthy {
         return Err(status
             .last_error
-            .unwrap_or_else(|| "Runner 写入后校验失败".to_string()));
+            .unwrap_or_else(|| ManagerError::new(ErrorCode::RunnerVerification, "")));
     }
 
     Ok(RunnerInstallOutcome {
@@ -246,12 +247,12 @@ fn unique_temporary_path(parent: &Path, file_name: &std::ffi::OsStr) -> io::Resu
 }
 
 #[cfg(not(target_os = "windows"))]
-fn replace_file(temporary: &Path, destination: &Path) -> io::Result<()> {
+pub(crate) fn replace_file(temporary: &Path, destination: &Path) -> io::Result<()> {
     fs::rename(temporary, destination)
 }
 
 #[cfg(target_os = "windows")]
-fn replace_file(temporary: &Path, destination: &Path) -> io::Result<()> {
+pub(crate) fn replace_file(temporary: &Path, destination: &Path) -> io::Result<()> {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Storage::FileSystem::{
         MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
@@ -276,13 +277,7 @@ fn replace_file(temporary: &Path, destination: &Path) -> io::Result<()> {
     };
 
     if result == 0 {
-        return Err(io::Error::new(
-            io::Error::last_os_error().kind(),
-            format!(
-                "Windows refused to replace the existing Runner (it may still be in use): {}",
-                io::Error::last_os_error()
-            ),
-        ));
+        return Err(io::Error::last_os_error());
     }
     Ok(())
 }

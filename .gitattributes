@@ -2,6 +2,7 @@
 
 *.svg text eol=lf
 *.png binary
+*.ico binary
 *.jpg binary
 *.jpeg binary
 *.webp binary

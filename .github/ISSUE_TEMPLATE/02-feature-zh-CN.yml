@@ -1,0 +1,68 @@
+name: "功能建议（简体中文）"
+description: "描述玩家的问题及建议的改进。"
+body:
+  -
+    type: "markdown"
+    attributes:
+      value: "疑似漏洞请先阅读[安全策略](https://github.com/YangYuS8/SteamWrapper/blob/v2/SECURITY.zh-CN.md)。不要公开利用细节、凭据、存档、游戏二进制、完整 Steam 配置或未脱敏的个人路径。"
+  -
+    type: "input"
+    id: "version"
+    attributes:
+      label: "版本、分支或提交"
+      description: "例如 v2 与构建使用的提交；不要假定默认分支就是 v2。"
+    validations:
+      required: true
+  -
+    type: "input"
+    id: "platform"
+    attributes:
+      label: "平台"
+      description: "Windows 版本／内部版本和架构，或具体的已有 Linux 环境。"
+    validations:
+      required: true
+  -
+    type: "dropdown"
+    id: "manager"
+    attributes:
+      label: "Manager 实现"
+      options:
+        - "WinUI 预览"
+        - "Dioxus"
+        - "仅 Runner"
+        - "旧版 main"
+        - "不确定"
+    validations:
+      required: true
+  -
+    type: "textarea"
+    id: "problem"
+    attributes:
+      label: "玩家遇到的问题"
+      description: "谁遇到此问题？目前难以完成什么任务？"
+    validations:
+      required: true
+  -
+    type: "textarea"
+    id: "proposal"
+    attributes:
+      label: "建议的行为"
+      description: "说明期望结果、考虑过的替代方案及平台或兼容性影响。"
+    validations:
+      required: true
+  -
+    type: "checkboxes"
+    id: "checks"
+    attributes:
+      label: "提交前检查"
+      description: "[行为准则](https://github.com/YangYuS8/SteamWrapper/blob/v2/CODE_OF_CONDUCT.zh-CN.md)"
+      options:
+        -
+          label: "我已搜索现有 issue 和文档。"
+          required: true
+        -
+          label: "我同意遵守项目行为准则。"
+          required: true
+        -
+          label: "我已移除私人数据，且没有公开报告安全漏洞。"
+          required: true

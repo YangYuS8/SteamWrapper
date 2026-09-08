@@ -35,6 +35,14 @@ run = "pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify"
 description = "Build the native WinUI Manager and stage its independent Rust Runner"
 run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build"
 
+[tasks."brand:generate"]
+description = "Regenerate packaged SVG, PNG and ICO assets from the canonical icon"
+run = "node scripts/generate-brand.mjs"
+
+[tasks."brand:check"]
+description = "Verify packaged icons match the canonical SVG"
+run = "node scripts/generate-brand.mjs --check"
+
 [tasks."winui:test"]
 description = "Run isolated C# configuration, Steam scanner and Runner installation tests"
 run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test"

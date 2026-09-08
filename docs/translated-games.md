@@ -1,140 +1,162 @@
-# 官方安装与汉化版分开存放
+<a id="官方安装与汉化版分开存放"></a>
 
-初始记录：2026-09-07；系列隔离验收补充：2026-09-08。适用于 Windows WinUI 预览与独立 Runner。测试已由 9-nine 第二部扩展至系列其余作品，逐部记录运行、中文内容和退出结果。
+# Keep official installations and translated games separate
 
-## 两个位置分别负责什么
+**English** | [简体中文](translated-games.zh-CN.md)
 
-| 位置 | 用途 |
+Initial record: 2026-09-07; series acceptance update: 2026-09-08. Applies to the Windows WinUI preview and independent Runner. Testing expanded from 9-nine Episode 2 to the rest of the series, with launch, Chinese content and exit results recorded separately for each game.
+
+<a id="两个位置分别负责什么"></a>
+
+## What the two locations mean
+
+| Location | Purpose |
 | --- | --- |
-| Steam 安装位置 | Steam 从本地安装清单管理的官方游戏目录，接受官方更新和完整性校验 |
-| 实际运行文件夹 | 玩家选择的完整汉化版或自定义启动器目录，可位于 Steam 库之外 |
+| Steam installation | The official game directory managed through Steam's local installation manifest; receives official updates and integrity verification |
+| Actual game folder | The complete translated build or custom launcher selected by the player; may be outside all Steam libraries |
 
-Steam 校验与更新维护的是发布者提供的构建。对官方同名程序和资源的汉化改动不能同时保持与官方版本一致；两套独立文件可以避免校验/更新与汉化互相覆盖。官方更新会构建新文件并替换旧文件，见 [SteamPipe 文件更新机制](https://partner.steamgames.com/doc/sdk/uploading#content_structure)。该机制说明混合版本的风险，不能证明本机之前一定发生过校验覆盖。
+Steam verification and updates maintain the publisher's build. Translated changes to official programs or resources cannot also remain identical to the official version. Two independent copies prevent verification/updates and translations from overwriting each other. Official updates construct new files and replace old ones; see [SteamPipe's file update mechanism](https://partner.steamgames.com/doc/sdk/uploading#content_structure). This explains the risk of mixed builds, but does not prove that verification overwrote files in the earlier local incident.
 
-实际运行目录应包含与该汉化入口匹配的完整资源。两套目录不要通过硬链接或目录联接共用会被更新的程序和资源；库外运行也不会自动修复已经缺失或混用的文件。主要成本是保留官方副本所需的额外磁盘空间。
+The actual game folder must contain the complete resources matching its translated entry point. Do not share updatable executables or resources between the two locations through hard links or directory junctions. Running outside the library cannot repair missing or mixed files. The main cost is the extra disk space for an official copy.
 
-## 配置与迁移顺序
+<a id="配置与迁移顺序"></a>
 
-1. 先保存当前版本的完整副本，并分别备份游戏目录内、用户目录及 Steam remote 中已确认的存档。当前能否启动与备份是否完整分别记录。
-2. 准备完整、可直接运行的汉化版，放入库外独立目录。直接验收时，先在普通资源管理器中进入实际游戏文件夹，再双击将交给 Runner 的同一个 EXE，核对标题、中文内容和正常退出。资源管理器停在父目录时从地址栏执行绝对 EXE 路径，不能代替这项对照；启动上下文可能不同。不能把上一轮报错目录的副本当作已修复版本。
-3. 确认汉化副本和存档安全后，再让 Steam 原目录恢复完整官方安装并校验。不要向尚未保护好的混合目录直接执行修复；也不要用恢复旧存档来自动解决云冲突。
-4. 在 Manager 中保留原 AppID，将“实际运行文件夹”设为库外目录，选择其中的 EXE。“工作目录”留空时使用实际运行文件夹；旧配置若有显式工作目录，需核对并修改。只改 EXE 不会自动改变已经填写的目录。
-5. 保留 Steam 原启动选项，粘贴 Manager 生成的命令，关闭 Manager，从原来的 Steam 游戏条目启动并正常退出。分别确认实际入口、工作目录、Steam 状态与时长，必要时恢复原启动选项。
+## Configuration and migration order
 
-启动项仍为：
+1. Preserve a complete copy of the current build and independently back up confirmed saves in the game directory, user directories and Steam remote storage. Record launchability separately from backup completeness.
+2. Prepare a complete, directly runnable translated build in an independent directory outside the library. For the direct baseline, navigate into that game folder in ordinary Explorer and double-click the same EXE that Runner will launch; check the title, Chinese content and normal exit. Executing an absolute EXE path from Explorer's address bar while it remains in the parent directory is not an equivalent baseline: the launch context may differ. A copy of a previously failing directory is not a repaired build.
+3. Once the translated copy and saves are protected, restore the original Steam directory to a complete official installation and verify it. Do not repair an unprotected mixed directory, or automatically resolve a cloud conflict by restoring old saves.
+4. Keep the original AppID in Manager. Set **Actual game folder** to the external directory and choose its EXE. An empty working directory uses the actual game folder; review and change an explicitly configured working directory in an older profile. Changing only the EXE does not change an already populated directory.
+5. Record Steam's previous Launch Options, paste Manager's generated command, close Manager, then launch and exit normally through the original Steam library entry. Check the actual entry point, working directory, Steam status and playtime separately; restore the previous options when appropriate.
+
+Launch Options remain:
 
 ```text
 "<stable-runner-path>" --appid "<appid>" -- %command%
 ```
 
-Runner 按 AppID 读取 profile 的 `game_dir`、`target`、`working_dir` 和参数；Steam 原命令只被接收和记录，不会同时启动官方 EXE。目录分离不需要修改 Runner 或 TOML 协议。
+Runner reads the profile's `game_dir`, `target`, `working_dir` and arguments by AppID. The original Steam command is received and logged; the official EXE is not launched alongside the selected target. Directory separation requires no Runner or TOML protocol change.
 
-Manager 中的 Steam 安装位置来自只读本地发现，仅作位置说明，不表示官方文件已经通过校验。实际运行位置仍保存到既有 `game_dir`，扫描结果不应覆盖用户配置；未发现官方目录时也不能用汉化目录冒充。
+Manager obtains the Steam installation location from read-only local discovery. Displaying it does not establish that the official files passed verification. The actual game location remains in the existing `game_dir` field, and scan results must not overwrite the player's configuration. If the official directory is undiscovered, the translated directory must not be presented as its substitute.
 
-## 汉化版能否正常触发成就
+<a id="汉化版能否正常触发成就"></a>
 
-有希望，前提是该 Steam AppID 本身有成就，而且运行的汉化版本仍包含对应的游戏进度触发逻辑和 Steamworks 接入。
+## Can translated builds unlock achievements normally?
 
-| 汉化方式或故障 | 判断 |
+Potentially, if that Steam AppID has achievements and the translated build retains both the corresponding progress triggers and Steamworks integration.
+
+| Translation approach or failure | Assessment |
 | --- | --- |
-| 基于 Steam 版，只修改文本/资源并保留成就逻辑 | 最有希望；仍需作者兼容说明和真实进度验证，不能仅凭补丁名称保证 |
-| Steam 接口仍在，但 AppID、工作目录、依赖或启动上下文错误 | 修正配置可能恢复已有能力；需要证据确认初始化和提交是否成功 |
-| 基于没有 Steam 接入的其他发行版本的整包 | 从 Steam 启动、设置 AppID 或放入一个 DLL，都不能补出剧情节点到成就的映射与调用 |
-| AppID 没有可确认的成就集合 | 不能把没有成就可触发归咎于汉化或 Runner |
+| Steam-based build changing only text/resources while retaining achievement logic | Most promising; requires the author's compatibility information and real progress testing, not just a patch name |
+| Steam interfaces remain, but AppID, working directory, dependencies or launch context are wrong | Correcting configuration may restore existing capabilities; successful initialization and submission need evidence |
+| Complete package based on another release without Steam integration | Launching from Steam, setting an AppID or adding a DLL cannot supply the missing story-event mappings and achievement calls |
+| No confirmed achievement set for the AppID | Lack of unlockable achievements cannot be blamed on the translation or Runner |
 
-Steamworks 必须成功初始化，游戏才能访问其接口。Steam 客户端、当前用户、游戏许可、AppID 与相应的运行库都影响初始化；[Valve 接口概览](https://partner.steamgames.com/doc/sdk/api#SteamAPI_Init)列出了这些条件。库外路径本身不等于初始化必然失败，但部分游戏可能自行重新启动 Steam 安装目录中的版本，必须观察实际进程。
+Steamworks must initialize successfully before the game can use its interfaces. The Steam client, current user, game license, AppID and runtime libraries affect initialization; [Valve's API overview](https://partner.steamgames.com/doc/sdk/api#SteamAPI_Init) lists these conditions. An external path does not inherently mean initialization fails, but some games may restart the version in Steam's installation directory, so observe the actual processes.
 
-成就由游戏在达到条件时调用 `SetAchievement`，或更新关联统计；`StoreStats` 提交到服务器，相关回调和 Steam 成就状态可用于确认结果。客户端在游戏退出时也可能补提交，不能把缺少显式提交调用等同于绝对无法解锁。运行时长增加或 Overlay 可打开，不是成就成功的证据。[ISteamUserStats](https://partner.steamgames.com/doc/api/ISteamUserStats#SetAchievement)。当前文档将 `RequestCurrentStats` 标为弃用，不把旧教程中的调用顺序当成所有现行版本的硬性要求；旧游戏实际使用的接口版本仍须独立判断。
+Games call `SetAchievement`, or update associated statistics, when conditions are reached. `StoreStats` submits to the server; callbacks and Steam's achievement state can confirm the result. The client may also submit when the game exits, so lack of an explicit submission call does not prove unlocking is impossible. Increased playtime or a working Overlay is not evidence of achievement success. See [ISteamUserStats](https://partner.steamgames.com/doc/api/ISteamUserStats#SetAchievement). Its documentation currently marks `RequestCurrentStats` deprecated; an old tutorial's sequence is not a universal requirement for current versions. The interface version actually used by an older game still needs separate assessment.
 
-只看到 `steam_api.dll`、导出函数或二进制中的 `SetAchievement` 字样，最多说明存在相关组件/标记。它们不能证明汉化入口会加载组件、游戏脚本会触发、初始化成功或服务器接受提交；静态扫描没找到也不能排除动态加载或资源内脚本。
+A `steam_api.dll`, exported functions or `SetAchievement` bytes establish at most the presence of relevant components or markers. They do not prove the translated entry point loads them, scripts trigger calls, initialization succeeds or the server accepts a submission. Conversely, a negative static scan cannot exclude dynamic loading or scripts inside resources.
 
-SteamWrapper 当前只配置和等待游戏，不增加成就写入接口、进度伪造、DLL 注入或游戏二进制修改。最合适的后续工作是找到保留原 Steam 成就逻辑的汉化版本，并验证其正常游戏流程。
+SteamWrapper configures and waits for games. It adds no achievement-writing API, fabricated progress, DLL injection or game binary modifications. The most useful next step is to find a translated build retaining the original Steam achievement logic and verify it through normal gameplay.
 
-### 9-nine 的具体证据
+<a id="9-nine-的具体证据"></a>
 
-2026-09-07 查询官方商店、公开全局成就页和无密钥 `GetGlobalAchievementPercentagesForApp/v0002` 接口，未查询玩家账号：
+### Specific evidence for 9-nine
 
-| 作品 / AppID | 公开证据 | 结论 |
+On 2026-09-07, the official stores, public global achievement pages and keyless `GetGlobalAchievementPercentagesForApp/v0002` endpoint were queried without looking up a player's account:
+
+| Game / AppID | Public evidence | Conclusion |
 | --- | --- | --- |
-| Episode 1 / 976390 | 商店列成就；官方全局成就页显示 4 项；公开接口 HTTP 200 返回 4 项 | 确认有 4 项可研究的官方成就 |
-| Episode 2 / 1033420 | 商店未列成就；公开接口 HTTP 403 | 未确认成就集合；403 不是数量为零 |
-| Episode 3 / 1142830 | 商店未列成就；公开接口 HTTP 403 | 未确认成就集合；403 不是数量为零 |
-| Episode 4 / 1424660 | 商店未列成就；公开接口 HTTP 403 | 未确认成就集合；403 不是数量为零 |
-| NewEpisode / 1890120 | 商店未列成就；公开接口 HTTP 403 | 未确认成就集合；403 不是数量为零 |
+| Episode 1 / 976390 | Store lists achievements; official global page shows 4; public endpoint returns HTTP 200 with 4 | Four official achievements confirmed for investigation |
+| Episode 2 / 1033420 | Store does not list achievements; endpoint returns HTTP 403 | Achievement set unconfirmed; 403 does not mean zero |
+| Episode 3 / 1142830 | Store does not list achievements; endpoint returns HTTP 403 | Achievement set unconfirmed; 403 does not mean zero |
+| Episode 4 / 1424660 | Store does not list achievements; endpoint returns HTTP 403 | Achievement set unconfirmed; 403 does not mean zero |
+| NewEpisode / 1890120 | Store does not list achievements; endpoint returns HTTP 403 | Achievement set unconfirmed; 403 does not mean zero |
 
-来源：[第一部全局成就](https://steamcommunity.com/stats/976390/achievements/)、[第一部商店](https://store.steampowered.com/app/976390/)、[第二部商店](https://store.steampowered.com/app/1033420/)、[第三部商店](https://store.steampowered.com/app/1142830/)、[第四部商店](https://store.steampowered.com/app/1424660/)、[新章商店](https://store.steampowered.com/app/1890120/)。
+Sources: [Episode 1 global achievements](https://steamcommunity.com/stats/976390/achievements/), [Episode 1 store](https://store.steampowered.com/app/976390/), [Episode 2 store](https://store.steampowered.com/app/1033420/), [Episode 3 store](https://store.steampowered.com/app/1142830/), [Episode 4 store](https://store.steampowered.com/app/1424660/), [NewEpisode store](https://store.steampowered.com/app/1890120/).
 
-2026-09-07 检查的本机五部混合目录均存在 `steam_api.dll`、`plugin/krkrsteam.dll` 和 `plugin/SteamDrawDevice.dll`。前两个组件包含初始化、用户统计和成就相关的有限字节标记，但未确认汉化入口加载或执行它们。只读检查的 148 个现存 DLL/TPM/所选 EXE 均与之前文件基线相同；当时第一部中文入口仍缺失。未解包游戏资源、执行成就调用或改变任何用户成就。这些可能是混合目录中的残留组件，不能据此认定兼容或断言组件来源。
+All five mixed local directories inspected on 2026-09-07 contained `steam_api.dll`, `plugin/krkrsteam.dll` and `plugin/SteamDrawDevice.dll`. The first two contained limited initialization, user-statistics and achievement byte markers, but loading or execution by the translated entry point was unconfirmed. All 148 existing DLL/TPM/selected EXE files checked read-only matched the earlier baseline; Episode 1's translated entry point was still missing. No game resources were unpacked, achievement calls executed or user achievements changed. These may have been leftover components in mixed directories; they establish neither compatibility nor provenance.
 
-2026-09-08 单独检查 G 盘库外的第一部独立汉化包：`nine_kokoiro.exe`、`kokoiro_chs.dll`、`version.dll` 和插件共 26 个文件的普通及延迟导入表均成功解析，未发现显式 Steam 依赖，也未命中所选 Steam API / 成就文字标记。该目录没有 `steam_api.dll`、`steam.xp3`、`plugin/krkrsteam.dll` 或 `plugin/SteamDrawDevice.dll`；不能把前一天混合目录中的组件当作当前包的接入证据。游戏 EXE 仅显式依赖 Windows 库，汉化 DLL 仅显式依赖 `kernel32/comctl32`，`version.dll` 导出版本查询兼容函数。
+On 2026-09-08, Episode 1's independent translated package outside the Steam library on drive G was inspected separately. Normal and delay import tables parsed successfully for all 26 selected files: `nine_kokoiro.exe`, `kokoiro_chs.dll`, `version.dll` and plugins. No explicit Steam dependency or selected Steam API/achievement text marker was found. This directory contained no `steam_api.dll`, `steam.xp3`, `plugin/krkrsteam.dll` or `plugin/SteamDrawDevice.dll`; components from the previous day's mixed directory are not evidence for this package. The game EXE explicitly depends only on Windows libraries, the translation DLL only on `kernel32/comctl32`, and `version.dll` exports compatible version-query functions.
 
-这次静态检查没有取得该独立包保留成就逻辑的正面证据；汉化 DLL 仍可能包含打包或动态逻辑，资源内脚本、实际接口初始化和剧情事件调用均未验证，因此也不能据此断言绝对不支持成就。检查没有运行游戏、读取存档内容或调用成就接口。原始结果位于忽略目录 `target/real-steam-validation/nine-isolated-20260908T102930-79d125b2936745b0a96c16566dbcebaf/entry-audit/episode1-steam-static.json`，与前一天的混合目录记录分开保留。
+This static inspection found no positive evidence that the independent package retained achievement logic. The translation DLL could still contain packed or dynamic logic; scripts inside resources, actual API initialization and story-event calls were not tested, so the result does not establish absolute incompatibility. No game was run, save contents read or achievement API called in this inspection. Raw results remain in the ignored `target/real-steam-validation/nine-isolated-20260908T102930-79d125b2936745b0a96c16566dbcebaf/entry-audit/episode1-steam-static.json`, separate from the preceding mixed-directory records.
 
-找到[樱空第一部原发布帖](https://bbs2.kdays.net/read/64426)和[第三部 v1.1 原发布帖](https://bbs2.kdays.net/read/74486)，未找到它们承诺原 Steam 成就兼容。第三部该帖明确排除 DL 版，说明补丁与底包要匹配；这不是对本机整包版本的鉴定。[Denpasoft 官方第一部 DLC 安装说明](https://support.denpasoft.com/portal/en/kb/articles/installing-9-nine-episode1-dlc)则以已安装 Steam 版为基础，但同样不能作为第三方汉化兼容承诺。
+The [original Yingkong Episode 1 release post](https://bbs2.kdays.net/read/64426) and [Episode 3 v1.1 release post](https://bbs2.kdays.net/read/74486) were found, but no promise of original Steam achievement compatibility was found. The Episode 3 post explicitly excludes the DL edition, illustrating the need to match a patch to its base build; this does not identify the local package's edition. [Denpasoft's official Episode 1 DLC instructions](https://support.denpasoft.com/portal/en/kb/articles/installing-9-nine-episode1-dlc) assume an installed Steam edition, but likewise make no promise about third-party translations.
 
-目录分离与启动测试已扩展至系列五部，当前结果见下文。第一部恢复汉化入口后已通过直接启动及 Steam → Runner 的中文开场验证。Steam 显示成就 0/4，但本次只到首句剧情，未达到成就条件，不能据此判为成就兼容失败。后续需通过正常游戏达到条件后观察结果，并实时检查云同步状态；不修改存档来伪造进度，也不替玩家选择覆盖云/本地进度。
+Directory separation and launch testing expanded to all five games; results follow below. After its translated entry point was restored, Episode 1 passed direct launch and Steam → Runner verification through the Chinese opening. Steam displayed 0/4 achievements, but the test stopped at the first story line before any achievement condition, so this is not an achievement compatibility failure. Subsequent testing must reach conditions through normal gameplay and observe the outcome while checking current cloud status. Do not edit saves to fabricate progress or choose between local and cloud progress for the player.
 
-## 存档与云同步需要分别核验
+<a id="存档与云同步需要分别核验"></a>
 
-Steam Auto-Cloud 使用发行方配置的路径和匹配规则，其中可包含官方安装目录；它不会因为 Runner 改了目标就必然改为库外汉化目录。游戏通过 Remote Storage API 同步的情况又不同，见 [Steam Cloud 路径与接入方式](https://partner.steamgames.com/doc/features/cloud)。官方版与汉化版的存档格式也可能不同，不能直接假定可互换。
+## Verify saves and cloud synchronization separately
 
-在确认格式、实际读写位置和冲突处理前，保留独立备份，不把两套存档自动合并。9-nine 第一部在 2026-09-07 测试时出现过云冲突；2026-09-08 恢复汉化入口后的验收中，云同步始终开启、显示最新，未出现冲突。这不证明库外汉化存档已被 Steam 同步。若再次出现冲突，须由玩家决定保留的版本，不能直接沿用前一天的冲突状态或自动选择覆盖。
+Steam Auto-Cloud uses publisher-defined paths and matching rules, which may include the official installation directory. Redirecting Runner does not necessarily redirect synchronization to the external translated folder. Games using the Remote Storage API behave differently; see [Steam Cloud paths and integration](https://partner.steamgames.com/doc/features/cloud). Official and translated builds may also use incompatible save formats.
 
-## 2026-09-07 本机实施与研究记录
+Keep independent backups until formats, actual read/write locations and conflict handling are verified; do not automatically merge the two sets of saves. Episode 1 showed a cloud conflict during testing on 2026-09-07. During acceptance after restoring the translated entry point on 2026-09-08, cloud synchronization remained enabled and up to date, with no conflict. This does not prove Steam synchronized the external translated saves. Any new conflict requires the player's choice of version; neither reuse the previous day's conflict state nor automatically overwrite progress.
 
-第二部当前报错版本已完整复制到库外新建备份目录：90 个文件、6 个子目录、3,108,545,018 字节。逐文件源读取前后与副本 SHA-256 相同，文件/目录集合不变；源与目的句柄确认普通物理路径，不跟随链接，不覆盖已有目的。这是现有失败版本的保护副本，不是已修复或已通过官方校验的版本。
+<a id="2026-09-07-本机实施与研究记录"></a>
 
-截至当日，尚缺第二部完整可运行汉化包/备份的路径，已向用户询问。未移动原目录，未进行 Steam 修复/恢复官方安装，未改变真实游戏配置或成就；后续迁移依赖可用汉化来源。只读原始证据留在忽略目录 `target/real-steam-validation/nine-20260907T054031Z-8615e539097a4cc18efedeb38dd2f0f5` 下：
+## Local implementation and research on 2026-09-07
 
-- `episode2-complete-backup-20260907T072842Z-2743e53469bf4232a12e37c7d04e89df/`：完整副本及源前后摘要核验；具体私人路径仅保留本机。
-- `steam-interface-static-20260907T073052Z-2a9e83ee/`：组件、窄匹配标记与静态证据限制。
+A complete copy of Episode 2's then-failing build was made in a newly created backup directory outside the library: 90 files, 6 subdirectories and 3,108,545,018 bytes. Per-file SHA-256 matched for the source before/after reading and the copy; file/directory sets were unchanged. Source and destination handles confirmed ordinary physical paths; links were not followed and no existing destination was overwritten. This protected the failing build; it was not a repaired or officially verified version.
 
-界面验证使用一次性 `STEAM_DIR`、`LOCALAPPDATA`、`XDG_DATA_HOME` 和 `STEAMWRAPPER_E2E_ROOT`；不会以示例配置通过冒充真实游戏的成就或迁移成功。
+As of that date, the location of a complete runnable Episode 2 translation/backup was still missing and had been requested from the user. The original directory was not moved, Steam repair/official restoration was not performed, and real profiles and achievements were not changed. Migration depended on a usable translated source. Read-only raw evidence remains under the ignored `target/real-steam-validation/nine-20260907T054031Z-8615e539097a4cc18efedeb38dd2f0f5`:
 
-WinUI 已显示只读 Steam 安装位置和独立可编辑的实际运行文件夹。关联测试先红后绿；真实双 Steam 库同 AppID 的回归揭示扫描提前去重的问题，修复后标记安装位置歧义，不为新配置预填任意目录。该标记仅存在于发现结果，不进入 profile/TOML。
+- `episode2-complete-backup-20260907T072842Z-2743e53469bf4232a12e37c7d04e89df/`: complete copy and source before/after digest checks; exact private paths remain local.
+- `steam-interface-static-20260907T073052Z-2a9e83ee/`: components, narrowly matched markers and static-evidence limitations.
 
-- `mise run winui:test`：49/49 通过，含 6 项新的目录关联/冲突回归。红/绿结果位于忽略的 `target/steam-installation-tests/`。
-- `mise run winui:publish`：最终 self-contained Release 发布通过。
-- 原生隔离验证：官方位置与库外运行位置分别显示；保存保留 `game_dir`、目标和未知字段，生成既有启动项格式；增加重复清单并重新读取后位置显示未知，profile 字节摘要不变；新建歧义配置的运行目录为空。示例配置通过正常提示放弃，Manager 已退出。证据为 `target/translation-isolation/ui-40a48037fdf04ae195f311c8b57c87c0/native-validation.json`。
+UI verification used disposable `STEAM_DIR`, `LOCALAPPDATA`, `XDG_DATA_HOME` and `STEAMWRAPPER_E2E_ROOT` fixtures. Passing a sample configuration was not presented as real achievement or migration success.
 
-本轮没有修改 TOML/Runner 契约或 Runner 分发实现，未重复本地跨语言/进程全门禁；CI 保留其原有检查。没有实际触发或修改玩家成就。
+WinUI now displays a read-only Steam installation location and an independently editable actual game folder. Associated tests ran red before green. A real duplicate AppID across two Steam libraries exposed early scan deduplication; the fix marks installation ambiguity and does not prefill an arbitrary location for a new profile. This marker exists only in discovery results, not profiles/TOML.
 
-## 2026-09-08 系列隔离验收补充
+- `mise run winui:test`: 49/49 passed, including 6 new directory-association/conflict regressions. Red/green records are ignored under `target/steam-installation-tests/`.
+- `mise run winui:publish`: final self-contained Release publish passed.
+- Native isolated verification: official and external locations displayed separately; saving preserved `game_dir`, target and unknown fields and generated the existing Launch Options format. After adding a duplicate manifest and reloading, the installation location showed unknown and profile bytes were unchanged. A new ambiguous profile had an empty actual game folder. The sample was discarded through the normal prompt and Manager exited. Evidence: `target/translation-isolation/ui-40a48037fdf04ae195f311c8b57c87c0/native-validation.json`.
 
-各部结果分别记录，中文内容、正常退出与成就接入是不同的验收项：
+This round changed neither the TOML/Runner contract nor Runner distribution. The full local cross-language/process gates were not repeated; CI retained its existing checks. No player achievement was triggered or modified.
 
-| 作品 / AppID | 当前运行验证结果 |
+<a id="2026-09-08-系列隔离验收补充"></a>
+
+## Series acceptance update on 2026-09-08
+
+Each game has separate results. Chinese content, normal exit and achievement integration are distinct acceptance criteria:
+
+| Game / AppID | Current launch verification |
 | --- | --- |
-| Episode 1 / 976390 | 恢复汉化入口后，直接启动及 Steam → Runner 均到中文开场并正常退出；CHS 启动器先退，Runner 继续等待实际游戏 |
-| Episode 2 / 1033420 | Steam → Runner 启动中文开场并正常退出，通过 |
-| Episode 3 / 1142830 | Steam → Runner 启动中文开场并正常退出，通过 |
-| Episode 4 / 1424660 | Steam → Runner 启动中文开场并正常退出，通过 |
-| NewEpisode / 1890120 | Steam → Runner 启动中文开场并正常退出，通过 |
+| Episode 1 / 976390 | Restored translated entry point reached the Chinese opening and exited normally through both direct launch and Steam → Runner; CHS launcher exited first while Runner waited for the actual game |
+| Episode 2 / 1033420 | Steam → Runner reached the Chinese opening and exited normally; passed |
+| Episode 3 / 1142830 | Steam → Runner reached the Chinese opening and exited normally; passed |
+| Episode 4 / 1424660 | Steam → Runner reached the Chinese opening and exited normally; passed |
+| NewEpisode / 1890120 | Steam → Runner reached the Chinese opening and exited normally; passed |
 
-用户已将汉化版放入 Steam 库外独立目录，并报告官方安装已恢复。第二部（1033420）使用该汉化 EXE，从原 Steam 条目经稳定 Runner 启动，确认中文标题、菜单和首句剧情；游戏和 Runner 正常退出，Steam 显示的运行时长由 7 分钟增加到 8 分钟。第三部、第四部、新章也分别完成了中文开场与正常退出验证；这些结果均不代表成就接入已通过。
+The user placed translated builds in independent directories outside Steam libraries and reported restoring the official installations. Episode 2 (1033420) used its translated EXE from the original Steam entry through stable Runner; the Chinese title, menu and first story line were confirmed. Game and Runner exited normally, and displayed playtime rose from 7 to 8 minutes. Episode 3, Episode 4 and NewEpisode also completed their Chinese-opening and normal-exit checks. None of these results verifies achievements.
 
-第一部恢复后的后续验收也已完成，详见下文。五部的共享 profile 均已通过正常 Manager 保存；测试用 Steam 启动选项全部恢复为空。第一部原来没有该字段，最后为空字符串，按启动行为完成语义恢复；因此当前 Steam 不会仅因 profile 已保存就自动改用汉化版。
+Episode 1's follow-up after restoration also completed, as detailed below. All five shared profiles were saved through normal Manager operations. All test Steam Launch Options were restored to empty. Episode 1 originally lacked the field and ended with an empty string, restoring equivalent launch behavior. Saved profiles alone therefore do not make Steam launch the translated builds.
 
-第二部先从停在父目录的资源管理器地址栏执行绝对 EXE 路径，游戏能够启动，但剧情显示日文；随后进入汉化包文件夹双击同一 EXE，中文标题与菜单正常。Runner 在正确的实际运行文件夹启动时中文也正常。启动上下文差异已复现；第一次进程的工作目录未直接测定，因此不把推测的底层原因写成已确认事实。第二部的该问题通过修正实际运行目录和验收步骤解决，无需改动游戏文件、Runner 或 TOML 协议。
+Episode 2 initially launched from an absolute EXE path entered in Explorer's address bar while Explorer remained in the parent directory; the game ran but story text was Japanese. Navigating into the translated package and double-clicking the same EXE then showed the Chinese title and menu. Runner also showed Chinese when launched in the correct actual game folder. The context difference was reproduced, but the first process's working directory was not directly measured; the underlying cause remains an inference. Correcting the actual game folder and acceptance procedure resolved this case without modifying game files, Runner or the TOML protocol.
 
-本机证据保留在忽略目录 `target/real-steam-validation/nine-isolated-20260908T102930-79d125b2936745b0a96c16566dbcebaf/`：`1033420/observation.json` 记录 Steam 时长、进程和退出结果，`entry-audit/episode2-language-assessment.md` 记录直接启动对照与判断限制。此前 2026-09-07 的失败版本记录继续保留，不能与本次新目录的结果混用。
+Local evidence remains under the ignored `target/real-steam-validation/nine-isolated-20260908T102930-79d125b2936745b0a96c16566dbcebaf/`: `1033420/observation.json` records Steam playtime, processes and exits; `entry-audit/episode2-language-assessment.md` records the direct-launch comparison and limits. The failed-build records from 2026-09-07 remain separate from these new-directory results.
 
-### 第一部原始入口的早期直接启动故障
+<a id="第一部原始入口的早期直接启动故障"></a>
 
-2026-09-08 11:36:20（Asia/Shanghai），从普通资源管理器的实际游戏文件夹启动现有 `nine_kokoiro.exe`，观察到 PID 528。游戏未进入标题，只显示 Information 错误。界面乱码按 CP936 编码后以 CP932 解码，还原为“プロダクトIDチェック処理の起動に失敗しました”，即“产品 ID 检查处理启动失败”。点击错误框普通“确定”后，11:37:49 观察到进程退出；退出码未确认，此次属于启动失败。
+### Earlier direct-launch failure of Episode 1's original entry point
 
-当时包含隐藏文件的目录检查没有找到另一汉化入口或启动脚本；另两个 EXE 分别是升级器和卸载器。随包说明未指出一个明确缺失的启动依赖。[原汉化发布帖](https://bbs2.kdays.net/read/64426)与[发行方支持页](https://www.clearrave.co.jp/support/)中未找到该完整错误的明确解释。当时只能定位到游戏自身产品 ID 检查处理启动阶段，不能据消息单独认定许可证无效、缺少某个 DLL 或 Windows 版本不兼容；该错误在没有 Runner 的直接路径出现，也不是 Runner 故障的证据。
+At 11:36:20 on 2026-09-08 (Asia/Shanghai), launching the existing `nine_kokoiro.exe` from the actual game folder in ordinary Explorer produced PID 528. It never reached the title and showed only an Information error. Encoding the garbled text as CP936 and decoding as CP932 recovered “プロダクトIDチェック処理の起動に失敗しました”, meaning “Failed to start the product ID check process.” After ordinary confirmation, the process was observed gone at 11:37:49. Its exit code was unconfirmed; this was a launch failure.
 
-这次失败记录位于同一忽略目录的 `976390/direct-resumed-observation.json` 和 `entry-audit/episode1-product-id-assessment.md`。该原始入口失败的具体依赖未确认；这一阶段未执行升级器、安装器，未调整产品检查、解包或修补游戏文件。
+The directory inspection, including hidden files, then found no other translated entry point or launch script; the other two EXEs were an updater and uninstaller. Included instructions did not identify a specific missing launch dependency. Neither the [original translation post](https://bbs2.kdays.net/read/64426) nor the [publisher support page](https://www.clearrave.co.jp/support/) provided a clear explanation for the complete error. It localized the failure only to starting the game's product ID check, not to an invalid license, particular missing DLL or incompatible Windows version. Reproduction without Runner also did not establish a Runner defect.
 
-当日后续查询 Defender 记录确认，另一入口 `nine_kokoiro_chs.exe` 在建立文件基线之前已被隔离。按用户新授权，已从隔离区导出并补回这个入口及两个随包补丁文件，全部为补回缺失位置、没有覆盖已有程序或存档。文件恢复阶段没有执行入口，恢复本身不计为启动或成就通过；检测标签和静态加载器特征也不足以确认误报。具体范围见 [隔离记录与恢复](real-steam-validation.md#2026-09-08第一部-defender-隔离记录与文件恢复)，后续运行结果单独记录如下。
+The same ignored evidence root contains `976390/direct-resumed-observation.json` and `entry-audit/episode1-product-id-assessment.md`. The original entry point's specific failing dependency was not confirmed. This stage ran no updater/installer, changed no product check, and neither unpacked nor patched game files.
 
-### 第一部恢复后的 CHS 启动与等待验收
+A later Defender-record query confirmed that another entry point, `nine_kokoiro_chs.exe`, had been quarantined before the file baseline. Under new user authorization, that entry point and two included patch files were exported from quarantine and restored only to missing locations, overwriting neither existing programs nor saves. Restoration itself did not execute the entry point and is not launch or achievement acceptance. Detection labels and static loader characteristics also do not establish a false positive. See [quarantine records and restoration](real-steam-validation.md#episode1-quarantine-restoration) for the scope; subsequent runtime results are separate below.
 
-2026-09-08 14:06:56–14:08:31（Asia/Shanghai），从实际汉化文件夹双击恢复后的 `nine_kokoiro_chs.exe`，CHS 启动器先退出，实际游戏继续运行。标题与首句剧情为中文；主菜单英文、顶部菜单日文、退出确认中文，未将开场通过表述为全部界面汉化。测试没有手动保存或载入存档。
+<a id="第一部恢复后的-chs-启动与等待验收"></a>
 
-14:15:53–14:18:15 的 Steam 路径观察到 `Runner 14212 → CHS 18876 → 游戏 16512`。CHS 在 14:15:55 先退出后，实际游戏与 Runner 继续约 2 分 21 秒，直到普通退出。Manager 中已确认 `job`；独立观察记录零采样错误、零元数据失败和最终无残留。这验证了本机这个 CHS 启动器先退的场景，不证明所有启动器兼容，也不是对 Job 成员的直接查询。日志仅确认 CHS 与 Runner 的 exit 0；当前 [Windows job 实现](../crates/runner/src/platform/windows.rs)最终返回启动器状态，实际游戏退出码未记录。
+### Episode 1 restored CHS launch and waiting acceptance
 
-Steam 显示时长由 36 增至 38 分钟，退出后恢复“开始”；云始终开启并显示最新，未出现冲突。成就仍为 0/4，本次未达到触发条件，成就兼容及汉化存档云同步仍未验证。
+At 14:06:56–14:08:31 on 2026-09-08 (Asia/Shanghai), double-clicking restored `nine_kokoiro_chs.exe` in the actual translated folder launched a CHS process that exited first while the actual game kept running. The title and first story line were Chinese; the main menu was English, top menu Japanese and exit confirmation Chinese. This opening check does not claim complete UI translation. No save was manually written or loaded.
 
-启动前已记录四个存档文件的既有变化并另建检查点。直接启动和 Steam 阶段各自相对前一快照仅有五个 `savedata` 文件自然更新，其余文件及官方 68 文件不变，三个恢复文件哈希一致，无新增或缺失；原始及两批检查点共 24 份备份副本完整，当前游戏写入全部保留。完整过程见 [真实 Steam 验证](real-steam-validation.md)；本机忽略证据为 `976390/restored-chs-steam-observation.json` 和 `976390/after-recovered-chs-steam-20260908T061902Z-integrity-summary.json`。
+The Steam path at 14:15:53–14:18:15 showed `Runner 14212 → CHS 18876 → game 16512`. After CHS exited at 14:15:55, the game and Runner continued for roughly 2 minutes 21 seconds until normal exit. Manager confirmed `job`. Independent observation recorded no sampling errors, no metadata failures and no final leftovers. This verifies this local early-exiting CHS launcher, not all launchers, and is not direct Job membership inspection. Logs confirm exit 0 only for CHS and Runner; the current [Windows job implementation](../crates/runner/src/platform/windows.rs) returns the launcher's status, and the actual game's exit code was not recorded.
+
+Displayed Steam playtime rose from 36 to 38 minutes and returned to Play on exit. Cloud remained enabled and current, without conflicts. Achievements remained 0/4 and no trigger condition was reached; achievement compatibility and translated-save cloud synchronization remain unverified.
+
+Four pre-existing save changes were recorded and checkpointed before launch. Relative to each preceding snapshot, direct and Steam launch stages each naturally updated only five `savedata` files. Other files and the 68 official files were unchanged; all three restored hashes matched, with no added or missing files. All 24 original/checkpoint backup copies were intact and current game writes were retained. See [real Steam validation](real-steam-validation.md) for the full record. Ignored local evidence includes `976390/restored-chs-steam-observation.json` and `976390/after-recovered-chs-steam-20260908T061902Z-integrity-summary.json`.

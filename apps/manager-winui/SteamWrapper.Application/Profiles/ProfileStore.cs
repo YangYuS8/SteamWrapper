@@ -1,3 +1,4 @@
+using SteamWrapper.Application.Localization;
 using System.Collections.Concurrent;
 using System.Text;
 using Tomlyn;
@@ -27,7 +28,7 @@ public sealed class ProfileStore
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or DecoderFallbackException)
         {
-            throw new ProfileStoreException("无法读取配置文件，请检查文件权限和 UTF-8 编码。", error);
+            throw Messages.Profile("ProfilesRead", error);
         }
     }
 
@@ -35,18 +36,18 @@ public sealed class ProfileStore
         bool isNew = false, CancellationToken cancellationToken = default)
     {
         if (!StringComparer.OrdinalIgnoreCase.Equals(snapshot.Path, path))
-            throw new ProfileStoreException("这份编辑快照不属于当前配置文件。请重新加载。 ");
+            throw Messages.Profile("SnapshotMismatch");
         Validate(profile, isNew);
         // Reparse the immutable source, not the UI's exposed records or argument arrays.
         var original = ParseProfiles(snapshot.Source);
         var existing = original.SingleOrDefault(p => p.Key == profile.Key);
         if (isNew ? existing is not null : existing is null)
-            throw new ProfileStoreException(isNew ? "此配置标识已经存在，请编辑现有配置。" : "原配置已不存在，请重新加载。 ");
+            throw Messages.Profile(isNew ? "ProfileExists" : "ProfileMissing");
         var candidates = original.Where(p => p.Key != profile.Key).Append(profile).ToArray();
         var requestedId = profile.AppId ?? profile.Key;
         if (candidates.Count(p => p.Key == requestedId || p.AppId == requestedId) != 1 ||
             candidates.Count(p => p.Key == profile.Key || p.AppId == profile.Key) != 1)
-            throw new ProfileStoreException("多个配置关联了相同 AppID，无法安全确定 Runner 会使用哪一项。请先消除冲突。 ");
+            throw Messages.Profile("ProfileConflict");
 
         var text = Edit(snapshot.Source, existing, profile);
         var output = Utf8.GetBytes(text);
@@ -89,7 +90,7 @@ public sealed class ProfileStore
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            throw new ProfileStoreException("无法安全保存配置。请检查文件占用、权限和磁盘空间；原文件未被主动覆盖。", error);
+            throw Messages.Profile("ProfilesSave", error);
         }
         finally
         {
@@ -106,7 +107,7 @@ public sealed class ProfileStore
     private FileStream OpenWriterLease()
     {
         try { return new FileStream(path + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
-        catch (IOException error) { throw new ProfileConflictException($"另一个 Manager 正在保存此配置，请稍后重新加载。{error.Message}"); }
+        catch (IOException error) { throw Messages.Conflict("ProfilesBusy", error); }
     }
 
     private async Task<byte[]?> ReadBytesAsync(CancellationToken cancellationToken)
@@ -121,7 +122,7 @@ public sealed class ProfileStore
         var current = await ReadBytesAsync(cancellationToken);
         if ((current is null) != (snapshot.Bytes is null) ||
             (current is not null && !current.AsSpan().SequenceEqual(snapshot.Bytes)))
-            throw new ProfileConflictException("配置文件已被其他程序或窗口修改。请重新加载后再保存，外部改动已保留。 ");
+            throw Messages.Conflict("ProfilesChanged");
     }
 
     private ProfileSnapshot Snapshot(string? source, byte[]? bytes) => new()
@@ -137,7 +138,7 @@ public sealed class ProfileStore
         {
             var document = TomlSerializer.Deserialize<TomlTable>(source.TrimStart('\uFEFF'))!;
             if (!document.TryGetValue("version", out var version) || version is not long format || format != 2)
-                throw new ProfileStoreException("只支持 version = 2 的配置文件。此文件保持原样，不会降级覆盖。 ");
+                throw Messages.Profile("ProfileVersion");
             if (!document.TryGetValue("profiles", out var profiles)) return [];
             if (profiles is not TomlTable table) throw InvalidField("profiles");
             return table.Select(entry =>
@@ -160,36 +161,36 @@ public sealed class ProfileStore
         }
         catch (TomlException error)
         {
-            throw new ProfileStoreException("配置不是有效的 TOML，文件已保留。请修复后重新加载。", error);
+            throw Messages.Profile("ProfileToml", error);
         }
     }
 
     private static string RequiredString(TomlTable data, string key) => OptionalString(data, key) ?? throw InvalidField(key);
     private static string? OptionalString(TomlTable data, string key) =>
         data.TryGetValue(key, out var value) ? value as string ?? throw InvalidField(key) : null;
-    private static ProfileStoreException InvalidField(string key) => new($"配置字段 {key} 的类型或取值不受支持，不能安全编辑。 ");
+    private static ProfileStoreException InvalidField(string key) => Messages.Profile("ProfileField", null, key);
 
     private static void Validate(ProfileData profile, bool isNew)
     {
         if (string.IsNullOrWhiteSpace(profile.Key) || string.IsNullOrWhiteSpace(profile.Name) ||
             string.IsNullOrWhiteSpace(profile.GameDirectory) || string.IsNullOrWhiteSpace(profile.Target))
-            throw new ProfileStoreException("请填写游戏名称、游戏目录和目标程序。 ");
+            throw Messages.Profile("ProfileRequired");
         if (profile.Arguments is null || profile.Arguments.Any(value => value is null)) throw InvalidField("args");
         var strings = new[] { profile.Key, profile.Name, profile.AppId, profile.GameDirectory, profile.Target,
             profile.WorkingDirectory, profile.ProcessName }.Concat(profile.Arguments);
-        if (strings.Any(value => value?.Contains('\0') == true)) throw new ProfileStoreException("配置不能包含 NUL 字符。 ");
+        if (strings.Any(value => value?.Contains('\0') == true)) throw Messages.Profile("ProfileNul");
         if (!WaitModes.Contains(profile.WaitMode)) throw InvalidField("wait_mode");
         if (profile.Platform is not null and not ("windows" or "linux" or "steam_os")) throw InvalidField("platform");
         if (profile.Platform is null or "windows" && profile.WaitMode == "process_group")
-            throw new ProfileStoreException("Windows 不支持进程组等待，请选择等待程序及其子进程或其他 Windows 等待方式。 ");
+            throw Messages.Profile("ProfileWindowsWait");
         if (profile.WaitMode == "process_name" && string.IsNullOrWhiteSpace(profile.ProcessName))
-            throw new ProfileStoreException("按进程名称等待时，请填写实际游戏进程名。 ");
+            throw Messages.Profile("ProfileProcessRequired");
         if (isNew && (!uint.TryParse(profile.AppId, out var appId) || appId == 0 ||
             profile.AppId!.Any(character => character is < '0' or > '9') || profile.Key != profile.AppId ||
             profile.Platform != "windows"))
-            throw new ProfileStoreException("新配置需要明确的数字 AppID，并明确指定 Windows 平台。 ");
+            throw Messages.Profile("ProfileNewId");
         if (!isNew && profile.AppId is not null && (profile.AppId.Length == 0 || profile.AppId.Any(c => c is < '0' or > '9')))
-            throw new ProfileStoreException("Steam AppID 只能包含数字。旧别名表键可以保留。 ");
+            throw Messages.Profile("ProfileIdDigits");
     }
 
     private static string Edit(string? source, ProfileData? original, ProfileData profile)
@@ -210,7 +211,7 @@ public sealed class ProfileStore
         var table = document.Tables.OfType<TableSyntax>().SingleOrDefault(table =>
             KeyParts(table.Name).SequenceEqual(new[] { "profiles", profile.Key }));
         if (table is null || !table.Items.Any())
-            throw new ProfileStoreException("此配置使用内联或点号表结构；当前编辑器只安全修改显式 [profiles.标识] 表，文件已保留。 ");
+            throw Messages.Profile("ProfileLayout");
         var previous = Fields(original);
         var edits = new List<(int Offset, int Length, string Text)>();
         var additions = new StringBuilder();

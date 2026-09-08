@@ -223,11 +223,18 @@ jobs:
           fi
           {
             printf '## SteamWrapper %s\n\n' "$tag"
-            printf '面向玩家的 v2 LTS 发布包。国内玩家后续可优先从 CNB Release 下载，GitHub Release 保留作为同步渠道。\n\n'
-            printf '## 安装 / 更新 / 卸载\n\n'
-            printf -- '- Windows：下载 setup.exe 后双击安装；更新时运行新版安装包覆盖旧版本，用户配置会保留。\n'
-            printf -- '- Linux / SteamOS：下载 AppImage 或 tar.gz；更新时替换程序文件，XDG 数据目录会保留。\n'
-            printf -- '- 卸载默认只删除程序本体；清理用户数据前请确认已备份。\n\n'
+            printf 'This workflow packages the retained Dioxus Manager and independent Rust Runner. The WinUI Windows preview is distributed separately by its preview workflow.\n\n'
+            printf '## Install / update / uninstall\n\n'
+            printf -- '- Windows: download and run the attached NSIS setup executable. An update replaces application files while retaining the stable user data directory.\n'
+            printf -- '- Linux: download the attached AppImage, make it executable, and launch it. Replace the AppImage to update; XDG user data remains separate. SteamOS-specific acceptance is not implied.\n'
+            printf -- '- Keep profiles and previous Steam Launch Options backed up. Before uninstalling, restore Steam Launch Options; retained user data and the stable Runner require a separate, deliberate cleanup.\n'
+            printf -- '- Manager defaults to English; select Simplified Chinese in its language control. See README and docs/distribution.md for the delivery scope and recovery steps.\n\n'
+            printf '## 简体中文：安装 / 更新 / 卸载\n\n'
+            printf '本工作流分发保留的 Dioxus Manager 与独立 Rust Runner；WinUI Windows 预览由单独的预览工作流提供。\n\n'
+            printf -- '- Windows：下载并运行附件中的 NSIS 安装程序；更新替换应用文件，保留稳定用户数据目录。\n'
+            printf -- '- Linux：下载附件中的 AppImage，赋予执行权限后运行；更新时替换 AppImage，XDG 用户数据独立保留。这不代表已通过 SteamOS 专项验收。\n'
+            printf -- '- 备份配置和原 Steam 启动项。卸载前恢复 Steam 启动项；保留的用户数据和稳定 Runner 须另行确认清理。\n'
+            printf -- '- Manager 默认英语，可在语言控件中选择简体中文。分发范围与恢复步骤见中文 README 和 docs/distribution.zh-CN.md。\n\n'
             printf '## Changes\n\n'
             git log "$range" --reverse --pretty=format:'- %s (`%h`, %an)' || true
             printf '\n'

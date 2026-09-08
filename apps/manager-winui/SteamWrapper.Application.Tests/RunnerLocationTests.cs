@@ -1,3 +1,4 @@
+using SteamWrapper.Application.Localization;
 using System.Diagnostics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SteamWrapper.Application.Services;
@@ -22,7 +23,8 @@ public sealed class RunnerLocationTests
         var inspected = await installer.InspectAsync();
         Assert.IsFalse(inspected.IsReady, "A matching hash in a redirected view does not prove Steam can reach the logical path.");
         Assert.IsFalse(inspected.CanInstall);
-        StringAssert.Contains(inspected.Message, "资源管理器");
+        StringAssert.Contains(inspected.Message, "File Explorer");
+        StringAssert.Contains(new Localizer("zh-CN").Format(inspected.Text), "资源管理器");
         Assert.IsFalse((await installer.InstallOrRepairAsync()).IsReady);
         Assert.AreEqual("runner", await File.ReadAllTextAsync(paths.RunnerPath));
         CollectionAssert.AreEqual(before, await File.ReadAllBytesAsync(manifest));
@@ -44,7 +46,8 @@ public sealed class RunnerLocationTests
         var result = await installer.InstallOrRepairAsync();
         Assert.IsFalse(result.IsReady, "A candidate redirected away from the stable location must not replace the old Runner.");
         Assert.IsFalse(result.CanInstall);
-        StringAssert.Contains(result.Message, "资源管理器");
+        StringAssert.Contains(result.Message, "File Explorer");
+        StringAssert.Contains(new Localizer("zh-CN").Format(result.Text), "资源管理器");
         Assert.AreEqual("old runner", await File.ReadAllTextAsync(paths.RunnerPath));
         CollectionAssert.AreEqual(before, await File.ReadAllBytesAsync(manifest));
         Assert.AreEqual("version = 2\n[profiles]\n", await File.ReadAllTextAsync(profiles));
@@ -64,7 +67,8 @@ public sealed class RunnerLocationTests
         var result = await installer.InstallOrRepairAsync();
         Assert.IsFalse(result.IsReady);
         Assert.IsFalse(result.CanInstall);
-        StringAssert.Contains(result.Message, "资源管理器");
+        StringAssert.Contains(result.Message, "File Explorer");
+        StringAssert.Contains(new Localizer("zh-CN").Format(result.Text), "资源管理器");
         Assert.IsFalse(File.Exists(paths.RunnerPath));
         Assert.IsFalse(File.Exists(Path.Combine(paths.Root, "bin", "runner-manifest.json")));
         Assert.IsEmpty(Directory.GetFiles(Path.Combine(paths.Root, "bin"), "*.tmp-*"));
@@ -162,7 +166,8 @@ public sealed class RunnerLocationTests
         var inspected = await installer.InspectAsync();
         Assert.IsFalse(inspected.IsReady, "An accessible Runner cannot use profiles written only to the Manager's redirected view.");
         Assert.IsFalse(inspected.CanInstall);
-        StringAssert.Contains(inspected.Message, "资源管理器");
+        StringAssert.Contains(inspected.Message, "File Explorer");
+        StringAssert.Contains(new Localizer("zh-CN").Format(inspected.Text), "资源管理器");
         Assert.IsFalse((await installer.InstallOrRepairAsync()).IsReady);
         Assert.AreEqual(original, await File.ReadAllTextAsync(paths.ProfilesPath));
         Assert.AreEqual("runner", await File.ReadAllTextAsync(paths.RunnerPath));

@@ -8,19 +8,20 @@ identifier = "top.yangyus8.steamwrapper"
 publisher = "SteamWrapper"
 icon = ["assets/icons/steamwrapper.png"]
 short_description = "SteamWrapper Manager"
-long_description = "为 Steam 游戏配置稳定的启动目标与 Launch Options。"
+long_description = "Configure stable launch targets and Launch Options for Steam games."
 category = "Game"
 resources = ["resources/runner/SteamWrapperRunner.exe", "resources/runner/steamwrapper-runner"]
 
-[windows]
-webview_install_mode = { type = "DownloadBootstrapper", silent = true }
+[bundle.windows]
+webview_install_mode = { DownloadBootstrapper = { silent = true } }
 icon_path = "assets/icons/steamwrapper.ico"
 
-[windows.nsis]
+[bundle.windows.nsis]
 install_mode = "CurrentUser"
-languages = ["SimpChinese"]
+languages = ["English", "SimpChinese"]
+installer_icon = "assets/icons/steamwrapper.ico"
 
-[windows.wix]
+[bundle.windows.wix]
 upgrade_code = "79483db6-ea14-4da3-995d-23fb6d1a1aaf"
 
 [linux]

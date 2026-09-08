@@ -85,27 +85,31 @@ try {
   }
 
   const wdioCliPath = fileURLToPath(new URL("../bin/wdio.js", import.meta.resolve("@wdio/cli")));
-  const child = spawn(
-    process.execPath,
-    [wdioCliPath, "run", "wdio.native.conf.ts"],
-    {
-      cwd: e2eDir,
-      env: {
-        ...process.env,
-        STEAMWRAPPER_E2E_ROOT: fixtureRoot,
-        STEAM_DIR: steamRoot,
-        XDG_DATA_HOME: join(fixtureRoot, "xdg-data"),
-        LOCALAPPDATA: join(fixtureRoot, "local-app-data"),
+  for (const languagePhase of ["", "save", "restore"]) {
+    const child = spawn(
+      process.execPath,
+      [wdioCliPath, "run", "wdio.native.conf.ts"],
+      {
+        cwd: e2eDir,
+        env: {
+          ...process.env,
+          STEAMWRAPPER_E2E_ROOT: fixtureRoot,
+          STEAMWRAPPER_E2E_LANGUAGE_PHASE: languagePhase,
+          STEAM_DIR: steamRoot,
+          XDG_DATA_HOME: join(fixtureRoot, "xdg-data"),
+          LOCALAPPDATA: join(fixtureRoot, "local-app-data"),
+        },
+        stdio: "inherit",
       },
-      stdio: "inherit",
-    },
-  );
-  const exitCode = await new Promise((resolveExit, reject) => {
-    child.once("error", reject);
-    child.once("exit", (code) => resolveExit(code ?? 1));
-  });
+    );
+    const exitCode = await new Promise((resolveExit, reject) => {
+      child.once("error", reject);
+      child.once("exit", (code) => resolveExit(code ?? 1));
+    });
+    process.exitCode = exitCode;
+    if (exitCode !== 0) break;
+  }
   await preserveFixtureArtifacts();
-  process.exitCode = exitCode;
 } finally {
   await rm(fixtureRoot, { recursive: true, force: true });
 }

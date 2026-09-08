@@ -2,10 +2,14 @@ use std::{cell::RefCell, path::Path};
 
 use dioxus::prelude::*;
 use steamwrapper_manager_core::{
-    AppPaths, ConfiguredProfile, LocalSteamGame, RunnerLogEntry, RunnerStatus, SaveProfileRequest,
+    AppPaths, ConfiguredProfile, Language, LocalSteamGame, RunnerLogEntry, RunnerStatus,
+    SaveProfileRequest,
 };
 
-use crate::services;
+use crate::{
+    i18n::{Message, Text as K},
+    services,
+};
 
 const APP_CSS: Asset = asset!("/assets/manager.css");
 const BRAND: Asset = asset!("/assets/steamwrapper.svg");
@@ -25,6 +29,7 @@ struct GameDraft {
     name: String,
     install_dir: String,
     cover_path: Option<String>,
+    generated_name: bool,
 }
 
 impl From<LocalSteamGame> for GameDraft {
@@ -34,6 +39,7 @@ impl From<LocalSteamGame> for GameDraft {
             name: game.name,
             install_dir: game.install_dir.unwrap_or_default(),
             cover_path: game.cover_path,
+            generated_name: false,
         }
     }
 }
@@ -45,18 +51,27 @@ impl From<ConfiguredProfile> for GameDraft {
             name: profile.name,
             install_dir: profile.game_dir,
             cover_path: None,
+            generated_name: false,
         }
     }
 }
 
 impl GameDraft {
+    fn display_name(&self, language: Language) -> String {
+        if self.generated_name {
+            K::ManualName.text(language).to_string()
+        } else {
+            self.name.clone()
+        }
+    }
     fn manual() -> Self {
         let appid = format!("manual-{}", chrono_free_nonce());
         Self {
             appid,
-            name: "手动添加的游戏".to_string(),
+            name: K::ManualName.text(Language::default()).to_string(),
             install_dir: String::new(),
             cover_path: None,
+            generated_name: true,
         }
     }
 }
@@ -67,6 +82,10 @@ pub fn App() -> Element {
     let drag_window = window.clone();
     let minimize_window = window.clone();
     let maximize_window = window.clone();
+    let preference = use_hook(services::load_language);
+    let mut language = use_context_provider(|| Signal::new(preference.clone().unwrap_or_default()));
+    let mut preference_error = use_signal(|| preference.err());
+    let current_language = language();
     let active_view = use_signal(View::default);
     let mut games = use_signal(Vec::<LocalSteamGame>::new);
     let mut profiles = use_signal(Vec::<ConfiguredProfile>::new);
@@ -78,11 +97,11 @@ pub fn App() -> Element {
     let mut launch_option = use_signal(String::new);
     let mut dialog_open = use_signal(|| false);
     let mut runner_busy = use_signal(|| false);
-    let mut status_text = use_signal(|| "准备就绪".to_string());
+    let mut status_text = use_signal(|| Message::Plain(K::Ready));
 
     use_effect(move || {
         if let Err(error) = services::bootstrap() {
-            status_text.set(format!("Runner 初始化失败：{error}"));
+            status_text.set(Message::Error(K::BootstrapFailed, error));
         }
         refresh_profiles(&mut profiles, &mut status_text);
         refresh_logs(&mut logs, &mut status_text);
@@ -91,18 +110,18 @@ pub fn App() -> Element {
     });
 
     let scan_games = move |_| {
-        status_text.set("正在扫描本地 Steam 游戏……".to_string());
+        status_text.set(Message::Plain(K::Scanning));
         match services::scan_games() {
             Ok(scanned) => {
                 let count = scanned.len();
                 games.set(scanned);
                 status_text.set(if count == 0 {
-                    "没有扫描到本地 Steam 游戏".to_string()
+                    Message::Plain(K::NoGamesFound)
                 } else {
-                    format!("已找到 {count} 个本地 Steam 游戏")
+                    Message::GamesFound(count)
                 });
             }
-            Err(error) => status_text.set(format!("扫描失败：{error}")),
+            Err(error) => status_text.set(Message::Error(K::ScanFailed, error)),
         }
     };
 
@@ -112,7 +131,7 @@ pub fn App() -> Element {
         target_path.set(String::new());
         launch_option.set(String::new());
         dialog_open.set(true);
-        status_text.set("已创建手动游戏条目，请选择目标程序后保存".to_string());
+        status_text.set(Message::Plain(K::ManualCreated));
     };
 
     let refresh_profiles_action = move |_| refresh_profiles(&mut profiles, &mut status_text);
@@ -126,7 +145,7 @@ pub fn App() -> Element {
         document::Link { rel: "icon", href: BRAND }
         Stylesheet { href: APP_CSS }
 
-        main { class: "manager-shell", "data-testid": "manager-root",
+        main { class: "manager-shell", "data-testid": "manager-root", lang: current_language.tag(),
             header { class: "app-titlebar", "data-testid": "app-titlebar", onmousedown: move |_| drag_window.drag(),
                 div { class: "app-titlebar__brand",
                     img { src: BRAND, alt: "SteamWrapper" }
@@ -137,7 +156,7 @@ pub fn App() -> Element {
                     button {
                         class: "window-control",
                         "data-testid": "window-minimize",
-                        "aria-label": "最小化窗口",
+                        "aria-label": K::Minimize.text(current_language),
                         onmousedown: move |event| event.stop_propagation(),
                         onclick: move |_| minimize_window.set_minimized(true),
                         "—"
@@ -145,7 +164,7 @@ pub fn App() -> Element {
                     button {
                         class: "window-control",
                         "data-testid": "window-maximize",
-                        "aria-label": "最大化或还原窗口",
+                        "aria-label": K::Maximize.text(current_language),
                         onmousedown: move |event| event.stop_propagation(),
                         onclick: move |_| maximize_window.toggle_maximized(),
                         "□"
@@ -153,7 +172,7 @@ pub fn App() -> Element {
                     button {
                         class: "window-control window-control--close",
                         "data-testid": "window-close",
-                        "aria-label": "关闭窗口",
+                        "aria-label": K::CloseWindow.text(current_language),
                         onmousedown: move |event| event.stop_propagation(),
                         onclick: move |_| window.close(),
                         "×"
@@ -166,7 +185,19 @@ pub fn App() -> Element {
 
                 section { class: "workspace",
                     header { class: "workspace-toolbar",
-                        p { class: "status", "data-testid": "status-text", "{status_text}" }
+                        p { class: "status", "data-testid": "status-text", role: "status", "aria-live": "polite", {status_text().render(current_language)} }
+                        LanguagePicker {
+                            language: current_language,
+                            on_change: move |selected| {
+                                match services::save_language(selected) {
+                                    Ok(()) => { language.set(selected); preference_error.set(None); }
+                                    Err(error) => preference_error.set(Some(error)),
+                                }
+                            }
+                        }
+                    }
+                    if let Some(error) = preference_error() {
+                        p { class: "error", role: "alert", "data-testid": "language-error", {error.message(current_language)} }
                     }
                     section { class: "content",
                         match active_view() {
@@ -181,7 +212,7 @@ pub fn App() -> Element {
                                         target_path.set(String::new());
                                         launch_option.set(String::new());
                                         dialog_open.set(true);
-                                        status_text.set("正在配置游戏启动目标".to_string());
+                                        status_text.set(Message::Plain(K::Configuring));
                                     },
                                 }
                             },
@@ -194,7 +225,7 @@ pub fn App() -> Element {
                                         launch_option.set(profile.launch_option.clone());
                                         selected_game.set(Some(profile.into()));
                                         dialog_open.set(true);
-                                        status_text.set("正在编辑已保存的游戏配置".to_string());
+                                        status_text.set(Message::Plain(K::Editing));
                                     },
                                 }
                             },
@@ -213,14 +244,14 @@ pub fn App() -> Element {
                                         match services::install_runner() {
                                             Ok(outcome) => {
                                                 let message = if outcome.changed {
-                                                    "Runner 已安装到稳定路径"
+                                                    K::RunnerInstalled
                                                 } else {
-                                                    "Runner 已是当前版本，无需重复复制"
+                                                    K::RunnerCurrent
                                                 };
                                                 runner_status.set(Some(outcome.status));
-                                                status_text.set(message.to_string());
+                                                status_text.set(Message::Plain(message));
                                             }
-                                            Err(error) => status_text.set(format!("Runner 操作失败：{error}")),
+                                            Err(error) => status_text.set(Message::Error(K::RunnerFailed, error)),
                                         }
                                         runner_busy.set(false);
                                     },
@@ -244,8 +275,9 @@ pub fn App() -> Element {
                             if let Some(mut game) = game {
                                 if game.appid.starts_with("manual-") {
                                     let path_info = path_info(&path);
-                                    if game.name == "手动添加的游戏" {
+                                    if game.generated_name && !path_info.name.is_empty() {
                                         game.name = path_info.name;
+                                        game.generated_name = false;
                                     }
                                     if game.install_dir.is_empty() {
                                         game.install_dir = path_info.directory;
@@ -254,7 +286,7 @@ pub fn App() -> Element {
                                 }
                             }
                             target_path.set(path);
-                            status_text.set("已选择目标程序".to_string());
+                            status_text.set(Message::Plain(K::TargetSelected));
                         }
                     },
                     on_generate: move |_| {
@@ -262,29 +294,29 @@ pub fn App() -> Element {
                             match services::generate_launch_option(&game.appid) {
                                 Ok(option) => {
                                     launch_option.set(option);
-                                    status_text.set("已生成启动选项".to_string());
+                                    status_text.set(Message::Plain(K::OptionsGenerated));
                                 }
-                                Err(error) => status_text.set(format!("无法生成可用启动选项：{error}")),
+                                Err(error) => status_text.set(Message::Error(K::GenerateFailed, error)),
                             }
                         }
                     },
                     on_save: move |_| {
                         let Some(game) = selected_game() else {
-                            status_text.set("请先选择一个游戏".to_string());
+                            status_text.set(Message::Plain(K::ChooseGame));
                             return;
                         };
                         if game.install_dir.trim().is_empty() {
-                            status_text.set("当前游戏缺少安装目录，暂时无法保存配置".to_string());
+                            status_text.set(Message::Plain(K::MissingDirectory));
                             return;
                         }
                         let target = target_path().trim().to_string();
                         if target.is_empty() {
-                            status_text.set("请填写真正要启动的 exe 或 launcher 路径".to_string());
+                            status_text.set(Message::Plain(K::EnterTarget));
                             return;
                         }
                         match services::save_profile(SaveProfileRequest {
                             appid: game.appid.clone(),
-                            name: game.name.clone(),
+                            name: game.display_name(language()),
                             game_dir: game.install_dir.clone(),
                             target,
                         }) {
@@ -292,13 +324,13 @@ pub fn App() -> Element {
                                 match services::generate_launch_option(&game.appid) {
                                     Ok(option) => {
                                         launch_option.set(option);
-                                        status_text.set("配置已保存，并已生成 Launch Options".to_string());
+                                        status_text.set(Message::Plain(K::Saved));
                                     }
-                                    Err(error) => status_text.set(format!("配置已保存，但 Runner 尚不可用：{error}")),
+                                    Err(error) => status_text.set(Message::Error(K::SavedRunnerUnavailable, error)),
                                 }
                                 refresh_profiles(&mut profiles, &mut status_text);
                             }
-                            Err(error) => status_text.set(format!("保存失败：{error}")),
+                            Err(error) => status_text.set(Message::Error(K::SaveFailed, error)),
                         }
                     },
                 }
@@ -308,8 +340,27 @@ pub fn App() -> Element {
 }
 
 #[component]
+fn LanguagePicker(language: Language, on_change: EventHandler<Language>) -> Element {
+    rsx! {
+        div { class: "action-row", role: "group", "aria-label": K::LanguageLabel.text(language), "data-testid": "language-picker",
+            button {
+                class: "button", "data-testid": "language-en", lang: "en-US",
+                "aria-pressed": (language == Language::English).to_string(),
+                onclick: move |_| on_change.call(Language::English), "English"
+            }
+            button {
+                class: "button", "data-testid": "language-zh", lang: "zh-CN",
+                "aria-pressed": (language == Language::SimplifiedChinese).to_string(),
+                onclick: move |_| on_change.call(Language::SimplifiedChinese), "简体中文"
+            }
+        }
+    }
+}
+
+#[component]
 fn NavButton(
     label: &'static str,
+    test_id: &'static str,
     icon: &'static str,
     active: bool,
     onclick: EventHandler<MouseEvent>,
@@ -317,7 +368,7 @@ fn NavButton(
     rsx! {
         button {
             class: if active { "nav-button nav-button--active" } else { "nav-button" },
-            "data-testid": "nav-{label}",
+            "data-testid": "nav-{test_id}",
             onclick,
             span { class: "nav-icon", "{icon}" }
             span { class: "nav-label", "{label}" }
@@ -327,6 +378,8 @@ fn NavButton(
 
 #[component]
 fn Sidebar(mut active_view: Signal<View>) -> Element {
+    let language = use_context::<Signal<Language>>()();
+    let t = |key: K| key.text(language);
     let mut collapsed = use_signal(|| false);
 
     rsx! {
@@ -337,24 +390,25 @@ fn Sidebar(mut active_view: Signal<View>) -> Element {
                 img { src: BRAND, alt: "SteamWrapper" }
                 div { class: "brand-copy",
                     strong { "SteamWrapper" }
-                    span { "Manager v2 · Dioxus preview" }
+                    span { {t(K::Preview)} }
                 }
             }
             nav { class: "navigation",
-                NavButton { label: "游戏库", icon: "▦", active: active_view() == View::Library,
+                NavButton { label: t(K::Library), test_id: "library", icon: "▦", active: active_view() == View::Library,
                     onclick: move |_| active_view.set(View::Library) }
-                NavButton { label: "已配置游戏", icon: "✓", active: active_view() == View::Configured,
+                NavButton { label: t(K::Configured), test_id: "configured", icon: "✓", active: active_view() == View::Configured,
                     onclick: move |_| active_view.set(View::Configured) }
-                NavButton { label: "日志", icon: "≡", active: active_view() == View::Logs,
+                NavButton { label: t(K::Logs), test_id: "logs", icon: "≡", active: active_view() == View::Logs,
                     onclick: move |_| active_view.set(View::Logs) }
-                NavButton { label: "设置", icon: "⚙", active: active_view() == View::Settings,
+                NavButton { label: t(K::Settings), test_id: "settings", icon: "⚙", active: active_view() == View::Settings,
                     onclick: move |_| active_view.set(View::Settings) }
             }
             button {
                 class: "sidebar-toggle",
                 "data-testid": "sidebar-toggle",
+                "aria-label": if collapsed() { t(K::Expand) } else { t(K::Collapse) },
                 onclick: move |_| collapsed.toggle(),
-                if collapsed() { "›" } else { "‹  折叠侧边栏" }
+                if collapsed() { "›" } else { {format!("‹  {}", t(K::Collapse))} }
             }
         }
     }
@@ -368,26 +422,28 @@ fn LibraryView(
     on_manual: EventHandler<MouseEvent>,
     on_open: EventHandler<LocalSteamGame>,
 ) -> Element {
+    let language = use_context::<Signal<Language>>()();
+    let t = |key: K| key.text(language);
     rsx! {
         section { class: "hero-card",
             div { class: "hero-copy",
-                span { class: "eyebrow", "本地扫描 · 本地缓存优先，官方 Steam CDN 回退" }
-                h1 { "游戏库" }
-                p { "按照步骤完成配置；选择游戏后填写真正需要启动的 exe 或 launcher。" }
+                span { class: "eyebrow", {t(K::CoverSources)} }
+                h1 { {t(K::Library)} }
+                p { {t(K::LibraryHelp)} }
             }
             div { class: "action-row",
-                button { class: "button button--primary", "data-testid": "scan-games", onclick: on_scan, "扫描本地 Steam 游戏" }
-                button { class: "button", "data-testid": "manual-add-game", onclick: on_manual, "手动添加游戏" }
+                button { class: "button button--primary", "data-testid": "scan-games", onclick: on_scan, {t(K::ScanGames)} }
+                button { class: "button", "data-testid": "manual-add-game", onclick: on_manual, {t(K::AddGame)} }
             }
             div { class: "guide-grid",
-                GuideCard { number: "1", title: "扫描", description: "读取本地 Steam 游戏库" }
-                GuideCard { number: "2", title: "选择", description: "填写实际启动的程序" }
-                GuideCard { number: "3", title: "保存", description: "生成 Launch Options" }
+                GuideCard { number: "1", title: t(K::Scan), description: t(K::ScanHelp) }
+                GuideCard { number: "2", title: t(K::Choose), description: t(K::ChooseHelp) }
+                GuideCard { number: "3", title: t(K::Save), description: t(K::SaveHelp) }
             }
         }
         section { class: "game-grid",
             if games.is_empty() {
-                EmptyState { title: "还没有游戏列表", description: "点击“扫描本地 Steam 游戏”开始。" }
+                EmptyState { title: t(K::EmptyLibrary), description: t(K::EmptyLibraryHelp) }
             } else {
                 for game in games {
                     {
@@ -397,7 +453,7 @@ fn LibraryView(
                         let install_dir = game
                             .install_dir
                             .clone()
-                            .unwrap_or_else(|| "未找到安装目录".to_string());
+                            .unwrap_or_else(|| t(K::DirectoryNotFound).to_string());
                         rsx! {
                             button {
                                 class: if is_selected { "game-card game-card--selected" } else { "game-card" },
@@ -420,6 +476,8 @@ fn LibraryView(
 
 #[component]
 fn GameCover(game: LocalSteamGame) -> Element {
+    let language = use_context::<Signal<Language>>()();
+    let t = |key: K| key.text(language);
     let mut failed = use_signal(|| false);
     let image_url = game.cover_path.as_deref().and_then(cover_url);
 
@@ -428,11 +486,11 @@ fn GameCover(game: LocalSteamGame) -> Element {
             if let Some(url) = image_url.filter(|_| !failed()) {
                 img {
                     src: url,
-                    alt: "{game.name} 的封面",
+                    alt: t(K::CoverAlt).replace("{name}", &game.name),
                     onerror: move |_| failed.set(true),
                 }
             } else {
-                div { class: "cover-placeholder", span { "▧" } small { "封面暂不可用" } }
+                div { class: "cover-placeholder", span { "▧" } small { {t(K::MissingCover)} } }
             }
         }
     }
@@ -449,15 +507,17 @@ fn ConfiguredView(
     on_refresh: EventHandler<MouseEvent>,
     on_open: EventHandler<ConfiguredProfile>,
 ) -> Element {
+    let language = use_context::<Signal<Language>>()();
+    let t = |key: K| key.text(language);
     rsx! {
         section { class: "panel",
             header { class: "panel-header",
-                div { h1 { "已配置游戏" } p { "这里读取本机 profiles.toml，点击条目可以继续编辑。" } }
-                button { class: "button", "data-testid": "refresh-profiles", onclick: on_refresh, "刷新" }
+                div { h1 { {t(K::Configured)} } p { {t(K::ConfiguredHelp)} } }
+                button { class: "button", "data-testid": "refresh-profiles", onclick: on_refresh, {t(K::Refresh)} }
             }
             div { class: "list-stack",
                 if profiles.is_empty() {
-                    EmptyState { title: "还没有保存过配置", description: "先到游戏库选择一个游戏，保存后会出现在这里。" }
+                    EmptyState { title: t(K::EmptyProfiles), description: t(K::EmptyProfilesHelp) }
                 } else {
                     for profile in profiles {
                         {
@@ -467,8 +527,8 @@ fn ConfiguredView(
                                 button { class: "profile-card", "data-testid": "configured-profile-{id}", onclick: move |_| on_open.call(profile_for_click.clone()),
                                     div { class: "profile-card__heading", div { strong { "{profile.name}" } span { class: "muted", "AppID: {profile.appid}" } } span { class: "arrow", "›" } }
                                     div { class: "path-grid",
-                                        PathLine { label: "游戏目录", value: profile.game_dir.clone() }
-                                        PathLine { label: "目标程序", value: profile.target.clone() }
+                                        PathLine { label: t(K::GameDirectory), value: profile.game_dir.clone() }
+                                        PathLine { label: t(K::TargetProgram), value: profile.target.clone() }
                                     }
                                 }
                             }
@@ -482,20 +542,22 @@ fn ConfiguredView(
 
 #[component]
 fn LogsView(logs: Vec<RunnerLogEntry>, on_refresh: EventHandler<MouseEvent>) -> Element {
+    let language = use_context::<Signal<Language>>()();
+    let t = |key: K| key.text(language);
     rsx! {
         section { class: "panel",
             header { class: "panel-header",
-                div { h1 { "日志" } p { "显示 logs 目录下最近的 Runner 日志，便于排查启动失败。" } }
-                button { class: "button", "data-testid": "refresh-logs", onclick: on_refresh, "刷新" }
+                div { h1 { {t(K::Logs)} } p { {t(K::LogsHelp)} } }
+                button { class: "button", "data-testid": "refresh-logs", onclick: on_refresh, {t(K::Refresh)} }
             }
             div { class: "list-stack",
                 if logs.is_empty() {
-                    EmptyState { title: "暂无日志", description: "Runner 启动过游戏后，这里会显示日志文件。" }
+                    EmptyState { title: t(K::EmptyLogs), description: t(K::EmptyLogsHelp) }
                 } else {
                     for log in logs {
                         {
                             let content = if log.content.is_empty() {
-                                "日志为空".to_string()
+                                t(K::EmptyLog).to_string()
                             } else {
                                 log.content.clone()
                             };
@@ -523,49 +585,51 @@ fn SettingsView(
     on_refresh_runner: EventHandler<MouseEvent>,
     on_install: EventHandler<MouseEvent>,
 ) -> Element {
+    let language = use_context::<Signal<Language>>()();
+    let t = |key: K| key.text(language);
     let status_label = runner_status
         .as_ref()
         .map(|status| {
             if status.healthy {
-                "已安装"
+                t(K::Installed)
             } else if status.needs_install {
-                "未安装"
+                t(K::NotInstalled)
             } else if status.needs_update {
-                "需要更新"
+                t(K::UpdateNeeded)
             } else {
-                "检查失败"
+                t(K::CheckFailed)
             }
         })
-        .unwrap_or("正在读取……");
+        .unwrap_or(t(K::Reading));
     let runner_path = runner_status
         .as_ref()
         .map(|item| item.path.clone())
         .or_else(|| paths.as_ref().map(|item| item.runner_path.clone()))
-        .unwrap_or_else(|| "正在读取……".to_string());
+        .unwrap_or_else(|| t(K::Reading).to_string());
     let bundled_hash = runner_status
         .as_ref()
         .and_then(|item| item.bundled_version.as_ref())
         .map(|hash| short_hash(hash))
-        .unwrap_or_else(|| "未知".to_string());
+        .unwrap_or_else(|| t(K::Unknown).to_string());
     rsx! {
         section { class: "panel", "data-testid": "app-paths",
             header { class: "panel-header",
-                div { h1 { "设置" } p { "查看稳定数据目录和 Steam 启动所需的 Runner 状态。" } }
+                div { h1 { {t(K::Settings)} } p { {t(K::SettingsHelp)} } }
                 div { class: "action-row",
-                    button { class: "button", "data-testid": "refresh-runner-status", onclick: on_refresh_runner, "检查 Runner" }
-                    button { class: "button", "data-testid": "refresh-paths", onclick: on_refresh_paths, "刷新路径" }
+                    button { class: "button", "data-testid": "refresh-runner-status", onclick: on_refresh_runner, {t(K::CheckRunner)} }
+                    button { class: "button", "data-testid": "refresh-paths", onclick: on_refresh_paths, {t(K::RefreshPaths)} }
                 }
             }
             article { class: "runner-card",
                 div {
                     h2 { "SteamWrapper Runner" }
-                    p { "data-testid": "runner-status", "Runner 状态：{status_label}" }
-                    p { class: "muted break-all", "data-testid": "runner-path", "Runner 路径：{runner_path}" }
+                    p { "data-testid": "runner-status", {format!("{} {status_label}", t(K::RunnerStatus))} }
+                    p { class: "muted break-all", "data-testid": "runner-path", {format!("{} {runner_path}", t(K::RunnerPath))} }
                     p { class: "muted break-all", "data-testid": "runner-version",
-                        "随包摘要：{bundled_hash}"
+                        {format!("{} {bundled_hash}", t(K::BundledHash))}
                     }
                     if let Some(error) = runner_status.as_ref().and_then(|item| item.last_error.as_ref()) {
-                        p { class: "error", "data-testid": "runner-error", "{error}" }
+                        p { class: "error", "data-testid": "runner-error", {error.message(language)} }
                     }
                 }
                 if runner_status.as_ref().is_some_and(|status| !status.healthy) {
@@ -574,20 +638,20 @@ fn SettingsView(
                         "data-testid": if runner_status.as_ref().is_some_and(|status| status.needs_install) { "runner-install" } else { "runner-repair" },
                         disabled: runner_busy,
                         onclick: on_install,
-                        if runner_busy { "正在处理……" } else if runner_status.as_ref().is_some_and(|status| status.needs_install) { "安装 Runner" } else { "重新安装 / 修复 Runner" }
+                        if runner_busy { {t(K::Working)} } else if runner_status.as_ref().is_some_and(|status| status.needs_install) { {t(K::InstallRunner)} } else { {t(K::RepairRunner)} }
                     }
                 }
             }
             div { class: "path-grid",
                 if let Some(paths) = paths {
-                    PathCard { label: "用户数据目录", value: paths.app_data_dir }
+                    PathCard { label: t(K::UserData), value: paths.app_data_dir }
                     PathCard { label: "profiles.toml", value: paths.profiles_path }
-                    PathCard { label: "Runner 稳定路径", value: paths.runner_path }
-                    PathCard { label: "日志目录", value: paths.logs_dir }
-                    PathCard { label: "备份目录", value: paths.backups_dir }
-                    PathCard { label: "缓存目录", value: paths.cache_dir }
+                    PathCard { label: t(K::StableRunner), value: paths.runner_path }
+                    PathCard { label: t(K::LogsDirectory), value: paths.logs_dir }
+                    PathCard { label: t(K::BackupsDirectory), value: paths.backups_dir }
+                    PathCard { label: t(K::CacheDirectory), value: paths.cache_dir }
                 } else {
-                    EmptyState { title: "路径信息未加载", description: "点击刷新重新读取。" }
+                    EmptyState { title: t(K::EmptyPaths), description: t(K::EmptyPathsHelp) }
                 }
             }
         }
@@ -605,43 +669,47 @@ fn ConfigDialog(
     on_generate: EventHandler<MouseEvent>,
     on_save: EventHandler<MouseEvent>,
 ) -> Element {
+    let language = use_context::<Signal<Language>>()();
+    let t = |key: K| key.text(language);
     let Some(game) = game else {
         return rsx! {};
     };
+    let game_name = game.display_name(language);
     let game_directory = if game.install_dir.is_empty() {
-        "请选择目标程序，或输入游戏目录。".to_string()
+        t(K::ChooseDirectory).to_string()
     } else {
         game.install_dir.clone()
     };
     rsx! {
         div { class: "dialog-backdrop", "data-testid": "config-dialog",
-            article { class: "dialog-card",
+            article { class: "dialog-card", role: "dialog", "aria-modal": "true", "aria-label": t(K::ConfigureTarget),
                 header { class: "dialog-header",
-                    div { h1 { "配置启动目标" } p { "{game.name} · AppID {game.appid}" } }
-                    button { class: "icon-button", onclick: on_close, "×" }
+                    div { h1 { {t(K::ConfigureTarget)} } p { "{game_name} · AppID {game.appid}" } }
+                    button { class: "icon-button", "data-testid": "close-config", "aria-label": t(K::CloseDialog), onclick: on_close, "×" }
                 }
-                div { class: "game-directory", strong { "游戏目录" } p { "{game_directory}" } }
-                label { class: "field", span { "真正要启动的程序" }
+                div { class: "game-directory", strong { {t(K::GameDirectory)} } p { "{game_directory}" } }
+                label { class: "field", span { {t(K::ActualProgram)} }
                     div { class: "file-input-row",
                         input {
                             r#type: "text",
                             "data-testid": "target-path",
+                            "aria-label": t(K::ActualProgram),
                             value: "{target_path}",
-                            placeholder: "例如 Game_CHS.exe 或 launcher.exe",
+                            placeholder: t(K::TargetPlaceholder),
                             oninput: move |event| on_target_change.call(event.value()),
                         }
-                        label { class: "button file-button", "浏览",
-                            input { r#type: "file", accept: ".exe,.bat,.cmd,.sh,.desktop", onchange: on_choose_target }
+                        label { class: "button file-button", {t(K::Browse)}
+                            input { r#type: "file", "aria-label": t(K::Browse), accept: ".exe,.bat,.cmd,.sh,.desktop", onchange: on_choose_target }
                         }
                     }
                 }
                 div { class: "action-row",
-                    button { class: "button button--primary", "data-testid": "save-profile", onclick: on_save, "保存并生成启动选项" }
-                    button { class: "button", onclick: on_generate, "仅生成启动选项" }
-                    button { class: "button button--disabled", disabled: true, "测试启动（稍后实现）" }
+                    button { class: "button button--primary", "data-testid": "save-profile", onclick: on_save, {t(K::SaveOptions)} }
+                    button { class: "button", onclick: on_generate, {t(K::GenerateOptions)} }
+                    button { class: "button button--disabled", disabled: true, {t(K::TestLater)} }
                 }
-                label { class: "field", span { "Launch Options" }
-                    textarea { "data-testid": "launch-option", readonly: true, value: "{launch_option}", placeholder: "保存配置后生成" }
+                label { class: "field", span { {t(K::LaunchOptions)} }
+                    textarea { "data-testid": "launch-option", "aria-label": t(K::LaunchOptions), readonly: true, value: "{launch_option}", placeholder: t(K::OptionsPlaceholder) }
                 }
             }
         }
@@ -663,34 +731,34 @@ fn PathCard(label: &'static str, value: String) -> Element {
     rsx! { div { class: "path-card", strong { "{label}" } p { "{value}" } } }
 }
 
-fn refresh_profiles(profiles: &mut Signal<Vec<ConfiguredProfile>>, status: &mut Signal<String>) {
+fn refresh_profiles(profiles: &mut Signal<Vec<ConfiguredProfile>>, status: &mut Signal<Message>) {
     match services::list_profiles() {
         Ok(items) => profiles.set(items),
-        Err(error) => status.set(format!("读取配置失败：{error}")),
+        Err(error) => status.set(Message::Error(K::ProfilesFailed, error)),
     }
 }
 
-fn refresh_logs(logs: &mut Signal<Vec<RunnerLogEntry>>, status: &mut Signal<String>) {
+fn refresh_logs(logs: &mut Signal<Vec<RunnerLogEntry>>, status: &mut Signal<Message>) {
     match services::list_logs() {
         Ok(items) => logs.set(items),
-        Err(error) => status.set(format!("读取日志失败：{error}")),
+        Err(error) => status.set(Message::Error(K::LogsFailed, error)),
     }
 }
 
-fn refresh_paths(paths: &mut Signal<Option<AppPaths>>, status: &mut Signal<String>) {
+fn refresh_paths(paths: &mut Signal<Option<AppPaths>>, status: &mut Signal<Message>) {
     match services::paths() {
         Ok(items) => paths.set(Some(items)),
-        Err(error) => status.set(format!("读取路径失败：{error}")),
+        Err(error) => status.set(Message::Error(K::PathsFailed, error)),
     }
 }
 
 fn refresh_runner_status(
     status_signal: &mut Signal<Option<RunnerStatus>>,
-    status: &mut Signal<String>,
+    status: &mut Signal<Message>,
 ) {
     match services::runner_status() {
         Ok(item) => status_signal.set(Some(item)),
-        Err(error) => status.set(format!("检查 Runner 失败：{error}")),
+        Err(error) => status.set(Message::Error(K::RunnerCheckFailed, error)),
     }
 }
 
@@ -725,7 +793,7 @@ fn path_info(path: &str) -> PathInfo {
     let name = path
         .file_stem()
         .and_then(|name| name.to_str())
-        .unwrap_or("手动添加的游戏")
+        .unwrap_or_default()
         .to_string();
     let directory = path
         .parent()
@@ -756,6 +824,10 @@ fn chrono_free_nonce() -> u128 {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn manually_added_game_defaults_to_english() {
+        assert_eq!(super::GameDraft::manual().name, "Manually added game");
+    }
     use super::{cover_url, file_url, path_info, short_hash};
 
     #[test]

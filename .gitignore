@@ -21,6 +21,10 @@ TestResults/
 
 # Local SteamWrapper runtime data
 profiles.toml
+ui-settings.json
+ui-settings.json.lock
+ui-settings.json.tmp-*
+.ui-settings.json.tmp-*
 logs/
 backups/
 cache/

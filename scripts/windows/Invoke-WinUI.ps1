@@ -66,7 +66,9 @@ foreach ($running in @(Get-Process -Name 'SteamWrapper.Manager' -ErrorAction Sil
 $output = Complete-WinUIPublish -Root $publishRoot -Candidate $candidate -RequiredFiles @(
     'SteamWrapper.Manager.exe', 'SteamWrapper.Manager.dll', 'SteamWrapper.Application.dll', 'SteamWrapper.Manager.pri',
     'coreclr.dll', 'Microsoft.UI.Xaml.dll', 'Microsoft.WindowsAppRuntime.dll', 'Microsoft.Windows.Storage.Pickers.Projection.dll',
-    'Runner/SteamWrapperRunner.exe', 'Runner/runner-manifest.json'
+    'Runner/SteamWrapperRunner.exe', 'Runner/runner-manifest.json',
+    'Assets/steamwrapper.svg', 'Assets/steamwrapper.ico',
+    'zh-CN/SteamWrapper.Application.resources.dll'
 )
 Write-Output "WinUI preview: $output"
 if ($Action -ne 'Sandbox') { return }

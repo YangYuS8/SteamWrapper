@@ -1,3 +1,4 @@
+using SteamWrapper.Application.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -8,7 +9,8 @@ namespace SteamWrapper.Manager;
 
 internal sealed class AddGameDialog : ContentDialog
 {
-    private readonly TextBox search = new() { PlaceholderText = "搜索游戏名称或 AppID" };
+    private readonly Localizer localizer;
+    private readonly TextBox search = new();
     private readonly TextBlock notice = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12, Opacity = .75 };
     private readonly ListView games = new() { Height = 310, SelectionMode = ListViewSelectionMode.Single };
     private IReadOnlyList<SteamGame> scanned = [];
@@ -18,26 +20,29 @@ internal sealed class AddGameDialog : ContentDialog
     public bool Manual { get; private set; }
     public IReadOnlyList<SteamGame> DiscoveredGames => scanned;
 
-    public AddGameDialog(Window owner)
+    public AddGameDialog(Window owner, Localizer localizer)
     {
-        Title = "添加 Steam 游戏";
-        PrimaryButtonText = "使用此游戏";
-        SecondaryButtonText = "手动填写 AppID";
-        CloseButtonText = "取消";
+        this.localizer = localizer;
+        Language = localizer.Language;
+        search.PlaceholderText = localizer["SearchGames"];
+        Title = localizer["AddSteamGame"];
+        PrimaryButtonText = localizer["UseGame"];
+        SecondaryButtonText = localizer["ManualAppId"];
+        CloseButtonText = localizer["Cancel"];
         IsPrimaryButtonEnabled = false;
         DefaultButton = ContentDialogButton.Primary;
-        var browse = new Button { Content = "选择 Steam 文件夹…" };
+        var browse = new Button { Content = localizer["BrowseSteam"] };
         browse.Click += async (_, _) =>
         {
             try
             {
-                var selected = await new FolderPicker(owner.AppWindow.Id) { CommitButtonText = "选择 Steam 文件夹" }.PickSingleFolderAsync();
+                var selected = await new FolderPicker(owner.AppWindow.Id) { CommitButtonText = localizer["PickSteam"] }.PickSingleFolderAsync();
                 if (selected is not null) await ScanAsync(selected.Path);
             }
-            catch (Exception ex) { notice.Text = "无法选择文件夹：" + ex.Message; }
+            catch (Exception ex) { notice.Text = localizer.Format(Messages.Text("PickFolderFailed", ex)); }
         };
         var panel = new StackPanel { Spacing = 12, MinWidth = 420 };
-        panel.Children.Add(new TextBlock { Text = "从本机 Steam 游戏中选择，或手动添加。", TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = localizer["AddSteamDescription"], TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(search);
         panel.Children.Add(games);
         panel.Children.Add(notice);
@@ -61,17 +66,17 @@ internal sealed class AddGameDialog : ContentDialog
         scanCancellation = cancellation;
         scanned = [];
         Filter();
-        notice.Text = "正在读取本机 Steam 游戏…";
+        notice.Text = localizer["Scanning"];
         try
         {
             var result = await new SteamScanner().ScanAsync(root, cancellation.Token);
             if (closed || cancellation.IsCancellationRequested) return;
             scanned = result.Games;
             Filter();
-            notice.Text = result.Warnings.Count > 0 ? string.Join("\n", result.Warnings) : scanned.Count == 0 ? "未找到已安装游戏。可选择 Steam 文件夹，或手动填写 AppID。" : $"找到 {scanned.Count} 款本机游戏";
+            notice.Text = result.Warnings.Count > 0 ? string.Join("\n", result.WarningTexts.Select(localizer.Format)) : scanned.Count == 0 ? localizer["NoGames"] : localizer.Format(Messages.Text("GamesFound", scanned.Count));
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
-        catch (Exception ex) { if (!closed && !cancellation.IsCancellationRequested) notice.Text = "读取失败，可手动添加。" + ex.Message; }
+        catch (Exception ex) { if (!closed && !cancellation.IsCancellationRequested) notice.Text = localizer.Format(Messages.Text("ScanFailed", ex)); }
         finally
         {
             if (ReferenceEquals(scanCancellation, cancellation)) scanCancellation = null;

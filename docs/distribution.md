@@ -1,170 +1,196 @@
-# v2 分发与安装方案
+<a id="v2-分发与安装方案"></a>
 
-## 原则
+# v2 distribution and installation
 
-SteamWrapper v2 当前优先做好 Windows 安装、更新与卸载。WinUI 预览已支持本地自包含目录发布，每用户安装器尚未实现；下文 Dioxus bundle 命令继续描述旧交付链。见 [部署评估](winui3-assessment.md#部署与稳定路径)与 [Windows 主方案](windows-v2-design.md#7-安装更新卸载)。Linux / SteamOS 后续交付暂缓。稳定 Runner 路径和已有 profile 必须保留。
+English | [简体中文](distribution.zh-CN.md)
 
-- 安装默认不需要管理员权限，也不要求用户理解 Runner / TOML；
-- 更新覆盖 Manager 程序，但保留稳定用户数据；
-- 卸载默认删除程序本体，清理用户数据必须是明确选择；
-- GitHub Release 与 CNB Release 双渠道为待验收的正式交付目标；
-- 改写 Steam Launch Options 前必须先备份，后续一键应用功能不得在 Steam 运行时盲写配置。
+<a id="原则"></a>
 
-WinUI 目标安装包同时携带 .NET 与 Windows App SDK，独立 Rust Runner 随包安装到稳定目录，不包含 Rust FFI bridge。实际安装器需在无开发环境的 Windows 11 x64 上验证，项目属性不等于零运行时准备已实现。
+## Principles
 
-默认卸载只移除 Manager，保留仍可能被 Steam 启动项引用的稳定 Runner、配置、日志和备份。完整移除 Runner 前需先解除引用；手动粘贴或无法枚举的启动项不能假定已恢复。更新时也不能仅因摘要不同就让旧 Manager 降级稳定 Runner，需明确版本兼容与占用失败策略。这些是新安装器验收要求，当前 Dioxus 实现不因此获得已验证声明。
+SteamWrapper v2 currently prioritizes Windows installation, updates, and uninstall. The WinUI preview supports local self-contained directory publishing; a per-user installer is not yet implemented. The Dioxus bundle commands below continue to describe the retained delivery chain. See the [deployment assessment](winui3-assessment.md#部署与稳定路径) and [Windows design](windows-v2-design.md#7-安装更新卸载). Later Linux / SteamOS delivery is deferred. Stable Runner paths and existing profiles must be preserved.
 
-## WinUI 本地预览目录
+- Default installation should not require administrator rights or understanding Runner/TOML.
+- Updates replace Manager program files while preserving stable user data.
+- Uninstall removes the application by default; deleting user data must be an explicit choice.
+- GitHub Release and CNB Release are intended delivery channels that still require acceptance.
+- Back up before changing Steam Launch Options. Future one-click apply must not blindly write configuration while Steam is running.
 
-`mise run winui:publish` 在 `target/winui/publish` 生成 Windows 11 24H2 x64 预览。整个目录包括 Manager、.NET、Windows App SDK、品牌资源与 `Runner/`；没有单 EXE 或安装器承诺。`winui:sandbox` 使用一次性隔离目录启动预览，普通运行 EXE 则使用真实 `%LOCALAPPDATA%`。
+The target WinUI installer bundles both .NET and Windows App SDK, installing the independent Rust Runner at its stable path without a Rust FFI bridge. The actual installer must be tested on Windows 11 x64 without a development environment. Project properties alone do not establish that players need no runtime preparation.
 
-构建从 Runner Cargo 版本和实际二进制 SHA-256 生成 `runner-manifest.json`（schemaVersion 1 / contractVersion 2）。C# 安装器只接受摘要匹配的资源，原子安装到稳定 `bin/`；较新兼容版本保留，未知版本或同版本不同摘要拒绝覆盖。摘要绑定的 `runner-releases/` 元数据支持二进制/sidecar 提交中断后的识别。摘要用于一致性校验，不是发行者签名；不能据此宣称安装包已认证。
+Default uninstall removes Manager only, retaining stable Runner, configuration, logs, and backups that Steam Launch Options may still reference. Remove references before fully removing Runner; manually pasted or unenumerable options cannot be assumed restored. An older Manager must not downgrade stable Runner merely because its hash differs. Version compatibility and handling of busy files must be explicit. These are new-installer acceptance requirements, not evidence that the current Dioxus implementation passed them.
 
-现有 Runner 若与随包字节相同，可被确认并采用；未知且不同的已有 Runner 会提示使用匹配安装包，不能自动删掉强装。更新占用失败保留旧二进制和用户配置。Manager 缺少 Runner 资源仍可编辑和保存配置，但不会给出“已就绪”的启动项。
+<a id="winui-本地预览目录"></a>
 
-发布链默认切换、安装器签名/更新/卸载、干净 Windows VM 与真实 Steam 验收留在阶段 C。
+## Local WinUI preview directory
+
+`mise run winui:publish` generates the Windows 11 24H2 x64 preview in `target/winui/publish`. The complete directory includes Manager, .NET, Windows App SDK, brand resources, and `Runner/`. There is no single-EXE or installer promise. `winui:sandbox` launches the preview using disposable isolated directories; ordinarily running the EXE uses real `%LOCALAPPDATA%`.
+
+The build generates `runner-manifest.json` (schemaVersion 1 / contractVersion 2) from Runner's Cargo version and actual binary SHA-256. The C# installer accepts only hash-matching resources and installs atomically to stable `bin/`. It preserves newer compatible versions and rejects unknown versions or same-version/different-hash replacements. Hash-bound `runner-releases/` metadata supports recognition after an interrupted binary/sidecar commit. Hashes check consistency; they are not publisher signatures and do not establish package authentication.
+
+An existing Runner with identical bundled bytes can be recognized and adopted. An unknown, different Runner prompts the user to use a matching package rather than being deleted or forcibly replaced. A busy-file update failure preserves the old binary and user configuration. Manager can still edit/save configuration if Runner resources are missing, but does not present Launch Options as ready.
+
+Switching the default release chain, installer signing/update/uninstall, a clean Windows VM, and the applicable real Steam acceptance gates belong to stage C. Recorded local game passes are listed separately in [live validation](real-steam-validation.md).
 
 ## Dioxus Desktop bundle
 
-Manager 由 Dioxus `0.7.10` 打包，配置位于 `apps/manager-dioxus/Dioxus.toml`：
+Dioxus `0.7.10` packages Manager using `apps/manager-dioxus/Dioxus.toml`:
 
-- Windows：NSIS CurrentUser 安装器，图标和 WebView 安装模式在 `[windows]` 配置；
-- Linux：AppImage 预览包，bundle 中携带 WebKitGTK runtime 依赖与 Dioxus Manager 资源；
-- Runner：`[bundle].resources` 显式列出两个平台名称，构建机器只填入自己的非空目标文件；空的另一平台占位文件只用于满足 Dioxus manifest，不得进入对应平台发布物的 Runner 使用路径。
+- Windows: an NSIS CurrentUser installer; `[bundle.windows]` configures icons and WebView installation mode, with installer settings under `[bundle.windows.nsis]`.
+- Linux: an AppImage preview containing WebKitGTK runtime dependencies and Dioxus Manager resources.
+- Runner: `[bundle].resources` explicitly lists both platform names. A build machine fills only its own nonempty target. The other platform's empty placeholder satisfies the Dioxus manifest and must not become that platform's published Runner resource.
 
-Dioxus `asset_dir` 仅解决 Manager CSS / SVG 等 UI 资产；Runner 必须由 `[bundle].resources` 明确包含。目录不被当前 bundler 支持为 resource entry，因此资源以两个文件路径列出。
+Dioxus `asset_dir` handles Manager CSS/SVG and other UI assets only. Runner must be included explicitly in `[bundle].resources`. The current bundler does not support directories as resource entries, so two file paths are listed.
+
+Canonical brand assets are `assets/brand/steamwrapper.svg`, `.png`, and `.ico`, with matching Dioxus copies. After editing the original SVG, use `mise run brand:generate`; verify the checked-in outputs with `mise run brand:check`. pnpm and `@resvg/resvg-js` are development asset tooling, not application runtime dependencies. Preserve the asset checks during packaging.
+
+On 2026-09-08, the final local Dioxus NSIS build produced `SteamWrapperManager_0.2.0_x64-setup.exe` at **5,167,920 bytes**, with English and Simplified Chinese (`English`, `SimpChinese`) installer resources. The installer and the actual packaged Manager PE each contained all 10 canonical icon sizes (16, 20, 24, 32, 40, 48, 64, 96, 128, and 256 pixels), with every frame's SHA-256 matching the canonical ICO. Inspection confirmed the WebView2 download bootstrapper, no offline runtime installer, and `silent = true` in the WebView installation configuration. Bundled Runner was **1,180,160 bytes**, with its SHA-256 matching the release Runner. The local records are `target/dioxus-nsis-i18n-verified-20260908T095032Z/inspection.json` and `bundle.log` in the same ignored directory. This was a build and package-content check: the installer was not run, and installation, runtime download, updates/uninstall, clean-system behavior, and WinUI delivery were not validated by it.
 
 ## Windows
 
-面向普通 Windows 玩家时主推：
+The intended primary artifact for ordinary Windows players is:
 
 ```text
 SteamWrapper-v2.x.x-win-x64-setup.exe
 ```
 
-次要发布物：
+Secondary artifact:
 
 ```text
 SteamWrapper-v2.x.x-win-x64-portable.zip
 ```
 
-NSIS 安装器使用 Dioxus bundle 的 `CurrentUser` 模式；建议安装位置：
+The NSIS installer uses Dioxus bundle's `CurrentUser` mode. Suggested installation path:
 
 ```text
 %LOCALAPPDATA%\Programs\SteamWrapper\
 ```
 
-更新时运行新版 setup.exe 覆盖 Manager，稳定用户数据不随安装目录删除。portable zip 面向高级用户；即便 Manager 被移动或删除，Steam 启动项仍应只引用稳定 Runner。
+Run a newer setup.exe to replace Manager when updating; stable user data is not removed with the installation directory. Portable ZIP is for advanced users. Even if Manager is moved or deleted, Steam Launch Options must continue to reference stable Runner only.
 
-## Linux / SteamOS（后续交付暂缓）
+<a id="linux--steamos后续交付暂缓"></a>
 
-预览发布物：
+## Linux / SteamOS (later delivery deferred)
+
+Preview artifacts:
 
 ```text
 SteamWrapper-v2.x.x-linux-x64.AppImage
 SteamWrapper-v2.x.x-linux-x64.tar.gz
 ```
 
-- AppImage：替换旧 AppImage 即可更新；
-- tar.gz：解压覆盖程序目录，保留 XDG 数据目录；
-- Steam Deck：优先支持桌面模式，不写入只读系统区域；
-- Proton：保留 Steam 展开的 `%command%`；专用包装策略仍待平台实机验证。
+- AppImage: replace the previous AppImage to update.
+- tar.gz: extract over the application directory while preserving XDG data.
+- Steam Deck: prioritize Desktop Mode without writing read-only system areas.
+- Proton: retain Steam's expanded `%command%`; a dedicated wrapping strategy still requires real platform validation.
 
-## 稳定用户数据
+<a id="稳定用户数据"></a>
 
-Windows：
+## Stable user data
+
+Windows:
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\
   profiles.toml
+  ui-settings.json
   bin\SteamWrapperRunner.exe
   logs\
   backups\
   cache\
 ```
 
-Linux / SteamOS：
+Linux / SteamOS:
 
 ```text
 $XDG_DATA_HOME/SteamWrapper/
   profiles.toml
+  ui-settings.json
   bin/steamwrapper-runner
   logs/
   backups/
   cache/
 ```
 
-`$XDG_DATA_HOME` 未设置时使用 `~/.local/share/SteamWrapper/`。
+Use `~/.local/share/SteamWrapper/` when `$XDG_DATA_HOME` is unset.
 
-Steam Launch Options 只能引用稳定 Runner：
+Steam Launch Options may reference stable Runner only:
 
 ```text
 "<stable-runner-path>" --appid "<appid>" -- %command%
 ```
 
-## Runner 分发与安装
+<a id="runner-分发与安装"></a>
 
-构建时先 stage 当前平台 release Runner：
+## Runner distribution and installation
+
+Stage the current platform's release Runner before building:
 
 ```bash
 STEAMWRAPPER_RUNNER_PROFILE=release apps/manager-dioxus/scripts/stage-runner.sh
 ```
 
-Linux 资源名为 `steamwrapper-runner`，Windows 资源名为 `SteamWrapperRunner.exe`。它们是 bundle 中只读资源，不是 Steam Launch Options 的目标。
+The Linux resource is named `steamwrapper-runner`; the Windows resource is `SteamWrapperRunner.exe`. These are read-only bundle resources, not the targets of Steam Launch Options.
 
-首次启动或设置页“安装 / 修复 Runner”执行：
-
-```text
-随包 Runner
-→ 临时文件
-→ flush + SHA-256 校验
-→ 原子替换
-→ 稳定用户数据目录的 bin/Runner
-```
-
-- 摘要一致时不重复复制；
-- 缺失、损坏或摘要不一致时安装 / 修复；
-- 仅触碰稳定 `bin` 下的 Runner，不覆盖 `profiles.toml`、`logs`、`backups`、`cache`；
-- Windows 如旧 Runner 被 Steam 占用，替换失败时保留旧文件并提示玩家退出游戏后重试。
-
-## CI / release 验证
-
-release workflow 应：
-
-1. stage 当前平台 release Runner；
-2. 运行 Rust、Dioxus 与 E2E 类型质量门禁；
-3. 用 `dx bundle --release --package-types nsis|appimage` 生成当前平台包；
-4. 解包 Windows NSIS 并验证非空 `SteamWrapperRunner.exe`；
-5. 解包 Linux AppImage 并验证非空 `SteamWrapperManager/steamwrapper-runner`；
-6. 证明正式 Rust graph 不含 WDIO / embedded WebDriver；
-7. 上传命名一致的 bundle 与 SHA256SUMS。
-
-Linux AppImage 的本机验证不代表 Windows NSIS 或 Steam Deck 已验证；这些必须在各自 CI 或设备中取得实际证据。
-
-## 当前 Dioxus 封面策略
-
-Manager 优先读取本机 Steam 缓存：
+On first startup or Install / Repair Runner from Settings:
 
 ```text
-<Steam 安装目录>/appcache/librarycache/
-<Steam 安装目录>/userdata/<steamid>/config/grid/
+Bundled Runner
+→ temporary file
+→ flush + SHA-256 verification
+→ atomic replacement
+→ bin/Runner in the stable user-data directory
 ```
 
-缓存缺失时，它只使用已从本地 manifest 读取的 AppID 访问公开 Steam CDN：
+- Do not copy again when hashes match.
+- Install/repair when missing, damaged, or hash-mismatched.
+- Touch only Runner in stable `bin`, not `profiles.toml`, `logs`, `backups`, or `cache`.
+- On Windows, if Steam is using the old Runner, preserve it on replacement failure and ask the player to exit the game before retrying.
+
+<a id="ci--release-验证"></a>
+
+## CI / release validation
+
+The release workflow should:
+
+1. Stage the current platform's release Runner.
+2. Run Rust, Dioxus, and E2E type/quality gates.
+3. Generate the platform package with `dx bundle --release --package-types nsis|appimage`.
+4. Extract Windows NSIS and verify a nonempty `SteamWrapperRunner.exe`.
+5. Extract Linux AppImage and verify a nonempty `SteamWrapperManager/steamwrapper-runner`.
+6. Establish that the release Rust dependency graph contains no WDIO / embedded WebDriver.
+7. Upload consistently named bundles and SHA256SUMS.
+
+Local Linux AppImage validation is not Windows NSIS or Steam Deck validation. Each requires evidence from its own CI or device.
+
+<a id="当前-dioxus-封面策略"></a>
+
+## Current Dioxus cover policy
+
+Manager prefers local Steam caches:
+
+```text
+<Steam installation>/appcache/librarycache/
+<Steam installation>/userdata/<steamid>/config/grid/
+```
+
+When a cover is missing, it uses only an AppID read from a local manifest to access the public Steam CDN:
 
 ```text
 https://cdn.cloudflare.steamstatic.com/steam/apps/<appid>/library_600x900.jpg
 ```
 
-该请求不包含 Steam 用户名、库清单、profile 或任何 API Key；公开 CDN 的响应可按其 HTTP 缓存策略复用。应用不写入新封面文件，离线、限流、404 或图片加载失败时保留“封面暂不可用”占位，并继续允许配置游戏。不得把此有限回退扩展为第三方封面 API 或用户库数据上传。
+This request includes no Steam username, library list, profile, or API key. Public CDN responses may be reused according to HTTP caching policy. The application does not write new cover files. Offline operation, rate limits, 404s, and image-load failure leave a cover-unavailable placeholder and still permit configuration. Do not expand this limited fallback into third-party cover APIs or user-library uploads.
 
-新 WinUI 首版只读取本地封面或显示占位；上述 CDN 描述保留为当前实现事实。
+The first WinUI version reads local covers or shows placeholders only; the CDN description records the retained implementation.
 
-## 发布渠道
+<a id="发布渠道"></a>
+
+## Release channels
 
 ```text
-GitHub Release：海外用户、开发者与自动化下载
-CNB Release：国内玩家的 README 优先下载入口
+GitHub Release: international users, developers, and automated downloads
+CNB Release: intended preferred README download entry for players in mainland China
 ```
 
-每次正式 release 应包含平台 bundle、SHA256、中文更新说明和简短的安装 / 更新 / 卸载说明。版本命名必须一致，避免玩家在 GitHub 与 CNB 之间困惑。
+Each formal release should include platform bundles, SHA256, English and complete Simplified Chinese release notes, and brief installation/update/uninstall instructions. Version names must match across GitHub and CNB to avoid confusing players.

@@ -17,6 +17,7 @@
     <SelfContained>true</SelfContained>
     <PublishTrimmed>false</PublishTrimmed>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>../../../assets/brand/steamwrapper.ico</ApplicationIcon>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
@@ -30,6 +31,7 @@
     <ProjectReference Include="..\SteamWrapper.Application\SteamWrapper.Application.csproj" />
     <Manifest Include="$(ApplicationManifest)" />
     <Content Include="..\..\..\assets\brand\steamwrapper.svg" Link="Assets\steamwrapper.svg" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\..\assets\brand\steamwrapper.ico" Link="Assets\steamwrapper.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\..\..\target\winui\runner\*" Link="Runner\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

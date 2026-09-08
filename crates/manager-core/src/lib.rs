@@ -1,4 +1,8 @@
+mod localization;
 mod runner;
+mod ui_settings;
+pub use localization::{ErrorCode, Language, ManagerError};
+pub use ui_settings::UiSettingsStore;
 
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
@@ -6,20 +10,11 @@ use steamwrapper_core::{
     app_data_dir, build_launch_option, default_profiles_path, default_runner_path, ensure_app_dirs,
     scan_local_steam_games, Platform, Profile, SteamWrapperConfig,
 };
-use thiserror::Error;
 
 pub use runner::{
     inspect_runner, install_or_repair, RunnerInstallOutcome, RunnerPaths, RunnerStatus,
 };
 pub use steamwrapper_core::LocalSteamGame;
-
-#[derive(Debug, Error)]
-pub enum ManagerError {
-    #[error("failed to prepare SteamWrapper data directories: {0}")]
-    PrepareDirectories(#[from] std::io::Error),
-    #[error("{0}")]
-    Message(String),
-}
 
 #[derive(Debug, Clone)]
 pub struct ManagerPaths {
@@ -122,10 +117,10 @@ impl ManagerService {
             ensure_app_dirs()?;
         } else {
             let runner_dir = self.paths.runner_path.parent().ok_or_else(|| {
-                ManagerError::Message(format!(
-                    "Runner stable path has no parent: {}",
-                    self.paths.runner_path.display()
-                ))
+                ManagerError::new(
+                    ErrorCode::InvalidRunnerPath,
+                    self.paths.runner_path.display(),
+                )
             })?;
             fs::create_dir_all(runner_dir)?;
             fs::create_dir_all(&self.paths.logs_dir)?;
@@ -146,15 +141,15 @@ impl ManagerService {
 
     pub fn install_runner(&self) -> Result<RunnerInstallOutcome, ManagerError> {
         self.prepare()?;
-        install_or_repair(&self.runner_paths()).map_err(ManagerError::Message)
+        install_or_repair(&self.runner_paths())
     }
 
     pub fn generate_launch_option(&self, appid: &str) -> Result<String, ManagerError> {
         let status = self.runner_status()?;
         if !status.healthy {
-            return Err(ManagerError::Message(status.last_error.unwrap_or_else(
-                || "Runner 尚未安装或需要修复，请先在设置页完成安装。".to_string(),
-            )));
+            return Err(status
+                .last_error
+                .unwrap_or_else(|| ManagerError::new(ErrorCode::RunnerUnavailable, "")));
         }
         Ok(build_launch_option(&self.paths.runner_path, appid))
     }
@@ -172,22 +167,24 @@ impl ManagerService {
             .runner_status()
             .map(|status| status.healthy)
             .unwrap_or(false);
-        let config = SteamWrapperConfig::load(&self.paths.profiles_path)
-            .map_err(|err| ManagerError::Message(err.to_string()))?;
+        let config =
+            SteamWrapperConfig::load(&self.paths.profiles_path).map_err(ManagerError::from)?;
         let mut profiles: Vec<ConfiguredProfile> = config
             .profiles
             .into_iter()
             .map(|(appid, profile)| ConfiguredProfile {
-                launch_option: runner_healthy
-                    .then(|| build_launch_option(&self.paths.runner_path, &appid))
-                    .unwrap_or_default(),
+                launch_option: if runner_healthy {
+                    build_launch_option(&self.paths.runner_path, &appid)
+                } else {
+                    String::new()
+                },
                 appid,
                 name: profile.name,
                 game_dir: profile.game_dir.to_string_lossy().to_string(),
                 target: profile.target.to_string_lossy().to_string(),
             })
             .collect();
-        profiles.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        profiles.sort_by_key(|profile| profile.name.to_lowercase());
         Ok(profiles)
     }
 
@@ -207,7 +204,7 @@ impl ManagerService {
         self.prepare()?;
         let mut logs = Vec::new();
         let entries = fs::read_dir(&self.paths.logs_dir)
-            .map_err(|err| ManagerError::Message(err.to_string()))?;
+            .map_err(|err| ManagerError::new(ErrorCode::LogsRead, err))?;
 
         for entry in entries.flatten() {
             let path = entry.path();
@@ -237,8 +234,7 @@ impl ManagerService {
     pub fn save_profile(&self, request: SaveProfileRequest) -> Result<(), ManagerError> {
         self.prepare()?;
         let mut config = if self.paths.profiles_path.exists() {
-            SteamWrapperConfig::load(&self.paths.profiles_path)
-                .map_err(|err| ManagerError::Message(err.to_string()))?
+            SteamWrapperConfig::load(&self.paths.profiles_path).map_err(ManagerError::from)?
         } else {
             SteamWrapperConfig::default()
         };
@@ -258,7 +254,7 @@ impl ManagerService {
         config.profiles.insert(request.appid, profile);
         config
             .save(&self.paths.profiles_path)
-            .map_err(|err| ManagerError::Message(err.to_string()))
+            .map_err(ManagerError::from)
     }
 }
 

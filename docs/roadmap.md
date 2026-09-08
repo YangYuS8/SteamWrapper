@@ -1,63 +1,79 @@
-# SteamWrapper v2 Roadmap
+# SteamWrapper v2 roadmap
 
-## 路线原则
+English | [简体中文](roadmap.zh-CN.md)
 
-按最早 v2 的 Windows 优先原则重新安排：**Windows 可用配置与启动闭环 → 安全一键应用/恢复与 Windows 稳定化 → 再评估跨平台**。新 Manager 采用 WinUI 3/C# 和 C# 配置服务，Rust Runner 独立；TOML、稳定路径和 CLI 不变。
+<a id="路线原则"></a>
 
-[Windows v2 重设计](windows-v2-design.md)是当前实施方案，[WinUI 评估](winui3-assessment.md)记录技术依据。WinUI 配置预览已实现，Dioxus 保留作为迁移基线。以下阶段是验收顺序，不重新解释已发布版本号；当前证据见 [预览验收](winui-preview-validation.md)。
+## Direction
 
-## A. Windows 工具链与配置契约
+Reorder delivery around the original Windows-first v2 requirement: **usable Windows configuration and a complete launch flow → safe one-click apply/restore and Windows stabilization → reconsider cross-platform work**. The new Manager uses WinUI 3/C# and C# configuration services, with an independent Rust Runner. TOML, stable paths, and CLI remain unchanged.
 
-- [x] 追溯原始需求、评估 WinUI、明确产品与架构边界
-- [x] mise 固定开发工具，安装 MSVC/Windows SDK，完成独立 WinUI 自包含构建验证
-- [x] 在 Windows 跑通现有 Rust Runner 的 6 项测试，包括 Job Object 与进程名等待
-- [x] C# 读取/单字段编辑/Rust 消费验证：完整字段、缺省、旧别名键、未知数据、中文与路径参数
-- [x] 配置原子保存、替换失败保留、备份和编辑冲突验证（非协作编辑器仍有最终检查竞态）
-- [x] C# 生成配置交给真实 Runner fixture，验证 argv、cwd 和等待
-- [x] 增量加入 Windows 构建与契约 CI，保留现有工作流；远程运行尚未验证
+The [Windows v2 redesign](windows-v2-design.md) is the current implementation plan; the [WinUI assessment](winui3-assessment.md) records the technical basis. The WinUI configuration preview is implemented, and Dioxus remains the migration baseline. These stages describe acceptance order rather than reinterpreting published version numbers. See [preview validation](winui-preview-validation.md) for current evidence.
 
-## B. WinUI 完整配置切片
+<a id="a-windows-工具链与配置契约"></a>
 
-- [x] 建立 WinUI 窗口与独立可测试的 C# 应用服务，不新增 FFI/helper
-- [x] 已配置游戏首页、添加游戏、搜索与手动选择 Steam 路径
-- [x] 原生选择 target，保留高级参数与工作目录，保存兼容 TOML
-- [x] 本地封面或友好占位，无网络封面前置条件
-- [x] 安装/修复稳定 Runner，失败时保留配置与原二进制
-- [x] 生成并复制精确启动项，明确原值保留和手动恢复引导
-- [ ] 原生交互、中文输入、键盘、缩放、取消及错误恢复验收
+## A. Windows toolchain and configuration contracts
 
-## C. Windows 可用预览与替换门槛
+- [x] Trace original requirements, assess WinUI, and define product/architecture boundaries
+- [x] Pin development tools with mise, install MSVC/Windows SDK, and validate an isolated self-contained WinUI build
+- [x] Pass the existing Rust Runner's six tests on Windows, including Job Object and process-name waiting
+- [x] Verify C# reading/single-field editing/Rust consumption: complete fields, defaults, legacy aliases, unknown data, Chinese text, paths, and arguments
+- [x] Verify atomic configuration saves, preservation after replacement failure, backup, and editing conflicts (a final-check race remains for non-cooperating editors)
+- [x] Pass C#-generated configuration to an actual Runner fixture and verify argv, cwd, and waiting
+- [x] Add Windows build/contract CI incrementally while retaining existing workflows; the implementation baseline passed remote WinUI CI, while later changes need their own verification
 
-- [x] 关闭 Manager 后，从真实 Steam 启动/退出并记录状态与时长；本机 Unity 游戏与 9-nine 五部通过，见 [逐游戏证据与限制](real-steam-validation.md)
-- [x] 本机第一部 CHS 启动器先退后，实际游戏与 Runner 继续等待至普通退出；中文开场及 Steam 时长通过，仅覆盖这个实际启动器场景
-- [ ] 补齐中文/空格路径、启动失败和日志可诊断的玩家验收；保留 job 返回启动器状态的说明与实际后代退出码边界
-- [ ] Windows 11 x64 干净 VM 验证自包含目录及每用户安装器，无手动运行时准备
-- [ ] 覆盖更新、Manager 移动、Runner 占用和版本冲突不破坏配置/启动项
-- [ ] 卸载默认保留仍被启动项引用的 Runner 和用户数据
-- [ ] 记录安装体积、启动时间、已验证游戏及已知限制；提供中文使用与恢复说明
-- [ ] 达到以上门槛后切换默认 Manager 与发布链；按依赖退役 Dioxus/旧管理链及被替代的工作流
+<a id="b-winui-完整配置切片"></a>
 
-预览可先采用手动复制启动项。生成/复制不能标记为已写入 Steam，fixture 通过不能标记真实 Steam 时长已验证。
+## B. Complete WinUI configuration slice
 
-## D. Windows 安全一键应用与恢复
+- [x] Establish a WinUI window and independently testable C# application services, without new FFI/helpers
+- [x] Configured-game home page, adding games, search, and manual Steam path selection
+- [x] Native target selection, preservation of advanced arguments/working directory, and compatible TOML saving
+- [x] Local covers or friendly placeholders, without a network-cover prerequisite
+- [x] Install/repair stable Runner, retaining configuration and the old binary on failure
+- [x] Generate/copy exact Launch Options with explicit guidance to preserve the old value and restore it manually
+- [ ] Accept native interaction, Chinese input, keyboard use, scaling, cancellation, and error recovery
 
-- [ ] 核验 Steam 本地配置，识别游戏和多用户，展示原值与将写入值
-- [ ] Steam 运行时阻止写入，并在实际写入前复检
-- [ ] 备份、无关数据保留、原子写入、复读验证和中断恢复
-- [ ] 检测外部更改，恢复时不覆盖用户后来设置或其他游戏数据
-- [ ] 扩大真实 Windows launcher 测试，必要时完善显式等待策略
-- [ ] 完成稳定版验收后再将一键应用作为默认玩家流程
+<a id="c-windows-可用预览与替换门槛"></a>
 
-此阶段优先于 Linux/SteamOS/Proton 扩展。portable、国内镜像与更新入口可按 Windows 交付需要安排；不因发布矩阵扩展阻塞主流程。
+## C. Usable Windows preview and replacement gate
 
-## 后续评估
+- [x] Close Manager, launch/exit through real Steam, and record status/playtime; a local Unity game and all five 9-nine titles passed. See [per-game evidence and limits](real-steam-validation.md)
+- [x] After the local Episode 1 CHS launcher exited first, the actual game and Runner remained until ordinary exit; Chinese opening and Steam playtime passed, covering only this observed launcher scenario
+- [ ] Complete player acceptance for Chinese/spaced paths, launch failures, and useful diagnostic logs; retain the explanation that job returns launcher status and the limits of descendant exit-code evidence
+- [ ] Validate the self-contained directory and per-user installer on a clean Windows 11 x64 VM, without manual runtime setup
+- [ ] Cover updates, moving Manager, busy Runner files, and version conflicts without damaging configuration/Launch Options
+- [ ] Uninstall preserves Runner still referenced by Launch Options and user data by default
+- [ ] Record installation size, startup time, validated games, and known limits; provide English and complete Simplified Chinese use/recovery instructions
+- [ ] Switch the default Manager/release chain after these gates pass; retire Dioxus, old management layers, and replaced workflows according to dependencies
 
-- Windows 10、ARM64、portable ZIP、MSIX、更新渠道和签名方案；必须分别取得产物/平台证据。
-- 导入导出、多目标切换和批量恢复；按玩家实际需求决定。
-- Linux、SteamOS、Proton；另立需求和支持矩阵，不作为 Windows 首发门槛。
+The preview may begin with manually copied Launch Options. Generation/copying is not a Steam write, and fixture success is not real Steam playtime validation.
 
-## 现有实现记录与证据边界
+<a id="d-windows-安全一键应用与恢复"></a>
 
-当前源码已有 Rust core/manager-core/Runner、Dioxus 0.7.10 UI、本地 Steam 扫描、CDN 封面回退、TOML 保存、稳定 Runner 安装、启动项生成、平台进程代码及 Dioxus Native E2E/打包工作流。它们构成迁移参考，不证明本次 Windows 已通过。
+## D. Safe Windows one-click apply and restore
 
-旧路线的 Dioxus、Linux/AppImage 勾选是历史实现记录，可在 `31a609d:docs/roadmap.md` 查阅；不继续混放在新路线作为当前验收。已有 Linux 代码和 CI 保留，新增范围延期。WinUI 配置预览和契约已实现，详见 [环境记录](windows-development.md)；一键应用/恢复与新安装器仍未实现。
+- [ ] Verify local Steam configuration, identify games and multiple users, and show previous/proposed values
+- [ ] Block writes while Steam is running and check again immediately before writing
+- [ ] Backup, preserve unrelated data, write atomically, read back, and recover from interruption
+- [ ] Detect external changes and avoid overwriting later user settings or other games during restore
+- [ ] Expand real Windows launcher tests and improve explicit wait strategies where needed
+- [ ] Make one-click apply the default player flow only after stable-release acceptance
+
+This stage takes priority over Linux/SteamOS/Proton expansion. Portable delivery, domestic mirrors, and update entry points can follow Windows delivery needs; a larger release matrix must not block the main flow.
+
+<a id="后续评估"></a>
+
+## Later assessment
+
+- Windows 10, ARM64, portable ZIP, MSIX, update channels, and signing; each requires separate artifact/platform evidence.
+- Import/export, multiple targets, and batch restore according to actual player needs.
+- Linux, SteamOS, and Proton with separate requirements/support matrices, outside the first Windows release gate.
+
+<a id="现有实现记录与证据边界"></a>
+
+## Existing implementation and evidence boundaries
+
+Current source contains Rust core/manager-core/Runner, Dioxus 0.7.10 UI, local Steam scanning, CDN cover fallback, TOML saving, stable Runner installation, Launch Options generation, platform process code, and Dioxus Native E2E/packaging workflows. They provide migration references, not proof that the current Windows acceptance has passed.
+
+The old roadmap's Dioxus and Linux/AppImage checks are historical implementation records available at `31a609d:docs/roadmap.md`; they are not mixed into current acceptance. Existing Linux code and CI remain, with new scope deferred. The WinUI configuration preview and contracts are implemented; see the [environment record](windows-development.md). One-click apply/restore and the new installer are still unimplemented.

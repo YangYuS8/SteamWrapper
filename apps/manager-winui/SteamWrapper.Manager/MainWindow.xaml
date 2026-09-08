@@ -8,17 +8,21 @@
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <StackPanel Orientation="Horizontal" Spacing="10">
         <Image Source="ms-appx:///Assets/steamwrapper.svg" Width="36" Height="36"/>
-        <StackPanel><TextBlock Text="SteamWrapper" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="从 Steam 照常开始" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/></StackPanel>
+        <StackPanel><TextBlock Text="SteamWrapper" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="LocalizedTagline" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/></StackPanel>
       </StackPanel>
-      <Button Grid.Row="1" x:Name="AddGameButton" Content="＋ 添加游戏" HorizontalAlignment="Stretch" Style="{StaticResource AccentButtonStyle}" Click="AddGame_Click" AutomationProperties.AutomationId="AddGame"/>
+      <Button Grid.Row="1" x:Name="AddGameButton" HorizontalAlignment="Stretch" Style="{StaticResource AccentButtonStyle}" Click="AddGame_Click" AutomationProperties.AutomationId="AddGame"/>
       <Grid Grid.Row="2" RowSpacing="8">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-        <TextBlock Text="已配置的游戏" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        <TextBlock x:Name="LocalizedConfiguredGames" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         <ListView Grid.Row="1" x:Name="ProfilesList" SelectionChanged="ProfilesList_SelectionChanged" AutomationProperties.AutomationId="Profiles" />
       </Grid>
       <StackPanel Grid.Row="3" Spacing="10">
-        <Button x:Name="ReloadButton" Content="重新读取配置" Click="Reload_Click" HorizontalAlignment="Stretch"/>
-        <TextBlock Text="Windows 预览版" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        <ComboBox x:Name="LanguageInput" Header="Language" HorizontalAlignment="Stretch" SelectionChanged="Language_Changed" AutomationProperties.AutomationId="Language">
+          <ComboBoxItem Content="English" Tag="en-US"/>
+          <ComboBoxItem Content="简体中文" Tag="zh-CN"/>
+        </ComboBox>
+        <Button x:Name="ReloadButton" Click="Reload_Click" HorizontalAlignment="Stretch"/>
+        <TextBlock x:Name="LocalizedPreview" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
       </StackPanel>
     </Grid>
     <Border Grid.Column="1" Margin="0,12,12,12" CornerRadius="12" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
@@ -28,54 +32,54 @@
           <StackPanel Padding="32" Spacing="24" MaxWidth="850" HorizontalAlignment="Stretch">
             <StackPanel x:Name="WelcomePanel" Spacing="16" Margin="0,48,0,0">
               <FontIcon Glyph="&#xE7FC;" FontSize="48" HorizontalAlignment="Left" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-              <TextBlock Text="配置一次，照常开始" FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap"/>
-              <TextBlock Text="让 Steam 启动你选择的汉化程序或启动器。配置完成后，直接从 Steam 开始游戏即可。" TextWrapping="Wrap" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-              <TextBlock Text="1  添加 Steam 游戏&#x0a;2  选择要运行的程序&#x0a;3  保存并复制启动项到 Steam" FontSize="15" LineHeight="32"/>
+              <TextBlock x:Name="LocalizedWelcomeTitle" FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap"/>
+              <TextBlock x:Name="LocalizedWelcomeDescription" TextWrapping="Wrap" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+              <TextBlock x:Name="LocalizedWelcomeSteps" FontSize="15" LineHeight="32"/>
             </StackPanel>
             <ContentControl x:Name="EditorPanel" Visibility="Collapsed" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="24">
-              <StackPanel Spacing="6"><TextBlock x:Name="EditorHeading" Text="游戏配置" FontSize="28" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="选择 Steam 启动时实际运行的程序。" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/></StackPanel>
+              <StackPanel Spacing="6"><TextBlock x:Name="EditorHeading" FontSize="28" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock x:Name="LocalizedEditorDescription" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/></StackPanel>
               <ContentControl x:Name="FormFields" HorizontalContentAlignment="Stretch">
               <StackPanel Spacing="16">
-                <TextBox x:Name="NameInput" Header="游戏名称" TextChanged="FieldChanged" AutomationProperties.AutomationId="ProfileName"/>
-                <TextBox x:Name="AppIdInput" Header="Steam AppID" PlaceholderText="例如 123456" TextChanged="FieldChanged" AutomationProperties.AutomationId="AppId"/>
+                <TextBox x:Name="NameInput" TextChanged="FieldChanged" AutomationProperties.AutomationId="ProfileName"/>
+                <TextBox x:Name="AppIdInput" Header="Steam AppID" TextChanged="FieldChanged" AutomationProperties.AutomationId="AppId"/>
                 <StackPanel Spacing="6">
-                  <TextBox x:Name="SteamInstallationInput" Header="Steam 安装位置" IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.AutomationId="SteamInstallationDirectory"/>
-                  <TextBlock Text="由 Steam 管理，此处仅用于查看。" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                  <TextBox x:Name="SteamInstallationInput" IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.AutomationId="SteamInstallationDirectory"/>
+                  <TextBlock x:Name="LocalizedSteamInstallationHelp" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </StackPanel>
                 <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                  <TextBox x:Name="GameDirectoryInput" Header="实际运行文件夹" TextChanged="FieldChanged" AutomationProperties.AutomationId="GameDirectory"/>
-                  <Button Grid.Column="1" Content="浏览…" VerticalAlignment="Bottom" Click="GameDirectory_Click" AutomationProperties.Name="选择实际运行文件夹"/>
+                  <TextBox x:Name="GameDirectoryInput" TextChanged="FieldChanged" AutomationProperties.AutomationId="GameDirectory"/>
+                  <Button x:Name="LocalizedBrowse" Grid.Column="1" VerticalAlignment="Bottom" Click="GameDirectory_Click" />
                 </Grid>
-                <TextBlock Text="可选择 Steam 库外的汉化目录。工作目录留空时使用此文件夹。" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="LocalizedRuntimeFolderHelp" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                  <TextBox x:Name="TargetInput" Header="要运行的程序" PlaceholderText="选择汉化程序或启动器 .exe" TextChanged="FieldChanged" AutomationProperties.AutomationId="Target"/>
-                  <Button Grid.Column="1" Content="选择程序…" VerticalAlignment="Bottom" Click="Target_Click" AutomationProperties.AutomationId="ChooseTarget"/>
+                  <TextBox x:Name="TargetInput" TextChanged="FieldChanged" AutomationProperties.AutomationId="Target"/>
+                  <Button x:Name="LocalizedChooseProgram" Grid.Column="1" VerticalAlignment="Bottom" Click="Target_Click" AutomationProperties.AutomationId="ChooseTarget"/>
                 </Grid>
-                <Expander x:Name="Advanced" Header="高级设置" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <Expander x:Name="Advanced" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                   <StackPanel Spacing="16">
-                    <TextBox x:Name="WorkingDirectoryInput" Header="工作目录（留空使用实际运行文件夹）" TextChanged="FieldChanged"/>
-                    <StackPanel Spacing="8"><TextBlock Text="启动参数"/><TextBlock Text="每项是一个参数，含空格无需另加引号。" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/><StackPanel x:Name="ArgumentRows" Spacing="8"/><Button Content="添加参数" Click="AddArgument_Click"/></StackPanel>
-                    <ComboBox x:Name="WaitModeInput" Header="何时结束 Steam 运行状态" HorizontalAlignment="Stretch" SelectionChanged="WaitMode_Changed">
-                      <ComboBoxItem Content="等待程序及其子进程（推荐）" Tag="job"/>
-                      <ComboBoxItem Content="仅等待直接启动的程序" Tag="root"/>
-                      <ComboBoxItem Content="等待指定进程名称" Tag="process_name"/>
-                      <ComboBoxItem Content="启动后立即结束" Tag="none"/>
-                      <ComboBoxItem Content="进程组（Linux / SteamOS）" Tag="process_group"/>
+                    <TextBox x:Name="WorkingDirectoryInput" TextChanged="FieldChanged"/>
+                    <StackPanel Spacing="8"><TextBlock x:Name="LocalizedArguments" /><TextBlock x:Name="LocalizedArgumentsHelp" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/><StackPanel x:Name="ArgumentRows" Spacing="8"/><Button x:Name="LocalizedAddArgument" Click="AddArgument_Click"/></StackPanel>
+                    <ComboBox x:Name="WaitModeInput" HorizontalAlignment="Stretch" SelectionChanged="WaitMode_Changed">
+                      <ComboBoxItem x:Name="LocalizedWaitJob" Tag="job"/>
+                      <ComboBoxItem x:Name="LocalizedWaitRoot" Tag="root"/>
+                      <ComboBoxItem x:Name="LocalizedWaitProcessName" Tag="process_name"/>
+                      <ComboBoxItem x:Name="LocalizedWaitNone" Tag="none"/>
+                      <ComboBoxItem x:Name="LocalizedWaitProcessGroup" Tag="process_group"/>
                     </ComboBox>
-                    <TextBox x:Name="ProcessNameInput" Header="进程名称（按进程名等待时必填）" TextChanged="FieldChanged"/>
+                    <TextBox x:Name="ProcessNameInput" TextChanged="FieldChanged"/>
                   </StackPanel>
                 </Expander>
               </StackPanel>
               </ContentControl>
-              <Button x:Name="SaveButton" Content="保存并生成启动项" Style="{StaticResource AccentButtonStyle}" Click="Save_Click" AutomationProperties.AutomationId="SaveProfile"/>
+              <Button x:Name="SaveButton" Style="{StaticResource AccentButtonStyle}" Click="Save_Click" AutomationProperties.AutomationId="SaveProfile"/>
               <StackPanel x:Name="LaunchPanel" Visibility="Collapsed" Spacing="12">
-                <TextBlock Text="最后一步：粘贴到 Steam" FontSize="20" FontWeight="SemiBold"/>
-                <TextBlock Text="在 Steam 中右键该游戏 → 属性 → 通用 → 启动选项，粘贴下面的内容。" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                <TextBlock Text="粘贴前请先复制并保留原来的启动选项；需要恢复时，将原值粘贴回 Steam。" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="LocalizedLaunchTitle" FontSize="20" FontWeight="SemiBold"/>
+                <TextBlock x:Name="LocalizedLaunchInstructions" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="LocalizedLaunchBackup" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 <TextBox x:Name="LaunchOptionsText" IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.AutomationId="LaunchOptions"/>
-                <Button x:Name="CopyButton" Content="复制启动项" Click="Copy_Click" AutomationProperties.AutomationId="CopyLaunchOptions"/>
-                <TextBlock Text="粘贴完成后，可关闭 SteamWrapper，直接从 Steam 启动游戏。" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <Button x:Name="CopyButton" Click="Copy_Click" AutomationProperties.AutomationId="CopyLaunchOptions"/>
+                <TextBlock x:Name="LocalizedLaunchDone" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
               </StackPanel>
             </StackPanel>
             </ContentControl>

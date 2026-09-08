@@ -15,6 +15,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         try
         {
             window = new MainWindow();
+            window.AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "steamwrapper.ico"));
             window.Activate();
         }
         catch (Exception ex) { RecordFailure(ex); throw; }

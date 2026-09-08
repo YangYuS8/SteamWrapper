@@ -1,10 +1,14 @@
+using SteamWrapper.Application.Localization;
 using Microsoft.Win32;
 using System.Text;
 
 namespace SteamWrapper.Application.Services;
 
 public sealed record SteamGame(string AppId, string Name, string GameDirectory, string? CoverPath, bool InstallationAmbiguous = false);
-public sealed record SteamScanResult(IReadOnlyList<SteamGame> Games, IReadOnlyList<string> Warnings, string? SteamRoot);
+public sealed record SteamScanResult(IReadOnlyList<SteamGame> Games, IReadOnlyList<LocalMessage> WarningTexts, string? SteamRoot)
+{
+    public IReadOnlyList<string> Warnings => WarningTexts.Select(message => message.ToString()).ToArray();
+}
 
 public sealed class SteamScanner(Func<string, string?>? environment = null)
 {
@@ -15,16 +19,16 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
 
     private SteamScanResult Scan(string? steamRoot, CancellationToken cancellationToken)
     {
-        var warnings = new List<string>();
+        var warnings = new List<LocalMessage>();
         var root = steamRoot ?? _environment("STEAM_DIR");
         var sandbox = _environment("STEAMWRAPPER_E2E_ROOT");
         if (!string.IsNullOrWhiteSpace(sandbox) && (string.IsNullOrWhiteSpace(root) || !DataPaths.IsWithin(root, sandbox)))
-            return new([], ["沙盒模式需要位于 STEAMWRAPPER_E2E_ROOT 内的 STEAM_DIR，已阻止扫描实际游戏库。"], root);
+            return new([], [Messages.Text("SandboxSteam")], root);
         root ??= DiscoverSteamRoot();
-        if (string.IsNullOrWhiteSpace(root)) return new([], ["未找到 Steam，请选择 Steam 安装目录或手动填写 AppID。"], null);
+        if (string.IsNullOrWhiteSpace(root)) return new([], [Messages.Text("SteamNotFound")], null);
         root = Path.GetFullPath(root);
         if (!Directory.Exists(Path.Combine(root, "steamapps")))
-            return new([], [$"无法读取 Steam 目录：{root}"], root);
+            return new([], [Messages.Text("SteamUnreadable", root)], root);
 
         var libraries = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { root };
         var libraryFile = Path.Combine(root, "steamapps", "libraryfolders.vdf");
@@ -41,12 +45,12 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
                         if (entry.Key.All(char.IsAsciiDigit) && library is not null && Path.IsPathFullyQualified(library))
                         {
                             if (!string.IsNullOrWhiteSpace(sandbox) && !DataPaths.IsWithin(library, sandbox))
-                                warnings.Add($"沙盒模式已跳过范围外的游戏库：{library}");
+                                warnings.Add(Messages.Text("SandboxLibrary", library));
                             else libraries.Add(Path.GetFullPath(library));
                         }
                     }
             }
-            catch (Exception ex) when (IsReadError(ex)) { warnings.Add($"无法读取库列表，仍会扫描 Steam 主目录：{ex.Message}"); }
+            catch (Exception ex) when (IsReadError(ex)) { warnings.Add(Messages.Text("SteamLibraries", ex)); }
         }
 
         var games = new Dictionary<string, SteamGame>(StringComparer.Ordinal);
@@ -61,20 +65,20 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
                     try
                     {
                         var state = ReadVdf(manifest).Children?.GetValueOrDefault("AppState")?.Children
-                            ?? throw new FormatException("缺少 AppState。");
+                            ?? throw Messages.Format("SteamAppState");
                         var appId = state.GetValueOrDefault("appid")?.Value;
                         if (appId is null || appId.Any(c => !char.IsAsciiDigit(c)) || !uint.TryParse(appId, out var id) || id == 0)
-                            throw new FormatException("无效的 AppID。");
+                            throw Messages.Format("SteamAppId");
                         if (!string.Equals(Path.GetFileName(manifest), $"appmanifest_{appId}.acf", StringComparison.OrdinalIgnoreCase))
-                            throw new FormatException("清单文件名与 AppID 不一致。");
-                        var name = state.GetValueOrDefault("name")?.Value ?? $"Steam App {appId}";
+                            throw Messages.Format("SteamManifestId");
+                        var name = state.GetValueOrDefault("name")?.Value ?? $"Steam AppID {appId}";
                         var install = state.GetValueOrDefault("installdir")?.Value;
                         if (IsTool(appId, name, install)) continue;
                         if (string.IsNullOrWhiteSpace(install) || Path.IsPathRooted(install))
-                            throw new FormatException("缺少或不安全的游戏目录。");
+                            throw Messages.Format("SteamGameDirectory");
                         var common = Path.Combine(library, "steamapps", "common");
                         var gameDirectory = Path.GetFullPath(Path.Combine(common, install));
-                        if (!DataPaths.IsWithin(gameDirectory, common)) throw new FormatException("游戏目录超出 Steam 库。");
+                        if (!DataPaths.IsWithin(gameDirectory, common)) throw Messages.Format("SteamOutsideLibrary");
                         if (!Directory.Exists(gameDirectory)) continue;
                         if (games.TryGetValue(appId, out var known))
                         {
@@ -82,15 +86,15 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
                             {
                                 games[appId] = known with { InstallationAmbiguous = true };
                                 if (!known.InstallationAmbiguous)
-                                    warnings.Add($"AppID {appId} 对应多个安装目录，无法确认 Steam 安装位置；实际运行文件夹仍可自行选择。");
+                                    warnings.Add(Messages.Text("SteamAmbiguous", appId));
                             }
                         }
                         else games.Add(appId, new SteamGame(appId, name, gameDirectory, FindCover(root, appId)));
                     }
-                    catch (Exception ex) when (IsReadError(ex)) { warnings.Add($"已跳过清单 {Path.GetFileName(manifest)}：{ex.Message}"); }
+                    catch (Exception ex) when (IsReadError(ex)) { warnings.Add(Messages.Text("SteamManifestSkipped", Path.GetFileName(manifest), ex)); }
                 }
             }
-            catch (Exception ex) when (IsReadError(ex)) { warnings.Add($"无法读取游戏库 {library}：{ex.Message}"); }
+            catch (Exception ex) when (IsReadError(ex)) { warnings.Add(Messages.Text("SteamLibraryUnreadable", library, ex)); }
         }
         return new(games.Values.OrderBy(g => g.Name, StringComparer.CurrentCultureIgnoreCase).ToArray(), warnings, root);
     }
@@ -159,7 +163,7 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
     private static bool IsReadError(Exception ex) => ex is IOException or UnauthorizedAccessException or FormatException or ArgumentException;
     private static VdfNode ReadVdf(string path)
     {
-        if (new FileInfo(path).Length > 4 * 1024 * 1024) throw new FormatException("VDF 清单过大。");
+        if (new FileInfo(path).Length > 4 * 1024 * 1024) throw Messages.Format("VdfLarge");
         return new VdfReader(File.ReadAllText(path)).Read();
     }
 
@@ -172,18 +176,18 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
         public VdfNode Read() => ReadObject(0, nested: false);
         private VdfNode ReadObject(int depth, bool nested)
         {
-            if (depth > 32) throw new FormatException("VDF 嵌套过深。");
+            if (depth > 32) throw Messages.Format("VdfDeep");
             var values = new Dictionary<string, VdfNode>(StringComparer.OrdinalIgnoreCase);
             while (true)
             {
                 var key = Next();
-                if (key is null) { if (nested) throw new FormatException("VDF 对象未闭合。"); break; }
-                if (key.IsStructural && key.Text == "}") { if (!nested) throw new FormatException("多余的 VDF 右括号。"); break; }
-                if (key.IsStructural) throw new FormatException("缺少 VDF 键。");
-                var value = Next() ?? throw new FormatException("缺少 VDF 值。");
-                if (value.IsStructural && value.Text == "}") throw new FormatException("缺少 VDF 值。");
+                if (key is null) { if (nested) throw Messages.Format("VdfUnclosedObject"); break; }
+                if (key.IsStructural && key.Text == "}") { if (!nested) throw Messages.Format("VdfExtraBrace"); break; }
+                if (key.IsStructural) throw Messages.Format("VdfKey");
+                var value = Next() ?? throw Messages.Format("VdfValue");
+                if (value.IsStructural && value.Text == "}") throw Messages.Format("VdfValue");
                 var node = value.IsStructural ? ReadObject(depth + 1, nested: true) : new VdfNode(Value: value.Text);
-                if (!values.TryAdd(key.Text, node)) throw new FormatException($"重复的 VDF 键：{key.Text}");
+                if (!values.TryAdd(key.Text, node)) throw Messages.Format("VdfDuplicate", key.Text);
             }
             return new VdfNode(Children: values);
         }
@@ -214,7 +218,7 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
                 if (c == '\\' && _position < text.Length && text[_position] is '\\' or '"') c = text[_position++];
                 value.Append(c);
             }
-            throw new FormatException("VDF 字符串未闭合。");
+            throw Messages.Format("VdfUnclosedString");
         }
     }
 }

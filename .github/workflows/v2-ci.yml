@@ -7,6 +7,9 @@ on:
     branches: ["v2", "feat/runner-process-lifecycle"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check:
     name: Check (${{ matrix.os }})
@@ -43,7 +46,20 @@ jobs:
             "README.md",
             "README.zh-CN.md",
             "LICENSE",
+            "CONTRIBUTING.md",
+            "CONTRIBUTING.zh-CN.md",
+            "CODE_OF_CONDUCT.md",
+            "CODE_OF_CONDUCT.zh-CN.md",
+            "SECURITY.md",
+            "SECURITY.zh-CN.md",
+            "SUPPORT.md",
+            "SUPPORT.zh-CN.md",
+            ".github/PULL_REQUEST_TEMPLATE.md",
+            ".github/PULL_REQUEST_TEMPLATE/zh-CN.md",
+            ".github/ISSUE_TEMPLATE/config.yml",
             "assets/brand/steamwrapper.svg",
+            "assets/brand/steamwrapper.png",
+            "assets/brand/steamwrapper.ico",
             "apps/manager-dioxus/assets/steamwrapper.svg",
             "apps/manager-dioxus/assets/icons/steamwrapper.png",
             "apps/manager-dioxus/assets/icons/steamwrapper.ico",
@@ -96,6 +112,9 @@ jobs:
 
       - name: Type-check Dioxus native E2E suite
         run: pnpm --filter steamwrapper-manager-dioxus-e2e exec tsc --noEmit
+
+      - name: Verify canonical brand assets
+        run: pnpm run brand:check
 
       - name: Test native E2E startup diagnostics
         run: pnpm --filter steamwrapper-manager-dioxus-e2e run test:tooling

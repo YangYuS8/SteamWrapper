@@ -5,22 +5,30 @@ fn manager_renders_the_required_navigation_and_primary_actions() {
     let source = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/app.rs"))
         .expect("read Dioxus Manager source");
 
-    for required_text in [
-        "游戏库",
-        "已配置游戏",
-        "日志",
-        "设置",
-        "扫描本地 Steam 游戏",
-        "手动添加游戏",
-        "配置启动目标",
-        "保存并生成启动选项",
-        "SteamWrapper Runner",
+    let catalog = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/i18n.rs"))
+        .expect("read bilingual catalog");
+    for (key, english, chinese) in [
+        ("Library", "Game library", "游戏库"),
+        ("Configured", "Configured games", "已配置游戏"),
+        ("Logs", "Logs", "日志"),
+        ("Settings", "Settings", "设置"),
+        ("ScanGames", "Scan local Steam games", "扫描本地 Steam 游戏"),
+        ("AddGame", "Add game manually", "手动添加游戏"),
+        ("ConfigureTarget", "Configure launch target", "配置启动目标"),
+        (
+            "SaveOptions",
+            "Save and generate launch options",
+            "保存并生成启动选项",
+        ),
     ] {
         assert!(
-            source.contains(required_text),
-            "Dioxus Manager must retain the player-facing flow: {required_text}"
+            source.contains(&format!("K::{key}"))
+                && catalog.contains(english)
+                && catalog.contains(chinese),
+            "Dioxus Manager must retain the player-facing flow in both languages: {key}"
         );
     }
+    assert!(source.contains("SteamWrapper Runner"));
 }
 
 #[test]
@@ -109,8 +117,12 @@ fn manager_uses_a_frameless_desktop_shell_with_a_fixed_sidebar_and_scrollable_wo
     assert!(app.contains("\"data-testid\": \"sidebar\""));
     assert!(app.contains("\"data-testid\": \"sidebar-toggle\""));
     assert!(app.contains("onerror: move |_| failed.set(true)"));
-    assert!(app.contains("封面暂不可用"));
-    assert!(app.contains("本地缓存优先，官方 Steam CDN 回退"));
+    let catalog = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/i18n.rs"))
+        .expect("read bilingual catalog");
+    assert!(app.contains("t(K::MissingCover)") && catalog.contains("封面暂不可用"));
+    assert!(
+        app.contains("t(K::CoverSources)") && catalog.contains("本地缓存优先，官方 Steam CDN 回退")
+    );
     assert!(app.contains("class: \"app-titlebar\""));
     assert!(app.contains("\"data-testid\": \"app-titlebar\""));
     assert!(app.contains("\"data-testid\": \"window-minimize\""));

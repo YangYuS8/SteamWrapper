@@ -4,104 +4,159 @@
   <img src="assets/brand/steamwrapper.svg" alt="SteamWrapper icon" width="128" height="128" />
 </p>
 
-[中文 README](README.zh-CN.md) | [Agent Guidelines](AGENTS.md)
+English | [简体中文](README.zh-CN.md)
 
-SteamWrapper helps Windows players launch translated games or custom launchers through Steam while keeping play status aligned with the game. The [new v2 design](docs/windows-v2-design.md) uses a **WinUI 3/C# Manager with C# configuration services and an independent Rust Runner**, using the existing TOML/CLI contracts. The first native configuration preview is implemented in `apps/manager-winui`. Dioxus and its release workflows remain available until the Windows delivery gates pass.
+**Configure a game once in Manager, then launch it normally from Steam.** SteamWrapper helps Windows players launch translated games or custom launchers while keeping Steam status and playtime aligned with the actual game lifecycle.
 
-> Configure once in SteamWrapper Manager, then launch the game normally from Steam.
+The [Windows v2 design](docs/windows-v2-design.md) uses a **WinUI 3/C# Manager, C# configuration services, and an independent Rust Runner**, connected by existing TOML/CLI contracts. The native configuration preview is implemented in `apps/manager-winui`. Dioxus and its release workflows remain the migration baseline; the default delivery chain has not switched.
 
-The Manager is visible only during configuration. For daily play, Steam calls the headless `SteamWrapperRunner` through Launch Options; the Runner loads the selected profile, launches the real executable or launcher, and waits for the game to exit.
+For daily play, Steam Launch Options calls the headless Runner. It reads a profile from the stable data directory, starts the chosen exe/launcher, and waits according to the configured mode. Manager can remain closed. Process tests alone do not establish every game's Steam status or playtime compatibility.
 
-The WinUI preview distinguishes Steam's installation location from the actual runtime folder. Keep a translated copy outside the Steam library while preserving the official installation for updates and verification; see [directory separation, saves and achievement compatibility](docs/translated-games.md). SteamWrapper does not supply missing achievement logic.
+Keep an official installation for Steam updates/verification and a complete translated copy outside the Steam library. WinUI displays the Steam installation separately from the actual runtime folder. See [directory separation, saves, and achievements](docs/translated-games.md). SteamWrapper does not supply missing achievement logic.
 
-## Goals
+## Product goals
 
-- Aim for a Windows install that requires no manual runtime setup; a C# Manager may bundle .NET. Runner remains a native Rust executable.
-- No SteamEdit requirement in the default workflow.
-- No full wrapper copied into every game directory.
-- A native Windows configuration experience and an independent headless Runner for play; Dioxus remains the current implementation during migration.
-- Windows first. Existing Linux support is retained; Linux / SteamOS expansion and release commitments are deferred.
-- The WinUI preview uses local Steam metadata/covers and friendly placeholders. The current Dioxus implementation still has its public Steam CDN fallback.
+- Players should not need manual runtime preparation. A self-contained C# Manager can bundle .NET; Runner remains native Rust.
+- No default SteamEdit requirement, Steam client modification, or complete wrapper copied into each game directory.
+- Manager configures; normal play uses the independent, headless Runner.
+- Windows first. Existing Linux code/contracts remain; Linux / SteamOS expansion and release commitments are deferred.
+- First WinUI covers use local Steam metadata/cache and friendly placeholders. The retained Dioxus implementation still has a public Steam CDN fallback.
+- Configuration, installation, updates, and recovery should be understandable to ordinary players.
+- English is the primary project language, with complete Simplified Chinese UI resources and documentation.
 
-## Product shape
+## Product layout
 
 ```text
-SteamWrapper.Manager.exe  # native WinUI Windows configuration preview
-SteamWrapperManager(.exe)  # retained Dioxus Desktop configuration app
-SteamWrapperRunner(.exe)   # native headless runner called by Steam Launch Options
-profiles.toml              # shared game profiles
-logs/                      # runtime logs
-backups/                   # future Steam config backups
-cache/                     # local metadata/cache
+SteamWrapper.Manager.exe       # native WinUI Windows configuration preview
+SteamWrapperManager(.exe)       # retained Dioxus Desktop configuration app
+SteamWrapperRunner(.exe)        # headless Runner called by Steam Launch Options
+profiles.toml                   # shared game profiles
+ui-settings.json                # Manager display-language preference
+logs/                           # runtime logs
+backups/                        # configuration backups; future Steam apply backups
+cache/                          # local metadata/cache
 ```
 
-Target Windows flow:
+## Windows player flow
 
 ```text
 Install SteamWrapper
-→ open SteamWrapper Manager once
+→ open SteamWrapper Manager
 → scan local Steam games
-→ select a Steam game profile
-→ select the real target exe / launcher
-→ save the profile without losing existing advanced settings
-→ copy the generated Steam Launch Options
-→ preserve the previous options, then paste the new value in Steam
-→ from then on, launch directly from Steam
+→ select the game whose launch behavior needs changing
+→ select the real target exe / launcher and runtime folder
+→ save without losing advanced settings or working directory
+→ copy the generated Launch Options
+→ preserve the previous options, then paste the new value in Steam Properties
+→ close Manager and launch directly from Steam
 ```
 
-Launch Options compatibility contract:
+The generated Launch Options retain this compatibility format:
 
 ```text
 "C:\Users\<User>\AppData\Local\SteamWrapper\bin\SteamWrapperRunner.exe" --appid "123456" -- %command%
 ```
 
-The stable Runner path and `%command%` portion are deliberately preserved. The current Runner receives and logs the original Steam command, but launches the profile's target/args; it does not automatically execute or forward that command. Steam status and playtime require separate validation in the client.
+Keep `%command%` after `--`. Current Runner receives/logs the original Steam command but executes the profile's target/args; it does not automatically execute or forward the original command. Options always reference stable Runner, not a package, temporary extraction directory, or Manager.
 
-The Windows plan prioritizes safe configuration, a complete launch flow, and installation/update/uninstall before cross-platform expansion. Manual copying is sufficient for the first preview; backed-up Steam apply/restore follows next. See the [roadmap](docs/roadmap.md) and [technical assessment](docs/winui3-assessment.md).
+The Windows plan completes configuration fidelity, the launch flow, and installation/update/uninstall before cross-platform expansion. The first preview uses manual copying; backed-up one-click apply/restore follows next. Copying is not applying to Steam. See the [roadmap](docs/roadmap.md) and [technical assessment](docs/winui3-assessment.md).
 
 ## Current implementation
 
-The Windows preview separates `SteamWrapper.Manager` (native UI, pickers, clipboard) from `SteamWrapper.Application` (safe TOML edits, local Steam discovery, stable Runner installation). Cross-language tests verify compatibility with the actual Rust Runner. The retained Dioxus chain is shown below.
+WinUI's `SteamWrapper.Manager` (native UI, pickers, clipboard) calls `SteamWrapper.Application` (syntax-preserving TOML edits, local Steam discovery, stable Runner installation). Cross-language contracts verify actual Rust consumption without FFI or a background service. See [Windows development](docs/windows-development.md).
+
+Retained Dioxus chain:
 
 ```text
-apps/manager-dioxus  # Dioxus 0.7.10 Desktop + CSS UI
-        ↓ direct typed Rust calls
-crates/manager-core  # framework-neutral Manager services
-        ↓
-crates/core          # TOML, Steam metadata/covers, Launch Options
+apps/manager-dioxus (Dioxus Desktop + CSS)
+                ↓ direct typed Rust calls
+crates/manager-core (paths, profiles, scanning, logs, Runner installation/repair)
+                ↓
+crates/core (GUI-neutral TOML, Steam, covers, Launch Options)
 
-crates/runner        # independent native headless runtime
+crates/runner (independent, headless, called by Steam)
 ```
 
-The Manager does not emulate Tauri IPC: it directly consumes the Rust service layer. `core` stays GUI-neutral; `runner` stays independent from WebView/UI lifecycle.
+- `crates/core` has no Dioxus, desktop framework, or platform process API dependency.
+- `crates/runner` has no GUI, WebView, or frontend-resource dependency.
+- `crates/manager-core` orchestrates Manager services without Dioxus dependencies, preserving UI replacement boundaries.
+- `apps/manager-dioxus` uses Dioxus 0.7.10, RSX, and local CSS with direct typed service calls, not emulated Tauri IPC.
+
+## Language
+
+Manager offers English and Simplified Chinese. WinUI's language selector is in the sidebar. The Managers share `ui-settings.json` beside `profiles.toml`, using `language: "en-US"` or `"zh-CN"`; missing/unknown values fall back to English. A successful change updates application-owned text and persists for the next launch. User-entered names, paths, launch commands, and log contents stay unchanged.
+
+A language change does not reinterpret TOML fields, AppIDs, arguments, or wait modes. An invalid existing settings file is not silently overwritten. English documents use `.md`; their complete Simplified Chinese counterparts use `.zh-CN.md` and link back to English.
+
+## Stable Runner installation
+
+When saving a profile, WinUI checks bundled Runner and installs it atomically to the stable directory. Hash failures, busy files, or unknown relative versions preserve the existing file while still allowing profile saves. Newer compatible Runner versions are not downgraded. Dioxus retains its first-startup/Settings installation behavior.
+
+Windows:
+
+```text
+%LOCALAPPDATA%\Programs\SteamWrapper\      # intended Manager installation directory
+%LOCALAPPDATA%\SteamWrapper\bin\           # stable Runner
+%LOCALAPPDATA%\SteamWrapper\profiles.toml  # user configuration
+%LOCALAPPDATA%\SteamWrapper\ui-settings.json # display language
+%LOCALAPPDATA%\SteamWrapper\logs\          # logs
+%LOCALAPPDATA%\SteamWrapper\backups\       # backups
+```
+
+Linux / SteamOS:
+
+```text
+$XDG_DATA_HOME/SteamWrapper/
+  profiles.toml
+  ui-settings.json
+  bin/steamwrapper-runner
+  logs/
+  backups/
+  cache/
+```
+
+When `XDG_DATA_HOME` is unset, use `~/.local/share/SteamWrapper/`.
+
+## Current Dioxus cover policy
+
+Prefer local Steam caches:
+
+```text
+<Steam installation>/appcache/librarycache/
+<Steam installation>/userdata/<steamid>/config/grid/
+```
+
+If a cover is missing, Manager requests public Steam CDN `library_600x900.jpg` using only an AppID already present in a local manifest. It does not query player profiles, upload a library, or require an API key. Normal HTTP caching can reuse responses. Offline operation, rate limits, or absent resources show a friendly cover-unavailable placeholder without blocking scanning/configuration.
 
 ## WinUI preview development
 
-After the [mise environment setup](docs/windows-development.md):
+After [mise environment setup](docs/windows-development.md):
 
 ```powershell
-mise run winui:test
-mise run winui:contracts
-mise run winui:publish    # self-contained directory: target/winui/publish
+mise run winui:test       # C# service regressions
+mise run winui:contracts  # C# edit → Rust read and real Runner process verification
+mise run winui:publish    # self-contained target/winui/publish directory
 mise run winui:sandbox    # native preview with disposable Steam/user-data fixtures
 ```
 
-The preview supports local game discovery/search, manual AppID entry, native target selection, safe configuration edits, advanced arguments and copying Launch Options. Preserve the previous Steam options before pasting; restore that saved value to undo. Real Steam timing, a clean Windows VM and the installer still require validation. Keep the entire published directory together.
+The preview supports local scanning/search, manual additions, native executable selection, syntax-preserving saves, advanced arguments, and Launch Options copying. Preserve old Steam options before pasting; paste them back to undo. Keep the entire published directory together, not just the EXE.
 
-## Current Dioxus development
+Real Steam acceptance has passed locally for one Unity galgame and five separate translated 9-nine packages, with the exact titles/scenarios, Chinese openings, status/playtime, and limitations in [live validation](docs/real-steam-validation.md). These are not all-game or achievement guarantees. Clean Windows 11 VM acceptance and the WinUI installer remain unfinished.
 
-On Windows, use the [mise development setup](docs/windows-development.md): `mise install`, then `mise run windows:setup` and `mise run windows:doctor`. The project also provides `windows:verify` for the current application and `windows:winui-smoke` for an isolated WinUI build.
+## Dioxus Manager development
 
-`just` is the local entrypoint:
+On Windows, follow [mise development setup](docs/windows-development.md): `mise install`, `mise run windows:setup`, and `mise run windows:doctor`. `windows:verify` checks the Dioxus baseline; `windows:winui-smoke` remains an isolated template-environment diagnostic.
+
+Prerequisites include stable Rust, Dioxus CLI `0.7.10`, and WebKitGTK desktop dependencies on Linux. pnpm is used for Native E2E and development asset tooling, not a product UI runtime. The root `justfile` provides local entry points:
 
 ```bash
-just dev          # start the Desktop Manager with hot reload and real local data
-just dev-sandbox  # start it with disposable Steam and user-data directories
-just verify       # run Rust, Dioxus, and Native E2E gates
-just bundle-linux # stage the Runner and create release-artifacts/*.AppImage
+just dev          # hot reload with real local Steam/user data
+just dev-sandbox  # disposable Steam/user-data sandbox
+just verify       # Rust, Dioxus, and Native E2E gates
+just bundle-linux # stage Runner and produce release-artifacts/*.AppImage
 ```
 
-Run `just --list` for every recipe. The equivalent lower-level validation commands remain available:
+Use `just --list` for all recipes. Choose local checks by [change scope](docs/testing.md#按改动选择验证); full CI/release gates remain. Lower-level commands:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -114,23 +169,54 @@ dx check
 dx build --release
 ```
 
-Native E2E uses an isolated local Steam and user-data fixture. It does not touch the real Steam library or user profile:
+Native E2E creates isolated Steam Library, XDG/LocalAppData, and profile fixtures; it does not read/write real Steam configuration:
 
 ```bash
 cargo build -p steamwrapper-manager-dioxus --features e2e
 pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
 ```
 
-Choose local checks by the [change being made](docs/testing.md#按改动选择验证); full CI/release gates remain in place. See [architecture](docs/architecture.md), [technology choices](docs/tech-stack.md), [distribution](docs/distribution.md), and [roadmap](docs/roadmap.md) for implementation and deferred scope.
+Dioxus Native E2E uses the `@wdio/dioxus-service` embedded provider. Its Rust bridge is built only with the `e2e` Cargo feature; formal bundles contain no test WebDriver.
 
-## Brand asset
+## Distribution
 
-The canonical project mark is `assets/brand/steamwrapper.svg`. It is an original Rust-inspired gear and launch-graph mark for SteamWrapper, not the official Steam logo.
+Candidate artifacts in the retained Dioxus distribution plan, not a claim that all are delivered:
 
-## License
+```text
+SteamWrapper-v2.x.x-win-x64-setup.exe
+SteamWrapper-v2.x.x-win-x64-portable.zip
+SteamWrapper-v2.x.x-linux-x64.AppImage
+SteamWrapper-v2.x.x-linux-x64.tar.gz
+```
 
-Apache-2.0
+Existing Dioxus Windows configuration uses a CurrentUser NSIS installer. WinUI deployment needs separate acceptance. Later Linux / SteamOS delivery is deferred; GitHub/CNB dual-channel delivery remains a target requiring acceptance. See [distribution](docs/distribution.md).
 
-## Status
+## Safety boundaries
 
-The `v2` branch remains early-stage. The original C# implementation on `main` is still the legacy stable version.
+SteamWrapper v2 does not perform DLL injection, Steam/game binary patching, DRM bypass, hidden background services, user-data uploads, third-party online cover-service integration, or player-library uploads. System security changes and third-party file recovery are not application features.
+
+Use disposable fixtures for automated tests. Real-library tests require the owner's authorization, preserved Launch Options, and file/saved-progress safeguards. Do not run Steam verification over a modified translation without understanding that it can replace files. See [security reporting](SECURITY.md) for suspected vulnerabilities.
+
+## Brand assets
+
+The canonical original project mark is `assets/brand/steamwrapper.svg`, with generated `.png`/`.ico` files and matching Dioxus copies. Its Rust-inspired gear and Steam-inspired launch linkage identify SteamWrapper; the project is not affiliated with or endorsed by Valve or the Rust project.
+
+```powershell
+mise run brand:generate
+mise run brand:check
+```
+
+Generation uses development-only pnpm / `@resvg/resvg-js`, not an application runtime. See [contributing](CONTRIBUTING.md) before changing the source mark or packaged copies.
+
+## Documentation and community
+
+- [Documentation index](docs/README.md): architecture, setup, testing, migration, distribution, and dated evidence.
+- [Contributing](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md), [security policy](SECURITY.md), and [support](SUPPORT.md).
+- [Issues](https://github.com/YangYuS8/SteamWrapper/issues) accept English and Simplified Chinese reports. Matching template files are included on `v2`; the live template chooser follows the default branch.
+- [Agent guide](AGENTS.md) contains repository automation instructions.
+
+## License and status
+
+This `v2` branch retains [Apache-2.0](LICENSE). The legacy C# implementation on `main` has its own branch contents/license; this work does not change them.
+
+`v2` remains in development. GitHub's default branch is currently `main`, so its displayed community profile and templates may differ from this branch. Contributions for this implementation should target `v2`; no default-branch or remote settings are changed by these files.

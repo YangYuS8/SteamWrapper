@@ -4401,6 +4401,7 @@ name = "steamwrapper-manager-core"
 version = "0.2.0"
 dependencies = [
  "serde",
+ "serde_json",
  "sha2",
  "steamwrapper-core",
  "thiserror 2.0.18",

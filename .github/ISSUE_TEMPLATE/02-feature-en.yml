@@ -1,0 +1,68 @@
+name: "Feature request (English)"
+description: "Describe a player problem and a proposed improvement."
+body:
+  -
+    type: "markdown"
+    attributes:
+      value: "Read the [security policy](https://github.com/YangYuS8/SteamWrapper/blob/v2/SECURITY.md) before reporting a suspected vulnerability. Do not post exploit details, credentials, saves, game binaries, full Steam configuration, or unredacted personal paths."
+  -
+    type: "input"
+    id: "version"
+    attributes:
+      label: "Version, branch, or commit"
+      description: "For example, v2 and the commit used to build it; the default branch is not necessarily v2."
+    validations:
+      required: true
+  -
+    type: "input"
+    id: "platform"
+    attributes:
+      label: "Platform"
+      description: "Windows version/build and architecture, or your specific existing Linux environment."
+    validations:
+      required: true
+  -
+    type: "dropdown"
+    id: "manager"
+    attributes:
+      label: "Manager implementation"
+      options:
+        - "WinUI preview"
+        - "Dioxus"
+        - "Runner only"
+        - "Legacy main"
+        - "Not sure"
+    validations:
+      required: true
+  -
+    type: "textarea"
+    id: "problem"
+    attributes:
+      label: "Player problem"
+      description: "Who encounters it, and what task is difficult today?"
+    validations:
+      required: true
+  -
+    type: "textarea"
+    id: "proposal"
+    attributes:
+      label: "Proposed behavior"
+      description: "Describe the desired result, alternatives considered, and platform or compatibility implications."
+    validations:
+      required: true
+  -
+    type: "checkboxes"
+    id: "checks"
+    attributes:
+      label: "Before submitting"
+      description: "[Code of Conduct](https://github.com/YangYuS8/SteamWrapper/blob/v2/CODE_OF_CONDUCT.md)"
+      options:
+        -
+          label: "I searched existing issues and the documentation."
+          required: true
+        -
+          label: "I agree to follow the project Code of Conduct."
+          required: true
+        -
+          label: "I removed private data and am not reporting a security vulnerability publicly."
+          required: true

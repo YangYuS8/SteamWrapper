@@ -1,0 +1,10 @@
+blank_issues_enabled: true
+contact_links:
+  -
+    name: "Security reporting / 安全报告"
+    url: "https://github.com/YangYuS8/SteamWrapper/blob/v2/SECURITY.md"
+    about: "Read the security policy before sharing a suspected vulnerability. 报告疑似漏洞前请先阅读安全策略。"
+  -
+    name: "Support guide / 使用帮助"
+    url: "https://github.com/YangYuS8/SteamWrapper/blob/v2/SUPPORT.md"
+    about: "Setup, troubleshooting, and what information is safe to share. 环境、排查方法及可安全提供的信息。"

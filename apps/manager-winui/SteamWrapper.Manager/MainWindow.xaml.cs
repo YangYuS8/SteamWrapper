@@ -1,3 +1,4 @@
+using SteamWrapper.Application.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.Storage.Pickers;
@@ -10,6 +11,10 @@ namespace SteamWrapper.Manager;
 public sealed partial class MainWindow : Window
 {
     private readonly DataPaths paths = DataPaths.FromEnvironment();
+    private readonly Localizer localizer = new();
+    private readonly UiSettingsStore settings;
+    private LocalMessage? statusMessage;
+    private bool applyingLanguage;
     private readonly ProfileStore store;
     private readonly RunnerInstaller runner;
     private readonly List<TextBox> arguments = [];
@@ -22,7 +27,8 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Title = "SteamWrapper · Windows 预览版";
+        settings = new UiSettingsStore(paths.UiSettingsPath);
+        ApplyLanguage();
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1160, 900));
         store = new ProfileStore(paths.ProfilesPath);
         runner = new RunnerInstaller(paths, Path.Combine(AppContext.BaseDirectory, "Runner"));
@@ -35,7 +41,16 @@ public sealed partial class MainWindow : Window
         };
     }
 
-    private async void OnLoaded(object sender, RoutedEventArgs e) => await ReloadAsync();
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        SetBusy(true);
+        var preference = await settings.LoadAsync();
+        localizer.SetLanguage(preference.Language);
+        ApplyLanguage();
+        await ReloadAsync();
+        if (preference.ReadError is not null)
+            ShowStatus(Messages.Text("SettingsRead", preference.ReadError), InfoBarSeverity.Warning);
+    }
 
     private async Task ReloadAsync()
     {
@@ -52,7 +67,7 @@ public sealed partial class MainWindow : Window
             EditorPanel.Visibility = Visibility.Collapsed;
             StatusBar.IsOpen = false;
             var status = await runner.InspectAsync();
-            if (!status.IsReady) ShowStatus(status.Message, InfoBarSeverity.Informational);
+            if (!status.IsReady) ShowStatus(status.Text, InfoBarSeverity.Informational);
         }
         catch (Exception ex)
         {
@@ -62,7 +77,7 @@ public sealed partial class MainWindow : Window
             selecting = false;
             EditorPanel.Visibility = Visibility.Collapsed;
             WelcomePanel.Visibility = Visibility.Visible;
-            ShowStatus("无法读取配置，原文件保持不变。" + ex.Message, InfoBarSeverity.Error);
+            ShowStatus(Messages.Text("LoadFailed", ex), InfoBarSeverity.Error);
         }
         finally { SetBusy(false); }
     }
@@ -121,12 +136,12 @@ public sealed partial class MainWindow : Window
             mode.IsEnabled = foreign || (string)mode.Tag != "process_group";
         FormFields.IsEnabled = !foreign;
         SaveButton.IsEnabled = !foreign;
-        EditorHeading.Text = create ? "添加游戏配置" : profile.Name;
+        EditorHeading.Text = create ? localizer["NewProfile"] : profile.Name;
         WelcomePanel.Visibility = Visibility.Collapsed;
         EditorPanel.Visibility = Visibility.Visible;
         LaunchPanel.Visibility = Visibility.Collapsed;
         StatusBar.IsOpen = false;
-        if (foreign) ShowStatus("这是其他平台的配置，可查看；请在对应平台修改。", InfoBarSeverity.Informational);
+        if (foreign) ShowStatus(Messages.Text("ForeignProfile"), InfoBarSeverity.Informational);
         selecting = true;
         ProfilesList.SelectedItem = create ? null : ProfilesList.Items.Cast<ListViewItem>().FirstOrDefault(item => ((ProfileData)item.Tag).Key == profile.Key);
         selecting = false;
@@ -137,7 +152,7 @@ public sealed partial class MainWindow : Window
     private async void AddGame_Click(object sender, RoutedEventArgs e)
     {
         if (snapshot is null || !await CanLeaveAsync()) return;
-        var dialog = new AddGameDialog(this) { XamlRoot = Root.XamlRoot };
+        var dialog = new AddGameDialog(this, localizer) { XamlRoot = Root.XamlRoot };
         await dialog.ShowAsync();
         if (!dialog.Manual && dialog.SelectedGame is null) return;
         installedGames = dialog.DiscoveredGames;
@@ -145,7 +160,7 @@ public sealed partial class MainWindow : Window
         if (game is not null)
         {
             var existing = snapshot.Profiles.Where(p => p.Key == game.AppId || p.AppId == game.AppId).ToArray();
-            if (existing.Length > 1) { ShowStatus("同一 AppID 对应多份配置，请先处理配置冲突。", InfoBarSeverity.Error); return; }
+            if (existing.Length > 1) { ShowStatus(Messages.Text("DuplicateProfiles"), InfoBarSeverity.Error); return; }
             if (existing.Length == 1) { Edit(existing[0], false); return; }
         }
         selecting = true;
@@ -163,17 +178,17 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            var selected = await new FolderPicker(AppWindow.Id) { CommitButtonText = "选择实际运行文件夹" }.PickSingleFolderAsync();
+            var selected = await new FolderPicker(AppWindow.Id) { CommitButtonText = localizer["ChooseRuntimeFolder"] }.PickSingleFolderAsync();
             if (selected is not null) GameDirectoryInput.Text = selected.Path;
         }
-        catch (Exception ex) { ShowStatus("无法打开文件夹选择器：" + ex.Message, InfoBarSeverity.Error); }
+        catch (Exception ex) { ShowStatus(Messages.Text("FolderPickerFailed", ex), InfoBarSeverity.Error); }
     }
 
     private async void Target_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            var picker = new FileOpenPicker(AppWindow.Id) { CommitButtonText = "选择此程序", FileTypeFilter = { ".exe" } };
+            var picker = new FileOpenPicker(AppWindow.Id) { CommitButtonText = localizer["PickProgram"], FileTypeFilter = { ".exe" } };
             var selected = await picker.PickSingleFileAsync();
             if (selected is null) return;
             if (string.IsNullOrWhiteSpace(GameDirectoryInput.Text)) GameDirectoryInput.Text = Path.GetDirectoryName(selected.Path)!;
@@ -181,19 +196,19 @@ public sealed partial class MainWindow : Window
             var relative = Path.GetRelativePath(GameDirectoryInput.Text, selected.Path);
             TargetInput.Text = relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || Path.IsPathRooted(relative) ? selected.Path : relative;
         }
-        catch (Exception ex) { ShowStatus("无法选择程序：" + ex.Message, InfoBarSeverity.Error); }
+        catch (Exception ex) { ShowStatus(Messages.Text("ProgramPickerFailed", ex), InfoBarSeverity.Error); }
     }
 
     private void AddArgument(string value)
     {
-        var input = new TextBox { PlaceholderText = "参数（允许空字符串）", AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinWidth = 180, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var input = new TextBox { PlaceholderText = localizer["ArgumentPlaceholder"], AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinWidth = 180, HorizontalAlignment = HorizontalAlignment.Stretch };
         SetText(input, value);
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(input, "启动参数");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(input, localizer["Arguments"]);
         input.TextChanged += FieldChanged;
         var row = new Grid { ColumnSpacing = 8 };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var remove = new Button { Content = "移除" };
+        var remove = new Button { Content = localizer["Remove"] };
         Grid.SetColumn(remove, 1);
         remove.Click += (_, _) => { arguments.Remove(input); textValues.Remove(input); ArgumentRows.Children.Remove(row); MarkDirty(); };
         row.Children.Add(input);
@@ -213,12 +228,12 @@ public sealed partial class MainWindow : Window
         if (editing is null) return;
         var profile = isNew ? editing with { AppId = AppIdInput.Text.Trim() } : editing;
         SteamInstallationInput.Text = ProfileSteamInstallation.Find(profile, installedGames)?.GameDirectory
-            ?? "暂时无法确认 Steam 安装位置；可继续配置实际运行文件夹。";
+            ?? localizer["UnknownSteamInstallation"];
     }
     private void WaitMode_Changed(object sender, SelectionChangedEventArgs e) => MarkDirty();
     private void MarkDirty()
     {
-        if (loading || editing is null) return;
+        if (loading || applyingLanguage || editing is null) return;
         dirty = true;
         LaunchPanel.Visibility = Visibility.Collapsed;
         StatusBar.IsOpen = false;
@@ -247,12 +262,12 @@ public sealed partial class MainWindow : Window
                 ProcessName = Optional(ReadText(ProcessNameInput), editing.ProcessName)
             };
             if (!Path.IsPathFullyQualified(updated.GameDirectory) || !Directory.Exists(updated.GameDirectory))
-                throw new InvalidOperationException("请选择已存在的实际运行文件夹（完整路径）。");
+                throw Messages.Invalid("InvalidGameDirectory");
             var target = Path.IsPathRooted(updated.Target) ? updated.Target : Path.Combine(updated.GameDirectory, updated.Target);
             if (!File.Exists(target) || !string.Equals(Path.GetExtension(target), ".exe", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("请选择已存在的 .exe 程序。");
+                throw Messages.Invalid("InvalidTarget");
             if (updated.WorkingDirectory is { Length: > 0 } cwd && !Directory.Exists(Path.IsPathRooted(cwd) ? cwd : Path.Combine(updated.GameDirectory, cwd)))
-                throw new InvalidOperationException("工作目录不存在，请检查高级设置。");
+                throw Messages.Invalid("InvalidWorkingDirectory");
             snapshot = await store.SaveAsync(snapshot, updated, isNew);
             editing = snapshot.Profiles.Single(p => p.Key == updated.Key);
             RememberText(NameInput, editing.Name);
@@ -268,14 +283,14 @@ public sealed partial class MainWindow : Window
             EditorHeading.Text = editing.Name;
             RefreshProfiles();
             var status = await runner.InstallOrRepairAsync();
-            if (!status.IsReady) { ShowStatus("配置已保存。" + status.Message, InfoBarSeverity.Warning); return; }
+            if (!status.IsReady) { ShowStatus(Messages.Text("SavedWithStatus", status.Text), InfoBarSeverity.Warning); return; }
             LaunchOptionsText.Text = LaunchOptions.Build(paths.RunnerPath, appId);
             LaunchPanel.Visibility = Visibility.Visible;
-            ShowStatus("配置已保存，启动程序已就绪。请复制启动项到 Steam。", InfoBarSeverity.Success);
+            ShowStatus(Messages.Text("SavedReady"), InfoBarSeverity.Success);
         }
         catch (Exception ex)
         {
-            ShowStatus((saved ? "配置已保存，但启动程序尚未就绪。" : "未保存。") + ex.Message, InfoBarSeverity.Error);
+            ShowStatus(Messages.Text(saved ? "SavedRunnerFailed" : "SaveFailed", ex), InfoBarSeverity.Error);
         }
         finally { SetBusy(false); }
     }
@@ -299,9 +314,9 @@ public sealed partial class MainWindow : Window
             content.SetText(LaunchOptionsText.Text);
             Clipboard.SetContent(content);
             Clipboard.Flush();
-            ShowStatus("已复制。请粘贴到 Steam 的启动选项；复制不会自动修改 Steam。", InfoBarSeverity.Success);
+            ShowStatus(Messages.Text("Copied"), InfoBarSeverity.Success);
         }
-        catch (Exception ex) { ShowStatus("复制失败，可手动选中上方文字复制。" + ex.Message, InfoBarSeverity.Warning); }
+        catch (Exception ex) { ShowStatus(Messages.Text("CopyFailed", ex), InfoBarSeverity.Warning); }
     }
 
     private void SetBusy(bool value)
@@ -311,12 +326,14 @@ public sealed partial class MainWindow : Window
         ReloadButton.IsEnabled = !value;
         ProfilesList.IsEnabled = !value;
         EditorPanel.IsEnabled = !value;
+        LanguageInput.IsEnabled = !value;
     }
 
-    private void ShowStatus(string message, InfoBarSeverity severity)
+    private void ShowStatus(LocalMessage message, InfoBarSeverity severity)
     {
         StatusBar.Severity = severity;
-        StatusBar.Message = message;
+        statusMessage = message;
+        StatusBar.Message = localizer.Format(message);
         StatusBar.IsOpen = true;
     }
 
@@ -326,8 +343,9 @@ public sealed partial class MainWindow : Window
         if (!dirty) return true;
         var dialog = new ContentDialog
         {
-            XamlRoot = Root.XamlRoot, Title = "还有未保存的修改",
-            Content = "离开此配置将放弃本次修改。", PrimaryButtonText = "放弃修改", CloseButtonText = "继续编辑",
+            Language = localizer.Language,
+            XamlRoot = Root.XamlRoot, Title = localizer["UnsavedTitle"],
+            Content = localizer["UnsavedBody"], PrimaryButtonText = localizer["Discard"], CloseButtonText = localizer["KeepEditing"],
             DefaultButton = ContentDialogButton.Close
         };
         confirming = true;

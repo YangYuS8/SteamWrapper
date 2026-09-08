@@ -1,28 +1,36 @@
-# Windows 开发环境（mise）
+<a id="windows-开发环境mise"></a>
 
-使用仓库根的 `mise.toml` 管理项目工具，`global.json` 固定 .NET SDK 选择，`.vsconfig` 声明 MSVC/Windows SDK 组件。WinUI Manager 位于 `apps/manager-winui`；现有 Dioxus 工具链保留供迁移基线验证。独立模板 smoke 继续保留在忽略的 `target/toolchain-smoke/` 下用于环境诊断。
+# Windows development environment (mise)
 
-## 版本与管理范围
+English | [简体中文](windows-development.zh-CN.md)
 
-| 工具 | 固定版本 | 管理方式 |
+Use the root `mise.toml` to manage project tools, `global.json` to select the .NET SDK, and `.vsconfig` to declare MSVC/Windows SDK components. The WinUI Manager is in `apps/manager-winui`; the existing Dioxus toolchain remains available for migration-baseline checks. The standalone template smoke project stays under ignored `target/toolchain-smoke/` for environment diagnostics.
+
+<a id="版本与管理范围"></a>
+
+## Versions and management scope
+
+| Tool | Pinned version | Management |
 | --- | --- | --- |
-| .NET SDK | 10.0.400 | mise core；global.json 禁止 SDK roll-forward |
-| Rust | 1.98.1，rustfmt/clippy | mise 调用现有 rustup，Windows 使用 MSVC host |
-| PowerShell | 7.6.5 | mise；任务不依赖 Codex 私有运行时路径 |
-| Node / pnpm | 24.18.0 / 11.10.0 | mise；与现有 CI / packageManager 保持一致，仅用于当前 Dioxus 工具 |
-| Dioxus CLI / just | 0.7.10 / 1.58.0 | mise；Dioxus 官方 GitHub 二进制 |
-| WinUI CLI 模板 | 0.0.6-alpha | `windows:templates` 安装官方 NuGet 模板；这是模板的预览版本 |
-| WinUI smoke 依赖 | Windows App SDK 2.4.0、SDK.BuildTools 10.0.26100.7705、WinApp 0.3.1 | 验证脚本固定直接包引用，独立于机器级 Windows SDK |
-| WinUI Manager 组件 | WindowsAppSDK.WinUI 2.3.6、InteractiveExperiences 2.1.6、SDK.BuildTools 10.0.26100.7705 | 对应 Windows App SDK 2.4.0 组件集；NuGet 锁定全部传递依赖 |
-| MSVC / Windows SDK | VC.Tools.x86.x64 / Windows11SDK.26100 | `windows:setup` 调用 Microsoft 官方安装器；属于系统组件 |
+| .NET SDK | 10.0.400 | mise core; SDK roll-forward disabled in global.json |
+| Rust | 1.98.1, rustfmt/clippy | mise invokes existing rustup; Windows uses the MSVC host |
+| PowerShell | 7.6.5 | mise; tasks do not depend on Codex private runtime paths |
+| Node / pnpm | 24.18.0 / 11.10.0 | mise; aligned with existing CI / packageManager, for Dioxus E2E and brand asset generation/checks |
+| Dioxus CLI / just | 0.7.10 / 1.58.0 | mise; official Dioxus GitHub binaries |
+| WinUI CLI template | 0.0.6-alpha | `windows:templates` installs the official NuGet template; this is its preview version |
+| WinUI smoke dependencies | Windows App SDK 2.4.0, SDK.BuildTools 10.0.26100.7705, WinApp 0.3.1 | The verification script pins direct package references independently of the machine-wide Windows SDK |
+| WinUI Manager components | WindowsAppSDK.WinUI 2.3.6, InteractiveExperiences 2.1.6, SDK.BuildTools 10.0.26100.7705 | Windows App SDK 2.4.0 component set; NuGet locks all transitive dependencies |
+| MSVC / Windows SDK | VC.Tools.x86.x64 / Windows11SDK.26100 | `windows:setup` invokes Microsoft's official installer; these are system components |
 
-`mise.lock` 记录 Windows x64 可提供的下载地址/摘要；core .NET/Rust 仍委托官方安装脚本/rustup，锁文件不代表它们的完整离线镜像。MSVC bootstrapper 固定为核验过的 18.9.1 URL/SHA-256，实际组件按 Microsoft 通道解析，并非所有组件都可由 mise 隔离或逐字节锁定。
+`mise.lock` records available Windows x64 download URLs and hashes. Core .NET/Rust still delegate to the official installation script/rustup; the lockfile is not a complete offline mirror. The MSVC bootstrapper uses a verified 18.9.1 URL/SHA-256, while its components resolve through Microsoft's channel. mise cannot isolate or byte-pin every system component.
 
-.NET core backend 使用共享 SDK 根目录，单独固定 mise 版本不能替代 .NET 的 SDK resolver，因此同时提供一致的 `global.json`。[mise .NET 管理](https://mise.jdx.dev/lang/dotnet.html)、[Rust 管理](https://mise.jdx.dev/lang/rust.html)
+The .NET core backend uses a shared SDK root. Pinning a mise version alone does not replace .NET's SDK resolver, so a matching `global.json` is also provided. [mise .NET management](https://mise.jdx.dev/lang/dotnet.html), [Rust management](https://mise.jdx.dev/lang/rust.html)
 
-## 首次准备
+<a id="首次准备"></a>
 
-在仓库根目录的 Windows 终端执行：
+## Initial setup
+
+Run these commands from a Windows terminal at the repository root:
 
 ```powershell
 mise trust
@@ -33,117 +41,133 @@ mise run windows:doctor
 mise run windows:winui-smoke
 ```
 
-`mise trust` 只信任已审阅的当前仓库配置；`mise install` 安装项目声明的工具。系统组件安装任务会验证 bootstrapper 的 SHA-256 和 Microsoft 签名，按 `.vsconfig` 安装编译器/SDK及其必需依赖；已有完整组件时直接返回。无需安装完整 Visual Studio IDE。[Microsoft MSVC 组件安装](https://learn.microsoft.com/en-us/cpp/overview/acquire-msvc?view=msvc-170)
+`mise trust` trusts only the reviewed configuration in this repository. `mise install` installs its declared tools. The system-component task verifies the bootstrapper's SHA-256 and Microsoft signature, then installs the compiler/SDK and required dependencies from `.vsconfig`. It returns immediately when the full component set is already installed. The full Visual Studio IDE is not required. [Microsoft MSVC installation](https://learn.microsoft.com/en-us/cpp/overview/acquire-msvc?view=msvc-170)
 
-Microsoft 安装需要正常 UAC 权限。脚本使用 `--norestart`，不会自动重启；若退出码为 3010，会明确报告安装完成但需要重启，不能当成未安装，也不能宣称重启已完成。[官方安装参数](https://learn.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio?view=visualstudio)
+Microsoft's installer requires normal UAC permission. The script uses `--norestart` and never restarts automatically. Exit code 3010 explicitly means installation succeeded but a restart is required; it is neither an installation failure nor evidence that the restart has happened. [Official installer parameters](https://learn.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio?view=visualstudio)
 
-`windows:doctor` 用 vswhere 查找所需组件，再加载官方 Developer PowerShell；不会永久改写系统 PATH，也不会输出全量环境变量。`pwsh` 由 mise 提供，不依赖 Windows PowerShell 5.1 或 Codex 的 PATH 注入。[Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=visualstudio)
+`windows:doctor` locates the required components with vswhere and loads Microsoft's Developer PowerShell. It does not permanently change PATH or print the full environment. mise supplies `pwsh`; tasks do not depend on Windows PowerShell 5.1 or Codex PATH injection. [Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=visualstudio)
 
-## 日常命令
+<a id="日常命令"></a>
 
-WinUI 实现入口：
+## Daily commands
+
+WinUI development entry points:
 
 ```powershell
-mise run winui:test       # 配置安全、本地 Steam、Runner 安装服务回归
-mise run winui:contracts  # C# / Rust 往返、真实 Runner 受控父子进程验证
-mise run winui:build      # Release XAML 编译，stage 当前 Rust Runner
-mise run winui:publish    # target/winui/publish 自包含目录，含原生资源索引
-mise run winui:sandbox    # 发布并打开一次性 Steam/用户目录中的原生预览
+mise run winui:test       # Profile safety, local Steam, Runner installation and UI language services
+mise run winui:contracts  # C# / Rust round trips and controlled real Runner parent/child processes
+mise run winui:build      # Release XAML compilation; stage the current Rust Runner
+mise run winui:publish    # Self-contained target/winui/publish directory, including native resource indexes
+mise run winui:sandbox    # Publish and open the native preview with disposable Steam/user directories
 ```
 
-NuGet 依赖由各项目 `packages.lock.json` 固定，日常命令使用 locked restore。服务项目显式列出 win-x64 runtime identifier，避免测试与 UI 发布轮换时造成锁文件漂移。更新依赖时才使用 `--force-evaluate` 并审查锁文件差异。
+Each project's `packages.lock.json` pins NuGet dependencies, and daily commands use locked restore. The service project explicitly lists the win-x64 runtime identifier to prevent lockfile drift when alternating between tests and UI publication. Use `--force-evaluate` only when updating dependencies, and review the lockfile changes.
 
-Manager 已从 Windows App SDK 2.4.0 总包改为上述组件包，保留原组件版本与摘要；InteractiveExperiences 显式固定 2.1.6，避免依赖回落到 2.1.3。AI、ML、Search、Widgets、DWrite 及其未使用发布文件不再进入新产物；独立环境 smoke 仍使用总包，不随此次精简改变。
+Manager now references the component packages above instead of the Windows App SDK 2.4.0 umbrella package, retaining the same component versions and hashes. InteractiveExperiences is explicitly pinned to 2.1.6 to avoid falling back to 2.1.3. AI, ML, Search, Widgets, DWrite and their unused publication files no longer enter new artifacts. The independent environment smoke still uses the umbrella package.
 
-Manager 使用 Windows App SDK 的 [原生 picker API](https://learn.microsoft.com/en-us/windows/apps/develop/files/using-file-folder-pickers)。项目直接维护，不依赖 alpha 模板安装；`EnableMsixTooling` 用于生成应用 PRI 资源索引，`WindowsPackageType=None` 并关闭包生成/签名，因此不会注册 MSIX 调试身份。发布检查包含 Manager PRI、.NET、WinUI 和 Runner；只有编译成功不足以证明 XAML 能在启动时加载。
+Manager uses Windows App SDK's [native picker API](https://learn.microsoft.com/en-us/windows/apps/develop/files/using-file-folder-pickers). The project is maintained directly and does not depend on installing the alpha template. `EnableMsixTooling` generates the application PRI resource index; `WindowsPackageType=None` and disabled package generation/signing prevent registration of an MSIX debug identity. Publication checks include Manager PRI, .NET, WinUI and Runner. Compilation alone does not prove that XAML can load at startup.
 
-`winui:publish` 先写入 `target/winui/publish-staging-<id>` 的全新目录，验证 Manager 程序/程序集、PRI、.NET、WinUI、picker 投影、Runner 与清单，再替换 `target/winui/publish`。目录操作限于本仓库 `target/winui`，拒绝重解析路径，发布锁串行处理替换；正在运行的该目录预览会阻止替换。校验失败保留旧版，普通替换失败恢复旧目录；恢复或清理受阻时会报告保留位置。目录重命名不构成断电事务，失败候选保留用于排查。
+`winui:publish` first writes into a fresh `target/winui/publish-staging-<id>` directory. It validates the Manager executable/assemblies, PRI, .NET, WinUI, picker projections, Runner and manifest, then replaces `target/winui/publish`. Directory operations stay within this repository's `target/winui`, reject reparse paths, and serialize replacement with a publication lock. A preview running from the destination directory prevents replacement. Validation failure keeps the old version; an ordinary replacement failure restores the old directory. Blocked recovery or cleanup reports the retained location. Directory renames are not a power-loss transaction, and failed candidates remain available for investigation.
 
-发布回归直接运行真实发布命令，再用隔离目录验证错误恢复，无需额外测试框架：
+The publication regression runs the real publish command, then tests recovery in isolated directories without another test framework:
 
 ```powershell
 mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
-# 只检查目录替换/失败恢复，不重新构建：
+# Check only directory replacement/recovery, without rebuilding:
 mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
 ```
 
-完整命令包含 5 项检查：旧哨兵文件不残留、缺失资源保留旧版、锁住候选时回滚、成功替换只含新文件、越界路径拒绝。测试文件均在 `target/winui` 中；运行前关闭发布目录中的预览。
+The full command contains five checks: no stale sentinel file, preservation of the old version when a resource is missing, rollback when a candidate is locked, successful replacement containing only new files, and rejection of out-of-scope paths. All test files stay under `target/winui`. Close any preview running from the publish directory before testing.
 
-沙盒每次在 `target/winui/sandbox/<id>` 创建示例 Steam manifest、LOCALAPPDATA、XDG_DATA_HOME，并设置 STEAMWRAPPER_E2E_ROOT。示例游戏不带真实游戏程序，选择受控测试 exe 即可验证配置。脱离沙盒的产物会尝试使用常规用户数据位置；实际文件视图仍需按下节检查。常规自动化使用沙盒入口。不要从发布目录单独拷出 EXE。
+Each sandbox creates example Steam manifests, LOCALAPPDATA and XDG_DATA_HOME under `target/winui/sandbox/<id>` and sets STEAMWRAPPER_E2E_ROOT. Example games contain no real game executable; choose a controlled test executable to exercise configuration. Outside the sandbox, the artifact attempts to use normal user-data locations; its actual file view still needs the checks below. Routine automation uses the sandbox entry point. Do not copy the EXE out of the complete publication directory.
 
-旧实现与环境诊断入口：
+The UI defaults to English and offers English / 简体中文 in the sidebar. Both Managers store `language` in a separate `SteamWrapper/ui-settings.json` beside `profiles.toml`: canonical values are `en-US` and `zh-CN`. `en` and `zh-Hans` are accepted aliases, with whitespace trimming and case-insensitive matching; missing or unknown values default to English. Successful preference writes refresh application-owned labels, dynamic controls and service/status messages without reloading the form or discarding edits. Failed writes keep the current language and the original settings file. Unknown JSON fields are preserved; malformed, duplicate-key, non-object or oversized settings are not overwritten. User names, paths, arguments, protocol identifiers and diagnostic logs are not translated. Native OS dialogs retain system-owned wording.
+
+WinUI's English neutral resources and Simplified Chinese satellite resources live under `SteamWrapper.Application/Localization`. The explicit .NET resource culture is independent of the OS language and does not change the process's global culture. When inspecting a published artifact, check `zh-CN/SteamWrapper.Application.resources.dll` as well as the existing native resources. [ResourceManager culture-specific lookup](https://learn.microsoft.com/en-us/dotnet/fundamentals/runtime-libraries/system-resources-resourcemanager-getstring)
+
+Brand assets are generated from `assets/brand/steamwrapper.svg`. After editing that source, run `mise run brand:generate`, then `mise run brand:check` to verify SVG, PNG, ICO and bundled copies. Do not edit exported icons separately.
+
+Legacy implementation and environment diagnostics:
 
 ```powershell
-mise run windows:doctor       # 工具版本、link/cl 和 SDK 路径
-mise run windows:rust-test    # 当前 Rust workspace 测试
-mise run windows:verify       # Rust / Dioxus 构建与隔离 Native E2E，遇错即停
-mise run windows:winui-smoke  # 独立 XAML 项目的自包含目录发布验证
+mise run windows:doctor       # Tool versions, link/cl and SDK paths
+mise run windows:rust-test    # Current Rust workspace tests
+mise run windows:verify       # Rust / Dioxus builds and isolated Native E2E; stop on failure
+mise run windows:winui-smoke  # Self-contained publication of the independent XAML smoke project
 ```
 
-`windows:verify` 会安装冻结的 pnpm 依赖、stage 随包 Runner，并运行现有质量门禁。它不打 NSIS、不发布版本，也不自动操作真实 Steam。现有 `just` 命令仍可用；Windows 的上述入口直接使用 PowerShell，不执行 Bash 清理脚本。
+`windows:verify` installs frozen pnpm dependencies, stages the bundled Runner, and runs the existing quality gates. It does not build NSIS, publish a release, or operate real Steam automatically. Existing `just` commands remain available. These Windows entry points use PowerShell directly, without Bash cleanup scripts.
 
-一次性工具调用可用：
+For individual tool commands:
 
 ```powershell
 mise.exe exec -- dotnet --version
 mise.exe exec -- cargo test --locked -p steamwrapper-runner
 ```
 
-本机 PowerShell 的 `mise` 激活函数会吞掉 `exec` 的裸 `--` 分隔符，因此一次性调用使用 `mise.exe`；`mise run ...` 不受此问题影响。没有为此修改用户 PowerShell 配置。
+The local PowerShell `mise` activation function consumes the bare `--` separator in `exec` calls, so use `mise.exe` for these individual commands. `mise run ...` is unaffected. The user's PowerShell profile was not changed to work around this.
 
-## 共享数据路径与真实 Steam 验收
+<a id="共享数据路径与真实-steam-验收"></a>
 
-Manager 和 Steam 启动的 Runner 必须看到同一份 `%LOCALAPPDATA%\SteamWrapper\profiles.toml` 与 `bin\SteamWrapperRunner.exe`。本机发现：从 Codex 的进程环境启动 shell 或 Manager 时，字面上的常规 AppData 路径可以落到 Codex 包的 `LocalCache` 私有目录；文件存在、摘要匹配、直接运行成功都不足以证明普通 Steam 可访问它。shell 或 Manager 报告没有 package identity，也不能否认这种文件视图差异。此次差异由文件句柄的最终路径确认。
+## Shared data paths and live Steam acceptance
 
-[共享文件位置检查](../apps/manager-winui/SteamWrapper.Application/Services/SharedDataFileLocation.cs)在判定 Runner 就绪前核验现有 Runner 与存在的 profile，并在复制安装候选前、安装完成时核验对应文件。句柄最终路径与解析显式 junction/symlink 后的逻辑路径不符时，服务返回非就绪并提示从资源管理器重新打开 Manager；配置编辑算法和 Launch Options 格式不变。比较接受合法链接、大小写差异及 `\\?\` / UNC 前缀；缺少 profile 不影响独立 Runner 健康检查。此检查证明共享位置一致性，不替代真实 Steam 启动验收。
+Manager and the Runner launched by Steam must see the same `%LOCALAPPDATA%\SteamWrapper\profiles.toml` and `bin\SteamWrapperRunner.exe`. On this machine, a shell or Manager launched from Codex's process environment could resolve a literal normal AppData path into the Codex package's private `LocalCache`. File existence, matching hashes and direct execution did not prove that ordinary Steam could access it. A shell or Manager reporting no package identity also did not rule out the different file view. The discrepancy was confirmed through final file-handle paths.
 
-有用户授权后，真实验收按普通玩家的启动方式执行：
+The [shared-file location check](../apps/manager-winui/SteamWrapper.Application/Services/SharedDataFileLocation.cs) verifies the existing Runner and any existing profile before reporting Runner ready, and verifies the installation candidate and installed files during installation. If the final handle path differs from the logical path after explicit junction/symlink resolution, the service reports not ready and asks the user to reopen Manager from File Explorer. The profile-editing algorithm and Launch Options format remain unchanged. The comparison accepts legitimate links, case differences and `\\?\` / UNC prefixes. A missing profile does not prevent an independent Runner health check. This proves shared-location consistency, not successful live Steam launch.
 
-1. 记录所选游戏原启动项，准备文件完整性基线和存档保护；存在未解决的云同步冲突时停止。
-2. 关闭 Manager，在正常 Windows 资源管理器地址栏打开本仓库 `target\winui\publish` 的完整目录，再双击 `SteamWrapper.Manager.exe`。保留完整发布目录；从 Codex shell 调用进程启动 API 不能作为已经脱离其文件视图的证据。
-3. 在该 Manager 中完成配置与稳定 Runner 安装，确认没有共享位置警告。复制既有格式的启动项到 Steam，关闭 Manager，再从 Steam 启动所选游戏；分别记录 Runner/游戏进程、标题界面、退出后 Steam 状态与显示时长。
-4. 测试结束恢复原启动项，复查游戏文件与原存档。UI 回到“开始”或云显示最新，不能代替文件完整性核对。
+With user authorization, follow the ordinary player launch path for live acceptance:
 
-日常开发仍使用上面的 mise 与沙盒命令。通过本机普通 Explorer 的一次真实游戏验收，不等于干净 Windows VM、安装器、覆盖更新或卸载验收。
+1. Record the selected game's original launch options and establish file-integrity and save-protection baselines. Stop on unresolved cloud conflicts.
+2. Close Manager. Open the full repository `target\winui\publish` directory from normal Windows File Explorer's address bar, then double-click `SteamWrapper.Manager.exe`. Keep the publication directory complete. Invoking a process-launch API from a Codex shell is not evidence of leaving its file view.
+3. Configure the profile and install the stable Runner in that Manager. Confirm no shared-location warning. Paste the existing-format launch options into Steam, close Manager, and launch the selected game from Steam. Record Runner/game processes, the title screen, Steam status after exit, and displayed playtime separately.
+4. Restore the original launch options and recheck game files and original saves. Steam returning to “Play” or reporting an up-to-date cloud state does not replace file-integrity verification.
 
-## WinUI 验证的边界
+Daily development continues to use the mise and sandbox commands above. One live game acceptance through normal Explorer on this machine does not establish clean Windows VM, installer, update or uninstall acceptance.
 
-官方 CLI 模板能够通过 .NET 创建 WinUI/XAML 项目。0.0.6-alpha 的创建后操作会无条件更新三个 NuGet 包，`UseLatestWindowsAppSDK=false` 未约束这些操作；脚本在生成后用 XML 固定实际包引用和最低系统版本，再发布。不能只凭模板参数宣称版本已经固定。[WinUI 官方快速入门](https://learn.microsoft.com/en-us/windows/apps/get-started/start-here)
+<a id="winui-验证的边界"></a>
 
-smoke 使用 `net10.0-windows10.0.26100.0`、x64、unpackaged、.NET/Windows App SDK self-contained，暂不启用 trimming。它验证 XAML 编译与发布目录，不安装/启动 MSIX、不启用 Developer Mode、不启动游戏，也不证明干净系统运行或原生交互已经验收。实际 Manager 已建立独立项目、包锁定、服务和跨语言测试。
+## Limits of WinUI verification
 
-## 本机安装与验证记录
+Microsoft's CLI template can create a WinUI/XAML project through .NET. Version 0.0.6-alpha unconditionally updates three NuGet packages in its post-creation actions; `UseLatestWindowsAppSDK=false` does not constrain those actions. After generation, the script pins actual package references and the minimum OS version with XML before publishing. Template arguments alone do not prove that dependency versions are pinned. [Official WinUI quickstart](https://learn.microsoft.com/en-us/windows/apps/get-started/start-here)
 
-2026-09-07：上述 mise 工具已安装。Build Tools 注册版本为 `18.9.12112.369`，检测到 MSVC `14.51.36231` 和 Windows SDK `10.0.26100.0`。安装器返回过 3010；用户随后完成重启。本轮复检 .NET、MSVC、SDK 与项目工具可用。
+The smoke uses `net10.0-windows10.0.26100.0`, x64, unpackaged deployment, and self-contained .NET/Windows App SDK, without trimming. It verifies XAML compilation and the publication directory. It does not install or launch MSIX, enable Developer Mode, launch games, or establish clean-system runtime or native-interaction acceptance. The actual Manager has its own project, package locks, services and cross-language tests.
 
-本机完成的验证：
+<a id="本机安装与验证记录"></a>
 
-| 验证 | 结果 |
+## Local installation and verification record
+
+2026-09-07: the mise tools above were installed. Build Tools reported registration version `18.9.12112.369`, with MSVC `14.51.36231` and Windows SDK `10.0.26100.0` detected. The installer had returned 3010; the user subsequently restarted. This verification confirmed that .NET, MSVC, the SDK and project tools were available.
+
+Completed local checks:
+
+| Check | Result |
 | --- | --- |
-| `mise install`、组件安装任务重复执行、`windows:doctor` | 通过；已安装项不会重复覆盖，当前开发 shell 可用 |
-| WinUI 固定依赖后的自包含发布 | 通过；目录包含非空 EXE、`coreclr.dll` 和 `Microsoft.UI.Xaml.dll`；未启用裁剪 |
-| Manager 组件精简后的 fresh publish | 通过；171.196 MiB / 179,511,987 字节 / 457 文件，旧 AI/ML 等依赖无残留，Runner 清单摘要匹配 |
-| `Test-WinUIPublish.ps1` | 5 项通过；先复现旧发布保留哨兵的失败，再验证新发布与错误恢复 |
-| 共享数据位置保护的 `winui:test` / `winui:contracts` | 43/43 C# 用例通过，其中 9 条新增位置回归；Runner 与 profile 重定向先复现失败再修复，原生句柄与真实 junction 正例通过；跨语言及受控 Runner 契约通过 |
-| `cargo fmt --all -- --check`、`cargo check --locked --workspace` | 通过 |
-| `cargo test --locked --workspace` | 全部通过，包括 Windows Runner 的 6 项测试 |
-| 冻结 pnpm 安装、E2E TypeScript 检查 | 通过 |
-| `dx check`、`dx build --release`、release Runner staging | 通过；Dioxus 产物在 `target/dx/SteamWrapperManager/release/windows/app` |
-| Cargo `e2e` feature 构建、隔离 Native E2E | 通过，3 个 spec / 6 个用例 |
-| mise 任务校验、PowerShell AST、JSON/TOML 版本一致性、文档链接和 diff | 通过 |
+| `mise install`, repeated component setup, `windows:doctor` | Passed; installed components were not replaced again, and the current development shell was usable |
+| WinUI self-contained publication after dependency pinning | Passed; non-empty EXE, `coreclr.dll` and `Microsoft.UI.Xaml.dll` present; trimming disabled |
+| Fresh publication after Manager component reduction | Passed; 171.196 MiB / 179,511,987 bytes / 457 files; no stale AI/ML dependencies; Runner manifest hash matched |
+| `Test-WinUIPublish.ps1` | Five checks passed; the old publication first reproduced the stale-sentinel failure, followed by new-publication and recovery verification |
+| Shared-data location protection: `winui:test` / `winui:contracts` | 43/43 C# tests passed, including nine new location regressions; Runner/profile redirection first reproduced failures, then passed after the fix; native handle and real junction positive cases passed; cross-language and controlled Runner contracts passed |
+| `cargo fmt --all -- --check`, `cargo check --locked --workspace` | Passed |
+| `cargo test --locked --workspace` | All passed, including six Windows Runner tests |
+| Frozen pnpm install, E2E TypeScript check | Passed |
+| `dx check`, `dx build --release`, release Runner staging | Passed; Dioxus output at `target/dx/SteamWrapperManager/release/windows/app` |
+| Cargo `e2e` feature build, isolated Native E2E | Passed: three specs / six tests |
+| mise task validation, PowerShell AST, JSON/TOML version consistency, documentation links and diff | Passed |
 
-安装后验证复现并修正了三个现有 Windows 工具/测试问题：Manager service 测试硬编码 Linux wait mode、Native E2E 直接启动 `pnpm.cmd` 的 EINVAL、Runner 路径断言硬编码 `/`。pnpm 也明确禁用了当前 embedded provider 不使用的 Edge/Gecko 下载脚本，保留 esbuild。没有修改产品运行逻辑或降低现有断言要求。
+Post-installation verification reproduced and fixed three existing Windows tooling/test issues: a hardcoded Linux wait mode in Manager service tests, EINVAL from directly launching `pnpm.cmd` in Native E2E, and a hardcoded `/` in a Runner path assertion. pnpm also explicitly disabled the Edge/Gecko download scripts unused by the current embedded provider, retaining esbuild. Product runtime logic and assertion requirements were not weakened.
 
-完整验证任务最初遇错停止；最后的路径断言修正后，仅重跑受影响的 TypeScript 和 E2E，其余已通过检查未重复。日志保留在忽略的 `target/windows-verify.log`、`target/windows-runner-test.log`、`target/windows-e2e.log` 和 `target/winui-toolchain-build.log`。
+The full verification task initially stopped on failure. After the final path-assertion fix, only the affected TypeScript and E2E checks were repeated. Other successful checks were not rerun. Logs remain in ignored `target/windows-verify.log`, `target/windows-runner-test.log`, `target/windows-e2e.log` and `target/winui-toolchain-build.log`.
 
-后续实现已通过 C# 配置/服务测试和 `winui:contracts`：C# 单字段编辑由 Rust 全量比较语义，真实 Runner 验证中文路径、精确 argv/cwd、job/root 等待差别、退出码与缺失目标日志。证据位于忽略的 `target/winui-contracts/`；原生预览记录见 [首个切片验收](winui-preview-validation.md)。这些 fixture 结果本身不代表新安装器、干净系统运行或真实 Steam 时长验收；真实游戏结果单独记录如下。
+Later implementation passed C# profile/service tests and `winui:contracts`: Rust compared complete semantics after C# edited a single field, and the real Runner verified Chinese paths, exact argv/cwd, job/root waiting differences, exit codes and missing-target logs. Evidence is under ignored `target/winui-contracts/`; native preview records are in [first-slice acceptance](winui-preview-validation.md). These fixtures alone do not establish a new installer, clean-system runtime or live Steam playtime acceptance. Live results are recorded separately below.
 
-后续补齐 Native E2E 启动失败日志后，本机 Windows 再次通过 3 个 spec / 6 项测试，退出码 0 且无 Manager 残留；日志为 `target/native-e2e-wrapper-1f429cd320e1437f98e8be2331c68c0f/native-e2e.log`。
+After Native E2E startup-failure logging was completed, local Windows again passed three specs / six tests, with exit code 0 and no residual Manager process. The log is `target/native-e2e-wrapper-1f429cd320e1437f98e8be2331c68c0f/native-e2e.log`.
 
-用户授权的真实 galgame `The NOexistenceN of you AND me`（AppID 2873080）已完成本机 Steam 闭环：2026-09-07 12:46:03 从 Steam 启动 Runner 和游戏，标题界面正常退出后，Steam 在 12:53:33 记录 Runner、游戏与 Unity 子进程全部 exit 0；UI 回到“开始”、云显示最新，累计时长显示从 11.2 变为 11.4 小时，原空启动项已恢复。此前 OS Error 3 对应的是 Codex 私有 AppData 文件视图；通过正常 Explorer 打开同一 Manager、在真实稳定目录安装后，原启动项格式未作修改即成功。最终 35/35 个游戏文件与 4/4 份原存档的 SHA-256 均与初始基线一致；存档句柄最终路径也确认未被重定向。详见 [真实 Steam 验证](real-steam-validation.md)。
+The user-authorized live galgame `The NOexistenceN of you AND me` (AppID 2873080) completed the local Steam flow. On 2026-09-07 at 12:46:03, Steam launched Runner and the game. Following a normal exit from the title screen, Steam recorded Runner, the game and Unity child process all exiting with code 0 at 12:53:33. The UI returned to “Play,” cloud status was up to date, displayed total playtime rose from 11.2 to 11.4 hours, and the original empty launch options were restored. The earlier OS Error 3 corresponded to Codex's private AppData view. Opening the same Manager through normal Explorer and installing into the real stable directory succeeded with the unchanged launch-options format. Final SHA-256 checks matched the initial baseline for 35/35 game files and 4/4 original saves; final save-file handle paths also showed no redirection. See [live Steam validation](real-steam-validation.md).
 
-新增位置保护的发布产物已完成两种启动上下文的原生复核：从受重定向的工具环境打开时显示位置警告，保存后不显示启动项或复制按钮；从普通 Explorer 打开新版 Manager（PID 13644，父进程 11316 为 `explorer.exe`）后保存成功，生成完全一致的既有命令格式。这是本机窗口与共享路径证据，干净 Windows VM、安装器和卸载边界仍未验收。
+The publication containing location protection received native checks in both launch contexts. Launching from the redirected tool environment displayed a location warning; saving did not show launch options or a copy button. Opening the new Manager from normal Explorer (PID 13644, parent PID 11316 `explorer.exe`) saved successfully and generated exactly the existing command format. This is local window/shared-path evidence. Clean Windows VM, installer and uninstall boundaries remain untested.
 
-组件精简与发布保护的证据在 `target/winui-component-study/integrated-publish.json`、`publish-regression-before.log` 和 `publish-regression-after.log`。此次已验证构建、布局与发布恢复；精简后最终产物另行通过沙盒原生窗口、配置读取、picker 打开/取消、保存和稳定 Runner 就绪复核。旧 226.23 MiB 产物的 6 轮启动/内存数据没有作为新产物复测结果，干净 Windows 系统也尚未测试。Windows CI 在上传预览前运行 `Test-WinUIPublish.ps1`，同时完成发布与 5 项发布回归。
+Component-reduction and publication-protection evidence is in `target/winui-component-study/integrated-publish.json`, `publish-regression-before.log` and `publish-regression-after.log`. This work verified builds, layout and publication recovery. The final reduced artifact separately passed sandbox native-window, profile loading, picker open/cancel, save and stable-Runner readiness checks. Six rounds of startup/memory measurements from the old 226.23 MiB artifact were not treated as measurements of the new artifact, and a clean Windows system was not tested. Windows CI runs `Test-WinUIPublish.ps1` before uploading the preview, completing publication and all five publication regressions.
 
-提交 `3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)与 [v2 完整门禁](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786)均已通过。后者包含 Windows/Ubuntu Native E2E、各平台 Runner 独立进程测试及 Linux AppImage 构建、实际解包检查和上传。远程运行中发现的 Linux `libxdo` 缺失、Native E2E 无显示环境、AppImage 解包校验相对路径问题已修复并经新提交完整运行确认；未降低门禁要求。CNB 同步成功。以上记录对应代码提交，不将后续仅文档提交的运行状态提前写为通过。
+Commit `3d322db` passed both [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718) and the [full v2 gates](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786). The latter includes Windows/Ubuntu Native E2E, independent platform Runner process tests, Linux AppImage building, actual extraction inspection and upload. Missing Linux `libxdo`, a headless Native E2E environment and a relative-path error in AppImage extraction verification were fixed and confirmed by complete runs on the new commit; no gates were weakened. CNB synchronization succeeded. These records correspond to their code commit, not to an assumed successful run for later documentation-only commits.
+
+The 2026-09-08 language implementation passed the final `mise run winui:test` with 59/59 tests, including 10 new localization/preference cases. The initial English-default regressions failed against the old Chinese messages before implementation. UTF-8 BOM preference compatibility and nested duplicate-JSON-key rejection also failed before their fixes. Coverage includes both resource catalogs and format placeholders, nested service messages in both languages, invariant diagnostics/user data, canonical language persistence, unknown JSON fields, malformed/duplicate/oversized settings, and BOM input. Cross-language/Runner contracts and the final self-contained publish passed, including the `zh-CN` satellite resources. The [later language validation](winui-preview-validation.md#later-language-work) records final native switching, restart persistence, preserved inputs/profile bytes, and application/window icon checks on a disposable fixture; it does not replace clean-system or live Steam acceptance.
