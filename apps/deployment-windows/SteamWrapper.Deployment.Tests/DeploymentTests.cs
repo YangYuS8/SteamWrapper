@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text;
+using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace SteamWrapper.Deployment.Tests;
@@ -336,6 +338,33 @@ public sealed class DeploymentTests
         Assert.IsFalse(File.Exists(Path.Combine(fixture.Root, "installation.json")));
     }
 
+    [TestMethod]
+    public void RedirectedChineseMaintenanceDiagnosticsReplaceAnEnglishOemWriterWithUtf8()
+    {
+        using var fixture = new Fixture();
+        using var process = fixture.Start("SteamWrapper.Deployment.ProcessFixture", "SteamWrapper.Deployment.ProcessFixture",
+            "oem-host", fixture.AssemblyPath("SteamWrapper.Host", "SteamWrapper"), "--repair", "--root", fixture.Root, "--test-root", "--language", "zh-CN");
+        Assert.IsTrue(process.WaitForExit(10000), "Maintenance errors must exit without waiting for a dialog.");
+        Assert.AreEqual(11, process.ExitCode);
+        StringAssert.Contains(process.StandardError.ReadToEnd(), "没有可用的完整管理器安装");
+        Assert.IsFalse(File.Exists(Path.Combine(fixture.Root, "installation.json")));
+    }
+
+    [TestMethod]
+    public void WinExeMaintenanceFailureWithoutRedirectedStreamsExitsWithoutADialog()
+    {
+        using var fixture = new Fixture();
+        var start = new ProcessStartInfo(Path.ChangeExtension(fixture.AssemblyPath("SteamWrapper.Host", "SteamWrapper"), ".exe"))
+            { UseShellExecute = false, CreateNoWindow = true };
+        start.Environment["STEAMWRAPPER_DEPLOYMENT_TEST"] = "1";
+        start.Environment["DOTNET_ROOT"] = Path.GetFullPath(Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "../../.."));
+        foreach (var argument in new[] { "--repair", "--root", fixture.Root, "--test-root", "--language", "zh-CN" }) start.ArgumentList.Add(argument);
+        using var process = Process.Start(start)!;
+        Assert.IsTrue(process.WaitForExit(10000), "A WinExe maintenance failure must not require a console or wait for a dialog.");
+        Assert.AreEqual(11, process.ExitCode);
+        Assert.IsFalse(File.Exists(Path.Combine(fixture.Root, "installation.json")));
+    }
+
     [DataRow("RecoveryReceiptWritten")]
     [DataRow("RecoveryStageMoved")]
     [TestMethod]
@@ -641,13 +670,17 @@ internal sealed class Fixture : IDisposable
             .Where(path => Path.GetFileName(path) != DeploymentManifest.FileName)
             .Select(path => new PayloadFile(Path.GetRelativePath(directory, path).Replace('\\', '/'), new FileInfo(path).Length, DeploymentManifest.Hash(path))).ToArray() });
     }
-    public Process Start(string project, string assembly, params string[] arguments)
+    public string AssemblyPath(string project, string assembly)
     {
         var sourceRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
         var configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
-        var dll = Path.Combine(sourceRoot, project, "bin", configuration, "net10.0", assembly + ".dll");
-        var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
-        start.ArgumentList.Add(dll);
+        return Path.Combine(sourceRoot, project, "bin", configuration, "net10.0", assembly + ".dll");
+    }
+    public Process Start(string project, string assembly, params string[] arguments)
+    {
+        var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
+            StandardOutputEncoding = new UTF8Encoding(false), StandardErrorEncoding = new UTF8Encoding(false) };
+        start.ArgumentList.Add(AssemblyPath(project, assembly));
         foreach (var argument in arguments) start.ArgumentList.Add(argument);
         start.Environment["STEAMWRAPPER_DEPLOYMENT_TEST"] = "1";
         return Process.Start(start)!;

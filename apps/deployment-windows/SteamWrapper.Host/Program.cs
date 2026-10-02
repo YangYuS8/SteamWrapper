@@ -1,11 +1,18 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using SteamWrapper.Deployment;
 
 var selectedLanguage = DeploymentMessages.ReadPreferredLanguage();
 var launchRequested = args.Length == 0;
 try
 {
+    // Redirected diagnostics use a fixed byte encoding on every Windows language. Configure
+    // writers rather than the console code page so Explorer/WinExe startup needs no console.
+    if (Console.IsOutputRedirected)
+        Console.SetOut(new StreamWriter(Console.OpenStandardOutput(), new UTF8Encoding(false)) { AutoFlush = true });
+    if (Console.IsErrorRedirected)
+        Console.SetError(new StreamWriter(Console.OpenStandardError(), new UTF8Encoding(false)) { AutoFlush = true });
     var switches = new HashSet<string>(StringComparer.Ordinal);
     var options = new Dictionary<string, string>(StringComparer.Ordinal);
     for (var index = 0; index < args.Length; index++)
