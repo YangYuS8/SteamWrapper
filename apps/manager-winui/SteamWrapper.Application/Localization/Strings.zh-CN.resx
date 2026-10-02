@@ -160,4 +160,7 @@
   <data name="CoverSettingsSave" xml:space="preserve"><value>无法保存封面偏好，继续使用之前的设置。{0}</value></data>
   <data name="ClearCoversFailed" xml:space="preserve"><value>无法清除全部下载封面，本地图片保持不变。{0}</value></data>
   <data name="CloseStatus" xml:space="preserve"><value>关闭状态消息</value></data>
+  <data name="DeploymentTitle" xml:space="preserve"><value>SteamWrapper 安装</value></data>
+  <data name="DeploymentBlocked" xml:space="preserve"><value>无法打开此安装版本。请先完成安装或使用修复，再重试。{0}</value></data>
+  <data name="DeploymentHealthFailed" xml:space="preserve"><value>应用已打开，但无法确认恢复记录。请保留上一版本，必要时使用修复。{0}</value></data>
 </root>

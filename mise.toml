@@ -73,3 +73,15 @@ run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish"
 [tasks."winui:sandbox"]
 description = "Build and open WinUI with a disposable Steam library and data directories"
 run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox"
+
+[tasks."winui:installer-tools"]
+description = "Install and verify the pinned official Inno compiler under target"
+run = "pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1"
+
+[tasks."winui:installer-test"]
+description = "Test real setup and uninstall processes against disposable installation/data roots"
+run = "pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1"
+
+[tasks."winui:signing-test"]
+description = "Test signing policy and staged Runner metadata without requesting production signing"
+run = "pwsh -NoProfile -File scripts/windows/Test-WindowsSigning.ps1"

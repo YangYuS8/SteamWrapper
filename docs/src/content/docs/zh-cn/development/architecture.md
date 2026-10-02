@@ -61,6 +61,12 @@ crates/core                                 # 共享配置/路径契约
 
 `ProfileSteamInstallation` 按 AppID 关联只读 Steam 路径用于显示，不序列化，也不覆盖 `game_dir`。后者是实际运行文件夹，可以位于 Steam 库外。详见[汉化目录分离](/SteamWrapper/zh-cn/guides/translated-games/)。
 
+### Manager 部署
+
+`apps/deployment-windows` 包含不依赖 GUI 的 C# 部署库和 NativeAOT `SteamWrapper.exe` 启动器／辅助程序。Manager 初始化前取得共享安装锁，保持到进程退出，健康确认绑定当前事务。Inno 和显式修复／回退／卸载共用独占锁及清单／日志引擎。该组件只启动 Manager，不接触游戏、Steam 启动项或稳定 Runner／数据目录。详见[安装器所有权与恢复](/SteamWrapper/zh-cn/guides/installer-preview/)。
+
+应用更新认证是注入信任的内部服务，没有启用生产源或更新界面。SignPath 签名和 D1b 干净客户端交付仍需外部批准／独立验收。
+
 ### `crates/core`
 
 Core 是不依赖 GUI 的 Rust 库。Runner 使用其 Profile/TOML 与路径语义。现有 Steam 元数据、封面 URL 和启动项工具不为 WinUI 提供服务：C# 直接实现文件契约。Core 不含平台进程等待 API。

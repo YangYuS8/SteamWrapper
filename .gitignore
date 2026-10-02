@@ -6,6 +6,8 @@ node_modules/
 # .NET / WinUI build output
 /apps/manager-winui/**/bin/
 /apps/manager-winui/**/obj/
+/apps/deployment-windows/**/bin/
+/apps/deployment-windows/**/obj/
 /tests/fixtures/**/bin/
 /tests/fixtures/**/obj/
 /tests/contracts/**/bin/

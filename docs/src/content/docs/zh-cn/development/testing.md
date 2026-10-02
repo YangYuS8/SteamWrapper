@@ -87,6 +87,14 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 | Windows 发布 | `Test-WinUIPublish.ps1` | 自包含 Manager/Runner 资源与发布目录替换、恢复 |
 | WinUI 交互 | `Invoke-WinUI.ps1 -Action Sandbox` 加单独记录的原生交互 | 一次性数据、真实窗口/picker；自动化原生 UI 门禁仍在计划中 |
 
+## 安装器与签名命令
+
+`Invoke-WinUI.ps1 -Action Test` 也运行部署库的进程／清单／日志回归。`Test-WinUIInstallerScripts.ps1` 不生成应用安装包，仅测试打包保护；`Test-WindowsSigning.ps1` 使用政策夹具和真实 Windows 信任失败，不申请签名。`Test-RunnerSigningMetadata.ps1` 检查已构建 Runner 的 PE，不执行它。这些检查进入日常 Windows CI。
+
+完整发布后，`Test-WinUIProductMetadata.ps1` 检查全部七个自有 EXE／DLL 产品（含中文资源）及实际 x64／GUI NativeAOT Host。发布工作流要求此门禁，它不执行文件，也不证明发布者签名。
+
+完整 Publish 并安装已验证 Inno 工具后，`Test-WinUIInstaller.ps1` 在隔离程序／数据根目录运行真实安装和卸载进程。前置条件与证据边界见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)。手动预览工作流执行此门禁并单独构建安装包；普通分支 CI 不打包安装器。干净 Windows 11 客户端、原生向导／Explorer 行为和注册表／快捷方式／断电故障验收仍是独立门槛。
+
 ## 本地命令
 
 按自己的方式安装 Windows 工具；mise 是可选项。SDK 要求及 PowerShell 入口见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。Rust workspace 只包含 core 与 Runner，Linux 不再需要 GTK/WebKit、Dioxus CLI、Xvfb 或桌面会话。
@@ -129,12 +137,12 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 
 `winui-release.yml` 在版本标签或明确请求的手动预览中重新执行完整门禁，再发布自包含应用，运行全部发布／恢复回归并检查完整布局。版本标签运行先验证源码／标签／版本和双语说明，再生成 portable ZIP、校验和及元数据。标签运行可公开未签名 GitHub 预发布；手动运行只上传预览产物。发布边界和可选 CNB 镜像见[发布准备](/SteamWrapper/zh-cn/development/distribution/)。
 
-旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；WinUI 自动化原生 UI、安装器与更新门禁仍属于路线图。
+旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；手动发布工作流预览现已运行真实隔离安装器进程。WinUI 自动化原生 UI、干净客户端交付和启用更新后的验收仍属于路线图。
 
 ## 限制
 
 - C# 服务/契约和发布检查不能证明原生 UI、可访问性或干净 Windows 安装；WinUI 自动化原生 UI 门禁尚在计划中。
 - 常规自动化不操作真实 Steam；真实验收需要授权、记录原启动项、保护存档、校验文件并恢复。一键应用/恢复 Launch Options 仍是后续功能。
 - Runner 进程 fixture 仅证明对应平台和已测生命周期场景，不证明真实 Proton、breakaway、Unix daemonize/新 session 或 Steam Deck 兼容性。
-- 当前预览是完整的 Windows 自包含目录；安装器、更新/卸载及干净 Windows VM 仍需独立验收。
+- 当前预览包含完整的 Windows 自包含目录和单独的未签名安装器；隔离安装／卸载测试不能证明干净 Windows VM、原生向导或经过认证的更新验收。
 - 上述 2026-09-07–09-08 Dioxus 记录是归档历史结果，不是当前 WinUI 证据。

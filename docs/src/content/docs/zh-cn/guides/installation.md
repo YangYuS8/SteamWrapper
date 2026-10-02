@@ -5,7 +5,7 @@ description: 获取完整 WinUI 预览版，了解数据位置，并在不破坏
 
 WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览版**。应用目录中包含 .NET 与 Windows App SDK 文件，请始终保留完整目录。
 
-目前没有新的 WinUI 安装向导、单文件 EXE，也尚未完成干净系统、更新与卸载的交付保证。WinUI 是唯一的 Manager，程序名为 `SteamWrapper.Manager.exe`。当前版本标签发布均为未签名预发布；Dioxus 发布属于历史产物，不包含当前 WinUI Manager。
+另已实现未签名的[每用户安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)。干净系统、更新与卸载验收仍未完成，WinUI 没有单文件 EXE。WinUI 是唯一的 Manager，程序名为 `SteamWrapper.Manager.exe`。当前版本标签仍发布未签名便携预览；Dioxus 发布属于历史产物，不包含当前 WinUI Manager。
 
 ## 获取带版本的预览包
 
@@ -23,6 +23,8 @@ WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览�
 常规拉取请求与合入 `main` 只运行 CI，不上传应用包。维护者可以打开 [WinUI version release 工作流](https://github.com/YangYuS8/SteamWrapper/actions/workflows/winui-release.yml)，在 **Run workflow** 中选择所需分支或 ref，按需请求构建。手动运行执行完整构建和门禁，但不会公开创建 Release。
 
 从成功的手动运行下载 **`SteamWrapper-WinUI-preview-windows-x64`**，解压全部文件。不要把单独的测试证据产物当成应用。工作流产物下载可能要求登录 GitHub，且会随保留期限到期；维护者提供预览时应同时标明所选源码提交。
+
+独立的 **`SteamWrapper-WinUI-installer-preview-windows-x64`** 产物包含未签名安装器预览与检查元数据。使用前阅读[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)，干净客户端和签名门槛尚未通过。
 
 ## 打开完整应用
 

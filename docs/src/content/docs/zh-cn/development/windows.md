@@ -67,7 +67,9 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish  # target
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox  # 发布并打开一次性 Steam/用户目录中的原生预览
 ```
 
-NuGet 依赖由各项目 `packages.lock.json` 固定，日常命令使用 locked restore。服务项目显式列出 win-x64 runtime identifier，避免测试与 UI 发布轮换时造成锁文件漂移。更新依赖时才使用 `--force-evaluate` 并审查锁文件差异。
+NuGet 依赖由各项目 `packages.lock.json` 固定，日常命令使用 locked restore。Application 和部署项目显式列出 win-x64，避免测试与发布轮换时漂移。Host 固定 NativeAOT 依赖；发布先加载既定原生 SDK，再生成独立 GUI 子系统可执行文件。只在有意更新依赖／目标时使用 `--force-evaluate`，并审查锁文件差异。
+
+`-Action Test` 包含部署回归，`-Action Build` 编译 Host，但不发布应用包。`-Action Publish` 也包含 `SteamWrapper.Deployment.dll` 和 `Deployment/SteamWrapper.exe`。已验证 Inno 编译器、真实隔离安装测试及本地安装包构建的直接命令见[安装器预览指南](/SteamWrapper/zh-cn/guides/installer-preview/)。可选 mise 别名为 `winui:installer-tools`、`winui:installer-test` 和 `winui:signing-test`。
 
 Manager 已从 Windows App SDK 2.4.0 总包改为上述组件包，保留原组件版本与摘要；InteractiveExperiences 显式固定 2.1.6，避免依赖回落到 2.1.3。AI、ML、Search、Widgets、DWrite 及其未使用发布文件不再进入新产物；独立环境 smoke 仍使用总包，不随此次精简改变。
 

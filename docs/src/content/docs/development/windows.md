@@ -77,7 +77,9 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish  # Self-c
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox  # Publish and open the native preview with disposable Steam/user directories
 ```
 
-Each project's `packages.lock.json` pins NuGet dependencies, and daily commands use locked restore. The service project explicitly lists the win-x64 runtime identifier to prevent lockfile drift when alternating between tests and UI publication. Use `--force-evaluate` only when updating dependencies, and review the lockfile changes.
+Each project's `packages.lock.json` pins NuGet dependencies, and daily commands use locked restore. Application and deployment projects explicitly list win-x64 to prevent lockfile drift between tests and publication. Host pins NativeAOT dependencies; publication loads the documented native SDK before producing its independent GUI-subsystem executable. Use `--force-evaluate` only for deliberate dependency/target changes and review lockfiles.
+
+`-Action Test` includes deployment regressions; `-Action Build` compiles Host without publishing an application package. `-Action Publish` also bundles `SteamWrapper.Deployment.dll` and `Deployment/SteamWrapper.exe`. For the verified Inno compiler, isolated real setup tests and local setup build, use the direct commands in the [installer preview guide](/SteamWrapper/guides/installer-preview/). Optional mise aliases are `winui:installer-tools`, `winui:installer-test` and `winui:signing-test`.
 
 Manager now references the component packages above instead of the Windows App SDK 2.4.0 umbrella package, retaining the same component versions and hashes. InteractiveExperiences is explicitly pinned to 2.1.6 to avoid falling back to 2.1.3. AI, ML, Search, Widgets, DWrite and their unused publication files no longer enter new artifacts. The independent environment smoke still uses the umbrella package.
 

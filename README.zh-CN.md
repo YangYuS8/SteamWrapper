@@ -12,13 +12,13 @@
 
 ## 当前状态
 
-项目优先做好 Windows。**WinUI 3/C# Manager 已有可用预览**，支持本地 Steam 发现、原生选择器、保留语法的配置编辑、高级参数与启动选项复制。WinUI 是唯一的 Manager；旧 Dioxus 界面与发布链已移除。选择构建产物前请阅读安装指南；干净系统验收和 WinUI 安装器仍待完成。
+项目优先做好 Windows。**WinUI 3/C# Manager 已有可用预览**，支持本地 Steam 发现、原生选择器、保留语法的配置编辑、高级参数与启动选项复制。WinUI 是唯一的 Manager；旧 Dioxus 界面与发布链已移除。已实现未签名的[每用户安装器预览](https://yangyus8.top/SteamWrapper/zh-cn/guides/installer-preview/)，干净系统验收和生产签名仍待完成。
 
 Manager 默认英语，提供完整简体中文。切换语言保留游戏名称、路径、参数与已保存配置。请将官方 Steam 安装与第三方汉化版分开放置，详见[汉化游戏、存档与成就](https://yangyus8.top/SteamWrapper/zh-cn/guides/translated-games/)。兼容性记录限定于具体游戏和场景，不保证所有游戏均可用。
 
 封面优先使用自定义与本地 Steam 图片。可选的官方 Steam CDN 补图默认关闭，使用有界的 SteamWrapper 缓存并提供清理入口；缺图不影响配置或启动。详见[封面设置](https://yangyus8.top/SteamWrapper/zh-cn/guides/configuration/#cover-settings)。
 
-拉取请求与 `main` 运行测试及编译检查。可下载的 Windows 包由发布工作流在推送版本标签时构建，也可以按需手动生成预览。Windows 交付门槛通过前，WinUI 标签发布仍标为未签名预发布。版本与发布要求见[发布准备](https://yangyus8.top/SteamWrapper/zh-cn/development/distribution/)。
+拉取请求与 `main` 运行测试及编译检查，版本标签构建便携预发布，手动工作流也构建并测试未签名安装器预览。Windows 交付门槛通过前，标签发布仍为未签名预发布。详见[发布准备](https://yangyus8.top/SteamWrapper/zh-cn/development/distribution/)和[代码签名政策](https://yangyus8.top/SteamWrapper/zh-cn/project/design/code-signing/)。
 
 ## 文档
 

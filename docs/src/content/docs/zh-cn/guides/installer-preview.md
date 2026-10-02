@@ -1,0 +1,80 @@
+---
+title: "Windows 安装器预览"
+description: "构建、试用、修复和卸载未签名的按用户安装器，并明确预览版边界。"
+---
+
+## 当前边界
+
+Inno Setup 安装器和 C# 部署组件已实现，面向 **Windows 11 24H2 或更新版本、x64**，目前是**未签名预览版**。包含完整的自包含 WinUI 文件、两种语言和独立 Runner。普通分支 CI 只测试和编译，不生成安装包；显式手动运行发布工作流会构建安装器预览。安装器和签名验收通过前，公开版本标签继续使用现有便携 ZIP 发布契约。
+
+这不是已签名或稳定发布。开发机或托管 Windows Server 的隔离进程测试不等于干净 Windows 11 验收。干净客户端、正常防护下的下载、多用户、缩放以及真实 Steam 交付门槛仍在[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)中记录。不要为了运行预览关闭 Windows 防护。
+
+## 构建预览
+
+安装文档要求的 Windows 开发工具后，在仓库根目录运行：
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
+pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
+pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.1-preview.1
+```
+
+最后一条命令生成 `target/winui/installers/v0.2.1-preview.1/SteamWrapper-v0.2.1-preview.1-win-x64-setup.exe` 和检查元数据。标签必须匹配源码的三段版本号，仅用于标识本地产物；命令不会创建 Git 标签或发布 Release。已公开版本不能复用于不同字节。
+
+Inno Setup 7.1.0 x64 仅从官方网站下载，检查固定 SHA-256 和发布者签名后安装到 `target/toolchain`。贡献者也可以用 `-Compiler` 提供版本匹配且验证通过的编译器。mise 别名只是可选便利工具。开发 SDK 和 Inno 是构建工具，不是玩家运行要求。
+
+隔离验收命令：
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerScripts.ps1
+pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1
+```
+
+后者在仓库 `target` 下新建目录，使用独立测试 AppId 和真实安装、卸载进程，快捷方式重定向到一次性夹具目录。其中人工构造的下一版本文件只验证部署事务，不代表真实下一版本构建或签名证据。测试不使用真实游戏库；脚本会报告包含日志和 `evidence.json` 的隔离目录，其路径包含中文、空格和单引号，用于验证路径处理。
+
+## 安装与日常使用
+
+安装时选择 English 或简体中文。按当前用户安装，通常无需提权，程序目录固定为：
+
+```text
+%LOCALAPPDATA%\Programs\SteamWrapper\
+  SteamWrapper.exe
+  installation.json
+  versions\<tag>\
+  maintenance\SteamWrapper.Deployment.exe
+```
+
+安装器创建开始菜单快捷方式，桌面快捷方式可选；两者都指向稳定的 `SteamWrapper.exe` 启动器。启动器只打开 Manager。Steam 仍调用 `%LOCALAPPDATA%\SteamWrapper\bin\SteamWrapperRunner.exe`，不要把 Manager、部署辅助程序或版本目录路径填入 Steam 启动选项。
+
+安装 Manager 不修改 Steam 启动选项、游戏或稳定 Runner。Manager 原有的 Runner 安装／修复操作仍单独负责 Runner。配置、界面偏好、备份、日志和缓存仍在 `%LOCALAPPDATA%\SteamWrapper\`。便携版用户可以直接安装 Manager 并保留已有数据，无需复制游戏。
+
+安装、修复、回退或卸载前，请正常关闭所有 Manager 窗口。部署锁阻止 Manager 运行时替换文件，并在激活期间阻止新的 Manager 启动。占用时显示重试提示，不终止 Manager、Runner 或游戏，也不安排重启后强制替换被占用的启动器。
+
+## 修复与回退
+
+重新运行匹配且验证过的安装包可以恢复缺失的稳定 Manager 启动器。也可以关闭 Manager 后运行维护程序：
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\SteamWrapper\maintenance\SteamWrapper.Deployment.exe" --repair --language en
+& "$env:LOCALAPPDATA\Programs\SteamWrapper\maintenance\SteamWrapper.Deployment.exe" --rollback --language zh-CN
+```
+
+修复会处理支持的中断部署日志，并从已验证版本恢复缺失启动器。遇到未知或被改动的文件会拒绝覆盖；这不是运行时文件损坏的通用修复。回退需要验证完整清单后才能选择保留的兼容上一版本，不回退配置或稳定 Runner。
+
+复制暂存文件中断时，修复将全部不确定字节保留到程序目录下的 `.recovery-<transaction>`，并写入恢复凭据。该目录不会被启动或自动清除，也不妨碍恢复后的有效版本运行；请保留用于排查，人工确认后再删除，卸载也会保留它。完整旧版本目前继续保留，尚未实现自动清理和磁盘配额。
+
+Manager 初始化完成后才写入绑定本次事务的健康确认。未确认或启动缓慢不会导致强制关闭或无人值守回退，目前提供人工恢复。文件状态日志不能保证注册表、快捷方式和所有断电位置的整个事务原子性。
+
+## 卸载
+
+关闭 Manager 后，从 Windows 已安装应用设置或安装的卸载器卸载。卸载移除清单拥有的 Manager 版本、稳定 Manager 启动器、安装注册和快捷方式。未知或被改动的安装文件会在常规删除前阻止操作，应保留诊断并排查后重试。
+
+移除中断时使用独立卸载日志和隔离的 `.removal-<transaction>` 目录，已停用或部分删除的文件不会被视作可启动版本。报告的占用解除后，重复卸载或使用相同已验证安装包（或更新的基础版本）恢复；未知字节仍保留。这些文件恢复测试不能证明所有 Windows 注册表或快捷方式故障都能恢复。
+
+卸载保留**配置、界面设置、稳定 Runner、备份、日志、下载封面和未来的更新信任状态**。Steam 启动选项可能仍引用 Runner。目前没有“删除全部数据”选项，也未实现自动恢复 Steam 启动选项；仍存在引用时不要人工删除 Runner。
+
+## 签名与更新
+
+[代码签名政策](/SteamWrapper/zh-cn/project/design/code-signing/)准备 SignPath Foundation 审核，并验证时间戳、发布者、明确证书指纹及最终 Runner 字节。Foundation 批准和生产签名尚未接入，校验和、PE 产品元数据不等于发布者签名。
+
+更新认证底层使用隔离夹具独立开发。目前没有启用生产更新地址、密钥、后台检查、自动下载或确认后调用安装器的流程。日常游戏启动继续独立于 Manager 和联网。

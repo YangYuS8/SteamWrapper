@@ -7,11 +7,11 @@ description: "WinUI 预览目录、稳定 Runner 安装及剩余 Windows 交付�
 
 ## 原则
 
-WinUI 是唯一当前 Manager。已实现的交付形式为 **Windows 11 24H2 x64 自包含预览目录**，可本地生成或由发布工作流打包。版本标签触发经过测试的 portable ZIP 预发布；明确的手动运行可以只生成预览包，不公开发布。常规拉取请求与 `main` 只运行检查，不打包应用。WinUI 每用户安装器、应用更新器及自动 Steam 启动项应用／恢复仍未实现。详见[安装指南](/SteamWrapper/zh-cn/guides/installation/)与[路线图](/SteamWrapper/zh-cn/project/roadmap/)。
+WinUI 是唯一当前 Manager。交付包含 **Windows 11 24H2 x64 自包含预览目录**和未签名的[每用户安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)。版本标签仍触发便携 ZIP 预发布，手动工作流也构建和测试安装器，但不公开发布。常规拉取请求与 `main` 只检查，不打包应用。尚未启用更新器，自动 Steam 启动项应用／恢复也未实现。
 
-未来安装不应要求开发工具或日常管理员权限。更新须保留用户数据和兼容的稳定 Runner。卸载应默认移除 Manager、保留 Runner 与用户数据，因为 Steam 可能仍引用它们。完整清理须明确选择并处理已知引用，不能假定手动粘贴或无法枚举的启动项已恢复。这些是验收要求，不是已有安装器行为。
+安装器预览包含运行时文件，使用固定每用户目录且通常无需提权；仅卸载 Manager 时保留稳定 Runner 和数据。Manager 占用会阻止变更，不强制结束进程。未知文件保留，复制中断的暂存文件可以隔离后人工排查。注册表／快捷方式／断电整体恢复、干净客户端交付及稳定状态仍是独立门槛。
 
-[Windows 安装、签名与更新方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)提出每用户 Inno 安装器、共享 C# 部署协议、SignPath Foundation 签名及可选的可信 Manager 更新，记录维护者优先免费签名的选择、源码约束、实施阶段和验收门槛。这些组件及外部签名批准仍属于待实施方案。
+[已批准的 Windows 交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)区分已实现的部署／签名保护与剩余 Foundation 批准、已签名发布及可信客户端更新阶段。详见[代码签名政策](/SteamWrapper/zh-cn/project/design/code-signing/)，尚无可用生产证书。
 
 GitHub/CNB 二进制发布须检查实际可下载产物。源码同步或发布说明不等于二进制交付。干净系统安装、更新、恢复和卸载需要单独 Windows 证据。
 
@@ -21,7 +21,7 @@ GitHub/CNB 二进制发布须检查实际可下载产物。源码同步或发布
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 ```
 
-`target/winui/publish` 包含 Manager、.NET、Windows App SDK、原生／本地化资源、品牌资源及 `Runner/`。发布工作流将这套完整布局打包为 Windows x64 portable ZIP。解压全部文件后从普通资源管理器打开 Manager，不宣称已有单 EXE 或安装向导。
+`target/winui/publish` 包含 Manager、.NET、Windows App SDK、原生／本地化资源、品牌资源及 `Runner/`。发布工作流将这套完整布局打包为 Windows x64 portable ZIP。解压全部文件后从普通资源管理器打开 Manager；单独的安装器预览也包含这套完整布局，Manager 本身不是单文件应用。
 
 `pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox` 使用一次性隔离数据；普通启动使用真实 `%LOCALAPPDATA%`。开发宿主可能重定向 AppData，因此路径存在不能证明 Steam 看到相同文件。Manager 检查最终共享文件位置，发现重定向时报告未就绪。详见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。
 
@@ -41,9 +41,9 @@ Dioxus Manager、NSIS/AppImage 链与 Native E2E 已从当前开发中移除。[
 
 ## Windows
 
-可下载的 WinUI 预览是版本标签发布或明确手动请求生成的完整 portable ZIP。目前产物未签名，公开发布均标为预发布。每用户 WinUI 安装器和发布者签名仍属于规划。当前没有可运行的 WinUI setup.exe。
+标签预览仍为完整便携 ZIP，明确请求的手动工作流也生成未签名安装器。产物仍未签名，公开发布保持预发布。安装器目前仅有隔离验收，公开安装器／稳定交付前仍需干净 Windows 11 客户端和生产签名。
 
-未来 Manager 安装位置提案为 `%LOCALAPPDATA%\Programs\SteamWrapper`。无论 Manager 安装或解压到何处，Steam 均只引用稳定 Runner。移动／删除 Manager 不应静默移除 Runner 或用户数据。覆盖更新、文件占用、中断替换和恢复必须先验收，再描述为受支持的交付操作。
+固定安装根目录为 `%LOCALAPPDATA%\Programs\SteamWrapper`，Steam 只引用独立数据目录中的稳定 Runner。`apps/deployment-windows` 拥有版本目录、清单、启动器和锁／日志恢复，Inno 拥有维护程序副本、卸载注册和快捷方式。修复／回退边界见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)。
 
 <a id="linux--steamos后续交付暂缓"></a>
 
@@ -99,14 +99,14 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 | --- | --- |
 | 拉取请求或推送 `main` | Rust Windows/Linux 检查、C# 测试／契约与实际 WinUI 编译；不生成应用压缩包 |
 | 推送版本标签 | 完整门禁、完整 Windows x64 portable ZIP、校验和／元数据及双语说明；未签名 GitHub 预发布 |
-| 在所选分支／ref 上 **Run workflow** | 完整门禁与完整 `SteamWrapper-WinUI-preview-windows-x64` 产物；不公开发布 |
+| 在所选分支／ref 上 **Run workflow** | 完整门禁、完整 `SteamWrapper-WinUI-preview-windows-x64` 目录，以及通过测试的未签名 `SteamWrapper-WinUI-installer-preview-windows-x64` 产物；不公开发布 |
 | `main` 上相关文档变更 | 独立的文档检查与 GitHub Pages 部署 |
 
 发布标签采用 `vMAJOR.MINOR.PATCH`，可带 SemVer 预发布后缀，例如 `v0.2.1-preview.1`。三位基础版本必须与 `SteamWrapper.Manager.csproj` 的 `<Version>` 及 `crates/core/Cargo.toml`、`crates/runner/Cargo.toml` 的包版本一致。提交必须在 `main` 的历史中，且对应版本中须包含 `releases/<tag>.en.md` 与 `releases/<tag>.zh-CN.md`。无效标签、版本不匹配或缺失说明均会在交付前失败。WinUI 交付门槛仍未完成时，即使标签没有预发布后缀，也会标为 GitHub 预发布。
 
-当前源码版本是 `0.2.0`；不要覆盖已有标签或历史发布。准备未来版本时，更新三个清单及 `Cargo.lock` 中受影响的 workspace 包版本，从[发布模板](https://github.com/YangYuS8/SteamWrapper/tree/main/releases)编写完整英语／简体中文说明，再将经过审阅的改动合入 `main`。打标签前确认所选主线提交已通过 CI。修改发布流程本身不会创建或公开新版本。
+当前源码版本为 `0.2.1`，因 Runner 新 PE 资源改变字节而递增。不要覆盖已有标签或历史发布。未来需协调 Rust、Manager、Application、部署产品版本及锁文件，并提供完整双语说明。打标签前确认所选主线提交已通过 CI；合并此次工作不会创建公开新版本。
 
-例如，已审阅的改动将三个源码版本都改为 `0.2.1`，并加入两份 `v0.2.1-preview.1` 说明后：
+例如，已审阅的改动将所有协调的产品与源码版本都改为 `0.2.1`，并加入两份 `v0.2.1-preview.1` 说明后：
 
 ```sh
 git fetch origin

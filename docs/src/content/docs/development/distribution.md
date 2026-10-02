@@ -9,11 +9,11 @@ description: "The WinUI preview directory, stable Runner installation, and remai
 
 ## Principles
 
-WinUI is the only current Manager. The implemented delivery is a **self-contained Windows 11 24H2 x64 preview directory**, generated locally or packaged by the release workflow. Version tags trigger tested portable ZIP prereleases; an explicit manual run can produce a preview without publishing a release. Ordinary pull requests and `main` run checks without packaging the application. A WinUI per-user installer, application updater, and automatic Steam Launch Options application/restoration remain unimplemented. See [installation](/SteamWrapper/guides/installation/) and the [roadmap](/SteamWrapper/project/roadmap/).
+WinUI is the only current Manager. Delivery includes a **self-contained Windows 11 24H2 x64 preview directory** and an unsigned [per-user installer preview](/SteamWrapper/guides/installer-preview/). Version tags still trigger portable ZIP prereleases; manual workflow runs also build and test setup without publishing a release. Ordinary pull requests and `main` run checks without packaging the application. An enabled updater and automatic Steam Launch Options application/restoration remain unimplemented.
 
-Future installation should require no developer tools or routine administrator rights. Updates must preserve user data and compatible stable Runner versions. Uninstall should remove Manager while retaining Runner and user data by default, because Steam may still reference them. Full removal needs an explicit choice and handling of known references; manually pasted or unenumerable options cannot be assumed restored. These are acceptance requirements, not existing installer behavior.
+The installer preview bundles runtime files, uses a fixed per-user root without routine elevation and retains the stable Runner/data tree on Manager-only uninstall. Busy Managers block mutation without forced exits. Unknown files are preserved; interrupted partial copies can be quarantined for manual diagnosis. Whole registry/shortcut/power-loss recovery, clean-client delivery and stable status remain separate gates.
 
-The [Windows installation, signing and updates plan](/SteamWrapper/project/design/windows-delivery/) proposes a per-user Inno installer, a shared C# deployment protocol, SignPath Foundation signing and optional authenticated Manager updates. It records the maintainer's free-signing preference, source constraints, implementation stages and acceptance gates. These components and external signing approval remain proposed.
+The [approved Windows delivery plan](/SteamWrapper/project/design/windows-delivery/) distinguishes implemented deployment/signing safeguards from remaining Foundation approval, signed release and authenticated client-update stages. See the [code-signing policy](/SteamWrapper/project/design/code-signing/); no production certificate is available yet.
 
 GitHub/CNB binary releases require inspection of actual downloadable artifacts. Source synchronization or release notes alone do not establish a binary release. Clean-system installation, update, recovery and uninstall need separate Windows evidence.
 
@@ -25,7 +25,7 @@ GitHub/CNB binary releases require inspection of actual downloadable artifacts. 
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 ```
 
-The result in `target/winui/publish` contains Manager, .NET, Windows App SDK, native/localized resources, brand assets, and `Runner/`. The release workflow packages this complete layout as a Windows x64 portable ZIP. Extract every file and launch Manager from ordinary File Explorer. No single-EXE or setup-wizard delivery is claimed.
+The result in `target/winui/publish` contains Manager, .NET, Windows App SDK, native/localized resources, brand assets, and `Runner/`. The release workflow packages this complete layout as a Windows x64 portable ZIP. Extract every file and launch Manager from ordinary File Explorer. The separate installer preview embeds the same complete layout; Manager itself is not a single-file application.
 
 `pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox` uses disposable isolated data; an ordinary launch uses real `%LOCALAPPDATA%`. A development host can redirect AppData, so path existence alone does not prove Steam sees the same files. Manager checks final shared file locations and reports not ready on redirection. See [Windows development](/SteamWrapper/development/windows/).
 
@@ -45,9 +45,9 @@ On 2026-09-08, the final local Dioxus NSIS build produced `SteamWrapperManager_0
 
 ## Windows
 
-The downloadable WinUI preview is a complete portable ZIP from a version-tag release or an explicitly requested workflow preview. Packages are currently unsigned and published releases are marked prerelease. A per-user WinUI installer and publisher signing remain planned. There is no current WinUI setup.exe to run.
+Tagged previews remain complete portable ZIPs; an explicitly requested manual workflow also produces an unsigned setup preview. Packages remain unsigned and public releases remain prereleases. Installer acceptance is isolated; a clean Windows 11 client and production signing are still required before public installer/stable delivery.
 
-A proposed future Manager location is `%LOCALAPPDATA%\Programs\SteamWrapper`. Wherever Manager is installed or extracted, Steam must reference only the stable Runner. Moving/deleting Manager must not silently remove that Runner or user data. Test in-place updates, busy files, interrupted replacement and recovery before describing them as supported delivery operations.
+The fixed installer root is `%LOCALAPPDATA%\Programs\SteamWrapper`. Steam references only the stable Runner in the separate data tree. Version directories, manifests, launcher and lease/journal recovery are owned by `apps/deployment-windows`; Inno owns its maintenance copy, uninstall registration and shortcuts. Repair/rollback limits are in the [installer guide](/SteamWrapper/guides/installer-preview/).
 
 <a id="linux--steamos后续交付暂缓"></a>
 <a id="linux--steamos-later-delivery-deferred"></a>
@@ -110,14 +110,14 @@ The [WinUI version release workflow](https://github.com/YangYuS8/SteamWrapper/bl
 | --- | --- |
 | Pull request or `main` push | Rust Windows/Linux checks, C# tests/contracts and actual WinUI compilation; no application archive |
 | Push a version tag | Full gates, complete Windows x64 portable ZIP, checksum/metadata and bilingual notes; unsigned GitHub prerelease |
-| **Run workflow** on a selected branch/ref | Full gates and complete `SteamWrapper-WinUI-preview-windows-x64` artifact; no public release |
+| **Run workflow** on a selected branch/ref | Full gates, complete `SteamWrapper-WinUI-preview-windows-x64` layout and tested unsigned `SteamWrapper-WinUI-installer-preview-windows-x64` artifact; no public release |
 | Relevant documentation changes on `main` | Independent documentation checks and GitHub Pages deployment |
 
 Release tags use `vMAJOR.MINOR.PATCH` with an optional SemVer prerelease suffix, such as `v0.2.1-preview.1`. The three-number base must match `<Version>` in `SteamWrapper.Manager.csproj` and the package versions in both `crates/core/Cargo.toml` and `crates/runner/Cargo.toml`. The commit must be reachable from `main`, and `releases/<tag>.en.md` plus `releases/<tag>.zh-CN.md` must be present in that revision. Invalid tags, mismatched versions or missing notes fail before delivery. A tag without a prerelease suffix still publishes as a GitHub prerelease while WinUI's delivery gates remain open.
 
-The current source version is `0.2.0`; existing tags and historical releases must not be overwritten. To prepare a future version, update all three manifests and the affected workspace package versions in `Cargo.lock`, write complete English and Simplified Chinese notes from the [release templates](https://github.com/YangYuS8/SteamWrapper/tree/main/releases), and merge that reviewed change into `main`. Confirm the intended main revision passed CI before tagging it. This task does not create or publish a new version by itself.
+The current source version is `0.2.1`, advanced because the new Runner PE resources change its bytes. Existing tags and historical releases must not be overwritten. Future versions must coordinate Rust, Manager, Application and deployment product versions and lockfiles, with complete bilingual notes. Confirm the intended main revision passed CI before tagging it. Merging this work does not create a public version.
 
-For example, after a reviewed change has set all three source versions to `0.2.1` and added both `v0.2.1-preview.1` notes:
+For example, after a reviewed change has set all coordinated product/source versions to `0.2.1` and added both `v0.2.1-preview.1` notes:
 
 ```sh
 git fetch origin

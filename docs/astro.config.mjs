@@ -26,7 +26,7 @@ export default defineConfig({
         {
           label: 'Using SteamWrapper', translations: { 'zh-CN': '使用指南' },
           items: [
-            'guides/getting-started', 'guides/installation', 'guides/configuration',
+            'guides/getting-started', 'guides/installation', 'guides/installer-preview', 'guides/configuration',
             'guides/wait-modes', 'guides/translated-games', 'guides/troubleshooting',
           ],
         },
@@ -40,7 +40,7 @@ export default defineConfig({
         {
           label: 'Project', translations: { 'zh-CN': '项目资料' }, collapsed: true,
           items: [
-            'project/roadmap', 'project/design/windows-v2', 'project/design/windows-delivery',
+            'project/roadmap', 'project/design/windows-v2', 'project/design/windows-delivery', 'project/design/code-signing',
             {
               label: 'Decisions', translations: { 'zh-CN': '技术决策' }, collapsed: true,
               items: ['project/decisions/winui3', 'project/decisions/manager-comparison', 'project/decisions/astra-instructions'],
