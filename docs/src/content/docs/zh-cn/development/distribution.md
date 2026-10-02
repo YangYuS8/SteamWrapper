@@ -11,6 +11,8 @@ WinUI 是唯一当前 Manager。已实现的交付形式为 **Windows 11 24H2 x6
 
 未来安装不应要求开发工具或日常管理员权限。更新须保留用户数据和兼容的稳定 Runner。卸载应默认移除 Manager、保留 Runner 与用户数据，因为 Steam 可能仍引用它们。完整清理须明确选择并处理已知引用，不能假定手动粘贴或无法枚举的启动项已恢复。这些是验收要求，不是已有安装器行为。
 
+[Windows 安装、签名与更新方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)提出每用户 Inno 安装器、共享 C# 部署协议、SignPath Foundation 签名及可选的可信 Manager 更新，记录维护者优先免费签名的选择、源码约束、实施阶段和验收门槛。这些组件及外部签名批准仍属于待实施方案。
+
 GitHub/CNB 二进制发布须检查实际可下载产物。源码同步或发布说明不等于二进制交付。干净系统安装、更新、恢复和卸载需要单独 Windows 证据。
 
 ## WinUI 本地预览目录

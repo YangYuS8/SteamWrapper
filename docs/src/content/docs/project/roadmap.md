@@ -82,6 +82,8 @@ See [cover settings](/SteamWrapper/guides/configuration/#cover-settings) for the
 
 **Deliverable:** an unpackaged, self-contained per-user WinUI installer and complete portable ZIP from the same application layout.
 
+The proposed [Windows delivery plan](/SteamWrapper/project/design/windows-delivery/) maps P1–P3 into D1a/D1b installation/recovery, D2/D3 signing readiness/releases and D4/D5 optional checks/confirmed updates. Inno per-user packaging and free-first SignPath Foundation are the recommended direction, with one C# deployment protocol and stable Runner/data ownership preserved. Research and a written plan do not satisfy these implementation or acceptance checkboxes.
+
 - [ ] Bundle .NET, Windows App SDK, native/localized resources and the independent Runner. Ordinary players should not install SDKs or prepare runtimes; no single-file EXE is promised.
 - [ ] Install Manager per user without routine administrator rights. Keep data under `%LOCALAPPDATA%\SteamWrapper\` and Steam references on stable `bin\SteamWrapperRunner.exe`, never a versioned Manager or extraction directory.
 - [ ] On a clean supported Windows 11 x64 VM without development tools, verify installation, both languages, first configuration, actual shared data paths and launch through stable Runner with Manager closed.
