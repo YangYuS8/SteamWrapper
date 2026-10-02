@@ -5,18 +5,24 @@ description: 获取完整 WinUI 预览版，了解数据位置，并在不破坏
 
 WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览版**。应用目录中包含 .NET 与 Windows App SDK 文件，请始终保留完整目录。
 
-目前没有新的 WinUI 安装向导、单文件 EXE，也尚未完成干净系统、更新与卸载的交付保证。WinUI 是唯一的 Manager，程序名为 `SteamWrapper.Manager.exe`。Dioxus 及其发布工作流已移除；WinUI 标签自动发布仍是待实现工作。
+目前没有新的 WinUI 安装向导、单文件 EXE，也尚未完成干净系统、更新与卸载的交付保证。WinUI 是唯一的 Manager，程序名为 `SteamWrapper.Manager.exe`。当前版本标签发布均为未签名预发布；Dioxus 发布属于历史产物，不包含当前 WinUI Manager。
 
-## 获取 CI 预览包
+## 获取带版本的预览包
 
-1. 打开仓库的 [WinUI Windows preview 工作流](https://github.com/YangYuS8/SteamWrapper/actions/workflows/winui-windows.yml)。
-2. 选择所需 `main` 代码版本对应的一次成功运行。
-3. 如果该运行的产物仍然可用，下载 **`SteamWrapper-WinUI-preview-windows-x64`**。
-4. 将整个压缩包解压到准备保留的目录中。
+1. 打开 [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases)，选择说明中明确标识 **WinUI Windows x64 portable 预览**的发布。
+2. 阅读已知限制及英语或简体中文说明。历史 Dioxus 安装包不是当前应用。
+3. 下载该发布的 **`SteamWrapper-<tag>-win-x64.zip`** 与 **`SHA256SUMS`**，ZIP 中的标签应与所选发布一致。
+4. 对照 `SHA256SUMS` 中对应一行验证 ZIP 的 SHA-256，再将整个 ZIP 解压到准备保留的目录中。
 
-工作流完成测试和发布检查后上传应用目录。产物是否可下载取决于具体运行及保留期限；没有合适产物时，可以使用下面的本地构建方式。托管 CI 显示绿色，本身不代表所有 Windows 安装环境或游戏都已兼容。
+例如，PowerShell 命令 `Get-FileHash -Algorithm SHA256 -LiteralPath '.\SteamWrapper-v0.2.1-preview.1-win-x64.zip'` 会显示待对照的摘要。这只是文件名示例，不表示该版本已经发布。发布附件还包含 `release.json` 和独立的英语／简体中文说明。
 
-请下载应用产物，不要把单独的 `WinUI-Windows-contract-evidence` 测试结果产物当成应用。
+如果没有可用 WinUI 发布，可以使用下面的手动工作流预览或本地构建。发布工作流仅在门禁和包检查通过后公开产物；运行成功不代表所有 Windows 安装环境或游戏都已兼容。
+
+## 获取按需工作流预览
+
+常规拉取请求与合入 `main` 只运行 CI，不上传应用包。维护者可以打开 [WinUI version release 工作流](https://github.com/YangYuS8/SteamWrapper/actions/workflows/winui-release.yml)，在 **Run workflow** 中选择所需分支或 ref，按需请求构建。手动运行执行完整构建和门禁，但不会公开创建 Release。
+
+从成功的手动运行下载 **`SteamWrapper-WinUI-preview-windows-x64`**，解压全部文件。不要把单独的测试证据产物当成应用。工作流产物下载可能要求登录 GitHub，且会随保留期限到期；维护者提供预览时应同时标明所选源码提交。
 
 ## 打开完整应用
 

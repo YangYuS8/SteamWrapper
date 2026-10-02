@@ -5,18 +5,24 @@ description: Get the complete WinUI preview, understand its data locations, and 
 
 The WinUI Manager is currently a **self-contained directory preview for Windows 11 24H2 x64**. It bundles .NET and Windows App SDK files alongside the application. Keep the complete directory together.
 
-There is no new WinUI setup wizard, single-file executable, or completed clean-system/update/uninstall guarantee. WinUI is the only Manager, with executable `SteamWrapper.Manager.exe`. Dioxus and its release workflows have been removed; automated WinUI tag releases remain planned work.
+There is no new WinUI setup wizard, single-file executable, or completed clean-system/update/uninstall guarantee. WinUI is the only Manager, with executable `SteamWrapper.Manager.exe`. Current version-tag releases are unsigned prereleases; Dioxus releases are historical and do not contain the current WinUI Manager.
 
-## Get a CI preview
+## Get a versioned preview
 
-1. Open the repository's [WinUI Windows preview workflow](https://github.com/YangYuS8/SteamWrapper/actions/workflows/winui-windows.yml).
-2. Choose a successful run for the intended `main` revision.
-3. If its artifact is available, download **`SteamWrapper-WinUI-preview-windows-x64`**.
-4. Extract the entire archive into a directory you intend to keep.
+1. Open [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases) and choose a release whose notes identify the **WinUI Windows x64 portable preview**.
+2. Read its known limits and English or Simplified Chinese notes. A historical Dioxus setup package is not the current application.
+3. Download **`SteamWrapper-<tag>-win-x64.zip`** and **`SHA256SUMS`** from that release. The ZIP's tag must match the release you selected.
+4. Compare the ZIP's SHA-256 with the matching line in `SHA256SUMS`, then extract the entire ZIP into a directory you intend to keep.
 
-The workflow uploads the published application directory after its tests and publication checks. Artifact availability depends on the run and retention period; if no suitable artifact is available, use the local build below. A green hosted CI run does not by itself prove compatibility with every Windows installation or game.
+For example, PowerShell's `Get-FileHash -Algorithm SHA256 -LiteralPath '.\SteamWrapper-v0.2.1-preview.1-win-x64.zip'` displays the digest to compare. This is an example filename, not a claim that this version has been released. Release assets also include `release.json` and separate English/Simplified Chinese notes.
 
-Download the application artifact, not the separate `WinUI-Windows-contract-evidence` test-results artifact.
+If no WinUI release is available, use a manual workflow preview or the local build below. The release workflow publishes only after its gates and package checks pass; a successful run does not prove compatibility with every Windows installation or game.
+
+## Get an on-demand workflow preview
+
+Ordinary pull requests and merges into `main` run CI without uploading an application package. A maintainer can open the [WinUI version release workflow](https://github.com/YangYuS8/SteamWrapper/actions/workflows/winui-release.yml), select the intended branch or ref under **Run workflow**, and request a build. A manual run performs the full build and gates but never publishes a public release.
+
+From a successful manual run, download **`SteamWrapper-WinUI-preview-windows-x64`** and extract every file. Do not use the separate test-evidence artifact as the application. Workflow artifact downloads may require GitHub sign-in and expire with the retention period. Maintainers should provide the selected source revision with the preview.
 
 ## Open the complete application
 

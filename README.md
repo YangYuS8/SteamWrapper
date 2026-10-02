@@ -18,6 +18,8 @@ Manager defaults to English and includes complete Simplified Chinese localizatio
 
 Covers prefer custom and local Steam images. Optional official Steam CDN fallback is off by default, with a bounded SteamWrapper cache and a clear action; missing artwork never blocks configuration or launch. See [cover settings](https://yangyus8.top/SteamWrapper/guides/configuration/#cover-settings).
 
+Pull requests and `main` run tests and compile checks. Downloadable Windows packages are built by the release workflow when a version tag is pushed, or on demand for a manual preview. Tagged WinUI releases remain unsigned prereleases until the Windows delivery gates pass. See [release preparation](https://yangyus8.top/SteamWrapper/development/distribution/) for versioning and release requirements.
+
 ## Documentation
 
 The [Astro Starlight documentation site](https://yangyus8.top/SteamWrapper/) is the primary usage and development reference, with complete [Simplified Chinese](https://yangyus8.top/SteamWrapper/zh-cn/).

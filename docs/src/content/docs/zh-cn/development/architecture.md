@@ -114,7 +114,7 @@ WinUI 使用与 `profiles.toml` 同级的 `ui-settings.json`。`language` 为 `e
 
 ## 分发与稳定安装
 
-当前 Windows 产物是完整自包含预览目录，可本地构建，也由 CI 生成。完整解压后从普通资源管理器打开 Manager。每用户安装器、WinUI 标签发布工作流、应用更新器及自动 Steam 写入仍未实现。
+当前 Windows 使用完整自包含预览布局，可本地生成，也可通过版本标签／手动发布工作流构建。日常 CI 只测试和编译，不打包应用。完整解压后从普通资源管理器打开 Manager。每用户安装器、应用更新器及自动 Steam 写入仍未实现；标签包为未签名预发布，交付验收仍待完成。准确触发方式见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\

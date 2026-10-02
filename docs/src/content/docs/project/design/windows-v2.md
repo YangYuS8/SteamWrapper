@@ -160,7 +160,7 @@ Manager uninstall preserves profiles, logs, backups, and stable Runner by defaul
 
 Every candidate installer and portable package needs clean Windows 11 x64 VM tests for installation, configuration, launch after closing Manager, in-place update, relocation and uninstall/preservation as applicable. Record package size, cold startup, and idle memory before optimizing. Assess MSIX, ARM64, and Windows 10 separately.
 
-P2 will establish tagged WinUI releases with signing, checksums, complete English/Simplified Chinese notes and matching GitHub/CNB binaries. P3 will add optional application updates only after the replacement/recovery and release-trust gates pass. Neither is implemented by removing the old UI release chain. Updates must remain outside Runner's daily launch path and preserve user data and a usable stable Runner.
+P2 now has version-tag automation for unsigned portable prereleases, checksums, complete English/Simplified Chinese notes and an optional CNB binary mirror. Actual tagged download verification, signing and stable delivery acceptance remain open; see [distribution](/SteamWrapper/development/distribution/). P3 will add optional application updates only after the replacement/recovery and release-trust gates pass. Updates must remain outside Runner's daily launch path and preserve user data and a usable stable Runner.
 
 <a id="8-实施顺序与停止条件"></a>
 

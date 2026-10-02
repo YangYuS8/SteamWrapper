@@ -1,4 +1,4 @@
-name: WinUI Windows preview
+name: WinUI Windows CI
 
 on:
   push:
@@ -6,17 +6,18 @@ on:
   pull_request:
     branches: ["main", "v2"]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: winui-windows-${{ github.ref }}
+  group: winui-windows-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   winui:
-    name: Contracts and self-contained Windows x64 preview
+    name: WinUI compilation and contracts
     # The hosted image is Windows Server 2025, not a clean Windows 11 client.
     # This build gate does not replace Windows 11 UI and real-Steam acceptance.
     runs-on: windows-2025
@@ -63,15 +64,21 @@ jobs:
       - name: Verify Rust interoperability and real Runner consumption
         run: mise.exe run winui:contracts
 
-      - name: Publish self-contained preview and verify safe replacement
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
+      - name: Compile the actual WinUI Manager and Runner resources
+        run: mise.exe run winui:build
 
-      - name: Upload preview directory
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: SteamWrapper-WinUI-preview-windows-x64
-          path: target/winui/publish/
-          if-no-files-found: error
+      - name: Test publication replacement using disposable files
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
+
+      - name: Test version validation and release packaging safeguards
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIReleaseScripts.ps1
+
+      - name: Test GitHub and CNB publishers without network writes
+        run: |
+          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub publisher regressions failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'CNB publisher regressions failed.' }
 
       - name: Upload isolated contract evidence
         if: always()

@@ -130,7 +130,7 @@ Missing legacy `wait_mode` always parses as `root`. No Linux Manager currently c
 
 ## Distribution and stable installation
 
-Windows currently ships a complete self-contained preview directory through local builds and CI. Extract it in full and open Manager from ordinary File Explorer. A per-user installer, tagged WinUI release workflow, application updater, and automatic Steam writes remain unimplemented.
+Windows uses a complete self-contained preview layout through local builds and the version-tag/manual release workflow. Daily CI tests and compiles without packaging the application. Extract the complete package and open Manager from ordinary File Explorer. A per-user installer, application updater, and automatic Steam writes remain unimplemented; tagged packages are unsigned prereleases pending delivery acceptance. See [distribution](/SteamWrapper/development/distribution/) for the exact triggers.
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\
