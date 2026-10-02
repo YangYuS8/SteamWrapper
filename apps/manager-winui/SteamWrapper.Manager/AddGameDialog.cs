@@ -60,16 +60,26 @@ internal sealed class AddGameDialog : ContentDialog
         coverSettings.Children.Add(new TextBlock { Text = localizer["SteamCoversPrivacy"], TextWrapping = TextWrapping.Wrap, FontSize = 12, Opacity = .75 });
         coverSettings.Children.Add(clearCovers);
         coverSettings.Children.Add(coverNotice);
+        var coverOptions = new Expander
+        {
+            Header = localizer["CoverSettings"], Content = coverSettings,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
+        // Keep secondary settings readable within the native dialog's available height.
+        coverOptions.Expanding += (_, _) => games.Height = 100;
+        coverOptions.Collapsed += (_, _) => games.Height = 310;
         var panel = new StackPanel { Spacing = 12, MinWidth = 420, MaxWidth = 520 };
         panel.Children.Add(new TextBlock { Text = localizer["AddSteamDescription"], TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(search);
         panel.Children.Add(games);
         panel.Children.Add(notice);
         panel.Children.Add(browse);
-        panel.Children.Add(coverSettings);
+        panel.Children.Add(coverOptions);
         Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = 600 };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(search, "SteamSearch");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(games, "SteamGames");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(coverOptions, "CoverSettings");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(downloadCovers, "SteamCdnCovers");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(clearCovers, "ClearDownloadedCovers");
         search.TextChanged += (_, _) => Filter();

@@ -151,6 +151,7 @@
   <data name="SettingsInvalid" xml:space="preserve"><value>The settings file is not a valid JSON object. The original file has been preserved.</value></data>
   <data name="SettingsLarge" xml:space="preserve"><value>The settings file is too large. The original file has been preserved.</value></data>
   <data name="SettingsChanged" xml:space="preserve"><value>Settings were changed by another window. Try again.</value></data>
+  <data name="CoverSettings" xml:space="preserve"><value>Cover settings</value></data>
   <data name="DownloadSteamCovers" xml:space="preserve"><value>Download missing covers from Steam</value></data>
   <data name="SteamCoversPrivacy" xml:space="preserve"><value>Custom and local Steam artwork takes priority. Downloads are off by default. When enabled, missing cover requests send installed AppIDs to the official Steam CDN, without account information, game paths or a library upload. Cached covers remain available offline; unavailable images keep a placeholder.</value></data>
   <data name="ClearDownloadedCovers" xml:space="preserve"><value>Clear downloaded covers</value></data>

@@ -151,6 +151,7 @@
   <data name="SettingsInvalid" xml:space="preserve"><value>设置文件不是有效的 JSON 对象，已保留原文件。</value></data>
   <data name="SettingsLarge" xml:space="preserve"><value>设置文件过大，已保留原文件。</value></data>
   <data name="SettingsChanged" xml:space="preserve"><value>设置已被其他窗口修改，请重试。</value></data>
+  <data name="CoverSettings" xml:space="preserve"><value>封面设置</value></data>
   <data name="DownloadSteamCovers" xml:space="preserve"><value>从 Steam 下载缺失封面</value></data>
   <data name="SteamCoversPrivacy" xml:space="preserve"><value>优先显示 Steam 自定义封面和本地图片。下载默认关闭；开启后，仅为缺图的本机游戏向 Steam 官方 CDN 请求对应 AppID 的封面，不发送账户信息、游戏路径或上传游戏库。已缓存封面可离线显示，无法获取的图片保留占位图。</value></data>
   <data name="ClearDownloadedCovers" xml:space="preserve"><value>清除已下载封面</value></data>

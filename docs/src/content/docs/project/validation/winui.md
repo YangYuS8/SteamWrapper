@@ -89,6 +89,23 @@ The final native UI check used a disposable Steam/AppData fixture on Windows 11 
 
 Native Windows chrome and operating-system diagnostics follow the system language. This isolated check did not touch real Steam options, profiles, or game files, and does not establish clean-system installation, live Steam compatibility, or the complete accessibility matrix.
 
+## Cover validation on 2026-10-03
+
+[PR #10](https://github.com/YangYuS8/SteamWrapper/pull/10) adds local-first covers, opt-in official Steam CDN downloads and an isolated, bounded download cache. The following results apply to that cover slice; they do not replace the dated configuration and launch evidence above.
+
+| Check | Result and boundary |
+| --- | --- |
+| Local discovery | Read-only scanning found cover candidates for all 44 locally installed games, including the newer hashed cache layouts for AppIDs `1091500` and `3548580`. Candidate discovery alone does not prove every image rendered. |
+| Automated Windows gates | On 2026-10-02 at `a5debf1`, [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/37006387662) passed 99 Application tests and nine actual Windows decoder tests, C#/Rust contracts, self-contained publishing and publish regressions. Cases cover offline defaults, corrupt images, bounded redirects/downloads/decoding, cancellation, cache quotas/expiry/clearing and preference preservation. |
+| Other PR gates | [Rust CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/37006387721) passed on Windows and Linux. [Bilingual documentation CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/37006387800) passed; Pages deployment was correctly skipped for the PR. |
+| Resumed native English review | An isolated library displayed local covers for `1091500` and `3548580`, displayed the fixture's cached `480.cover` offline, and retained the placeholder for missing art on `9999999`. Filtering for Chill with You preserved its displayed cover. |
+| Native Simplified Chinese review | The main window, Add Game dialog, cover-settings Expander, privacy text, unchecked opt-in and clear-cache notice rendered in Simplified Chinese; game names remained unchanged. Closing and relaunching retained the Chinese interface. |
+| Settings layout | In English and Simplified Chinese at the observed 914 × 714 window size, expanded cover settings reduced the game list to 100 pixels and left the controls and notice visible. The Chinese collapse check restored the 310-pixel, four-row list. This does not cover the complete scaling matrix. |
+| Native official CDN opt-in | A separate `1091500` fixture began without local art or cache: the default-off state showed a placeholder and created no cover file. Enabling through the English checkbox persisted `true`, downloaded and displayed an actual 54,176-byte official portrait. Disabling persisted `false`; after closing, relaunching and reopening the dialog, the cached portrait still displayed with the setting unchecked and its SHA-256 and modification time unchanged. |
+| Native cache clear | Chinese clearing removed the fixture's `480.cover`; English clearing removed the actual downloaded `1091500.cover`. Both restored the respective placeholders and localized notices. The Chinese check retained both local Steam images with unchanged SHA-256 hashes. Neither test wrote a profile. |
+
+The native observations used disposable Manager/Steam fixtures; they did not modify real Steam options, profiles or game files. They did not disconnect the operating-system network, capture network traffic or interrupt an in-flight HTTP request; default zero-request behavior and cancellation are covered by the focused service tests above. The broader P0 UI automation/accessibility matrix and clean-system installer acceptance remain open; see the [roadmap](/SteamWrapper/project/roadmap/).
+
 <a id="尚未完成的验收"></a>
 
 ## Outstanding acceptance

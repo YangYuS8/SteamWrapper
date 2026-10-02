@@ -124,7 +124,7 @@ If saving the preference fails, the current language remains selected and an err
 
 Cover display is **local-first and offline by default**. Custom artwork saved by Steam takes priority, followed by Steam's local library cache. Both older filenames and newer nested hash directories are supported. Local images are read without changing Steam files. A missing or unreadable cover uses the gamepad placeholder; you can still select the game, edit, save and launch it.
 
-In **Add Steam game**, enable **Download missing covers from Steam** only if you want Manager to request missing images for games discovered in your local Steam library. Each image request includes that game's AppID and normal HTTPS connection information. It does not query your account or upload your library list. Manual AppID entry does not start a metadata lookup. Steam may not provide an image at the fixed portrait address, so some games can still show placeholders.
+In **Add Steam game**, expand **Cover settings** and enable **Download missing covers from Steam** only if you want Manager to request missing images for games discovered in your local Steam library. Each image request includes that game's AppID and normal HTTPS connection information. It does not query your account or upload your library list. Manual AppID entry does not start a metadata lookup. Steam may not provide an image at the fixed portrait address, so some games can still show placeholders.
 
 The choice persists alongside the language preference in `ui-settings.json`, without changing profiles or Launch Options. Turning it off cancels active downloads and prevents new image requests. Already downloaded, valid cached covers remain available offline; local/custom art still takes priority.
 
