@@ -5,7 +5,7 @@ description: 在 Windows 上配置一次，以后仍从原来的 Steam 游戏库
 
 SteamWrapper 可以让 Steam 启动你选择的游戏程序或启动器。**Manager 负责配置，独立的 Runner 负责日常启动。** 完成设置后，Manager 可以一直保持关闭。
 
-本指南使用 **WinUI Windows 预览版**，当前面向 Windows 11 24H2 x64。保留的 Dioxus 应用及其发布链是另一套交付方式；新的 WinUI 安装器尚未交付。如果还没有完整的预览版目录，请先阅读[安装指南](/SteamWrapper/zh-cn/guides/installation/)。
+本指南使用 **WinUI Windows 预览版**，当前面向 Windows 11 24H2 x64。WinUI 是唯一的 Manager；安装器和标签自动发布仍待交付。如果还没有完整的预览版目录，请先阅读[安装指南](/SteamWrapper/zh-cn/guides/installation/)。
 
 ## 配置前准备
 

@@ -1,6 +1,5 @@
 [tools]
 dotnet = "10.0.400"
-"github:DioxusLabs/dioxus" = { version = "0.7.10", matching = "dx-" }
 just = "1.58.0"
 node = "24.18.0"
 pnpm = "11.10.0"
@@ -28,7 +27,7 @@ description = "Run the Rust workspace tests with MSVC and isolated test fixtures
 run = "pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action RustTest"
 
 [tasks."windows:verify"]
-description = "Run the existing Rust, Dioxus and Native E2E quality gates on Windows"
+description = "Run Rust, WinUI service/contract tests and the self-contained Windows publish gate"
 run = "pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify"
 
 [tasks."winui:build"]

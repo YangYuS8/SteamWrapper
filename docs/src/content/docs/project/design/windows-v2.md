@@ -11,7 +11,9 @@ description: "Windows product requirements, configuration fidelity, architecture
 
 Date: 2026-09-08. Status: following implementation authorization, the WinUI configuration preview, safe C# configuration services, and cross-language/real Runner contracts are implemented. The implementation baseline passed remote WinUI CI. [Real galgame testing](/SteamWrapper/project/validation/steam/) completed the Steam → Runner → game flow for one Unity game and five independent translated 9-nine packages outside the Steam library, including ordinary exit and Steam status/playtime updates. All five had their Chinese openings verified. After Episode 1's CHS entry was restored, the local launcher-exits-first/game-and-Runner-keep-waiting scenario also passed; the original entry's earlier product-ID-check failure remains in the record.
 
-The earlier OS Error 3 was traced to the development host's AppData redirection, and actual file-location checks were added. Broader launcher compatibility, the installer, and clean-system acceptance are unfinished. This is the main Windows implementation plan, replacing the earlier default `manager-ffi` approach. Dioxus code and CI remain the migration baseline.
+The earlier OS Error 3 was traced to the development host's AppData redirection, and actual file-location checks were added. Broader launcher compatibility, the installer, and clean-system acceptance are unfinished. This is the main Windows implementation plan, replacing the earlier default `manager-ffi` approach.
+
+**2026-10-02 implementation update:** WinUI is now the only Manager. At the user's request, the Dioxus application, Rust `manager-core`, Dioxus Native E2E and old UI release chain have been removed. Their historical source remains available at `ca6a09e`. This supersedes the original staged-retirement decision; it does not change the September measurements or complete the remaining Windows acceptance gates. Mainline integration still delivers a preview, not a stable release. Current priorities are in the [roadmap](/SteamWrapper/project/roadmap/).
 
 <a id="1-回到最初要解决的问题"></a>
 
@@ -47,7 +49,7 @@ Manager is a configuration tool. Its home page centers on configured games and a
 
 Distinguish configuration saved, Launch Options copied, applied to Steam (only after future writes and verification), and manually validated launch. Button clicks, TOML saves, or Runner exit codes do not establish correct Steam playtime.
 
-The first version reads local covers only, with friendly placeholders that do not affect saving or launch. Existing Dioxus Steam CDN fallback code remains; the first WinUI version does not inherit that request. English default and complete Simplified Chinese support, keyboard use, native file selection, scaling, and recoverable errors are basic experience requirements.
+The current WinUI version reads local covers only, with friendly placeholders that do not affect saving or launch. The removed Dioxus fallback is not a current network path. The [P0 cover plan](/SteamWrapper/project/roadmap/) keeps offline/local-first defaults and adds only an explicitly enabled, reversible official Steam CDN option for locally known AppIDs, with bounded requests and a small SteamWrapper cache. This option is not implemented. English default and complete Simplified Chinese support, keyboard use, native file selection, scaling, and recoverable errors are basic experience requirements.
 
 Account login, online game metadata, general mod management, multiple-target switching, persistent tray operation, background update services, a new Linux/SteamOS GUI, Proton, and store distribution are out of scope for now. Steam Overlay, achievements, and every third-party launcher's compatibility are not default promises.
 
@@ -55,7 +57,7 @@ Account login, online game metadata, general mod management, multiple-target swi
 
 ## 3. Technical decisions
 
-Use a **C#/XAML WinUI 3 Manager + independent Rust Runner**. Implement Manager's Windows configuration services in C#, using existing files to work with Runner:
+Use a **C#/XAML WinUI 3 Manager + independent Rust Runner**. WinUI is the sole Manager implementation. Implement its Windows configuration services in C#, using existing files to work with Runner:
 
 ```text
 WinUI 3 Manager
@@ -86,7 +88,7 @@ tests/contracts/                 # redacted shared C#/Rust config and process fi
 
 Services expose a small set of named operations; file and scan work is cancellable and does not block UI. Do not add generic RPC, background helpers, a DI plugin platform, or multiple transport-DTO layers. C# models implement the existing protocol rather than creating a second configuration format.
 
-During migration, `crates/core` continues providing existing Runner/Dioxus functionality; `crates/manager-core` serves only the retained Dioxus chain. New WinUI functionality is implemented once in C#. Retire Dioxus, old management layers, and build infrastructure according to actual dependencies only after WinUI passes replacement gates, not by deleting them during design.
+`crates/core` and the independent Rust Runner retain their protocol and process responsibilities; Windows configuration services live in C#. The former [Dioxus app](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/apps/manager-dioxus), [Rust management layer](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/crates/manager-core) and [UI release workflow](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09e/.github/workflows/release.yml) are historical references. They were removed on 2026-10-02, rather than retained as a second Manager or future retirement task. The C#/Rust file-contract checks remain necessary.
 
 <a id="4-配置保真是第一个门槛"></a>
 
@@ -98,12 +100,12 @@ These contracts remain unchanged: v2 `profiles.toml` format, fields, and enum me
 "<stable-runner-path>" --appid "<appid>" -- %command%
 ```
 
-Current source exposes two behaviors to fix rather than directly port:
+Two behaviors in the historical management/configuration code at `ca6a09e` motivated the requirements below. They are not descriptions of the current C# configuration service:
 
-- [Manager saving](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/lib.rs) reconstructs Profile, resetting `args`, `working_dir`, `wait_mode`, and `process_name`. Changing a target path must not discard those settings.
-- [Configuration saving](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/config.rs) calls `fs::write` directly, without atomic replacement or editing-conflict checks. Atomic Runner installation does not make profile saving safe.
+- [Manager saving](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09e/crates/manager-core/src/lib.rs) reconstructed Profile, resetting `args`, `working_dir`, `wait_mode`, and `process_name`. Changing a target path must not discard those settings.
+- [Configuration saving](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09e/crates/core/src/config.rs) called `fs::write` directly, without atomic replacement or editing-conflict checks. Atomic Runner installation does not make profile saving safe.
 
-The new configuration service must satisfy:
+The C# configuration service must continue to satisfy:
 
 | Area | Required preserved or verified meaning |
 | --- | --- |
@@ -114,7 +116,7 @@ The new configuration service must satisfy:
 | Write safety | Same-directory temporary files, flushing, backup, and atomic replacement; preserve old files on failure. Prevent cooperating app writers and report external changes after reading, without claiming all external editors can be locked |
 | Real consumption | C# TOML is checked for complete semantics by the existing Rust parser, then drives a controlled Runner to verify argv/cwd/waiting. Editing one field of a historical Rust fixture in C# must preserve unedited meaning |
 
-Choose the TOML library using this roundtrip experiment, not by first pinning an unverified package. Cover omitted values, all existing wait modes, alias keys, unknown fields/versions, interrupted writes, and competing writers. Comparing a few text files or showing that both sides parse is insufficient.
+The original TOML-library selection criterion was this roundtrip experiment, rather than an unverified package choice. It remains a regression requirement: cover omitted values, all existing wait modes, alias keys, unknown fields/versions, interrupted writes, and competing writers. Comparing a few text files or showing that both sides parse is insufficient.
 
 <a id="5-runner-与-steam-验收"></a>
 
@@ -134,7 +136,7 @@ Routine automation uses isolated Steam/user directories and controlled processes
 
 ## 6. Safe one-click apply and restore
 
-The first Windows preview may use manually copied Launch Options; **one-click apply/restore follows next, before cross-platform expansion**. Establish reliable preview behavior before making it the formal release's default flow.
+The Windows preview supports manually copied Launch Options. **One-click apply/restore remains planned P4 work**, after the P0 configuration and P1/P2 delivery safeguards, and before new cross-platform scope. It does not depend on the optional P3 updater. Establish and verify safe writes before considering them the default flow.
 
 Do not treat Steam's private local files as a stable public write API. Recheck actual structures before implementation and verify parsing/unrelated-data preservation using redacted fixtures. The flow must:
 
@@ -150,17 +152,21 @@ The manual-copy stage must not claim automatic old-value backup or one-click res
 
 ## 7. Installation, updates, and uninstall
 
-The first target is an **unpackaged self-contained directory + per-user installer**, bundling both .NET and Windows App SDK. Ordinary players should not install development tools or runtimes. Runner remains an independent Rust EXE. Portable delivery can later reuse the directory layout; no single-file EXE is promised. [Official self-contained deployment](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps)
+The P1 delivery target is an **unpackaged self-contained per-user installer and portable ZIP** sharing one application layout, bundling both .NET and Windows App SDK. Ordinary players should not install development tools or runtimes. Runner remains an independent Rust EXE; no single-file EXE is promised. Local publishing is available, but the installer and clean-system delivery gate remain unfinished. [Official self-contained deployment](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps)
 
 Install app files under `%LOCALAPPDATA%\Programs\SteamWrapper\`; verify bundled Runner before installing it to stable `bin`. Ensure installation succeeds during first configuration, while keeping ordinary UI access usable on installation failure. If Runner is busy, preserve the old file, configuration, and valid options, allowing a retry after play. Updates must not let an old Manager arbitrarily downgrade installed Runner. Define release metadata and compatibility handling; a different hash alone is not proof that an upgrade is valid.
 
 Manager uninstall preserves profiles, logs, backups, and stable Runner by default so remaining Launch Options still work. Fully removing Runner first requires handling managed Steam options. If manually pasted or unenumerable references cannot be confirmed removed, retain Runner and provide cleanup guidance. Preserving configuration does not make deleting Runner safe.
 
-Every candidate installer needs clean Windows 11 x64 VM tests for installation, configuration, launch after closing Manager, in-place update, and uninstall. Record package size, cold startup, and idle memory before optimizing. Assess MSIX, automatic updates, ARM64, and Windows 10 separately.
+Every candidate installer and portable package needs clean Windows 11 x64 VM tests for installation, configuration, launch after closing Manager, in-place update, relocation and uninstall/preservation as applicable. Record package size, cold startup, and idle memory before optimizing. Assess MSIX, ARM64, and Windows 10 separately.
+
+P2 will establish tagged WinUI releases with signing, checksums, complete English/Simplified Chinese notes and matching GitHub/CNB binaries. P3 will add optional application updates only after the replacement/recovery and release-trust gates pass. Neither is implemented by removing the old UI release chain. Updates must remain outside Runner's daily launch path and preserve user data and a usable stable Runner.
 
 <a id="8-实施顺序与停止条件"></a>
 
 ## 8. Implementation order and stop conditions
+
+The following A–D stages preserve the original 2026-09-08 acceptance framework. They are requirements, not a claim that every stage has passed; the [roadmap](/SteamWrapper/project/roadmap/) separates completed evidence from remaining P0–P4 work. The original E retirement condition was superseded by the explicit 2026-10-02 removal decision.
 
 | Stage | Completion condition |
 | --- | --- |
@@ -168,6 +174,6 @@ Every candidate installer needs clean Windows 11 x64 VM tests for installation, 
 | B. WinUI configuration slice | Select fixture games/targets in a native window, preserve configuration, install stable Runner, and copy exact options; recover from cancellation/missing directories/unwritable or busy files; usable keyboard/Chinese input/scaling |
 | C. Usable Windows preview | Real Windows/Steam launch records; clean-VM self-contained installation, updates, Manager relocation, and uninstall preservation; documentation of manual restore and known compatibility |
 | D. Safe apply/stabilization | Pass multiple-user, Steam-running, backup, conflict, interruption, and single-game restore checks; expand real launcher testing; then consider default one-click apply |
-| E. Cleanup/later work | Switch default Manager and replace CI only after C passes, then retire the Dioxus chain by dependency; consider cross-platform/new scope after D stabilizes |
+| E. Original cleanup decision (superseded) | The original design deferred replacing the default Manager/CI and retiring Dioxus until C. The user directed removal on 2026-10-02; unfinished delivery gates remain open. Consider new platform scope only after Windows stabilization |
 
-The first implementation task focuses on a complete A→B configuration/controlled-launch slice, adding Windows build/contract CI incrementally while preserving existing workflows. Switch the default release chain after C. A polished UI is not migration-complete evidence when tooling is missing, roundtrips lose data, or Runner lifecycle regressions remain. mise toolchain setup is underway; see [Windows development](/SteamWrapper/development/windows/) for the latest installation and validation record.
+The original implementation order began with the A→B configuration/controlled-launch slice and incremental Windows build/contract CI. Its decision to retain the old UI workflows is now superseded. Current work proceeds through P0 native WinUI UI automation, broader player feedback and explicitly optional local-first covers; P1 installer/portable acceptance; P2 tagged releases; P3 optional updates; and P4 safe Steam writes. P0 feedback and P1 preparation can overlap, and P4 does not depend on P3. A polished UI or removal of an old implementation does not establish a stable release when configuration, lifecycle or delivery gates remain incomplete. mise is optional; see [Windows development](/SteamWrapper/development/windows/) for SDK requirements, direct commands and scoped validation records.

@@ -1,62 +1,43 @@
 ---
 title: "SteamWrapper v2 architecture"
-description: "Manager and Runner boundaries, stable data, and configuration contracts."
+description: "WinUI Manager, C# application services, independent Rust Runner, and stable contracts."
 ---
 
 <a id="steamwrapper-v2-architecture"></a>
-
 <a id="steamwrapper-v2-架构设计"></a>
-
-
-
 <a id="核心目标"></a>
 
 ## Core goal
 
-Windows is the current priority for v2. The new [product and architecture design](/SteamWrapper/project/design/windows-v2/) uses a WinUI 3/C# Manager, its own C# configuration services, and an independent Rust Runner connected through the existing TOML/CLI contracts. `apps/manager-winui` implements the configuration preview; the Dioxus/Rust management chain remains the migration baseline. Existing Linux contracts are retained, while Linux / SteamOS / Proton expansion is deferred.
+**WinUI 3 is the only Manager implementation.** The Windows preview in `apps/manager-winui` uses C#/XAML and C# application services. Steam launches the independent Rust Runner through the existing TOML/CLI contracts. There is no Rust FFI, management helper, or background service. See the [Windows design](/SteamWrapper/project/design/windows-v2/).
 
-Players configure a game once in SteamWrapper Manager, then always click Play in Steam. Manager does not participate in daily launches.
-
-```text
-SteamWrapperManager: visible during configuration, WinUI preview / Dioxus baseline GUI
-SteamWrapperRunner: unobtrusive during play, native headless Rust executable
-```
+Configure a game once, then click Play in Steam with Manager closed. Removing the old UI does not complete installation, update, or stable-release acceptance. Linux retains Rust Runner compatibility and process CI; there is no Linux GUI, and new SteamOS/Proton work is deferred.
 
 <a id="运行流程"></a>
 
 ## Runtime flow
 
 ```text
-Steam starts the game
-↓
-Steam Launch Options calls SteamWrapperRunner
-↓
-Runner reads profiles.toml
-↓
-Runner finds the profile by --appid
-↓
-Runner starts the actual exe / launcher
-↓
-Runner waits for the game to exit
-↓
-Runner exits; Steam status and playtime still require acceptance in the client
+Steam Play
+→ stable Runner --appid <appid> -- %command%
+→ read profiles.toml
+→ launch the configured target and arguments
+→ wait according to the profile
+→ exit
 ```
 
-Manager's configuration flow (the cover fallback below is Dioxus-only; WinUI uses local covers or placeholders):
+Steam status, playtime, achievements, and cloud behavior need their own scoped acceptance.
 
 ```text
-The user opens SteamWrapper Manager
-↓
-Scan the local Steam Library and appmanifest_<appid>.acf
-↓
-Find cached covers; when absent, associate a public Steam CDN URL with the known AppID
-↓
-Choose the game and the actual exe / launcher
-↓
-Save the profile and generate Steam Launch Options (applying them to Steam is not implemented)
-↓
-Continue launching the game from Steam
+Open WinUI Manager
+→ scan local Steam manifests and covers
+→ show local art or a friendly placeholder
+→ select the actual executable/launcher and preserve advanced settings
+→ save the profile and install/check stable Runner
+→ generate/copy Launch Options for manual application
 ```
+
+Automatic Steam Launch Options application and restoration are not implemented.
 
 <a id="launch-options-合约"></a>
 
@@ -66,77 +47,42 @@ Continue launching the game from Steam
 "<stable-runner-path>" --appid "123456" -- %command%
 ```
 
-- `--appid` identifies the profile consistently.
-- The original Steam command remains after `--`.
-- `%command%` is retained for future Steam / Proton wrapping.
-- Launch Options must point to the stable Runner, never a temporary installation or extraction directory.
-
-The v2 `profiles.toml` format, Runner CLI, and Launch Options above are compatibility boundaries. A GUI migration must not change them.
-
-The current Runner receives and logs `steam_command`; it runs the profile's target/args without executing or automatically appending the original command. A UI migration must preserve this meaning.
+`--appid` selects the profile. The original Steam command remains after `--`; options reference stable Runner, never Manager or temporary/versioned package paths. Runner receives and logs `steam_command`, but executes the profile's target/args without executing or appending that original command. Preserving `%command%` is a compatibility boundary, not completed Proton wrapping.
 
 <a id="分层"></a>
 
 ## Layers
 
-WinUI preview:
-
 ```text
-apps/manager-winui/SteamWrapper.Manager       # XAML, window state, native picker, clipboard
+apps/manager-winui/SteamWrapper.Manager       # C#/XAML, UI state, pickers, clipboard
                  ↓ C# calls
-apps/manager-winui/SteamWrapper.Application   # configuration, local Steam, Runner installation
+apps/manager-winui/SteamWrapper.Application   # profiles, local Steam, logs, Runner installation
                  ↓ profiles.toml / stable Runner files
-crates/runner                               # started independently by Steam
+crates/runner                               # Steam-started CLI and process lifecycle
+                 ↓ Rust calls
+crates/core                                 # shared configuration/path contracts
 ```
 
-`ProfileStore` uses Tomlyn syntax spans to change only edited fields, preserving other text and unknown data. New profiles explicitly default to job; a legacy omitted root default is not filled in as job. Saving uses a cooperative write lock, byte-version conflict checks, a flushed temporary file in the same directory, and atomic replacement with backup. Inline/dotted profiles are readable but cannot be modified. Non-cooperating editors can still race between the final check and replacement.
+`ProfileStore` uses Tomlyn syntax spans to edit only changed fields, preserving other text and unknown data. New Windows profiles explicitly use `job`; omitted legacy `wait_mode` remains `root`. Saves use a cooperative lock, byte-version conflict checks, a flushed same-directory temporary file, atomic replacement, and backup. Inline/dotted profiles are read-only. Non-cooperating editors can still race between the final check and replacement.
 
-`SteamScanner` reads only local VDF and covers. `RunnerInstaller` uses a hash-bound version manifest, stable paths, and atomic replacement; it rejects overwrites when relative versions cannot be established. The UI does not control game processes. `tests/contracts` and test-only process fixtures verify C# editing and actual Rust consumption; they are not included in the Manager package.
+`SteamScanner` reads local metadata/covers. `RunnerInstaller` checks hash-bound version metadata and actual shared file locations before reporting ready; it uses stable paths and atomic replacement, preserving newer compatible versions and rejecting unknown replacements. GUI code never launches or waits for games. Cross-language tests and controlled process fixtures verify actual Rust consumption and are excluded from published output.
 
-`ProfileSteamInstallation` associates a read-only Steam installation path by AppID for display in Manager. It is not written to TOML, and discovery does not overwrite `game_dir`. The latter still means the actual runtime folder, which may be outside the Steam library; Runner target and working-directory resolution stay unchanged. See [separate translated-game directories](/SteamWrapper/guides/translated-games/) for the purposes of both paths, migration, and achievement boundaries.
-
-The retained Dioxus management chain below uses its own older save implementation:
-
-```text
-apps/manager-dioxus
-  Dioxus Desktop, RSX, local CSS, player-facing UI
-                ↓ direct Rust calls
-crates/manager-core
-  ManagerServices, stable paths, profiles, scanning, logs, Runner installation/repair
-                ↓
-crates/core
-  Profile / TOML, Steam Library, cover cache, Launch Options, cross-platform rules
-
-crates/runner
-  independent CLI, target launch, platform waiting, runtime logs
-```
+`ProfileSteamInstallation` associates a read-only Steam path by AppID for display. It is not serialized and never overwrites `game_dir`, the actual runtime folder, which may be outside Steam. See [translated-game directories](/SteamWrapper/guides/translated-games/).
 
 ### `crates/core`
 
-In the existing Rust management chain, `core` provides Profile/TOML, Steam directory and appmanifest parsing, local-first cover discovery with AppID-based Steam CDN fallback URLs, and Launch Options. It must not depend on Dioxus, Tauri, React, WebView, or platform process-waiting APIs. The C# Manager implements configuration services against the same protocol, with cross-language roundtrips and actual Runner consumption constraining compatibility. It does not reuse the management chain through FFI.
-
-### `crates/manager-core`
-
-`manager-core` is the UI-framework-neutral Manager service layer, not an RPC layer. It composes `core` directly and provides:
-
-- Stable data paths and directory creation for the current platform.
-- Profile reading/saving and Launch Options generation.
-- Local Steam game scanning and log listing.
-- Runner hash checks, atomic installation, and repair.
-
-Dioxus calls it directly; do not copy old Tauri command shapes or introduce artificial IPC.
-
-The current save service reconstructs profiles and overwrites advanced fields; core saves through direct file writes. These are known migration risks, not configuration semantics endorsed by the new design. WinUI must preserve unedited fields, protect unknown data, write atomically, and handle conflicts. See the [configuration fidelity gate](/SteamWrapper/project/design/windows-v2/#4-配置保真是第一个门槛).
-
-### `apps/manager-dioxus`
-
-The Dioxus Desktop 0.7.10 configurator provides local game scanning, cover cards, manual additions, target selection, profile editing, Launch Options, configured games, logs, and settings. CSS is a local native resource. The brand SVG must remain consistent with `assets/brand/steamwrapper.svg`.
-
-`Dioxus.toml` explicitly declares `resources/runner`. Build steps stage the platform's Runner; Manager copies the read-only bundled resource into the stable user-data location only on first startup or repair from Settings.
+Core is a GUI-independent Rust library. Runner uses its Profile/TOML and path semantics. Existing Steam metadata, cover URL, and Launch Options utilities do not provide WinUI services: C# implements the file contract directly. Core contains no platform process-waiting API.
 
 ### `crates/runner`
 
-Runner is always independent, native, and headless, with no dependency on Dioxus or GUI lifecycle. Manager installs and checks its distribution resources only. Launching, waiting, and platform process control must never move into the GUI.
+Runner owns CLI parsing, target launch, platform waiting, and runtime logs, without GUI, WebView, or .NET dependencies. Manager checks and installs its files without sharing its process lifetime.
+
+<a id="cratesmanager-core"></a>
+<a id="appsmanager-dioxus"></a>
+
+### Archived management chain
+
+Dioxus Manager, `crates/manager-core`, its E2E, and the old GUI release chain are removed from current development. Their [UI source](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/apps/manager-dioxus) and [service source](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/crates/manager-core) at ca6a09e are historical references. The [2026-09-07 comparison](/SteamWrapper/project/decisions/manager-comparison/) preserves measurements and limitations, not a second supported Manager.
 
 <a id="profile-示例"></a>
 
@@ -160,9 +106,9 @@ wait_mode = "job"
 
 ## Display language settings
 
-Manager display language is separate from the Runner/TOML contract. Both Managers use `ui-settings.json` in the stable data root, beside `profiles.toml`. The `language` value is `en-US` or `zh-CN`; trimmed, case-insensitive `en` and `zh-Hans` aliases are accepted, and missing/unknown values default to English. Preserve unknown JSON fields when saving and refuse to overwrite an invalid existing file. A language change must preserve current form input and protocol values; user names, paths, commands, and log contents remain literal.
+WinUI uses `ui-settings.json` beside `profiles.toml`. `language` is `en-US` or `zh-CN`; trimmed, case-insensitive `en` and `zh-Hans` aliases are accepted, with missing/unknown values defaulting to English. Saves preserve unknown JSON fields and refuse to overwrite invalid settings.
 
-WinUI's sidebar selector refreshes application-owned text after a successful save; a failed save retains the previous language and reports the error. This UI preference does not change Runner arguments, wait modes, game paths, or the original Steam command.
+The sidebar selector refreshes application-owned text after successful persistence; failure retains the previous language and reports an error. Unsaved input, user names, paths, arguments, protocol identifiers, and logs remain unchanged. Language does not alter Runner/TOML behavior.
 
 <a id="等待模式"></a>
 
@@ -170,62 +116,48 @@ WinUI's sidebar selector refreshes application-owned text after a successful sav
 
 | Mode | Purpose |
 | --- | --- |
-| `root` | Wait only for the directly launched target process |
-| `job` | Windows default; a Job Object waits for launcher descendants that do not explicitly break away |
-| `process_name` | After the launcher exits, wait for the specified process name appearing during this launch |
-| `process_group` | Linux / SteamOS default; wait for descendants in the same POSIX process group |
+| `root` | Wait for the directly launched target |
+| `job` | New Windows profile default; wait for Job members that do not break away |
+| `process_name` | After launcher exit, wait for the specified name observed during this launch |
+| `process_group` | Retained Linux mode for descendants in the same POSIX process group |
 | `none` | Exit immediately after launch |
 
-New Manager profiles currently default to `job` on Windows and `process_group` on Linux. The Rust parser defaults to `root` when legacy TOML omits `wait_mode`; migration must not reinterpret this. `process_name` excludes same-name `(PID, start_time)` pairs that existed before launch, but a name cannot identify application ownership. It is an explicit compatibility option for complex launchers. Proton wrapping awaits a complete platform-specific strategy.
+Missing legacy `wait_mode` always parses as `root`. No Linux Manager currently creates profiles. `process_name` excludes preexisting same-name `(PID, start_time)` pairs, but a name cannot establish ownership. Windows `job` returns launcher status after waiting, not necessarily the game's exit code. Use platform process tests and scoped live evidence for lifecycle claims.
 
 <a id="分发与稳定安装"></a>
 
 ## Distribution and stable installation
 
-Windows:
+Windows currently ships a complete self-contained preview directory through local builds and CI. Extract it in full and open Manager from ordinary File Explorer. A per-user installer, tagged WinUI release workflow, application updater, and automatic Steam writes remain unimplemented.
 
 ```text
-%LOCALAPPDATA%\Programs\SteamWrapper\      # Manager installation directory
-%LOCALAPPDATA%\SteamWrapper\bin\           # stable Runner path
-%LOCALAPPDATA%\SteamWrapper\profiles.toml  # configuration
-%LOCALAPPDATA%\SteamWrapper\ui-settings.json # display language
-%LOCALAPPDATA%\SteamWrapper\logs\          # logs
-%LOCALAPPDATA%\SteamWrapper\backups\       # backups
-```
-
-Linux / SteamOS:
-
-```text
-$XDG_DATA_HOME/SteamWrapper/
+%LOCALAPPDATA%\SteamWrapper\
   profiles.toml
   ui-settings.json
-  bin/steamwrapper-runner
-  logs/
-  backups/
-  cache/
+  bin\SteamWrapperRunner.exe
+  logs\
+  backups\
+  cache\
 ```
 
-When `XDG_DATA_HOME` is unset, use `~/.local/share/SteamWrapper/`. After resource verification, Runner is written atomically to its stable path. Updates touch Runner only, preserving profiles, logs, backups, and cache.
+`%LOCALAPPDATA%\Programs\SteamWrapper` is a proposed future Manager installation location. Runner installation preserves profiles and other user data.
+
+Existing Linux Runner uses `$XDG_DATA_HOME/SteamWrapper/`, falling back to `~/.local/share/SteamWrapper/`, and `bin/steamwrapper-runner`. Preserve existing data there; no Linux GUI or automatic installer is provided.
 
 <a id="封面与安全边界"></a>
 
 ## Covers and safety boundaries
 
-Manager prefers local Steam caches:
+Current WinUI reads local Steam `appcache/librarycache/` and per-user `config/grid/` images; unavailable art uses a friendly placeholder. It performs no cover downloads.
 
-```text
-<Steam installation>/appcache/librarycache/
-<Steam installation>/userdata/<steamid>/config/grid/
-```
+The [roadmap](/SteamWrapper/project/roadmap/) plans an explicit optional official Steam CDN fallback: local-first, offline by default, known local AppIDs, allowlisted HTTPS hosts/redirects, bounded requests and cache under SteamWrapper's `cache/`. It must preserve custom images and remain usable after errors. The preference, downloader, and persistent cover cache are unimplemented. No third-party metadata service, account lookup, or library upload is included.
 
-When a local cover is missing, `core` builds a public Steam CDN `library_600x900.jpg` URL from an AppID already read from a local manifest. Dioxus passes only this URL to its image control. The request includes no Steam username, library list, profile, or API key. It adds neither a third-party cover service nor new image files in user data. Offline operation, rate limits, missing resources, and image-load errors produce a friendly cover-unavailable placeholder without blocking scanning or configuration.
-
-SteamWrapper does not inject DLLs, patch Steam/games, bypass DRM, remain running as a background service, or upload user data.
+SteamWrapper does not inject DLLs, patch Steam/game files, bypass DRM, or upload user data. Unresolved save/cloud conflicts stop live acceptance.
 
 <a id="manager-技术边界"></a>
 
 ## Manager technology boundaries
 
-The old Tauri/React Manager and its E2E were removed. `apps/manager-winui` now provides the Windows configuration preview, while `apps/manager-dioxus` remains the migration baseline. WinUI implements Windows configuration services in C# without a C ABI or background helper. Runner remains an independent Rust executable. The [Windows design](/SteamWrapper/project/design/windows-v2/) defines WinUI's local-cover policy, retirement conditions for the old management chain, and acceptance order.
+WinUI/C# Application and Rust Runner are the sole current product path. Dioxus and Tauri/React are historical implementations. Node/pnpm serve development assets and static documentation, not desktop runtime.
 
-Windows NSIS, Linux AppImage, and physical SteamOS devices still need validation in their respective CI/platform environments. Passing local Linux checks is not Windows or physical Steam Deck evidence.
+Windows preview evidence does not establish installer/update/uninstall or clean-system acceptance. Linux Runner CI does not establish a Linux GUI, Steam Deck support, or Proton integration. See [distribution](/SteamWrapper/development/distribution/) and the [roadmap](/SteamWrapper/project/roadmap/).

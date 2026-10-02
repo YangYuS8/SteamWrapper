@@ -3,6 +3,10 @@ title: "WinUI 3 迁移技术评估"
 description: "带日期的 WinUI 迁移评估、备选方案、依赖与部署约束。"
 ---
 
+:::note[2026-10-02 退役背景]
+下文涉及 Dioxus 和 Rust `manager-core` 的内容属于九月的历史记录。它们的源码、工具和界面发布链已于 2026-10-02 移除；WinUI 是唯一 Manager。原始测量和逐场景证据保留其日期及范围，当前实现见[架构](/SteamWrapper/zh-cn/development/architecture/)。
+:::
+
 <a id="winui-3-迁移技术评估"></a>
 
 核验日期：2026-09-07。本文件记录实施前的技术依据、备选和环境限制。随后已按 [Windows v2 产品与架构](/SteamWrapper/zh-cn/project/design/windows-v2/)实现首个配置预览；最新实现与验证状态见 [预览验收](/SteamWrapper/zh-cn/project/validation/winui/)，新安装器仍未完成。
@@ -30,15 +34,15 @@ ABI 成本依据 [Microsoft 原生互操作指南](https://learn.microsoft.com/e
 | 现有部分 | 迁移处理 |
 | --- | --- |
 | [Profile/TOML](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/config.rs)、[字段与默认值](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/profile.rs) | 作为既有兼容协议依据；C# 实现由跨语言往返和实际 Runner 解析验证 |
-| [ManagerService](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/lib.rs) | 只维护现有 Dioxus 管理链；不要求新 C# 应用调用它 |
-| [Runner 安装](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/runner.rs) | 摘要、临时文件、落盘、原子替换和失败保留可作为行为参考，C# 实现另做 Windows 验证 |
+| [ManagerService](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/crates/manager-core/src/lib.rs) | 只维护现有 Dioxus 管理链；不要求新 C# 应用调用它 |
+| [Runner 安装](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/crates/manager-core/src/runner.rs) | 摘要、临时文件、落盘、原子替换和失败保留可作为行为参考，C# 实现另做 Windows 验证 |
 | [Steam 扫描](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/steam.rs) | 当前 Windows 主要检查环境变量和 Program Files；新实现需覆盖自定义位置和部分库读取失败，不能把现有 VDF 解析当成已验证的写入器 |
 | [Windows Runner](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/platform/windows.rs) | 保留挂起启动、Job Object 和等待代码；以真实进程和 Steam 验收约束，不迁入 GUI |
-| [UI contract](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-dioxus/tests/ui_contract.rs) | 字符串断言不能移作 WinUI 的原生交互、布局或可访问性证据 |
+| [UI contract](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/apps/manager-dioxus/tests/ui_contract.rs) | 字符串断言不能移作 WinUI 的原生交互、布局或可访问性证据 |
 
 当前 `save_profile` 会重置高级字段，`config.save` 直接写文件；这说明复用 FFI 并不能自动获得无损保存。新方案要求只更新编辑字段、保护未知字段/版本、原子写入和冲突检测，见 [配置门槛](/SteamWrapper/zh-cn/project/design/windows-v2/#4-配置保真是第一个门槛)。旧配置缺失 `wait_mode` 解释为 `root`，新建 Windows 配置才显式设 `job`。
 
-最初源码对照发现 [manager_service.rs](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/tests/manager_service.rs) 的保存测试硬编码 `process_group`，而 Windows 路径选 `job`。工具链安装后已实际复现失败，随后修正为独立的平台期望值，保留其余格式断言；产品默认行为没有改变。现有 Manager 也没有一键写入/恢复 Steam Launch Options。
+最初源码对照发现 [manager_service.rs](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/crates/manager-core/tests/manager_service.rs) 的保存测试硬编码 `process_group`，而 Windows 路径选 `job`。工具链安装后已实际复现失败，随后修正为独立的平台期望值，保留其余格式断言；产品默认行为没有改变。现有 Manager 也没有一键写入/恢复 Steam Launch Options。
 
 ## 部署与稳定路径
 

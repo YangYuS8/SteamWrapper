@@ -5,9 +5,9 @@ description: "选择相关的服务、原生界面、Runner、包体和 Steam �
 
 <a id="测试"></a>
 
-SteamWrapper v2 按行为、服务、UI 与安装包分层验证。WinUI 预览已有 C#、跨语言与实际 Runner 测试；Dioxus 基线门禁保留。Windows 最终交付仍按 [重设计的阶段门槛](/SteamWrapper/zh-cn/project/design/windows-v2/#8-实施顺序与停止条件)验收。
+SteamWrapper 分别验证跨 Windows/Linux 的 Rust core 与独立 Runner，以及 WinUI Manager 的 C# 服务、跨语言契约和自包含发布。Dioxus、其 Rust 管理服务、Native E2E 与旧打包流程已退役。Windows 最终交付仍按 [阶段门槛](/SteamWrapper/zh-cn/project/design/windows-v2/#8-实施顺序与停止条件)验收。
 
-两套 Windows Manager 的同输入配置探针、原生保存补测及资源测量见 [实测比较](/SteamWrapper/zh-cn/project/decisions/manager-comparison/)。资源复测脚本为 `scripts/windows/Measure-ManagerComparison.ps1`；需先准备两端 release 产物，并在其他构建和测试结束后顺序运行。
+[Manager 实测比较](/SteamWrapper/zh-cn/project/decisions/manager-comparison/)是选型的归档证据；[测量脚本](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/scripts/windows/Measure-ManagerComparison.ps1)与 Dioxus 源码固定在提交 `ca6a09e`，不再是当前开发前置条件。
 
 ## 按改动选择验证
 
@@ -15,20 +15,20 @@ SteamWrapper v2 按行为、服务、UI 与安装包分层验证。WinUI 预览�
 
 | 本次改动 | 本地验证范围 |
 | --- | --- |
-| 文档 / AGENTS / 技能 | 审核 diff、链接、指令冲突和技能元数据；不要求编译 UI 或生成安装包 |
-| core / manager-core 行为 | 先写能复现缺失行为的测试并观察预期失败，再修改实现；运行受影响 crate 测试；共享契约或跨 crate 影响时运行 workspace 检查和测试 |
+| 文档 / AGENTS / 技能 | 审核 diff、链接和指令冲突；文档/站点变更运行 `pnpm docs:check` 与 `pnpm docs:build` |
+| Rust core 行为 | 先写能复现缺失行为的测试并观察预期失败，再修改实现；运行受影响 crate 测试；共享契约或跨 crate 影响时运行 workspace 检查和测试 |
 | Runner 启动 / 等待 | 对应平台的真实进程回归测试；CLI / TOML / 公共模块变化再扩展到 workspace |
-| Dioxus 交互 / service 接线 | 相关 Rust 测试、`dx check` / 构建，以及覆盖该行为的隔离 Native E2E |
 | WinUI / C# 服务 | `Invoke-WinUI.ps1 -Action Test`；配置协议或 Runner 分发变化增加 `Test-WinUIContracts.ps1`；UI 变化使用 `Invoke-WinUI.ps1 -Action Publish` 与隔离原生交互（完整命令见下文） |
 | 纯视觉调整 | 构建并在隔离 Desktop 预览中检查受影响界面；按影响选择现有测试，不用固定 CSS 字符串代替视觉验收 |
-| E2E 工具或依赖 | frozen lockfile 安装、TypeScript 检查、受影响 Native E2E |
-| 打包 / 发布 / 工具链或共享构建变化 | 完整质量门禁、当前平台 release Runner staging、实际安装包解包检查 |
+| 发布 / 工具链或共享构建变化 | 相关 Rust/WinUI 门禁、当前 Windows Runner staging、完整发布目录与 `Test-WinUIPublish.ps1`；安装器另行验收 |
 
-CI / release 工作流仍执行各自完整门禁。上表限定日常本地工作量，不删减 CI。已通过的检查只在新改动、失败或未解决疑点出现时重跑；缺少工具时记录阻塞，不把未运行写成通过。
+CI 工作流仍执行各自完整门禁。上表限定日常本地工作量，不删减 CI。已通过的检查只在新改动、失败或未解决疑点出现时重跑；缺少工具时记录阻塞，不把未运行写成通过。
 
-行为回归优先验证外部结果。现有 `ui_contract` 包含源码文本断言，只能证明声明存在，不能证明窗口、可访问性、布局或原生文件选择实际可用。
+行为回归优先验证外部结果。服务或源码声明测试不能证明原生窗口、可访问性、布局或文件选择行为。WinUI 自动化原生 UI 门禁尚未实现，见 [路线图](/SteamWrapper/zh-cn/project/roadmap/)；隔离的人工原生验收须单独记录。
 
-## WinUI 迁移的新增验收
+<a id="winui-迁移的新增验收"></a>
+
+## WinUI 验收
 
 先验证 C# 配置服务与 Rust Runner 的既有文件协议，再证明 UI 和安装器。已有入口：
 
@@ -47,9 +47,9 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 
 原生本地化验收应使用没有 `ui-settings.json` 的全新隔离数据根，确认无论 Windows 显示语言如何，首次启动均为英语。打开配置编辑、添加参数并触发验证/状态消息，切换到简体中文再切回英语；检查应用自有标签、参数行、等待模式、既有状态、对话框和 picker 动作按钮文案同步变化，未保存的名称、路径、参数及已生成启动项保持不变。重开沙盒 Manager 检查持久化，并检查两种语言的换行、截断、键盘操作和对话框布局；检查发布目录的 `zh-CN/SteamWrapper.Application.resources.dll`。服务/资源测试不能替代原生呈现或发布完整性验证。
 
-两套 Manager 共用与 `profiles.toml` 同级的 `ui-settings.json`，`language` 为 `en-US` / `zh-CN`；兼容 `en` / `zh-Hans`，去除首尾空白且不区分大小写。缺失或未知语言默认英语。保存成功后刷新界面而不重载正在编辑的配置；失败保留旧语言并报告错误，损坏的设置文件原样保留。系统 picker 自有文案和外部原始诊断保持原语言。测试必须使用一次性设置目录，不修改真实 AppData 或 Steam 配置。
+WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language` 为 `en-US` / `zh-CN`；兼容 `en` / `zh-Hans`，去除首尾空白且不区分大小写。缺失或未知语言默认英语。保存成功后刷新界面而不重载正在编辑的配置；失败保留旧语言并报告错误，损坏的设置文件原样保留。系统 picker 自有文案和外部原始诊断保持原语言。测试必须使用一次性设置目录，不修改真实 AppData 或 Steam 配置。
 
-新增 Windows CI 保留旧工作流，依次运行上述测试与目录发布；`3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)已实际通过。托管 Windows Server 2025 构建不是 Windows 11 干净系统验收。完整验收范围如下，不能把 fixture 结果外推到未测平台或真实 Steam；本机 Unity 游戏及 9-nine 五部独立汉化版已另行通过 Steam 闭环，第一部另覆盖该 CHS 启动器先退场景，过程与边界见 [真实 Steam 验证](/SteamWrapper/zh-cn/project/validation/steam/)。
+当前 Windows CI 运行 C# 测试、跨语言 Runner 契约和发布检查。历史提交 `3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)已通过；这是有日期的记录，不代表最新提交。托管 Windows Server 2025 构建不是 Windows 11 干净系统或原生 UI 验收。完整验收范围如下；本机 Unity 游戏及 9-nine 五部独立汉化版已另行通过 Steam 闭环，第一部另覆盖 CHS 启动器先退场景，过程与边界见 [真实 Steam 验证](/SteamWrapper/zh-cn/project/validation/steam/)。
 
 | 范围 | 有效证据 |
 | --- | --- |
@@ -78,99 +78,35 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 
 | 层 | 命令 | 验证内容 |
 | --- | --- | --- |
-| Rust domain / service | `cargo test --workspace` | TOML、VDF、路径、Steam 过滤、封面、Launch Options、Manager service、Runner 等待模式 |
-| Dioxus contract | `cargo test -p steamwrapper-manager-dioxus --test ui_contract` | 玩家流程、文件选择、service 和 bundle 的源码声明及品牌一致性；不证明真实原生交互 |
-| Dioxus build | `dx check` / `dx build --release` | Dioxus 0.7.10 项目、RSX、静态资源和 release 客户端构建 |
-| Dioxus Native E2E | `pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native` | 真实 Dioxus binary、真实 `manager-core`、隔离 Steam / profile / Runner fixture |
-| 平台 bundle | `dx bundle --release --package-types …` | NSIS / AppImage 随包 Runner resource 与安装器产物 |
+| Rust core / Runner | `cargo test --locked --workspace` | TOML、VDF、路径、Steam 元数据、Launch Options 与平台 Runner 行为；无 GUI 依赖 |
+| C# 服务 | `Invoke-WinUI.ps1 -Action Test` | 配置保真和安全写入、本地发现、语言设置、稳定 Runner 安装与共享数据位置 |
+| C# / Rust 契约 | `Test-WinUIContracts.ps1` | 未编辑语义全量比对，以及真实受控 Runner 的 argv/cwd、等待、退出和错误行为 |
+| Windows 发布 | `Test-WinUIPublish.ps1` | 自包含 Manager/Runner 资源与发布目录替换、恢复 |
+| WinUI 交互 | `Invoke-WinUI.ps1 -Action Sandbox` 加单独记录的原生交互 | 一次性数据、真实窗口/picker；自动化原生 UI 门禁仍在计划中 |
 
 ## 本地命令
 
-按自己的方式安装 Windows 工具；mise 是可选项。使用 `pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor` 检查完整工具组合，使用 `pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify` 执行现有质量门禁。安装与 WinUI 编译验证见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。以下 `just`/底层命令保留为现有流程；WinUI smoke 不替代应用或 Steam 验收。
-
-优先使用根目录 `justfile`：
+按自己的方式安装 Windows 工具；mise 是可选项。SDK 要求及 PowerShell 入口见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。Rust workspace 只包含 core 与 Runner，Linux 不再需要 GTK/WebKit、Dioxus CLI、Xvfb 或桌面会话。
 
 ```bash
-just dev          # 使用真实 Steam / 用户数据启动 Desktop Manager 与热重载
-just dev-sandbox  # 使用一次性 Steam / 用户数据沙箱启动
-just test         # Rust 格式、检查与测试
-just e2e          # Dioxus Native E2E
-just verify       # 全部本地质量门禁
-just bundle-linux # stage Runner 并打 Linux AppImage
-```
-
-`dev-sandbox` 不会展示真实 Steam 库，也不会保留 profile 或 Runner；它只用于安全预览 UI。`just --list` 列出所有 recipe。下列是对应的底层命令：
-
-```bash
-pnpm install --frozen-lockfile
-pnpm --filter steamwrapper-manager-dioxus-e2e exec tsc --noEmit
-pnpm --filter steamwrapper-manager-dioxus-e2e run test:tooling
-
 cargo fmt --all -- --check
-cargo check --workspace
-cargo test --workspace
-
-cd apps/manager-dioxus
-dx check
-dx build --release
-cd ../..
-
-cargo build -p steamwrapper-manager-dioxus --features e2e
-pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
+cargo check --locked --workspace
+cargo test --locked --workspace
 ```
 
-Linux 构建、测试和打包前需准备 WebKitGTK、GTK3、`libxdo-dev`、AppIndicator、librsvg 与 `patchelf`。当前 Dioxus Desktop 通过 `muda` 的默认 `libxdo` feature 链接 X11 库；Ubuntu 需要安装开发包 `libxdo-dev`，否则 Manager 测试和 AppImage 构建会在链接阶段报 `unable to find library -lxdo`。CI Check、AppImage 和 release 的 Linux 依赖列表均包含该包。[Ubuntu 包说明](https://packages.ubuntu.com/noble/amd64/libxdo-dev)
+Windows 使用上文 WinUI 命令，并用 `pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1` 验证发布及恢复。`Invoke-Build.ps1 -Action Doctor` 检查 .NET/Rust/MSVC/SDK；`-Action RustTest` 执行 `cargo test --locked --workspace`；`-Action Verify` 在 Rust 检查后依次运行 C# `Test`、`Test-WinUIContracts.ps1` 和 WinUI `Publish`，遇错停止。它不调用 Dioxus、pnpm Native E2E 或自动原生 UI 验收。相关行为改变时，另加发布恢复和隔离原生交互检查。
 
-无桌面会话的 Linux CI 还需安装 `xvfb`、`xauth` 和 `dbus-daemon`，在虚拟 X 显示与临时 D-Bus 会话中运行 Native E2E；仅编译或打包不需要启动显示服务。GTK 初始化需要可用显示，但历史 CI 的退出码 101 没有保留下来的 stderr，不能据此认定具体 panic 原因。Linux Check 使用下列命令，Windows 保留直接运行 pnpm：[xvfb-run](https://manpages.ubuntu.com/manpages/questing/man1/xvfb-run.1.html)、[dbus-run-session](https://manpages.debian.org/unstable/dbus-daemon/dbus-run-session.1.en.html)。
+自动预览和进程 fixture 必须把 `STEAM_DIR`、`STEAMWRAPPER_E2E_ROOT`、`XDG_DATA_HOME`、`LOCALAPPDATA` 指向一次性目录，不能为了通过回归改用真实 Steam 或用户数据。
 
-```bash
-xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" dbus-run-session -- pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
-```
+<a id="dioxus-native-e2e"></a>
 
-平台 bundle 由对应平台运行：
+## 已归档的 Dioxus Native E2E 证据
 
-```bash
-# Linux
-STEAMWRAPPER_RUNNER_PROFILE=release apps/manager-dioxus/scripts/stage-runner.sh
-cd apps/manager-dioxus
-dx bundle --release --package-types appimage --out-dir ../../release-artifacts
+Dioxus 与 `manager-core` 已从当前 workspace 移除。[归档实现和测试](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/apps/manager-dioxus)、[管理服务](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/crates/manager-core)和[历史测试指南](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/docs/src/content/docs/zh-cn/development/testing.md#dioxus-native-e2e)固定在 `ca6a09e`。它们的命令和依赖不再是当前指导，也不验证 WinUI。
 
-# Windows（GitHub Actions Windows runner）
-# stage-runner.sh 会从 target/release/steamwrapper-runner.exe 生成
-# resources/runner/SteamWrapperRunner.exe，再运行 dx bundle --package-types nsis
-```
+2026-09-07 Windows 本机完成当时的 Rust workspace、Runner 进程测试、Dioxus check/release build 和 3 个 spec / 6 项 Native E2E。提交 `3d322db` 的 [v2 完整 CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786)还通过 Windows/Ubuntu 与 Linux AppImage 检查；工具修复与边界见 [归档环境记录](/SteamWrapper/zh-cn/development/windows/#本机安装与验证记录)。
 
-## Dioxus Native E2E
-
-2026-09-08 的语言和图标修改通过 10 次隔离 Native E2E：原有六项、两项语言／状态／错误测试，以及在两个独立进程中的语言保存和重启恢复。最终 Windows Rust 工作区 check/test 通过（43 项；依赖 C# 输出的契约在通用工作区运行中有意忽略，已通过 `winui:contracts` 单独验证）。其中两个受影响的 Manager 包共 30 项，覆盖未知 JSON 数字原文保留、嵌套重复键拒绝及两套实现共同的 64 层深度限制。TypeScript、E2E 工具测试、Dioxus 检查／发布构建和限定范围的严格 Clippy 通过。独立检查的双语 NSIS 包及其验收边界见[分发文档](/SteamWrapper/zh-cn/development/distribution/#ci--release-验证)。
-
-Native E2E 只在 `e2e` Cargo feature 下引入 `wdio-dioxus-embedded-driver`。正式 release graph 不含 WebDriver bridge 或测试 server。
-
-```bash
-cargo build -p steamwrapper-manager-dioxus --features e2e
-pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
-```
-
-测试脚本创建一次性临时 fixture，并将下列环境都指向它：
-
-```text
-STEAM_DIR
-STEAMWRAPPER_E2E_ROOT
-XDG_DATA_HOME
-LOCALAPPDATA
-```
-
-fixture 包含中文路径与空格路径、一个本地 Steam game manifest，且故意不写本地 cover cache。测试启动真实 Manager 后会断言该 AppID 使用公开 Steam CDN 封面 URL；测试只验证 URL 生成与 DOM 绑定，不依赖外网图片加载。
-
-- 默认游戏库和手动添加入口；
-- 首次启动把 bundle Runner 安装到稳定 `SteamWrapper/bin/`；
-- 本地 Steam 扫描与游戏配置对话框；
-- 保存 profile；
-- Launch Options 保持 `--appid "123456" -- %command%` 协议。
-
-成功或失败后的 WDIO 日志与脱敏 fixture artifact 位于 `apps/manager-dioxus/e2e/artifacts/`，该目录不提交；CI 负责上传。测试结束会清理临时目录，不能读取或修改用户真实 Steam 配置。
-
-`scripts/dioxus-service.mjs` 继续使用锁定的 Dioxus service，只补充启动失败时的清理：WDIO 在 `onPrepare` 失败后不会调用 `onComplete`，包装会先完成该钩子以刷新 app stdout/stderr 日志，再保留原错误退出。测试 app 启用 `RUST_BACKTRACE=1`。`test:tooling` 用不启动 GUI 的 Node 子进程验证早退 101 的 stdout/stderr 附件，以及失败后再次运行时日志进入新的输出目录；后者已观察旧服务失败、包装后通过。这些工具回归不代替 Linux GTK/WebKit 的真实 Native E2E。
+2026-09-08 语言/图标实现通过 10 次隔离 Native E2E：原有 6 项、2 项语言/状态/错误用例，以及两个进程中的语言保存/重启。当时 Windows Rust workspace 共 43 项通过；依赖 C# 输出的契约在普通运行中有意忽略，另由 `winui:contracts` 通过。两个旧 Manager 包占其中 30 项，覆盖未知 JSON 数值保真、嵌套重复键拒绝和共同 64 层深度限制。TypeScript、E2E 工具、Dioxus check/release build 与 scoped strict Clippy 通过。[分发记录](/SteamWrapper/zh-cn/development/distribution/#ci--release-验证)保留旧 NSIS 内容检查及其边界。这些归档结果不能作为当前 WinUI 原生 UI 自动化、安装器或干净系统通过的证据。
 
 ## Runner 稳定安装验证
 
@@ -180,21 +116,18 @@ WinUI 的 [RunnerInstaller](https://github.com/YangYuS8/SteamWrapper/blob/main/a
 
 服务测试后另行验证了新版发布产物的原生行为：受重定向的工具环境启动 Manager 后出现位置警告，保存不展示启动项或复制按钮；普通 Explorer 启动新版 Manager 后保存成功，生成完全一致的既有启动项。该原生复核与上述服务/进程证据分别记录，不替代干净 VM 或安装器验证。
 
-`manager-core` 的 Rust 测试覆盖 Runner 路径、摘要相同不覆盖、缺失 / 损坏修复、原子替换失败与不触碰 `profiles.toml` / `logs` / `backups` / `cache` 的边界。Dioxus Native E2E 从空的稳定目录启动，检查真实 Runner 文件被安装并由设置页显示为健康。
+当前稳定 Runner 的安装安全由 C# Application 测试和跨语言契约覆盖。退役的 Rust `manager-core` 与 Dioxus UI 安装测试已归档，旧结果不能替代当前服务测试。
 
 Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两平台的 `process_name` 边界。`process_name` 仅按进程名匹配，无法判断并发同名业务归属；它不是默认等待模式。
 
 ## CI
 
-`v2-ci.yml` 配置了 Windows / Ubuntu Check 矩阵，执行 Rust 格式、check、test、Dioxus check / release build、Native E2E 和各自平台 Runner 进程测试；其 Linux bundle job 构建 AppImage 并解包检查 Runner。Windows NSIS 构建与内容检查配置在 `release.yml`。工作流声明不代表最近一次运行通过，实际结果须另行核验。
+`v2-ci.yml` 现为 Windows / Ubuntu 的 Rust core/Runner 检查及平台进程测试。`winui-windows.yml` 在 Windows 运行 C# 测试、C# / Rust 契约和自包含发布/恢复检查。旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；WinUI 自动化原生 UI、安装器与更新门禁仍属于路线图。
 
 ## 限制
 
-- Linux 本机 Native E2E 的通过不能替代 Windows WebView2、NSIS 或 Steam Deck 实机验证。
-- 常规自动化不操作真实 Steam；真实验收需要用户授权并记录恢复。一键写入 / 恢复 Launch Options 仍是后续产品功能。
-- Native E2E 覆盖受控本地 fixture，不覆盖真实 Proton、breakaway、Unix daemonize / 新 session 行为。
-- Dioxus Browser Mode 不适用于当前直接 Rust service 架构；本项目用 Native E2E 覆盖真实 UI 与 service 边界。
-
-官方依据：Dioxus 0.7.10 Desktop / CLI 文档，`@wdio/dioxus-service` 1.0.0 的 embedded provider 与 bridge setup 文档。
-
-2026-09-07 Windows 本机已完成 Rust workspace、Runner 进程测试、Dioxus check/release build 和 3 个 spec / 6 项 Native E2E 验证。提交 `3d322db` 的 [v2 完整 CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786)也已通过 Windows、Ubuntu 和 Linux AppImage 全部门禁。安装环境、过程中修正的工具/CI 问题及证据范围见 [开发环境记录](/SteamWrapper/zh-cn/development/windows/#本机安装与验证记录)。这些门禁不替代 NSIS、干净 Windows VM 或真实 Steam 验收；本机另行完成的单款 [真实游戏闭环](/SteamWrapper/zh-cn/project/validation/steam/)仍有其明确测试范围。
+- C# 服务/契约和发布检查不能证明原生 UI、可访问性或干净 Windows 安装；WinUI 自动化原生 UI 门禁尚在计划中。
+- 常规自动化不操作真实 Steam；真实验收需要授权、记录原启动项、保护存档、校验文件并恢复。一键应用/恢复 Launch Options 仍是后续功能。
+- Runner 进程 fixture 仅证明对应平台和已测生命周期场景，不证明真实 Proton、breakaway、Unix daemonize/新 session 或 Steam Deck 兼容性。
+- 当前预览是完整的 Windows 自包含目录；安装器、更新/卸载及干净 Windows VM 仍需独立验收。
+- 上述 2026-09-07–09-08 Dioxus 记录是归档历史结果，不是当前 WinUI 证据。

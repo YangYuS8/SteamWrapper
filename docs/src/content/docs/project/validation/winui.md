@@ -3,6 +3,10 @@ title: "First WinUI configuration-slice validation"
 description: "WinUI preview implementation and dated service, native UI, and publish evidence."
 ---
 
+:::note[2026-10-02 retirement context]
+References to Dioxus and Rust `manager-core` below belong to the September historical record. Their source, tooling and UI release chain were removed on 2026-10-02; WinUI is the only Manager. Original measurements and scenario evidence retain their dates and scope; see the current [architecture](/SteamWrapper/development/architecture/).
+:::
+
 <a id="first-winui-configuration-slice-validation"></a>
 
 <a id="首个-winui-配置切片验收"></a>

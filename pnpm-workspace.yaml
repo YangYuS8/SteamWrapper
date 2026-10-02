@@ -1,13 +1,7 @@
 packages:
   - "docs"
-  - "apps/*"
-  - "apps/*/e2e"
 allowBuilds:
-  edgedriver: false
   esbuild: true
-  geckodriver: false
-overrides:
-  '@wdio/native-utils': 2.5.0
 
 onlyBuiltDependencies:
   - esbuild

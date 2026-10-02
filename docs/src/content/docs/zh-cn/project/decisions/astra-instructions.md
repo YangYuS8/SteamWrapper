@@ -3,6 +3,10 @@ title: "Astra 指令审计记录"
 description: "带日期的 Astra 指令研究与仓库指导审计记录。"
 ---
 
+:::note[2026-10-02 退役背景]
+下文涉及 Dioxus 和 Rust `manager-core` 的内容属于九月的历史记录。它们的源码、工具和界面发布链已于 2026-10-02 移除；WinUI 是唯一 Manager。原始测量和逐场景证据保留其日期及范围，当前实现见[架构](/SteamWrapper/zh-cn/development/architecture/)。
+:::
+
 <a id="astra-指令审计记录"></a>
 
 日期：2026-09-07。范围：当前 SteamWrapper `v2` 的可编辑指令与相关路线文档；不改产品实现、模型参数、插件安装状态或 CI。

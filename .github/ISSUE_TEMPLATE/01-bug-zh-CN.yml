@@ -28,7 +28,6 @@ body:
       label: "Manager 实现"
       options:
         - "WinUI 预览"
-        - "Dioxus"
         - "仅 Runner"
         - "旧版 v1"
         - "不确定"

@@ -6,7 +6,7 @@
 
 缺陷、功能提案或配置疑问可提交到 [GitHub Issues](https://github.com/YangYuS8/SteamWrapper/issues)。先搜索已有报告，再选择相应模板。模板文件在默认分支 `main` 中维护，GitHub 实际模板选择器使用该分支。2026-09-08 检查时，仓库未启用 GitHub Discussions。仓库没有公布专职支持服务或保证响应时间。
 
-请提供 SteamWrapper 版本／提交和分支、Windows 版本、Manager 实现（WinUI 预览或 Dioxus）及最小复现步骤。启动问题还应说明等待模式、从目标程序自身目录正常启动同一 EXE 是否可用，以及 Steam 测试时 Manager 是否关闭。应区分进程创建、游戏标题出现、普通退出、Steam 状态／时长和成就。
+请提供 SteamWrapper 版本／提交和分支、Windows 版本、问题发生在 WinUI 预览还是无界面 Runner及最小复现步骤。启动问题还应说明等待模式、从目标程序自身目录正常启动同一 EXE 是否可用，以及 Steam 测试时 Manager 是否关闭。应区分进程创建、游戏标题出现、普通退出、Steam 状态／时长和成就。
 
 只分享相关且已脱敏的日志片段，用占位符替换用户名和私人目录。不要上传完整 Steam 配置、凭据、存档、受版权保护的游戏文件或整个真实游戏库诊断包。
 

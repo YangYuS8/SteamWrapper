@@ -9,7 +9,7 @@ description: "Windows 预览反馈、交付、发布、可选更新与安全 Ste
 
 保持 Windows 优先的产品边界：在 WinUI 3/C# Manager 中配置游戏，再通过 Steam 调用独立 Rust Runner 启动。C# 配置服务、TOML、稳定数据路径与 CLI 继续作为基础。后续优先级是**玩家反馈 → Windows 交付与发布 → 可选更新与安全 Steam 集成 → 后续平台扩展**。
 
-**将 v2 合入 main 是主线调整，不等于产品已经稳定发布。**它不会自动完成安装／更新验收，也不意味着立即退役 Dioxus。[Windows v2 设计](/SteamWrapper/zh-cn/project/design/windows-v2/)记录架构与最初阶段，[WinUI 评估](/SteamWrapper/zh-cn/project/decisions/winui3/)记录技术依据。WinUI 配置预览已实现，Dioxus 保留作为迁移基线。下列里程碑明确验收顺序，不承诺日期，也不重新解释已发布版本号。限定范围的证据见[预览验收](/SteamWrapper/zh-cn/project/validation/winui/)。
+**将 v2 合入 main 是主线调整，不等于产品已经稳定发布。**安装／更新验收仍未完成。截至 **2026-10-02**，WinUI 是唯一 Manager：已按用户要求移除 Dioxus 应用、Rust `manager-core`、Dioxus Native E2E 和旧 UI 发布链。这改变了维护的实现，不代表尚未完成的 Windows 交付门槛通过。[Windows v2 设计](/SteamWrapper/zh-cn/project/design/windows-v2/)记录架构与最初阶段，[WinUI 评估](/SteamWrapper/zh-cn/project/decisions/winui3/)记录技术依据。下列里程碑明确验收顺序，不承诺日期，也不重新解释已发布版本号。限定范围的证据见[预览验收](/SteamWrapper/zh-cn/project/validation/winui/)。
 
 ## A. Windows 工具链与配置契约
 
@@ -44,12 +44,12 @@ description: "Windows 预览反馈、交付、发布、可选更新与安全 Ste
 
 | 优先级 | 交付目标 | 依赖与完成门槛 |
 | --- | --- | --- |
-| P0 | 玩家反馈、可用界面／错误提示和本地优先的可选封面 | 当前预览；限定范围的原生、离线和网络验收 |
+| P0 | 原生 UI 自动化、玩家反馈、可用界面／错误提示和本地优先的可选封面 | 当前预览；限定范围的原生、离线和网络验收 |
 | P1 | 自包含每用户安装器与 portable ZIP | P0 配置流程；干净 Windows 安装／更新／移动／卸载验收 |
 | P2 | WinUI 预发布与正式交付 | P1 产物；标签构建、签名／校验、双语说明与 GitHub/CNB 相同二进制 |
 | P3 | 可选应用更新 | P1 替换／恢复与 P2 可信发布元数据 |
 | P4 | 安全 Steam 启动项应用／恢复 | P0 配置与 P1/P2 交付保护；不依赖 P3 |
-| 后续 | Dioxus 退役及其他平台 | 先通过替换门槛；新增平台分别取得证据 |
+| 后续 | 其他 Windows 目标及平台扩展 | 先保证 Windows 交付可靠；新增平台分别取得证据 |
 
 P0 反馈和 P1 打包准备可以并行。WinUI 稳定发布需要 P0–P2 验收；P3/P4 尚未完成时，手动启动项仍受支持。可选更新检查和自动 Steam 写入不能推迟配置安全修复。
 
@@ -58,6 +58,7 @@ P0 反馈和 P1 打包准备可以并行。WinUI 稳定发布需要 P0–P2 验�
 **交付目标：**改进现有预览并加入用户要求的封面选项，同时保持配置和启动不依赖网络。
 
 - [ ] 收集可复现的反馈，包括应用／Windows 版本、预期／实际行为及相关脱敏诊断。区分配置、启动器生命周期和交付问题，不要求上传存档、游戏二进制或完整 Steam 账号文件。
+- [ ] 针对实际 WinUI 应用建立原生 UI 自动回归，使用可丢弃的 Steam 与用户数据 fixture。覆盖启动、语言切换／重启、编辑内容保留、选择器取消、保存／冲突处理及 Runner 状态。保留服务／契约测试；已移除的 Dioxus 测试不能证明 WinUI UI 覆盖。
 - [ ] 补齐英语／简体中文原生验收，涵盖未保存输入保留、键盘、中文输入、缩放、选择器、取消和可恢复错误。
 - [ ] 补齐中文／空格路径、启动失败和日志可诊断的玩家验收。保留 `job` 返回启动器状态的说明与实际后代退出码证据边界。扩展启动器结论必须有对应真实进程／游戏证据。
 - [ ] 封面保持**本地优先、默认离线**。优先使用自定义／本地 Steam 图片。缺失或不可读时显示友好占位，不阻塞保存或启动。
@@ -65,7 +66,7 @@ P0 反馈和 P1 打包准备可以并行。WinUI 稳定发布需要 P0–P2 验�
 - [ ] 仅允许文档列明的官方 Steam CDN HTTPS 主机，重定向也必须符合相同白名单。限制并发、请求／响应时间、下载字节和解码后的图片尺寸，拒绝不支持或损坏的内容。
 - [ ] 在 SteamWrapper 的 `cache` 目录保存小型配额缓存，提供过期／淘汰规则及清理入口。不覆盖自定义图片、Steam 缓存、游戏文件或配置。关闭回退后停止新请求；清理只影响 SteamWrapper 下载的封面。
 
-**验收：**隔离测试验证启用前及关闭后无封面请求、本地／自定义图片优先、偏好持久化、取消、离线／超时／404／限流、错误重定向、超大／损坏图片和缓存限制。原生检查覆盖双语与失败期间的流畅编辑。当前 WinUI 仍只有本地封面／占位；可选 CDN 路径与持久缓存属于待实现工作。封面成功不代表 Overlay、成就或游戏兼容性通过。
+**验收：**可重复的原生 WinUI UI 测试与更广泛的玩家试用覆盖双语、编辑和错误恢复，记录具体证据及未解决问题。封面隔离测试验证启用前及关闭后无请求、本地／自定义图片优先、偏好持久化、取消、离线／超时／404／限流、错误重定向、超大／损坏图片和缓存限制。原生检查另验证封面失败期间的流畅编辑。当前 WinUI 仍只有本地封面／占位；原生 UI 自动化、可选 CDN 路径与持久缓存属于待实现工作。封面成功不代表 Overlay、成就或游戏兼容性通过。
 
 ## P1. Windows 安装、更新与卸载
 
@@ -84,11 +85,11 @@ P0 反馈和 P1 打包准备可以并行。WinUI 稳定发布需要 P0–P2 验�
 
 **交付目标：**从审阅过的标签执行可重复发布，先标记为预发布，只有 P0/P1 验收后才进入稳定版。
 
-- [ ] 构建／测试准确标签版本，检查实际安装器／portable 内容、Runner 元数据和本地化资源。过渡期间清晰区分保留的 Dioxus 产物。
+- [ ] 构建／测试准确 WinUI 标签版本，检查实际安装器／portable 内容、Runner 元数据和本地化资源。将旧 Dioxus 发布标为历史产物；它们不是当前 WinUI 产物或保留的发布链。
 - [ ] 建立 Windows 产物签名、发布者身份和时间戳验证。打包后检查签名；如实标注未签名预发布。校验和不是签名，不要求玩家关闭防护。
 - [ ] 发布 SHA-256 校验和、准确版本／提交／平台标识、英语与完整简体中文发布说明、已知限制和安装／更新／恢复指南。
 - [ ] 向 GitHub Releases 与 CNB Releases 发布相同二进制及校验和，再验证两个渠道可下载的实际副本。仅同步源码不足；镜像／上传失败时，该渠道仍未完成。
-- [ ] 发布清单与干净系统证据通过后，才切换默认稳定 Manager／发布链。保留预发布／稳定版区别，明确未验证操作或平台。
+- [ ] 发布清单与干净系统证据通过后，才将 WinUI 发布标为稳定版。保留预发布／稳定版区别，明确未验证操作或平台。
 
 **验收：**另一位维护者能够识别源码标签，从两个渠道下载每个公开产物、验证摘要及适用签名，并按文档安装／更新／卸载。签名凭据与发布密钥不进入仓库。合并分支、打标签或上传 CI 预览，都不能单独完成该门槛。
 
@@ -121,13 +122,12 @@ P0 反馈和 P1 打包准备可以并行。WinUI 稳定发布需要 P0–P2 验�
 
 ## 后续评估
 
-- WinUI 配置、交付和默认发布门槛通过后，再退役 Dioxus、旧管理层及被替换工作流。先核对依赖和配置兼容性；合入 main 本身不是退役条件。
 - Windows 10、ARM64 和 MSIX 分别评估，取得实际产物／平台证据，不扩展套用 Windows 11 x64 结果。
 - 单游戏流程可靠后，根据玩家需求评估导入导出、多目标和批量恢复。
-- 保留现有 Linux 兼容性与 CI。新增 Linux、SteamOS、Proton 范围需要独立需求、进程测试和支持矩阵，不作为 Windows 首个稳定版门槛。
+- 保留现有 Rust core／Runner 的 Linux 兼容性与 CI。移除 Dioxus 后不再保留 Linux Manager。新增 Linux、SteamOS、Proton 范围需要独立需求、进程测试和支持矩阵，不作为 Windows 首个稳定版门槛。
 
 ## 现有实现记录与证据边界
 
-当前源码已有 Rust core/manager-core/Runner、Dioxus 0.7.10 UI、本地 Steam 扫描、CDN 封面回退、TOML 保存、稳定 Runner 安装、启动项生成、平台进程代码及 Dioxus Native E2E/打包工作流。它们构成迁移参考，不证明本次 Windows 已通过。
+当前源码包含 WinUI Manager、C# 配置服务及独立 Rust core／Runner。Manager 支持本地 Steam 发现／封面、TOML 编辑、稳定 Runner 安装和启动项生成。已移除的 [Dioxus 应用](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/apps/manager-dioxus)、[Rust 管理层](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/crates/manager-core)和[旧 UI 发布工作流](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09e/.github/workflows/release.yml)可在 `ca6a09e` 查阅，属于历史参考，不是当前 Windows UI 或交付证据。
 
-旧路线的 Dioxus、Linux/AppImage 勾选是历史实现记录，可在 `31a609d:docs/roadmap.md` 查阅；不继续混放在新路线作为当前验收。已有 Linux 代码和 CI 保留，新增范围延期。WinUI 配置预览和契约已实现，详见[环境记录](/SteamWrapper/zh-cn/development/windows/)。当前 WinUI 封面只读本地；上述明确启用的 CDN／缓存策略是新的待实现工作，与保留的 Dioxus 回退不同。新安装器、可选应用更新器和 Steam 一键应用／恢复仍未实现。本路线图只是规划，不实现这些功能，也不扩大游戏／成就保证。
+旧路线的 Dioxus、Linux/AppImage 勾选是历史实现记录，可在 `31a609d:docs/roadmap.md` 查阅；不继续混放在新路线作为当前验收。上述 A/B/C 勾选保留原有范围，包括当时保留的工作流。2026-10-02 的移除不改写早先测试结果，也不完成剩余交付门槛。WinUI 配置预览和契约已实现，详见[环境记录](/SteamWrapper/zh-cn/development/windows/)。当前 WinUI 封面只读本地；上述明确启用的 CDN／缓存策略是新的待实现工作。新安装器、WinUI 标签发布链、可选应用更新器和 Steam 一键应用／恢复仍未实现。本路线图只是规划，不实现这些功能，也不扩大游戏／成就保证。

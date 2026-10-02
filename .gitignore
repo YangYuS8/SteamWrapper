@@ -16,11 +16,6 @@ TestResults/
 /target/
 **/*.rs.bk
 
-# Dioxus desktop build outputs
-/apps/manager-dioxus/resources/runner/
-/apps/manager-dioxus/dist/
-/apps/manager-dioxus/e2e/artifacts/
-
 # Local SteamWrapper runtime data
 profiles.toml
 ui-settings.json

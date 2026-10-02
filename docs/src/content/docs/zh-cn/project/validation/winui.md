@@ -3,6 +3,10 @@ title: "首个 WinUI 配置切片验收"
 description: "WinUI 预览实现及带日期的服务、原生界面和发布证据。"
 ---
 
+:::note[2026-10-02 退役背景]
+下文涉及 Dioxus 和 Rust `manager-core` 的内容属于九月的历史记录。它们的源码、工具和界面发布链已于 2026-10-02 移除；WinUI 是唯一 Manager。原始测量和逐场景证据保留其日期及范围，当前实现见[架构](/SteamWrapper/zh-cn/development/architecture/)。
+:::
+
 <a id="首个-winui-配置切片验收"></a>
 
 初始记录日期：2026-09-07。分支：`v2`。范围是 Windows 配置预览和既有 Rust Runner 契约，尚未替换 Dioxus 默认发布链。下文后续观察保留各自范围；2026-09-08 扩大的游戏覆盖见[真实 Steam 验收](/SteamWrapper/zh-cn/project/validation/steam/)。

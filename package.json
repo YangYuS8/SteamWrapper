@@ -9,12 +9,7 @@
     "docs:build": "pnpm --filter steamwrapper-docs build",
     "docs:preview": "pnpm --filter steamwrapper-docs preview",
     "brand:generate": "node scripts/generate-brand.mjs",
-    "brand:check": "node scripts/generate-brand.mjs --check",
-    "e2e:native": "pnpm --filter steamwrapper-manager-dioxus-e2e e2e:native",
-    "e2e:native:build": "cargo build -p steamwrapper-manager-dioxus --features e2e",
-    "e2e:native:typecheck": "pnpm --filter steamwrapper-manager-dioxus-e2e exec tsc --noEmit",
-    "dioxus:check": "dx check --package steamwrapper-manager-dioxus",
-    "dioxus:build": "dx build --release --package steamwrapper-manager-dioxus"
+    "brand:check": "node scripts/generate-brand.mjs --check"
   },
   "devDependencies": {
     "@resvg/resvg-js": "2.6.2"

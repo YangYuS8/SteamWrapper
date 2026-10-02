@@ -1,4 +1,4 @@
-name: v2 CI
+name: Rust core and Runner CI
 
 on:
   push:
@@ -18,65 +18,33 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
-      - name: Install Linux desktop dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libxdo-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            xvfb \
-            xauth \
-            dbus-daemon
 
       - name: Check required project docs and assets
         shell: pwsh
         run: |
           $required = @(
-            "AGENTS.md",
-            "README.md",
-            "README.zh-CN.md",
-            "LICENSE",
-            "CONTRIBUTING.md",
-            "CONTRIBUTING.zh-CN.md",
-            "CODE_OF_CONDUCT.md",
-            "CODE_OF_CONDUCT.zh-CN.md",
-            "SECURITY.md",
-            "SECURITY.zh-CN.md",
-            "SUPPORT.md",
-            "SUPPORT.zh-CN.md",
-            ".github/PULL_REQUEST_TEMPLATE.md",
-            ".github/PULL_REQUEST_TEMPLATE/zh-CN.md",
+            "AGENTS.md", "README.md", "README.zh-CN.md", "LICENSE",
+            "CONTRIBUTING.md", "CONTRIBUTING.zh-CN.md",
+            "CODE_OF_CONDUCT.md", "CODE_OF_CONDUCT.zh-CN.md",
+            "SECURITY.md", "SECURITY.zh-CN.md", "SUPPORT.md", "SUPPORT.zh-CN.md",
+            ".github/PULL_REQUEST_TEMPLATE.md", ".github/PULL_REQUEST_TEMPLATE/zh-CN.md",
             ".github/ISSUE_TEMPLATE/config.yml",
-            "assets/brand/steamwrapper.svg",
-            "assets/brand/steamwrapper.png",
-            "assets/brand/steamwrapper.ico",
-            "apps/manager-dioxus/assets/steamwrapper.svg",
-            "apps/manager-dioxus/assets/icons/steamwrapper.png",
-            "apps/manager-dioxus/assets/icons/steamwrapper.ico",
-            "apps/manager-dioxus/Dioxus.toml",
-            "apps/manager-dioxus/scripts/stage-runner.sh",
+            "assets/brand/steamwrapper.svg", "assets/brand/steamwrapper.png", "assets/brand/steamwrapper.ico",
+            "apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj",
+            "apps/manager-winui/SteamWrapper.Application/SteamWrapper.Application.csproj",
             "docs/src/content/docs/development/stack.md",
             "docs/src/content/docs/development/architecture.md",
             "docs/src/content/docs/development/distribution.md",
             "docs/src/content/docs/project/roadmap.md"
           )
           foreach ($file in $required) {
-            if (-not (Test-Path $file)) {
-              throw "Required file missing: $file"
-            }
+            if (-not (Test-Path -LiteralPath $file)) { throw "Required file missing: $file" }
           }
 
-      - name: Check v2 license metadata
+      - name: Check license metadata
         shell: pwsh
         run: |
           if (-not (Select-String -Path "Cargo.toml" -Pattern 'license = "Apache-2.0"' -Quiet)) {
@@ -85,91 +53,33 @@ jobs:
           if (-not (Select-String -Path "package.json" -Pattern '"license": "Apache-2.0"' -Quiet)) {
             throw "package workspace license must be Apache-2.0"
           }
-          if (-not (Select-String -Path "apps/manager-dioxus/e2e/package.json" -Pattern '"license": "Apache-2.0"' -Quiet)) {
-            throw "Dioxus Manager E2E package license must be Apache-2.0"
-          }
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-
-      - name: Setup Dioxus CLI
-        uses: taiki-e/install-action@v2
         with:
-          tool: dioxus-cli@0.7.10
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24.18.0
-
-      - name: Enable pnpm
-        run: corepack enable
-
-      - name: Install frontend and E2E dependencies
-        env:
-          CI: "true"
-        run: pnpm install --frozen-lockfile
-
-      - name: Type-check Dioxus native E2E suite
-        run: pnpm --filter steamwrapper-manager-dioxus-e2e exec tsc --noEmit
-
-      - name: Verify canonical brand assets
-        run: pnpm run brand:check
-
-      - name: Test native E2E startup diagnostics
-        run: pnpm --filter steamwrapper-manager-dioxus-e2e run test:tooling
-
-      - name: Stage Manager Runner resource
-        shell: pwsh
-        run: |
-          $env:STEAMWRAPPER_RUNNER_PROFILE = "release"
-          if ($IsWindows) {
-            cargo build --release --package steamwrapper-runner
-            $resourceDir = "apps/manager-dioxus/resources/runner"
-            New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
-            Copy-Item target/release/steamwrapper-runner.exe "$resourceDir/SteamWrapperRunner.exe" -Force
-            New-Item -ItemType File -Force -Path "$resourceDir/steamwrapper-runner" | Out-Null
-            if (-not (Test-Path "$resourceDir/SteamWrapperRunner.exe" -PathType Leaf)) { throw "Windows Runner was not staged" }
-          } else {
-            bash apps/manager-dioxus/scripts/stage-runner.sh
-            test -s apps/manager-dioxus/resources/runner/steamwrapper-runner
-          }
+          toolchain: '1.98.1'
+          components: rustfmt, clippy
 
       - name: Cargo fmt
         run: cargo fmt --all -- --check
 
       - name: Cargo check
-        run: cargo check --workspace
+        run: cargo check --locked --workspace
 
       - name: Cargo test
-        run: cargo test --workspace
+        run: cargo test --locked --workspace
 
-      - name: Check Dioxus project
-        working-directory: apps/manager-dioxus
-        run: dx check
+      - name: Build independent headless Runner
+        run: cargo build --locked --release -p steamwrapper-runner
 
-      - name: Build Dioxus Manager
-        working-directory: apps/manager-dioxus
-        run: dx build --release
-
-      - name: Build Dioxus native E2E
-        run: cargo build -p steamwrapper-manager-dioxus --features e2e
-
-      - name: Run Dioxus native E2E (Linux)
-        if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" dbus-run-session -- pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
-
-      - name: Run Dioxus native E2E (Windows)
-        if: runner.os == 'Windows'
-        run: pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
-
-      - name: Upload Dioxus native E2E artifacts
-        if: always()
+      - name: Upload platform Runner
         uses: actions/upload-artifact@v7
         with:
-          name: dioxus-native-e2e-${{ matrix.os }}
-          path: apps/manager-dioxus/e2e/artifacts/native
-          if-no-files-found: ignore
+          name: SteamWrapper-Runner-${{ runner.os }}
+          path: |
+            target/release/steamwrapper-runner
+            target/release/steamwrapper-runner.exe
+          if-no-files-found: error
 
       - name: Run Linux process-group integration test
         if: runner.os == 'Linux'
@@ -207,58 +117,3 @@ jobs:
             if ($output -notmatch 'running 1 test') { throw "process_name integration test did not run exactly once: $test" }
             if ($output -notmatch 'test result: ok\. 1 passed;') { throw "process_name integration test did not pass: $test" }
           }
-
-
-  bundle-linux:
-    name: Bundle Linux AppImage
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Install Linux desktop dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libxdo-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Setup Dioxus CLI
-        uses: taiki-e/install-action@v2
-        with:
-          tool: dioxus-cli@0.7.10
-
-      - name: Stage Linux Runner resource
-        shell: bash
-        run: STEAMWRAPPER_RUNNER_PROFILE=release apps/manager-dioxus/scripts/stage-runner.sh
-
-      - name: Build AppImage
-        working-directory: apps/manager-dioxus
-        run: dx bundle --release --package-types appimage --out-dir ../../release-artifacts
-
-      - name: Verify AppImage contains Runner resource
-        shell: bash
-        run: |
-          set -euo pipefail
-          appimage="$(find "$GITHUB_WORKSPACE/release-artifacts" -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
-          test -n "$appimage"
-          extract_dir="$(mktemp -d)"
-          (
-            cd "$extract_dir"
-            "$appimage" --appimage-extract >/dev/null
-          )
-          find "$extract_dir/squashfs-root" -type f -path '*/SteamWrapperManager/steamwrapper-runner' -size +0c -print -quit | grep -q .
-
-      - name: Upload Linux AppImage
-        uses: actions/upload-artifact@v7
-        with:
-          name: SteamWrapper-linux-appimage
-          path: release-artifacts/*.AppImage
-          if-no-files-found: error

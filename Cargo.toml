@@ -1,9 +1,7 @@
 [workspace]
 members = [
     "crates/core",
-    "crates/manager-core",
     "crates/runner",
-    "apps/manager-dioxus",
 ]
 resolver = "2"
 

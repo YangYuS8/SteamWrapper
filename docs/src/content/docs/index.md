@@ -19,7 +19,7 @@ hero:
 SteamWrapper connects a Steam library entry to the game executable or launcher you choose. Configure it in Manager, copy the generated Launch Options into Steam, and keep Manager closed during daily play.
 
 :::note[Current delivery]
-The WinUI 3 Windows Manager is a preview. The retained Dioxus Manager has a separate release workflow. Start with [installation](/SteamWrapper/guides/installation/) to choose the appropriate artifact; a documented feature or historical test does not guarantee every game's compatibility.
+The WinUI 3 Windows Manager is a preview. WinUI is the only Manager; the Dioxus implementation has been removed. Start with [installation](/SteamWrapper/guides/installation/) to choose the appropriate artifact; a documented feature or historical test does not guarantee every game's compatibility.
 :::
 
 ## Use SteamWrapper

@@ -5,7 +5,7 @@ description: "准备 Windows SDK 和工具，直接运行构建，并查阅验�
 
 <a id="windows-开发环境mise"></a>
 
-按自己的方式安装开发工具。**mise 是可选项**，不是贡献或构建的前提。`global.json` 选择 .NET SDK；项目清单及锁文件定义依赖，根 `package.json` 选择 pnpm，`.vsconfig` 声明 MSVC/Windows SDK 组件。可选的 `mise.toml` / `mise.lock` 记录便利的本地工具组合及同一脚本的快捷入口。WinUI Manager 位于 `apps/manager-winui`；现有 Dioxus 工具链保留供迁移基线验证。独立模板 smoke 继续保留在忽略的 `target/toolchain-smoke/` 下用于环境诊断。
+按自己的方式安装开发工具。**mise 是可选项**，不是贡献或构建的前提。`global.json` 选择 .NET SDK；项目清单及锁文件定义依赖，根 `package.json` 选择 pnpm，`.vsconfig` 声明 MSVC/Windows SDK 组件。可选的 `mise.toml` / `mise.lock` 记录便利的本地工具组合及同一脚本的快捷入口。WinUI Manager 位于 `apps/manager-winui`；Rust workspace 包含 core 与独立 Runner。Dioxus 及其管理服务、Native E2E 和打包工具链已移除。独立模板 smoke 继续保留在忽略的 `target/toolchain-smoke/` 下用于环境诊断。
 
 ## 版本与管理范围
 
@@ -14,8 +14,8 @@ description: "准备 Windows SDK 和工具，直接运行构建，并查阅验�
 | .NET SDK | 10.0.400 | `global.json` 要求该版本，并禁止 SDK roll-forward |
 | Rust | 1.98.1，rustfmt/clippy | 可选 mise 配置中的本地参考工具链；Windows 构建需要 MSVC host；crate 清单和 `Cargo.lock` 定义 Rust 依赖 |
 | PowerShell | 本地参考版本 7.6.5 | 脚本要求 PATH 中存在 PowerShell 7（`pwsh`），不依赖 Codex 私有运行时 |
-| Node / pnpm | 本地参考版本 24.18.0 / 11.10.0 | pnpm 版本由根 `packageManager` 声明；用于 Dioxus E2E、品牌工具和文档，单独发布 WinUI 不需要 |
-| Dioxus CLI / just | 0.7.10 / 本地参考版本 1.58.0 | 分别用于 Dioxus 流程／可选命令配方；单独发布 WinUI 均不需要 |
+| Node / pnpm | 本地参考版本 24.18.0 / 11.10.0 | pnpm 版本由根 `packageManager` 声明；用于品牌工具和文档，构建或发布 WinUI 不需要 |
+| just | 本地参考版本 1.58.0 | 同一套 Rust/WinUI 命令的可选快捷入口，不是必需工具 |
 | WinUI CLI 模板 | 0.0.6-alpha | `Install-WinUITemplates.ps1` 固定官方预览模板，仅用于独立 smoke 测试 |
 | WinUI smoke 依赖 | Windows App SDK 2.4.0、SDK.BuildTools 10.0.26100.7705、WinApp 0.3.1 | 验证脚本固定直接包引用，独立于机器级 Windows SDK |
 | WinUI Manager 组件 | WindowsAppSDK.WinUI 2.3.6、InteractiveExperiences 2.1.6、SDK.BuildTools 10.0.26100.7705 | 对应 Windows App SDK 2.4.0 组件集；NuGet 锁定全部传递依赖 |
@@ -34,7 +34,7 @@ pwsh -NoProfile -File scripts/windows/Install-BuildTools.ps1
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build
 ```
 
-这两条命令不要求 Node、pnpm、Dioxus CLI、just 或 alpha WinUI 模板；仅在相关流程需要时安装。完整环境诊断除 .NET/Rust 外还会检查 Node、pnpm 和 Dioxus CLI，因此执行前应准备完整工具组合：
+这些命令不要求 Node、pnpm、just 或 alpha WinUI 模板。Node/pnpm 单独服务文档与品牌工具；`Doctor` 检查 .NET、Rust、MSVC 和 Windows SDK，不依赖退役的 Dioxus 工具链：
 
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor
@@ -87,22 +87,22 @@ pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
 
 沙盒每次在 `target/winui/sandbox/<id>` 创建示例 Steam manifest、LOCALAPPDATA、XDG_DATA_HOME，并设置 STEAMWRAPPER_E2E_ROOT。示例游戏不带真实游戏程序，选择受控测试 exe 即可验证配置。脱离沙盒的产物会尝试使用常规用户数据位置；实际文件视图仍需按下节检查。常规自动化使用沙盒入口。不要从发布目录单独拷出 EXE。
 
-界面默认使用英语，侧栏可选择 English / 简体中文。两套 Manager 共用与 `profiles.toml` 同级的独立 `SteamWrapper/ui-settings.json`，其中 `language` 的规范值为 `en-US`、`zh-CN`；兼容 `en`、`zh-Hans`，去除首尾空白且不区分大小写，缺失或未知值默认英语。成功保存偏好后，界面立即刷新应用自有标签、动态控件、状态和服务错误，保留尚未保存的输入；保存失败保留当前语言和原设置文件。未知 JSON 字段保留，损坏、重复键、非对象或过大的设置文件不会被覆盖。用户名称、路径、参数、协议标识和诊断日志不参与翻译；原生系统对话框中的系统文案沿用系统语言。
+界面默认使用英语，侧栏可选择 English / 简体中文。WinUI Manager 使用与 `profiles.toml` 同级的独立 `SteamWrapper/ui-settings.json`，其中 `language` 的规范值为 `en-US`、`zh-CN`；兼容 `en`、`zh-Hans`，去除首尾空白且不区分大小写，缺失或未知值默认英语。成功保存偏好后，界面立即刷新应用自有标签、动态控件、状态和服务错误，保留尚未保存的输入；保存失败保留当前语言和原设置文件。未知 JSON 字段保留，损坏、重复键、非对象或过大的设置文件不会被覆盖。用户名称、路径、参数、协议标识和诊断日志不参与翻译；原生系统对话框中的系统文案沿用系统语言。
 
 WinUI 的中性英文资源和简体中文卫星资源位于 `SteamWrapper.Application/Localization`。查找资源时显式指定 .NET culture，不依赖系统显示语言，也不修改进程的全局 culture。检查发布目录时，除原有原生资源外还应确认 `zh-CN/SteamWrapper.Application.resources.dll` 存在。[ResourceManager 指定语言查找](https://learn.microsoft.com/en-us/dotnet/fundamentals/runtime-libraries/system-resources-resourcemanager-getstring)
 
 品牌资源由 `assets/brand/steamwrapper.svg` 统一生成。修改该源文件后运行 `pnpm brand:generate`，再用 `pnpm brand:check` 检查 SVG、PNG、ICO 及随包副本是否一致；不要分别手工修改导出图标。
 
-旧实现与环境诊断入口：
+工具链诊断与组合质量检查：
 
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor    # 工具版本、link/cl 和 SDK 路径
 pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action RustTest  # 当前 Rust workspace 测试
-pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify    # Rust / Dioxus 构建与隔离 Native E2E，遇错即停
+pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify    # Rust 格式/check/测试、C# 测试、契约和 WinUI 发布，遇错即停
 pwsh -NoProfile -File scripts/windows/Test-WinUIBuild.ps1               # 独立 XAML 项目的自包含目录发布验证
 ```
 
-`Invoke-Build.ps1 -Action Verify` 会安装冻结的 pnpm 依赖、stage 随包 Runner，并运行现有质量门禁。它不打 NSIS、不发布版本，也不自动操作真实 Steam。现有 `just` 命令仍可用；Windows 的上述入口直接使用 PowerShell，不执行 Bash 清理脚本。
+`Invoke-Build.ps1 -Action Verify` 依次运行 `cargo fmt --all -- --check`、`cargo check --locked --workspace`、`cargo test --locked --workspace`，再运行 `Invoke-WinUI.ps1 -Action Test`、`Test-WinUIContracts.ps1` 和 `Invoke-WinUI.ps1 -Action Publish`。它不运行原生 UI 套件、不创建 GitHub Release 或安装器，也不操作真实 Steam。可选 `just` 配方调用同一套 Rust/WinUI 命令；文档和品牌验证使用各自的 pnpm 命令。
 
 一次性工具调用可用：
 
@@ -132,13 +132,17 @@ Manager 和 Steam 启动的 Runner 必须看到同一份 `%LOCALAPPDATA%\SteamWr
 
 官方 CLI 模板能够通过 .NET 创建 WinUI/XAML 项目。0.0.6-alpha 的创建后操作会无条件更新三个 NuGet 包，`UseLatestWindowsAppSDK=false` 未约束这些操作；脚本在生成后用 XML 固定实际包引用和最低系统版本，再发布。不能只凭模板参数宣称版本已经固定。[WinUI 官方快速入门](https://learn.microsoft.com/en-us/windows/apps/get-started/start-here)
 
+WinUI 自动化原生 UI 门禁尚未实现，仍列在 [路线图](/SteamWrapper/zh-cn/project/roadmap/)中。C# 服务、契约和发布检查不能替代隔离的原生窗口/picker、键盘、语言和缩放验收。
+
 smoke 使用 `net10.0-windows10.0.26100.0`、x64、unpackaged、.NET/Windows App SDK self-contained，暂不启用 trimming。它验证 XAML 编译与发布目录，不安装/启动 MSIX、不启用 Developer Mode、不启动游戏，也不证明干净系统运行或原生交互已经验收。实际 Manager 已建立独立项目、包锁定、服务和跨语言测试。
 
 ## 本机安装与验证记录
 
-2026-09-07：上述 mise 工具已安装。Build Tools 注册版本为 `18.9.12112.369`，检测到 MSVC `14.51.36231` 和 Windows SDK `10.0.26100.0`。安装器返回过 3010；用户随后完成重启。本轮复检 .NET、MSVC、SDK 与项目工具可用。
+**2026-09-07–09-08 归档证据。** 以下结果描述当轮实现和工具组合，包括如今已移除的 Dioxus app 与 `manager-core`；不是当前命令或最新提交结果。[旧源码、脚本和工作流](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c)固定在 `ca6a09e`。Dioxus Native E2E 不验证 WinUI；WinUI 服务/发布和真实游戏记录各自保留原有范围。
 
-本机完成的验证：
+2026-09-07：当轮 mise 工具已安装。Build Tools 注册版本为 `18.9.12112.369`，检测到 MSVC `14.51.36231` 和 Windows SDK `10.0.26100.0`。安装器返回过 3010；用户随后完成重启。本轮复检 .NET、MSVC、SDK 与项目工具可用。
+
+当轮已完成的本机验证：
 
 | 验证 | 结果 |
 | --- | --- |
@@ -154,7 +158,7 @@ smoke 使用 `net10.0-windows10.0.26100.0`、x64、unpackaged、.NET/Windows App
 | Cargo `e2e` feature 构建、隔离 Native E2E | 通过，3 个 spec / 6 个用例 |
 | mise 任务校验、PowerShell AST、JSON/TOML 版本一致性、文档链接和 diff | 通过 |
 
-安装后验证复现并修正了三个现有 Windows 工具/测试问题：Manager service 测试硬编码 Linux wait mode、Native E2E 直接启动 `pnpm.cmd` 的 EINVAL、Runner 路径断言硬编码 `/`。pnpm 也明确禁用了当前 embedded provider 不使用的 Edge/Gecko 下载脚本，保留 esbuild。没有修改产品运行逻辑或降低现有断言要求。
+安装后验证复现并修正了三个现有 Windows 工具/测试问题：Manager service 测试硬编码 Linux wait mode、Native E2E 直接启动 `pnpm.cmd` 的 EINVAL、Runner 路径断言硬编码 `/`。pnpm 也明确禁用了当时 embedded provider 不使用的 Edge/Gecko 下载脚本，保留 esbuild。没有修改产品运行逻辑或降低现有断言要求。
 
 完整验证任务最初遇错停止；最后的路径断言修正后，仅重跑受影响的 TypeScript 和 E2E，其余已通过检查未重复。日志保留在忽略的 `target/windows-verify.log`、`target/windows-runner-test.log`、`target/windows-e2e.log` 和 `target/winui-toolchain-build.log`。
 

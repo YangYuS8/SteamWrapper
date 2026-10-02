@@ -12,9 +12,9 @@
 
 ## 当前状态
 
-项目优先做好 Windows。**WinUI 3/C# Manager 已有可用预览**，支持本地 Steam 发现、原生选择器、保留语法的配置编辑、高级参数与启动选项复制。保留的 Dioxus Manager 使用自己的发布工作流，默认交付链尚未切换。选择构建产物前请阅读安装指南；干净系统验收和 WinUI 安装器仍待完成。
+项目优先做好 Windows。**WinUI 3/C# Manager 已有可用预览**，支持本地 Steam 发现、原生选择器、保留语法的配置编辑、高级参数与启动选项复制。WinUI 是唯一的 Manager；旧 Dioxus 界面与发布链已移除。选择构建产物前请阅读安装指南；干净系统验收和 WinUI 安装器仍待完成。
 
-两套 Manager 均默认英语，提供完整简体中文。切换语言保留游戏名称、路径、参数与已保存配置。请将官方 Steam 安装与第三方汉化版分开放置，详见[汉化游戏、存档与成就](https://yangyus8.top/SteamWrapper/zh-cn/guides/translated-games/)。兼容性记录限定于具体游戏和场景，不保证所有游戏均可用。
+Manager 默认英语，提供完整简体中文。切换语言保留游戏名称、路径、参数与已保存配置。请将官方 Steam 安装与第三方汉化版分开放置，详见[汉化游戏、存档与成就](https://yangyus8.top/SteamWrapper/zh-cn/guides/translated-games/)。兼容性记录限定于具体游戏和场景，不保证所有游戏均可用。
 
 ## 文档
 
@@ -39,7 +39,7 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
-发布目录为 `target/winui/publish`，请保持整个目录完整。沙盒使用一次性的 Steam／用户数据夹具。`just dev` 会读取真实本地数据；日常 Dioxus 预览应使用 `just dev-sandbox`。保留的 Dioxus 与各平台门禁见测试指南。
+发布目录为 `target/winui/publish`，请保持整个目录完整。沙盒使用一次性的 Steam／用户数据夹具。日常预览应使用沙盒。WinUI 和各平台 Runner 门禁见测试指南。
 
 仅维护文档时，按自己的方式安装 Node 24.18.0（已验证的参考版本）和 `package.json` 声明的 pnpm 版本，再执行：
 

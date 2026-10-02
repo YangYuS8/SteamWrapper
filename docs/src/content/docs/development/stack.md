@@ -1,96 +1,82 @@
 ---
 title: "SteamWrapper v2 technology stack"
-description: "Current frameworks, development tools, and the Windows-first technology direction."
+description: "The WinUI/C# Manager, independent Rust Runner, and Windows-first development tools."
 ---
 
 <a id="steamwrapper-v2-technology-stack"></a>
-
 <a id="steamwrapper-v2-技术栈"></a>
-
-
-
 <a id="目标方案"></a>
 
 ## Target design
 
-Use a **C#/XAML WinUI 3 Manager, C# application services, and an independent Rust Runner**, with Windows first. See the [product and architecture redesign](/SteamWrapper/project/design/windows-v2/) and [WinUI assessment](/SteamWrapper/project/decisions/winui3/). The WinUI configuration preview is implemented and can be built as self-contained output. Dioxus 0.7.10 and its release chain remain because the complete Windows replacement gate has not passed.
+**C#/XAML WinUI 3 is the sole Manager**, backed by independently testable C# Application services and an independent Rust Runner. The Windows configuration preview and self-contained directory build are implemented. Dioxus, its Rust Manager service layer, Native E2E, and GUI release workflow are removed; their historical results do not define the current product. See the [Windows design](/SteamWrapper/project/design/windows-v2/) and [WinUI assessment](/SteamWrapper/project/decisions/winui3/).
 
-| Area | Target choice | Rationale and constraints |
+| Area | Current choice | Boundary |
 | --- | --- | --- |
-| Manager UI | WinUI 3, C#, XAML | Native Windows windows, input, file selection, and accessibility; English default with complete Simplified Chinese localization |
-| Manager services | Small, independently testable C# application services | Configuration, Steam discovery, Runner installation, and logs; no Rust FFI or background helper |
-| Daily runtime | Independent Rust Runner | Preserve CLI and process-control boundaries; Manager does not participate in ordinary game launches |
-| Persistent configuration | Existing profiles.toml v2 | C# implements the same protocol; reading/editing/writing, unknown-data protection, and actual Rust consumption must be verified |
-| Covers | Local cache only in the first WinUI version | Use placeholders when absent; configuration/launch does not depend on network access |
-| Delivery | Unpackaged self-contained directory plus per-user installer | Bundle .NET/Windows App SDK; players do not prepare runtimes; install Runner at its stable user path |
-| Platform | Validate supported Windows 11 x64 first | Assess Windows 10, ARM64, and new Linux/SteamOS features separately; no advance support promise |
+| Manager UI | WinUI 3, C#, XAML | Native Windows controls, pickers and accessibility; English default and complete Simplified Chinese |
+| Manager services | C# Application | Profiles, local Steam discovery, Runner installation, logs; no Rust FFI or helper |
+| Daily runtime | Independent Rust Runner | Existing CLI and process lifecycle; Manager closed during play |
+| Configuration | `profiles.toml` v2 | C# edits preserve unknown/unedited data; actual Rust consumption is tested |
+| Covers | Local images and placeholders | Optional official CDN fallback is planned, not implemented |
+| Delivery | Unpackaged self-contained Windows directory and CI artifact | Per-user installer, tagged WinUI releases and updater remain unimplemented |
+| Platform | Windows 11 24H2 x64 preview | Existing Linux Runner compatibility/CI only; no Linux GUI |
 
-Existing Rust management services do not require the new UI to introduce an ABI. C# TOML uses pinned Tomlyn 2.10.1 to read syntax trees and edit field spans while preserving other source text. It generates only a Rust-readable TOML 1.0 string subset, without TOML 1.1 whole-model serialization. Fields, defaults, legacy alias keys, paths, and arguments are constrained by the passing cross-language/real Runner contracts. [Tomlyn package](https://www.nuget.org/packages/Tomlyn/2.10.1), [low-level syntax API](https://github.com/xoofx/Tomlyn/blob/2.10.1/site/docs/low-level.md)
+C# uses Tomlyn 2.10.1 syntax trees and field spans rather than whole-model serialization. It generates a Rust-readable TOML 1.0 string subset and preserves other source text. Fields, defaults, legacy aliases, paths and arguments are constrained by cross-language and real Runner tests. [Tomlyn package](https://www.nuget.org/packages/Tomlyn/2.10.1), [syntax API](https://github.com/xoofx/Tomlyn/blob/2.10.1/site/docs/low-level.md)
 
-Do not rewrite Runner merely to use one language. C# NativeAOT remains an alternative; any future evaluation should first establish complete CLI/TOML and Windows process compatibility, then compare actual package size, performance, and maintenance cost. [Official NativeAOT documentation](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/)
+Runner remains Rust. The earlier NativeAOT alternative is an archived assessment, not another implementation or a planned simultaneous rewrite. Any future reconsideration needs complete CLI/TOML and platform process evidence. [NativeAOT documentation](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/)
 
 <a id="当前仓库布局"></a>
 
 ## Current repository layout
 
 ```text
-crates/core                 # Rust TOML, Steam, covers, Launch Options
-crates/manager-core         # Manager services used by the existing Dioxus app
-crates/runner               # native headless runtime called by Steam
-apps/manager-dioxus         # Dioxus 0.7.10 Desktop Manager
-apps/manager-dioxus/e2e     # WDIO Native E2E, test tooling only
-apps/manager-winui         # WinUI UI, C# Application, and MSTest tests
-tests/contracts           # shared C# / Rust contracts and test driver
-tests/fixtures            # controlled processes consumed by real Runner, tests only
+apps/manager-winui/SteamWrapper.Manager             # WinUI UI
+apps/manager-winui/SteamWrapper.Application         # C# configuration services
+apps/manager-winui/SteamWrapper.Application.Tests   # MSTest
+crates/core                                       # Rust configuration/path contracts
+crates/runner                                     # headless runtime called by Steam
+tests/contracts                                   # C# / Rust contracts and driver
+tests/fixtures                                    # controlled test processes
+docs                                              # Astro/Starlight static site
 ```
-
-Retain existing code and CI during migration. Switch the default Manager after WinUI meets configuration, runtime, and delivery gates, then remove the old management layers according to actual dependencies.
 
 <a id="rust-核心与服务"></a>
 
 ### Rust core and services
 
-`steamwrapper-core` defines the existing Profile/TOML, Steam scanning, cover URLs, and Launch Options. It depends on neither UI nor platform process APIs. Runner continues to use core's configuration and path semantics.
-
-`steamwrapper-manager-core` combines stable paths, saving/listing, Steam scanning, logs, and Runner installation/repair into the Rust API called directly by Dioxus. It introduces neither a second Rust Profile type nor an IPC server. Its all-Rust service boundary does not constrain the new C# implementation.
-
-The current profile save reconstructs advanced fields and core writes configuration directly. These behaviors must not become requirements for the new Manager. Compatibility preserves the meaning of player configuration, not defects that overwrite data.
+`steamwrapper-core` defines Profile/TOML, path and Launch Options contracts, and existing metadata utilities. It depends on neither GUI nor platform process APIs. Runner uses its configuration semantics. WinUI calls C# Application directly; it does not call core through an ABI. No Rust Manager service crate remains.
 
 ### Runner
 
-`steamwrapper-runner` uses `clap`, `anyhow`, `tracing`, and `steamwrapper-core`. It independently launches the profile's target/args and waits according to the selected mode. It has no GUI, WebView, or .NET dependency and does not run as a persistent background service.
+`steamwrapper-runner` uses `clap`, `anyhow`, `tracing` and `steamwrapper-core`. It starts the profile's target/args and waits according to the selected mode, without GUI, WebView, .NET, or a persistent service.
 
-New Windows profiles default to a Job Object; new Linux profiles default to a POSIX process group. Omitted legacy wait_mode means root. `%command%` is currently received and logged, not automatically executed/forwarded. Proton wrapping is unfinished. Runner lifecycle tests and real Steam status/playtime acceptance are different evidence.
+New Windows profiles explicitly use `job`; legacy omitted `wait_mode` means `root`. Linux retains `process_group` support, with no current Linux Manager. `%command%` is received/logged, not executed or forwarded automatically. Proton integration remains unfinished. Platform process tests and actual Steam acceptance establish different facts.
 
 <a id="当前-dioxus-manager"></a>
+<a id="current-dioxus-manager"></a>
 
-### Current Dioxus Manager
+### Archived Dioxus implementation
 
-- Dioxus `0.7.10` with the desktop feature, RSX, and local CSS; verify official documentation before version/API changes.
-- UI calls manager-core directly through `src/services.rs`, without artificial Tauri IPC.
-- Current covers are local-first with an AppID Steam CDN fallback; the new WinUI local-cover goal does not mean the existing network code changed.
-- `Dioxus.toml` controls icons, metadata, and Runner resources. Stage the current platform's Runner before building.
-- `@wdio/dioxus-service` 1.0.0 embedded provider and `wdio-dioxus-embedded-driver` 1.0.0 are used only with the e2e feature; releases contain no test bridge.
-- pnpm is for Native E2E, development asset tooling, and static documentation development/builds, not a UI product runtime. `pnpm brand:generate` / `pnpm brand:check` generate and verify the canonical SVG/PNG/ICO and Dioxus copies using development-only `@resvg/resvg-js`. The independent `docs/` workspace package uses Astro 7.3.1 and Starlight 0.42.0; see [documentation maintenance](/SteamWrapper/development/documentation/) for its pnpm commands and bilingual content workflow.
-
-See the [Dioxus skill](https://github.com/YangYuS8/SteamWrapper/blob/main/skills/dioxus-manager/SKILL.md) for that workflow. New WinUI work does not use its DOM/RSX or bundle steps.
+The removed Dioxus 0.7.10 Manager, WDIO Native E2E and Rust service layer are accessible only as [historical source at ca6a09e](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/apps/manager-dioxus). The [2026-09-07 comparison](/SteamWrapper/project/decisions/manager-comparison/) and [2026-09-08 package inspection](/SteamWrapper/development/distribution/#dioxus-desktop-bundle) retain their measurements and limitations. They do not provide current build commands, supported packages, or a fallback Manager.
 
 <a id="工具链与交付"></a>
 
 ## Toolchain and delivery
 
-mise is an optional local tool manager. `global.json` requires .NET SDK 10.0.400; Rust 1.98.1 is the local reference toolchain recorded in the optional mise configuration. Project manifests, lockfiles, `packageManager` and `.vsconfig` define the applicable dependencies and SDK components. Direct PowerShell/pnpm commands do not require mise. Local MSVC/SDK components were checked again after reboot. Manager uses the component set corresponding to Windows App SDK 2.4.0, directly pinning `Microsoft.WindowsAppSDK.WinUI` 2.3.6, `Microsoft.WindowsAppSDK.InteractiveExperiences` 2.1.6, and SDK.BuildTools 10.0.26100.7705. Component package versions do not equal the framework name "WinUI 3". Pinning InteractiveExperiences explicitly prevents a fallback to the WinUI package's minimum 2.1.3 dependency. Retained dependency versions and hashes match the original 2.4.0 umbrella-package lockfile.
+mise is optional. `global.json` selects .NET SDK 10.0.400; Rust 1.98.1 is the local reference in the optional mise configuration. Manifests, lockfiles, `packageManager` and `.vsconfig` define applicable versions/components. Direct PowerShell/pnpm commands do not require mise.
 
-Selective component references are an officially supported Windows App SDK self-contained deployment method. Manager does not reference unused AI, ML, Search, Widgets, or DWrite components, and it does not shrink output by manually deleting published DLLs. The trimmed component selection produces a directory of about 171 MiB (457 files, uncompressed). See [preview validation](/SteamWrapper/project/validation/winui/) for the latest artifact byte count. Startup/memory measurements from the original 226.23 MiB build remain historical; those metrics have not been rerun for the smaller output. [Official component-package explanation](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/release-notes/windows-app-sdk-1-8#version-180-18250907003), [local comparison and publish validation](/SteamWrapper/project/decisions/manager-comparison/)
+Manager uses the Windows App SDK 2.4.0 component set, directly pinning `Microsoft.WindowsAppSDK.WinUI` 2.3.6, `Microsoft.WindowsAppSDK.InteractiveExperiences` 2.1.6 and SDK.BuildTools 10.0.26100.7705. Package versions are not the framework name “WinUI 3”. Explicit InteractiveExperiences avoids its older minimum dependency. Selected dependency versions/hashes match the original 2.4.0 umbrella-package lockfile.
 
-The target remains Windows 11 24H2 (26100) x64, self-contained with trimming disabled. Services use net10.0; tests use MSTest 4.4.0 / Test SDK 18.9.0; every project has a NuGet lockfile. Manager's project is maintained directly without alpha templates or a WinApp MSIX debug identity package. Publishing first builds and checks a new directory, then replaces old output to prevent stale dependencies. Commands, five publish regressions, and outstanding native/clean-system acceptance are in [Windows development](/SteamWrapper/development/windows/).
+Selective component references are an officially supported self-contained deployment method. Manager omits unused AI, ML, Search, Widgets and DWrite components through project references, never manual removal of published DLLs. The 2026-09-07 component-reduction record measured about **171 MiB, 457 files** uncompressed. Earlier **226.23 MiB** startup/memory results remain historical and were not rerun for that smaller output. Later artifacts have their own inventories; these numbers are not a promise about every current build. [Official component guidance](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/release-notes/windows-app-sdk-1-8#version-180-18250907003), [comparison record](/SteamWrapper/project/decisions/manager-comparison/), [preview record](/SteamWrapper/project/validation/winui/)
 
-Existing Dioxus builds use `dx check`, `dx build --release`, and NSIS/AppImage bundles. Runner is named `SteamWrapperRunner.exe` on Windows and `steamwrapper-runner` on Linux. These commands apply only to the retained implementation and do not validate a WinUI installer. [Testing](/SteamWrapper/development/testing/) and [distribution](/SteamWrapper/development/distribution/) separately record current commands and target acceptance.
+The preview targets Windows 11 24H2 (26100) x64, self-contained with trimming disabled. Services use net10.0; tests use MSTest 4.4.0 / Test SDK 18.9.0, with NuGet lockfiles. The Manager project is maintained directly, without alpha templates or a WinApp MSIX debug identity package. Publishing builds and validates a fresh directory before replacing old output. See [Windows development](/SteamWrapper/development/windows/) for commands and publish regressions.
+
+Node/pnpm serve brand generation and the static docs site, not desktop runtime. `pnpm brand:generate` / `pnpm brand:check` use development-only `@resvg/resvg-js` for canonical SVG/PNG/ICO assets. The `docs/` workspace uses Astro 7.3.1 / Starlight 0.42.0; see [documentation maintenance](/SteamWrapper/development/documentation/).
+
+Windows CI produces the complete preview directory with `Runner/SteamWrapperRunner.exe` and version/hash metadata. Rust CI preserves Linux process compatibility. A WinUI installer, tag-release pipeline, updater and automatic Steam Launch Options writes are future [roadmap](/SteamWrapper/project/roadmap/) work; no Linux GUI package is advertised.
 
 <a id="不选的方向"></a>
 
 ## Rejected directions
 
-This iteration does not restore the removed Tauri/React implementation or introduce Electron, a Node UI runtime, or Python product components. It also does not expand the first Windows configuration-tool release merely to achieve all-Rust code, general cross-platform support, or a single EXE.
-
-A C ABI, management helper, all-C# Runner, and MSIX each have conditions in which they may be useful; these remain in the assessment. The current choice addresses the actual UI, configuration safety, and independent game-lifecycle boundaries.
+The current product does not retain Dioxus or restore Tauri/React, Electron, a Node UI runtime, or Python runtime components. It adds no C ABI, management helper, or all-C# Runner rewrite. Windows 10, ARM64, MSIX, Linux GUI and SteamOS/Proton expansion require separate decisions and evidence; Windows x64 preview results do not establish them.

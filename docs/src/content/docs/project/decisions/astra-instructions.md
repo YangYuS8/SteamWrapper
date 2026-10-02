@@ -3,6 +3,10 @@ title: "Astra instruction audit record"
 description: "Dated Astra instruction research and repository-guidance audit record."
 ---
 
+:::note[2026-10-02 retirement context]
+References to Dioxus and Rust `manager-core` below belong to the September historical record. Their source, tooling and UI release chain were removed on 2026-10-02; WinUI is the only Manager. Original measurements and scenario evidence retain their dates and scope; see the current [architecture](/SteamWrapper/development/architecture/).
+:::
+
 <a id="astra-instruction-audit-record"></a>
 
 <a id="astra-指令审计记录"></a>

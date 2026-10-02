@@ -9,7 +9,7 @@ description: "Prepare the Windows SDKs and tools, run builds directly, and revie
 
 
 
-Install development tools using your preferred method. **mise is optional**, not a prerequisite for contributing or building. `global.json` selects the .NET SDK; project manifests and lockfiles define dependencies, the root `package.json` selects pnpm, and `.vsconfig` declares MSVC/Windows SDK components. The optional `mise.toml` / `mise.lock` record a convenient local toolset and shortcuts to the same scripts. The WinUI Manager is in `apps/manager-winui`; the existing Dioxus toolchain remains available for migration-baseline checks. The standalone template smoke project stays under ignored `target/toolchain-smoke/` for environment diagnostics.
+Install development tools using your preferred method. **mise is optional**, not a prerequisite for contributing or building. `global.json` selects the .NET SDK; project manifests and lockfiles define dependencies, the root `package.json` selects pnpm, and `.vsconfig` declares MSVC/Windows SDK components. The optional `mise.toml` / `mise.lock` record a convenient local toolset and shortcuts to the same scripts. The WinUI Manager is in `apps/manager-winui`; the Rust workspace contains core and the independent Runner. Dioxus and its management, Native E2E and bundle toolchain have been removed. The standalone template smoke project stays under ignored `target/toolchain-smoke/` for environment diagnostics.
 
 <a id="版本与管理范围"></a>
 
@@ -20,8 +20,8 @@ Install development tools using your preferred method. **mise is optional**, not
 | .NET SDK | 10.0.400 | Required by `global.json`, which disables SDK roll-forward |
 | Rust | 1.98.1, rustfmt/clippy | Local reference toolchain in optional mise configuration; Windows builds need an MSVC host; crates and `Cargo.lock` define Rust dependencies |
 | PowerShell | 7.6.5 local reference | Scripts require PowerShell 7 (`pwsh`) on PATH, with no dependency on Codex private runtimes |
-| Node / pnpm | 24.18.0 local reference / 11.10.0 | pnpm comes from root `packageManager`; needed for Dioxus E2E, brand tooling and docs, not a WinUI-only publish |
-| Dioxus CLI / just | 0.7.10 / 1.58.0 local reference | Dioxus workflow / optional recipe runner; neither is needed for WinUI-only publication |
+| Node / pnpm | 24.18.0 local reference / 11.10.0 | pnpm comes from root `packageManager`; needed for brand tooling and docs, not a WinUI build or publish |
+| just | 1.58.0 local reference | Optional shortcuts to the same Rust/WinUI commands; not required |
 | WinUI CLI template | 0.0.6-alpha | `Install-WinUITemplates.ps1` pins the official preview template for independent smoke tests only |
 | WinUI smoke dependencies | Windows App SDK 2.4.0, SDK.BuildTools 10.0.26100.7705, WinApp 0.3.1 | The verification script pins direct package references independently of the machine-wide Windows SDK |
 | WinUI Manager components | WindowsAppSDK.WinUI 2.3.6, InteractiveExperiences 2.1.6, SDK.BuildTools 10.0.26100.7705 | Windows App SDK 2.4.0 component set; NuGet locks all transitive dependencies |
@@ -42,7 +42,7 @@ pwsh -NoProfile -File scripts/windows/Install-BuildTools.ps1
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build
 ```
 
-Node, pnpm, Dioxus CLI, just and the alpha WinUI template are not prerequisites for these two commands. Install them only for the corresponding workflows. The full environment diagnostic checks Node, pnpm and Dioxus CLI as well as .NET/Rust, so prepare that larger toolset before running it:
+Node, pnpm, just and the alpha WinUI template are not prerequisites for these commands. Node/pnpm serve documentation and brand tooling separately. `Doctor` checks .NET, Rust, MSVC and the Windows SDK without requiring the retired Dioxus toolchain:
 
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor
@@ -97,22 +97,22 @@ The full command contains five checks: no stale sentinel file, preservation of t
 
 Each sandbox creates example Steam manifests, LOCALAPPDATA and XDG_DATA_HOME under `target/winui/sandbox/<id>` and sets STEAMWRAPPER_E2E_ROOT. Example games contain no real game executable; choose a controlled test executable to exercise configuration. Outside the sandbox, the artifact attempts to use normal user-data locations; its actual file view still needs the checks below. Routine automation uses the sandbox entry point. Do not copy the EXE out of the complete publication directory.
 
-The UI defaults to English and offers English / 简体中文 in the sidebar. Both Managers store `language` in a separate `SteamWrapper/ui-settings.json` beside `profiles.toml`: canonical values are `en-US` and `zh-CN`. `en` and `zh-Hans` are accepted aliases, with whitespace trimming and case-insensitive matching; missing or unknown values default to English. Successful preference writes refresh application-owned labels, dynamic controls and service/status messages without reloading the form or discarding edits. Failed writes keep the current language and the original settings file. Unknown JSON fields are preserved; malformed, duplicate-key, non-object or oversized settings are not overwritten. User names, paths, arguments, protocol identifiers and diagnostic logs are not translated. Native OS dialogs retain system-owned wording.
+The UI defaults to English and offers English / 简体中文 in the sidebar. The WinUI Manager stores `language` in a separate `SteamWrapper/ui-settings.json` beside `profiles.toml`: canonical values are `en-US` and `zh-CN`. `en` and `zh-Hans` are accepted aliases, with whitespace trimming and case-insensitive matching; missing or unknown values default to English. Successful preference writes refresh application-owned labels, dynamic controls and service/status messages without reloading the form or discarding edits. Failed writes keep the current language and the original settings file. Unknown JSON fields are preserved; malformed, duplicate-key, non-object or oversized settings are not overwritten. User names, paths, arguments, protocol identifiers and diagnostic logs are not translated. Native OS dialogs retain system-owned wording.
 
 WinUI's English neutral resources and Simplified Chinese satellite resources live under `SteamWrapper.Application/Localization`. The explicit .NET resource culture is independent of the OS language and does not change the process's global culture. When inspecting a published artifact, check `zh-CN/SteamWrapper.Application.resources.dll` as well as the existing native resources. [ResourceManager culture-specific lookup](https://learn.microsoft.com/en-us/dotnet/fundamentals/runtime-libraries/system-resources-resourcemanager-getstring)
 
 Brand assets are generated from `assets/brand/steamwrapper.svg`. After editing that source, run `pnpm brand:generate`, then `pnpm brand:check` to verify SVG, PNG, ICO and bundled copies. Do not edit exported icons separately.
 
-Legacy implementation and environment diagnostics:
+Toolchain diagnostics and combined quality checks:
 
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor    # Tool versions, link/cl and SDK paths
 pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action RustTest  # Current Rust workspace tests
-pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify    # Rust / Dioxus builds and isolated Native E2E; stop on failure
+pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify    # Rust format/check/tests, C# tests, contracts and WinUI publication; stop on failure
 pwsh -NoProfile -File scripts/windows/Test-WinUIBuild.ps1               # Self-contained publication of the independent XAML smoke project
 ```
 
-`Invoke-Build.ps1 -Action Verify` installs frozen pnpm dependencies, stages the bundled Runner, and runs the existing quality gates. It does not build NSIS, publish a release, or operate real Steam automatically. Existing `just` commands remain available. These Windows entry points use PowerShell directly, without Bash cleanup scripts.
+`Invoke-Build.ps1 -Action Verify` runs `cargo fmt --all -- --check`, `cargo check --locked --workspace` and `cargo test --locked --workspace`, then `Invoke-WinUI.ps1 -Action Test`, `Test-WinUIContracts.ps1` and `Invoke-WinUI.ps1 -Action Publish`. It neither runs a native UI suite nor creates a GitHub Release, installer or live Steam test. The optional `just` recipes call the same Rust/WinUI commands. Documentation and brand checks use their separate pnpm commands.
 
 For individual tool commands:
 
@@ -146,15 +146,19 @@ Daily development continues to use the direct scripts and sandbox commands above
 
 Microsoft's CLI template can create a WinUI/XAML project through .NET. Version 0.0.6-alpha unconditionally updates three NuGet packages in its post-creation actions; `UseLatestWindowsAppSDK=false` does not constrain those actions. After generation, the script pins actual package references and the minimum OS version with XML before publishing. Template arguments alone do not prove that dependency versions are pinned. [Official WinUI quickstart](https://learn.microsoft.com/en-us/windows/apps/get-started/start-here)
 
+An automated WinUI native UI gate is not implemented yet; it remains on the [roadmap](/SteamWrapper/project/roadmap/). C# service tests, contracts and publication checks cannot substitute for isolated native window/picker, keyboard, language and scaling acceptance.
+
 The smoke uses `net10.0-windows10.0.26100.0`, x64, unpackaged deployment, and self-contained .NET/Windows App SDK, without trimming. It verifies XAML compilation and the publication directory. It does not install or launch MSIX, enable Developer Mode, launch games, or establish clean-system runtime or native-interaction acceptance. The actual Manager has its own project, package locks, services and cross-language tests.
 
 <a id="本机安装与验证记录"></a>
 
 ## Local installation and verification record
 
-2026-09-07: the mise tools above were installed. Build Tools reported registration version `18.9.12112.369`, with MSVC `14.51.36231` and Windows SDK `10.0.26100.0` detected. The installer had returned 3010; the user subsequently restarted. This verification confirmed that .NET, MSVC, the SDK and project tools were available.
+**Archived 2026-09-07–09-08 evidence.** These dated results describe the implementation and toolset of that round, including the now-removed Dioxus app and `manager-core`; they are not current commands or latest-commit results. The [old source, scripts and workflows](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c) are pinned to `ca6a09e`. Dioxus Native E2E did not validate WinUI. WinUI service/publication and live-game observations retain their stated scope.
 
-Completed local checks:
+2026-09-07: that round's mise tools were installed. Build Tools reported registration version `18.9.12112.369`, with MSVC `14.51.36231` and Windows SDK `10.0.26100.0` detected. The installer had returned 3010; the user subsequently restarted. This verification confirmed that .NET, MSVC, the SDK and project tools were available.
+
+Checks completed in that archived round:
 
 | Check | Result |
 | --- | --- |
@@ -170,7 +174,7 @@ Completed local checks:
 | Cargo `e2e` feature build, isolated Native E2E | Passed: three specs / six tests |
 | mise task validation, PowerShell AST, JSON/TOML version consistency, documentation links and diff | Passed |
 
-Post-installation verification reproduced and fixed three existing Windows tooling/test issues: a hardcoded Linux wait mode in Manager service tests, EINVAL from directly launching `pnpm.cmd` in Native E2E, and a hardcoded `/` in a Runner path assertion. pnpm also explicitly disabled the Edge/Gecko download scripts unused by the current embedded provider, retaining esbuild. Product runtime logic and assertion requirements were not weakened.
+Post-installation verification reproduced and fixed three existing Windows tooling/test issues: a hardcoded Linux wait mode in Manager service tests, EINVAL from directly launching `pnpm.cmd` in Native E2E, and a hardcoded `/` in a Runner path assertion. pnpm also explicitly disabled the Edge/Gecko download scripts unused by the then-current embedded provider, retaining esbuild. Product runtime logic and assertion requirements were not weakened.
 
 The full verification task initially stopped on failure. After the final path-assertion fix, only the affected TypeScript and E2E checks were repeated. Other successful checks were not rerun. Logs remain in ignored `target/windows-verify.log`, `target/windows-runner-test.log`, `target/windows-e2e.log` and `target/winui-toolchain-build.log`.
 

@@ -11,7 +11,7 @@ For the expected setup sequence, see [getting started](/SteamWrapper/guides/gett
 
 Confirm that you extracted the **complete WinUI preview** and are running `SteamWrapper.Manager.exe` from ordinary File Explorer on Windows 11 24H2 x64.
 
-Do not run it from inside a ZIP or move the EXE away from its DLLs, native resources, `Assets`, `Runner` and language resources. A Dioxus `SteamWrapperManager.exe` or a test-evidence artifact is a different application/package.
+Do not run it from inside a ZIP or move the EXE away from its DLLs, native resources, `Assets`, `Runner` and language resources. An old `SteamWrapperManager.exe` belongs to the retired implementation; a test-evidence artifact is not the WinUI application.
 
 If present, inspect:
 
@@ -56,7 +56,7 @@ Profile saving can succeed before Runner installation or verification fails. Fol
 | A newer compatible Runner is retained | This is expected downgrade protection |
 | Shared location cannot be confirmed | Reopen Manager from ordinary File Explorer as described below |
 
-WinUI prepares Runner when saving a profile. The retained Dioxus application's Settings repair action is a separate UI.
+WinUI prepares and checks the stable Runner when saving a profile.
 
 ## Manager asks you to reopen it from File Explorer
 

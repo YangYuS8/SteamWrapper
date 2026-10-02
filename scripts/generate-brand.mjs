@@ -34,9 +34,6 @@ const png = render(512);
 const outputs = new Map([
   ['assets/brand/steamwrapper.png', png],
   ['assets/brand/steamwrapper.ico', ico],
-  ['apps/manager-dioxus/assets/steamwrapper.svg', svg],
-  ['apps/manager-dioxus/assets/icons/steamwrapper.png', png],
-  ['apps/manager-dioxus/assets/icons/steamwrapper.ico', ico],
   ['docs/public/favicon.svg', svg],
 ]);
 let stale = false;

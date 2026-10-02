@@ -19,7 +19,7 @@ hero:
 SteamWrapper 将 Steam 库中的游戏关联到你选择的游戏程序或启动器。在 Manager 中配置后，将生成的启动选项复制到 Steam；日常游玩时可以关闭 Manager。
 
 :::note[当前交付状态]
-WinUI 3 Windows Manager 仍是预览版；保留的 Dioxus Manager 使用独立发布工作流。请先阅读[安装指南](/SteamWrapper/zh-cn/guides/installation/)选择合适的构建产物。文档中的功能或历史测试不代表所有游戏均兼容。
+WinUI 3 Windows Manager 仍是预览版；WinUI 是唯一的 Manager，Dioxus 实现已移除。请先阅读[安装指南](/SteamWrapper/zh-cn/guides/installation/)选择合适的构建产物。文档中的功能或历史测试不代表所有游戏均兼容。
 :::
 
 ## 使用 SteamWrapper

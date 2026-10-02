@@ -5,7 +5,7 @@ description: Get the complete WinUI preview, understand its data locations, and 
 
 The WinUI Manager is currently a **self-contained directory preview for Windows 11 24H2 x64**. It bundles .NET and Windows App SDK files alongside the application. Keep the complete directory together.
 
-There is no new WinUI setup wizard, single-file executable, or completed clean-system/update/uninstall guarantee. Dioxus and its existing release workflows remain the retained delivery chain. The WinUI executable is `SteamWrapper.Manager.exe`; the Dioxus executable is `SteamWrapperManager.exe`.
+There is no new WinUI setup wizard, single-file executable, or completed clean-system/update/uninstall guarantee. WinUI is the only Manager, with executable `SteamWrapper.Manager.exe`. Dioxus and its release workflows have been removed; automated WinUI tag releases remain planned work.
 
 ## Get a CI preview
 
@@ -90,7 +90,7 @@ Close Manager and let any active game/Runner session exit normally before replac
 
 Saving a profile checks the bundled Runner and prepares the stable copy. The WinUI service preserves a newer compatible Runner and refuses an unknown version or a same-version file with different contents when it cannot establish a safe update. A busy-file or verification failure is reported; it should not be worked around by deleting user configuration.
 
-If Manager says the profile saved but Runner is not ready, see [Runner troubleshooting](/SteamWrapper/guides/troubleshooting/). The retained Dioxus app has its own Runner installation/repair actions in Settings; those are not an additional WinUI screen.
+If Manager says the profile saved but Runner is not ready, see [Runner troubleshooting](/SteamWrapper/guides/troubleshooting/).
 
 Steam Launch Options must continue to reference the stable `bin\SteamWrapperRunner.exe`, not the extracted package's `Runner` directory. Moving a complete Manager directory should not require rewriting each game's launch options just to point to the new Manager location.
 

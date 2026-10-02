@@ -3,6 +3,10 @@ title: "Windows Manager 实测比较"
 description: "Manager 行为和资源的实测比较及其证据边界。"
 ---
 
+:::note[2026-10-02 退役背景]
+下文涉及 Dioxus 和 Rust `manager-core` 的内容属于九月的历史记录。它们的源码、工具和界面发布链已于 2026-10-02 移除；WinUI 是唯一 Manager。原始测量和逐场景证据保留其日期及范围，当前实现见[架构](/SteamWrapper/zh-cn/development/architecture/)。
+:::
+
 <a id="windows-manager-实测比较"></a>
 
 日期：2026-09-07。初始比较针对提交 `31a609df027e54bf97156f7698d4a420bc7e3c71` 之上的当时工作区：Dioxus 0.7.10/Rust Manager 与首个 WinUI 3/C# Manager。后续组件精简及发布保护单独记录；历史运行数据不代表新产物的复测结果，也不是两个框架的一般性能排名。
@@ -35,11 +39,11 @@ Dioxus 第一次 E2E 使用了被 workspace 测试覆盖的普通二进制，缺
 
 Runner 版本探针用带摘要/版本清单的合成文件表示 `0.3.0` 与 `0.2.0`，没有启动这些合成文件，也不表示产品已发布这些版本。实际可执行 Runner 的行为由跨语言门禁另行验证。
 
-这些是服务实现差异。旧版 [保存服务](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/lib.rs)重建 Profile，[配置序列化](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/config.rs)重新生成整个文件；[Runner 安装](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/runner.rs)按摘要判断替换。Dioxus 可以修复这些行为，不能把问题归因于 WebView 或 Rust。C# 方案的保护来自新实现及测试，也不能因使用 WinUI 就省略验证。
+这些是服务实现差异。旧版 [保存服务](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/crates/manager-core/src/lib.rs)重建 Profile，[配置序列化](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/config.rs)重新生成整个文件；[Runner 安装](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/crates/manager-core/src/runner.rs)按摘要判断替换。Dioxus 可以修复这些行为，不能把问题归因于 WebView 或 Rust。C# 方案的保护来自新实现及测试，也不能因使用 WinUI 就省略验证。
 
 ## 依赖精简前的资源测量
 
-使用 [比较脚本](https://github.com/YangYuS8/SteamWrapper/blob/main/scripts/windows/Measure-ManagerComparison.ps1)，在两端完成构建及功能测试、测试窗口退出后顺序测量。两端使用相同隔离目录中的 10 条配置、10 个 Steam manifest、本地封面和同一个 release Runner，不操作真实 Steam 库。
+使用 [比较脚本](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/scripts/windows/Measure-ManagerComparison.ps1)，在两端完成构建及功能测试、测试窗口退出后顺序测量。两端使用相同隔离目录中的 10 条配置、10 个 Steam manifest、本地封面和同一个 release Runner，不操作真实 Steam 库。
 
 本机为 Windows build 26200、i7-12700H（20 逻辑处理器）、系统可见物理内存 31.62 GiB；Dioxus 子进程使用 WebView2 145.0.3800.97。资源测量使用当日先前已构建的 release 产物，本脚本没有重建；二进制 SHA-256、时间戳及机器信息保存在 `metadata.json`，工作区提交号不单独证明二进制与未提交源码对应。
 

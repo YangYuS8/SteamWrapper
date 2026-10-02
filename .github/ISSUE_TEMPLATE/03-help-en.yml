@@ -28,7 +28,6 @@ body:
       label: "Manager implementation"
       options:
         - "WinUI preview"
-        - "Dioxus"
         - "Runner only"
         - "Legacy v1"
         - "Not sure"

@@ -2,7 +2,7 @@
 
 English | [简体中文](CONTRIBUTING.zh-CN.md)
 
-SteamWrapper v2 is a Windows-first configuration Manager and an independent Rust Runner. Read the [README](README.md), [architecture](https://yangyus8.top/SteamWrapper/development/architecture/), and [roadmap](https://yangyus8.top/SteamWrapper/project/roadmap/) before changing a product boundary. The WinUI Manager is a preview; Dioxus and its existing workflows remain the migration baseline until the Windows delivery gates pass.
+SteamWrapper v2 is a Windows-first configuration Manager and an independent Rust Runner. Read the [README](README.md), [architecture](https://yangyus8.top/SteamWrapper/development/architecture/), and [roadmap](https://yangyus8.top/SteamWrapper/project/roadmap/) before changing a product boundary. The WinUI Manager is a preview; WinUI is the only Manager; its installer and stable-release delivery gates remain unfinished.
 
 ## Issues and proposals
 
@@ -34,7 +34,7 @@ For documentation-site changes, run `pnpm docs:check` and `pnpm docs:build`. Rev
 - Preserve unedited and unknown configuration fields. Do not replace syntax-preserving edits with whole-model serialization.
 - Keep process lifecycle behavior and its real process tests in Runner/platform code.
 - Keep English as the default UI/documentation language and maintain complete Simplified Chinese counterparts. Update both language resources and document pairs when meaning changes; identifiers, protocol fields, commands, and literal evidence remain exact.
-- Keep the canonical SVG/PNG/ICO assets and their Dioxus copies consistent. After editing the source SVG, run `pnpm brand:generate` and `pnpm brand:check`. pnpm / `@resvg/resvg-js` are development asset tooling, not application runtime dependencies. Use original artwork and respect third-party trademarks.
+- Keep the canonical SVG/PNG/ICO assets and the documentation favicon consistent. WinUI consumes the canonical assets. After editing the source SVG, run `pnpm brand:generate` and `pnpm brand:check`. pnpm / `@resvg/resvg-js` are development asset tooling, not application runtime dependencies. Use original artwork and respect third-party trademarks.
 
 ## Protect player data
 

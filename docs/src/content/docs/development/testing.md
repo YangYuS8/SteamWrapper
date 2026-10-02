@@ -9,9 +9,9 @@ description: "Choose relevant service, native UI, Runner, package, and Steam val
 
 
 
-SteamWrapper v2 verifies behavior, services, UI and packages separately. The WinUI preview has C#, cross-language and real Runner tests; Dioxus baseline gates remain in place. Final Windows delivery still follows the [redesign's stage gates](/SteamWrapper/project/design/windows-v2/#8-实施顺序与停止条件).
+SteamWrapper verifies the Rust core and independent Runner across Windows/Linux, and the WinUI Manager through C# service tests, cross-language contracts and self-contained publication checks. Dioxus, its Rust management services, Native E2E and bundle workflow have been retired. Windows delivery still follows the [stage gates](/SteamWrapper/project/design/windows-v2/#8-实施顺序与停止条件).
 
-The same-input configuration probes, native-save checks and resource measurements for both Windows Managers are in the [measured comparison](/SteamWrapper/project/decisions/manager-comparison/). The resource-measurement script is `scripts/windows/Measure-ManagerComparison.ps1`. Prepare both release artifacts first, then run measurements sequentially after other builds and tests finish.
+The [measured Manager comparison](/SteamWrapper/project/decisions/manager-comparison/) is archived evidence for the stack decision. Its [comparison script](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/scripts/windows/Measure-ManagerComparison.ps1) and Dioxus source belong to commit `ca6a09e`; they are not current development prerequisites.
 
 <a id="按改动选择验证"></a>
 
@@ -21,22 +21,22 @@ Read the affected code and tests first, then choose checks that demonstrate the 
 
 | Change | Local verification scope |
 | --- | --- |
-| Documentation / AGENTS / skills | Review diff, links, instruction conflicts and skill metadata; UI compilation and packaging are not required |
-| core / manager-core behavior | Add a test that reproduces the missing behavior and observe the expected failure before implementation; run affected crate tests; expand to workspace checks/tests when shared contracts or other crates are affected |
+| Documentation / AGENTS / skills | Review diff, links and instruction conflicts; run `pnpm docs:check` and `pnpm docs:build` for documentation/site changes |
+| Rust core behavior | Add a test that reproduces the missing behavior and observe the expected failure before implementation; run affected crate tests; expand to workspace checks/tests when shared contracts or other crates are affected |
 | Runner launch / waiting | Real process regressions on the affected platform; expand to the workspace for CLI / TOML / shared-module changes |
-| Dioxus interaction / service wiring | Relevant Rust tests, `dx check` / build, and isolated Native E2E covering the behavior |
 | WinUI / C# services | `Invoke-WinUI.ps1 -Action Test`; add `Test-WinUIContracts.ps1` for profile-contract or Runner-distribution changes; use `Invoke-WinUI.ps1 -Action Publish` and isolated native interaction for UI changes (full commands below) |
 | Purely visual changes | Build and inspect affected screens in an isolated Desktop preview; select existing tests according to impact, without using fixed CSS strings as visual acceptance |
-| E2E tooling or dependencies | Frozen-lockfile install, TypeScript check, affected Native E2E |
-| Packaging / publication / toolchain or shared builds | Full quality gates, current-platform release Runner staging, actual package extraction inspection |
+| Publication / toolchain or shared builds | Relevant Rust/WinUI gates, current Windows Runner staging, complete publish-directory checks and `Test-WinUIPublish.ps1`; installer acceptance remains separate |
 
-CI / release workflows continue to run their full gates. This table limits routine local work, not CI coverage. Repeat successful checks only when new changes, failures or unresolved questions justify it. Record missing tools as blockers; never label an unrun check as passed.
+CI workflows continue to run their full gates. This table limits routine local work, not CI coverage. Repeat successful checks only when new changes, failures or unresolved questions justify it. Record missing tools as blockers; never label an unrun check as passed.
 
-Behavioral regressions should verify externally observable results. Existing `ui_contract` source assertions prove that declarations exist, not that windows, accessibility, layout or native file selection work.
+Behavioral regressions should verify externally observable results. Service or source-declaration tests do not prove native windows, accessibility, layout or file-picker behavior. Automated WinUI native UI coverage is not implemented yet; track it in the [roadmap](/SteamWrapper/project/roadmap/) and record isolated manual native acceptance separately.
 
 <a id="winui-迁移的新增验收"></a>
 
-## Additional WinUI migration acceptance
+<a id="additional-winui-migration-acceptance"></a>
+
+## WinUI acceptance
 
 Verify the existing file contract between C# configuration services and Rust Runner first, then demonstrate the UI and installer. Available commands:
 
@@ -55,9 +55,9 @@ The English-default / Simplified Chinese implementation subsequently passed 59/5
 
 For native localization acceptance, use a fresh isolated data root with no `ui-settings.json` and verify English regardless of the Windows display language. Open profile editing, add arguments and create a validation/status message, then switch to 简体中文 and back. Confirm that visible application-owned labels, parameter rows, wait-mode choices, existing status messages, dialogs and picker action labels use the selected language, while unsaved names, paths, arguments and generated launch options remain unchanged. Reopen the sandbox Manager to verify persistence. Check both languages' wrapping, clipping, keyboard operation and dialog layout. Inspect the published `zh-CN/SteamWrapper.Application.resources.dll`; a service/catalog test cannot establish native rendering or publication completeness.
 
-Both Managers use `ui-settings.json` beside `profiles.toml` with `language` values `en-US` / `zh-CN`. `en` / `zh-Hans` are accepted aliases with case-insensitive matching and whitespace trimming. Missing or unknown language values default to English. Successful writes refresh the UI without reloading edited profiles; failures keep the previous language and report an error. Malformed settings remain untouched. OS-owned picker wording and raw external diagnostics retain their original language. Tests must use disposable settings directories and must not change actual AppData or Steam configuration.
+The WinUI Manager uses `ui-settings.json` beside `profiles.toml` with `language` values `en-US` / `zh-CN`. `en` / `zh-Hans` are accepted aliases with case-insensitive matching and whitespace trimming. Missing or unknown language values default to English. Successful writes refresh the UI without reloading edited profiles; failures keep the previous language and report an error. Malformed settings remain untouched. OS-owned picker wording and raw external diagnostics retain their original language. Tests must use disposable settings directories and must not change actual AppData or Steam configuration.
 
-The added Windows CI retains the old workflows and runs these tests and directory publication in order. [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718) for `3d322db` actually passed. A hosted Windows Server 2025 build is not clean Windows 11 acceptance. The full acceptance scope is below; do not extrapolate fixtures to untested platforms or live Steam. The local Unity game and all five isolated 9-nine translations separately completed the Steam flow. Episode 1 also covered its CHS launcher exiting first; see [live Steam validation](/SteamWrapper/project/validation/steam/) for the sequence and limits.
+The current Windows CI runs C# tests, cross-language Runner contracts and publication checks. The historical [WinUI CI run for `3d322db`](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718) passed; it is a dated result, not evidence for the latest commit. A hosted Windows Server 2025 build is not clean Windows 11 or native UI acceptance. The full acceptance scope is below. The local Unity game and all five isolated 9-nine translations separately completed the Steam flow; Episode 1 also covered its CHS launcher exiting first. See [live Steam validation](/SteamWrapper/project/validation/steam/) for the sequence and limits.
 
 | Scope | Valid evidence |
 | --- | --- |
@@ -88,101 +88,37 @@ The 68 official files, three restored files and other non-save files remained un
 
 | Layer | Command | Coverage |
 | --- | --- | --- |
-| Rust domain / service | `cargo test --workspace` | TOML, VDF, paths, Steam filtering, covers, Launch Options, Manager services and Runner wait modes |
-| Dioxus contract | `cargo test -p steamwrapper-manager-dioxus --test ui_contract` | Source declarations for player flows, file selection, services, bundles and brand consistency; not real native interaction |
-| Dioxus build | `dx check` / `dx build --release` | Dioxus 0.7.10 project, RSX, static assets and release client build |
-| Dioxus Native E2E | `pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native` | Real Dioxus binary and `manager-core` with isolated Steam / profile / Runner fixtures |
-| Platform bundle | `dx bundle --release --package-types …` | Bundled Runner resources and NSIS / AppImage artifacts |
+| Rust core / Runner | `cargo test --locked --workspace` | TOML, VDF, paths, Steam metadata, Launch Options and platform Runner behavior; no GUI dependency |
+| C# services | `Invoke-WinUI.ps1 -Action Test` | Profile fidelity and safe writes, local discovery, language settings, stable Runner installation and shared-data locations |
+| C# / Rust contract | `Test-WinUIContracts.ps1` | Complete unedited semantics plus real controlled Runner argv/cwd, waiting, exit and error behavior |
+| Windows publication | `Test-WinUIPublish.ps1` | Self-contained Manager/Runner resources and publish-directory replacement/recovery |
+| WinUI interaction | `Invoke-WinUI.ps1 -Action Sandbox` plus recorded native interaction | Disposable data and actual windows/pickers; an automated native UI gate remains planned |
 
 <a id="本地命令"></a>
 
 ## Local commands
 
-Install Windows tools by your preferred method; mise is optional. Use `pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor` to inspect the full toolset and `pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify` for existing quality gates. See [Windows development](/SteamWrapper/development/windows/) for setup and WinUI compilation. The following `just`/underlying commands remain available; the WinUI smoke does not replace application or Steam acceptance.
-
-Prefer the root `justfile`:
+Install Windows tools by your preferred method; mise is optional. See [Windows development](/SteamWrapper/development/windows/) for SDK requirements and the PowerShell wrappers. The Rust workspace contains only core and Runner. On Linux it no longer needs GTK/WebKit, Dioxus CLI, Xvfb or a desktop session.
 
 ```bash
-just dev          # Start Desktop Manager and hot reload with real Steam / user data
-just dev-sandbox  # Start with disposable Steam / user-data fixtures
-just test         # Rust formatting, checks and tests
-just e2e          # Dioxus Native E2E
-just verify       # All local quality gates
-just bundle-linux # Stage Runner and build a Linux AppImage
-```
-
-`dev-sandbox` neither displays the real Steam library nor retains profiles or Runner. It is only for safe UI previews. `just --list` lists all recipes. Corresponding underlying commands:
-
-```bash
-pnpm install --frozen-lockfile
-pnpm --filter steamwrapper-manager-dioxus-e2e exec tsc --noEmit
-pnpm --filter steamwrapper-manager-dioxus-e2e run test:tooling
-
 cargo fmt --all -- --check
-cargo check --workspace
-cargo test --workspace
-
-cd apps/manager-dioxus
-dx check
-dx build --release
-cd ../..
-
-cargo build -p steamwrapper-manager-dioxus --features e2e
-pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
+cargo check --locked --workspace
+cargo test --locked --workspace
 ```
 
-Linux builds, tests and packaging need WebKitGTK, GTK3, `libxdo-dev`, AppIndicator, librsvg and `patchelf`. Current Dioxus Desktop links X11 libraries through `muda`'s default `libxdo` feature. Ubuntu needs `libxdo-dev` or Manager tests/AppImage builds fail at link time with `unable to find library -lxdo`. Linux dependency lists for CI Check, AppImage and release all include it. [Ubuntu package details](https://packages.ubuntu.com/noble/amd64/libxdo-dev)
+On Windows, use the WinUI commands above and `pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1` for publish/recovery regression. `Invoke-Build.ps1 -Action Doctor` checks .NET/Rust/MSVC/SDK; `-Action RustTest` runs `cargo test --locked --workspace`. `-Action Verify` runs those Rust checks, then C# `Test`, `Test-WinUIContracts.ps1` and WinUI `Publish`, stopping on failure. No Dioxus, pnpm Native E2E or automatic native UI acceptance is invoked. Add publication-recovery and isolated native acceptance checks when their behavior changes.
 
-Headless Linux CI also needs `xvfb`, `xauth` and `dbus-daemon` to run Native E2E with a virtual X display and temporary D-Bus session. Compilation/packaging alone do not require a display service. GTK initialization needs a usable display, but stderr from the historical CI exit 101 was not retained, so that result does not establish a specific panic cause. Linux Check uses the command below; Windows runs pnpm directly. [xvfb-run](https://manpages.ubuntu.com/manpages/questing/man1/xvfb-run.1.html), [dbus-run-session](https://manpages.debian.org/unstable/dbus-daemon/dbus-run-session.1.en.html)
+All automated previews and process fixtures must point `STEAM_DIR`, `STEAMWRAPPER_E2E_ROOT`, `XDG_DATA_HOME` and `LOCALAPPDATA` into disposable directories. Never substitute real Steam or user data to make a regression pass.
 
-```bash
-xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" dbus-run-session -- pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
-```
+<a id="dioxus-native-e2e"></a>
 
-Build each platform bundle on its own platform:
+## Archived Dioxus Native E2E evidence
 
-```bash
-# Linux
-STEAMWRAPPER_RUNNER_PROFILE=release apps/manager-dioxus/scripts/stage-runner.sh
-cd apps/manager-dioxus
-dx bundle --release --package-types appimage --out-dir ../../release-artifacts
+Dioxus and `manager-core` have been removed from the current workspace. The [archived implementation and tests](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/apps/manager-dioxus), [management services](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/crates/manager-core) and [historical test guide](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/docs/src/content/docs/development/testing.md#dioxus-native-e2e) remain available at `ca6a09e`. Their commands and dependencies are not current instructions and do not validate WinUI.
 
-# Windows (GitHub Actions Windows runner)
-# stage-runner.sh generates resources/runner/SteamWrapperRunner.exe
-# from target/release/steamwrapper-runner.exe, then runs dx bundle --package-types nsis
-```
+On 2026-09-07, local Windows completed the then-current Rust workspace, Runner processes, Dioxus check/release build and three specs / six Native E2E tests. Commit `3d322db` also passed Windows/Ubuntu and Linux AppImage checks in [full v2 CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786). See the [archived environment record](/SteamWrapper/development/windows/#local-installation-and-verification-record) for tooling fixes and limits.
 
-## Dioxus Native E2E
-
-The 2026-09-08 language and icon changes passed 10 isolated Native E2E executions: the six existing cases, two language/status/error cases, and language save/restart in two separate processes. Final Windows Rust workspace check/test passed (43 tests; the C#-output contract is intentionally ignored by the generic workspace run and passed separately through `winui:contracts`). The two affected Manager packages account for 30 of those tests, including lossless unknown JSON number tokens, nested duplicate-key rejection and the shared 64-level depth limit. TypeScript, E2E tooling, Dioxus check/release build and scoped strict Clippy passed. See [distribution](/SteamWrapper/development/distribution/#ci--release-validation) for the independently inspected bilingual NSIS package and its limits.
-
-Native E2E includes `wdio-dioxus-embedded-driver` only under the `e2e` Cargo feature. The production release graph contains neither the WebDriver bridge nor a test server.
-
-```bash
-cargo build -p steamwrapper-manager-dioxus --features e2e
-pnpm --filter steamwrapper-manager-dioxus-e2e run e2e:native
-```
-
-Test scripts create disposable temporary fixtures and point all these environment variables into them:
-
-```text
-STEAM_DIR
-STEAMWRAPPER_E2E_ROOT
-XDG_DATA_HOME
-LOCALAPPDATA
-```
-
-The fixture includes Chinese/space-containing paths and a local Steam game manifest, deliberately omitting the local cover cache. After launching the real Manager, tests assert that this AppID uses a public Steam CDN cover URL. This checks URL generation and DOM binding, without depending on external image loading.
-
-- Default library and manual-add entry points.
-- First-launch installation of the bundled Runner into stable `SteamWrapper/bin/`.
-- Local Steam scanning and the game-configuration dialog.
-- Profile saving.
-- Launch Options retaining the `--appid "123456" -- %command%` contract.
-
-WDIO logs and sanitized fixture artifacts after success or failure are under `apps/manager-dioxus/e2e/artifacts/`, which is ignored; CI uploads them. Tests clean up temporary directories and must not read or modify real Steam configuration.
-
-`scripts/dioxus-service.mjs` retains the locked Dioxus service and adds startup-failure cleanup. WDIO does not call `onComplete` when `onPrepare` fails, so the wrapper first runs that hook to flush app stdout/stderr logs, then exits with the original error. Test apps enable `RUST_BACKTRACE=1`. `test:tooling` uses Node child processes without launching a GUI to verify stdout/stderr attachments for early exit 101 and that a subsequent run after failure writes logs into a fresh output directory. The latter reproduced failure with the old service and passed through the wrapper. These tooling regressions do not replace real Linux GTK/WebKit Native E2E.
+The 2026-09-08 language/icon work passed 10 isolated Native E2E executions: six existing cases, two language/status/error cases and language save/restart in two processes. That Windows Rust workspace passed 43 tests; the C#-output contract was intentionally ignored by the generic run and passed separately through `winui:contracts`. The two former Manager packages accounted for 30 tests, including unknown JSON number fidelity, nested duplicate-key rejection and the shared 64-level depth limit. TypeScript, E2E tooling, Dioxus check/release build and scoped strict Clippy passed. The historical NSIS content check and its limits remain in [distribution](/SteamWrapper/development/distribution/#ci--release-validation). None of these archived results establishes a current WinUI native UI gate, installer or clean-system pass.
 
 <a id="runner-稳定安装验证"></a>
 
@@ -194,23 +130,20 @@ This implementation added nine [location regressions](https://github.com/YangYuS
 
 After service tests, the new publication received separate native checks. Launching Manager from the redirected tool environment displayed a location warning and did not show launch options or a copy button after saving. Launching the new Manager through ordinary Explorer saved successfully and generated the same existing launch options. These native checks are recorded separately from service/process evidence and do not replace clean VM or installer validation.
 
-Rust `manager-core` tests cover Runner paths, no replacement when hashes match, missing/corrupt repair, atomic-replacement failure, and preservation of `profiles.toml` / `logs` / `backups` / `cache`. Dioxus Native E2E starts from an empty stable directory and checks that the real Runner is installed and shown as healthy on the settings page.
+Current stable-Runner installation safety is covered by the C# Application tests and cross-language contracts. Retired Rust `manager-core` and Dioxus UI installation checks are archived above; their old results are not substitutes for the current service tests.
 
 Runner process tests cover Linux `process_group`, Windows Job Object and `process_name` boundaries on both platforms. `process_name` matches names only and cannot establish ownership when concurrent processes share a name; it is not the default wait mode.
 
 ## CI
 
-`v2-ci.yml` defines a Windows / Ubuntu Check matrix for Rust formatting, check, test, Dioxus check/release build, Native E2E and platform Runner process tests. Its Linux bundle job builds an AppImage and inspects the extracted Runner. Windows NSIS build/content checks are in `release.yml`. Workflow declarations do not establish that the latest run passed; verify actual results separately.
+`v2-ci.yml` now defines the Windows / Ubuntu Rust core/Runner checks and platform process tests. `winui-windows.yml` runs C# tests, C# / Rust contracts and self-contained publication/recovery checks on Windows. The former Dioxus Native E2E, AppImage job and NSIS release chain are removed. Workflow declarations do not prove that the latest run passed; inspect actual results separately. Automated WinUI native UI, installer and updater gates remain roadmap work.
 
 <a id="限制"></a>
 
 ## Limitations
 
-- Passing local Linux Native E2E does not replace Windows WebView2, NSIS or physical Steam Deck validation.
-- Routine automation does not operate real Steam. Live acceptance needs user authorization and recorded restoration. One-click Launch Options apply/restore remains a future product feature.
-- Native E2E covers controlled local fixtures, not real Proton, breakaway, Unix daemonize or new-session behavior.
-- Dioxus Browser Mode does not fit the current direct Rust service architecture. This project uses Native E2E to cover real UI/service boundaries.
-
-Official references: Dioxus 0.7.10 Desktop / CLI documentation and the embedded-provider/bridge-setup documentation for `@wdio/dioxus-service` 1.0.0.
-
-Local Windows completed Rust workspace, Runner process, Dioxus check/release build and three specs / six Native E2E tests on 2026-09-07. Commit `3d322db` also passed all Windows, Ubuntu and Linux AppImage gates in [full v2 CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282786). See the [development environment record](/SteamWrapper/development/windows/#local-installation-and-verification-record) for installation, tooling/CI fixes and evidence boundaries. These gates do not replace NSIS, a clean Windows VM or live Steam acceptance; the separately completed local [live-game flow](/SteamWrapper/project/validation/steam/) has its own explicit scope.
+- C# service/contract and publish checks do not establish native UI behavior, accessibility or a clean Windows installation. The automated WinUI native UI gate is still planned.
+- Routine automation does not operate real Steam. Live acceptance needs authorization, recorded original options, save protection, integrity checks and restoration. One-click Launch Options apply/restore remains a future feature.
+- Runner process fixtures prove only their tested platform and lifecycle scenario; they do not establish real Proton, breakaway, Unix daemonize/new-session or Steam Deck compatibility.
+- The supported preview is a complete self-contained Windows directory. Installer, update/uninstall and clean Windows VM acceptance remain separate delivery gates.
+- The 2026-09-07–09-08 Dioxus records above are archived historical results, not current WinUI evidence.

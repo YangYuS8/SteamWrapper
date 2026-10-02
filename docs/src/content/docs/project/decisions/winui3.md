@@ -3,6 +3,10 @@ title: "WinUI 3 migration assessment"
 description: "Dated WinUI migration assessment, alternatives, dependencies, and deployment constraints."
 ---
 
+:::note[2026-10-02 retirement context]
+References to Dioxus and Rust `manager-core` below belong to the September historical record. Their source, tooling and UI release chain were removed on 2026-10-02; WinUI is the only Manager. Original measurements and scenario evidence retain their dates and scope; see the current [architecture](/SteamWrapper/development/architecture/).
+:::
+
 <a id="winui-3-migration-assessment"></a>
 
 <a id="winui-3-迁移技术评估"></a>
@@ -38,15 +42,15 @@ ABI costs follow [Microsoft's native interop guidance](https://learn.microsoft.c
 | Existing component | Migration treatment |
 | --- | --- |
 | [Profile/TOML](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/config.rs), [fields and defaults](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/profile.rs) | Define the compatibility protocol; validate C# with cross-language roundtrips and actual Runner parsing |
-| [ManagerService](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/lib.rs) | Maintain only for the existing Dioxus chain; the C# app need not call it |
-| [Runner installation](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/runner.rs) | Hashing, temporary files, flushing, atomic replacement, and failure preservation are behavior references; validate the C# implementation separately on Windows |
+| [ManagerService](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/crates/manager-core/src/lib.rs) | Maintain only for the existing Dioxus chain; the C# app need not call it |
+| [Runner installation](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/crates/manager-core/src/runner.rs) | Hashing, temporary files, flushing, atomic replacement, and failure preservation are behavior references; validate the C# implementation separately on Windows |
 | [Steam scanning](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/steam.rs) | Current Windows discovery mainly checks environment variables and Program Files; the new implementation must handle custom locations and partial library-read failures. Existing VDF parsing is not a validated writer |
 | [Windows Runner](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/platform/windows.rs) | Retain suspended launch, Job Object, and waiting code, constrained by real processes and Steam acceptance; do not move it into GUI |
-| [UI contract](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-dioxus/tests/ui_contract.rs) | String assertions cannot become evidence of native WinUI interaction, layout, or accessibility |
+| [UI contract](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/apps/manager-dioxus/tests/ui_contract.rs) | String assertions cannot become evidence of native WinUI interaction, layout, or accessibility |
 
 The current `save_profile` resets advanced fields and `config.save` writes directly. FFI reuse therefore does not automatically provide lossless saving. The new design requires editing only changed fields, protecting unknown fields/versions, atomic writes, and conflict detection; see the [configuration gate](/SteamWrapper/project/design/windows-v2/#4-配置保真是第一个门槛). Missing legacy `wait_mode` means `root`; only new Windows profiles explicitly default to `job`.
 
-Initial source comparison found that [manager_service.rs](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/tests/manager_service.rs) hardcoded `process_group` in its save test while Windows selects `job`. After toolchain installation, the failure was reproduced and fixed with an independent platform-specific expected value, retaining other format assertions. Product defaults did not change. The existing Manager also lacks one-click Steam Launch Options apply/restore.
+Initial source comparison found that [manager_service.rs](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/crates/manager-core/tests/manager_service.rs) hardcoded `process_group` in its save test while Windows selects `job`. After toolchain installation, the failure was reproduced and fixed with an independent platform-specific expected value, retaining other format assertions. Product defaults did not change. The existing Manager also lacks one-click Steam Launch Options apply/restore.
 
 <a id="部署与稳定路径"></a>
 

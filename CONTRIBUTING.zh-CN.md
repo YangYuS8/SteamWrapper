@@ -2,7 +2,7 @@
 
 [English](CONTRIBUTING.md) | 简体中文
 
-SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成。修改产品边界前，请阅读 [README](README.zh-CN.md)、[架构](https://yangyus8.top/SteamWrapper/zh-cn/development/architecture/)和[路线](https://yangyus8.top/SteamWrapper/zh-cn/project/roadmap/)。WinUI Manager 仍是预览；在 Windows 交付门槛通过前，Dioxus 与现有工作流保留为迁移基线。
+SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成。修改产品边界前，请阅读 [README](README.zh-CN.md)、[架构](https://yangyus8.top/SteamWrapper/zh-cn/development/architecture/)和[路线](https://yangyus8.top/SteamWrapper/zh-cn/project/roadmap/)。WinUI Manager 仍是预览；WinUI 是唯一的 Manager，安装器和稳定发布交付门槛仍待完成。
 
 ## 问题与提案
 
@@ -34,7 +34,7 @@ pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
 - 保留未编辑和未知配置字段，不要把保留语法的编辑替换为全模型序列化。
 - 进程生命周期行为及真实进程测试应放在 Runner／平台代码中。
 - 默认界面和文档使用英语，维护完整简体中文对应版本。含义变化时同时更新语言资源和文档对；标识符、协议字段、命令和原始证据保持准确。
-- 保持统一 SVG／PNG／ICO 资源与 Dioxus 副本一致。修改源 SVG 后执行 `pnpm brand:generate` 和 `pnpm brand:check`。pnpm／`@resvg/resvg-js` 仅是开发期资源工具，不是应用运行时依赖。使用原创图形并尊重第三方商标。
+- 保持统一 SVG／PNG／ICO 资源与文档站 favicon 一致；WinUI 使用统一资源。修改源 SVG 后执行 `pnpm brand:generate` 和 `pnpm brand:check`。pnpm／`@resvg/resvg-js` 仅是开发期资源工具，不是应用运行时依赖。使用原创图形并尊重第三方商标。
 
 ## 保护玩家数据
 

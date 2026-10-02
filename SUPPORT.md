@@ -6,7 +6,7 @@ Start with the [README](README.md), [Windows development/setup notes](https://ya
 
 Use [GitHub Issues](https://github.com/YangYuS8/SteamWrapper/issues) for a bug, feature proposal, or configuration question. Search existing reports and choose the matching template. Template files are maintained on `main`, the default branch used by GitHub's live template chooser. GitHub Discussions is not enabled for this repository as of 2026-09-08. This repository does not advertise a dedicated support service or guaranteed response time.
 
-Include the SteamWrapper version/commit and branch, Windows version, Manager implementation (WinUI preview or Dioxus), and the smallest steps that show the problem. For launch issues, include the wait mode, whether the exact same target works when launched normally from its own directory, and whether Manager is closed during the Steam test. Distinguish a process starting from a successful game title screen, normal exit, Steam status/playtime, and achievements.
+Include the SteamWrapper version/commit and branch, Windows version, whether the issue is in the WinUI preview or headless Runner, and the smallest steps that show the problem. For launch issues, include the wait mode, whether the exact same target works when launched normally from its own directory, and whether Manager is closed during the Steam test. Distinguish a process starting from a successful game title screen, normal exit, Steam status/playtime, and achievements.
 
 Share only relevant, redacted log excerpts. Replace usernames and personal directories with placeholders. Do not upload full Steam configuration, credentials, saves, copyrighted game files, or an entire real-library diagnostic archive.
 

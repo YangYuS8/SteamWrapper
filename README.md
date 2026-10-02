@@ -12,9 +12,9 @@ English | [简体中文](README.zh-CN.md)
 
 ## Current status
 
-Windows is the priority. The **WinUI 3/C# Manager is a working preview** with local Steam discovery, native pickers, syntax-preserving configuration, advanced arguments and Launch Options copying. The retained Dioxus Manager has its own release workflow; the default delivery chain has not switched. Read the installation guide before choosing an artifact. Clean-system acceptance and a WinUI installer remain unfinished.
+Windows is the priority. The **WinUI 3/C# Manager is a working preview** with local Steam discovery, native pickers, syntax-preserving configuration, advanced arguments and Launch Options copying. WinUI is the only Manager; the retired Dioxus UI and release chain have been removed. Read the installation guide before choosing an artifact. Clean-system acceptance and a WinUI installer remain unfinished.
 
-Both Managers default to English and include complete Simplified Chinese localization. Language changes preserve game names, paths, arguments and saved profiles. Keep official Steam installations separate from third-party translations; see [translated games, saves and achievements](https://yangyus8.top/SteamWrapper/guides/translated-games/). Compatibility observations are recorded per game and scenario, not promised for every title.
+Manager defaults to English and includes complete Simplified Chinese localization. Language changes preserve game names, paths, arguments and saved profiles. Keep official Steam installations separate from third-party translations; see [translated games, saves and achievements](https://yangyus8.top/SteamWrapper/guides/translated-games/). Compatibility observations are recorded per game and scenario, not promised for every title.
 
 ## Documentation
 
@@ -39,7 +39,7 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
-The published directory is `target/winui/publish`; keep it intact. The sandbox uses disposable Steam/user-data fixtures. `just dev` uses real local data; use `just dev-sandbox` for routine Dioxus previews. See the testing guide for retained Dioxus and platform-specific gates.
+The published directory is `target/winui/publish`; keep it intact. The sandbox uses disposable Steam/user-data fixtures. Use the sandbox for routine previews. See the testing guide for WinUI and platform-specific Runner gates.
 
 To work only on the documentation, use Node 24.18.0 (the verified reference version) and the pnpm version declared in `package.json`, installed by your preferred method, then run:
 

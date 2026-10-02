@@ -5,7 +5,7 @@ description: 获取完整 WinUI 预览版，了解数据位置，并在不破坏
 
 WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览版**。应用目录中包含 .NET 与 Windows App SDK 文件，请始终保留完整目录。
 
-目前没有新的 WinUI 安装向导、单文件 EXE，也尚未完成干净系统、更新与卸载的交付保证。Dioxus 及其既有发布工作流仍然保留。WinUI 的程序名是 `SteamWrapper.Manager.exe`，Dioxus 的程序名是 `SteamWrapperManager.exe`。
+目前没有新的 WinUI 安装向导、单文件 EXE，也尚未完成干净系统、更新与卸载的交付保证。WinUI 是唯一的 Manager，程序名为 `SteamWrapper.Manager.exe`。Dioxus 及其发布工作流已移除；WinUI 标签自动发布仍是待实现工作。
 
 ## 获取 CI 预览包
 
@@ -90,7 +90,7 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 
 保存配置时会检查随包 Runner，并准备稳定目录中的副本。WinUI 服务会保留较新的兼容 Runner；如果遇到未知版本，或同版本但文件内容不同且无法确定安全更新顺序，会拒绝替换。文件占用或校验失败会显示错误，不应通过删除用户配置绕过。
 
-如果 Manager 显示配置已保存、但启动组件尚未就绪，请阅读[Runner 排错](/SteamWrapper/zh-cn/guides/troubleshooting/)。保留的 Dioxus 应用在设置中有自己的 Runner 安装/修复操作，那不是 WinUI 额外隐藏的一页。
+如果 Manager 显示配置已保存、但启动组件尚未就绪，请阅读[Runner 排错](/SteamWrapper/zh-cn/guides/troubleshooting/)。
 
 Steam 启动项应始终引用稳定的 `bin\SteamWrapperRunner.exe`，而不是解压包内的 `Runner` 目录。完整移动 Manager 目录后，不应仅因为 Manager 位置变化，就需要逐个游戏重写启动项。
 

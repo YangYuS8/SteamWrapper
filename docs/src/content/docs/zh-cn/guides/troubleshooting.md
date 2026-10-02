@@ -11,7 +11,7 @@ description: 排查配置、Runner、Steam 状态、汉化和语言问题，同�
 
 确认已经**完整解压 WinUI 预览版**，并在 Windows 11 24H2 x64 的普通文件资源管理器中运行 `SteamWrapper.Manager.exe`。
 
-不要从 ZIP 内启动，也不要把 EXE 与 DLL、原生资源、`Assets`、`Runner` 和语言资源分开。Dioxus 的 `SteamWrapperManager.exe` 或测试证据产物，是不同的应用或包。
+不要从 ZIP 内启动，也不要把 EXE 与 DLL、原生资源、`Assets`、`Runner` 和语言资源分开。旧 `SteamWrapperManager.exe` 属于已退役实现；测试证据产物也不是 WinUI 应用。
 
 如果存在，可以查看：
 
@@ -56,7 +56,7 @@ description: 排查配置、Runner、Steam 状态、汉化和语言问题，同�
 | 已保留较新的兼容 Runner | 这是预期的防降级行为 |
 | 无法确认共享位置 | 按下一节说明，从普通文件资源管理器重新打开 Manager |
 
-WinUI 在保存配置时准备 Runner。保留的 Dioxus 应用在设置中的修复动作属于另一套界面。
+WinUI 在保存配置时准备并检查稳定 Runner。
 
 ## Manager 提示从文件资源管理器重新打开
 
