@@ -32,7 +32,7 @@ Choose the final layout before shipping an installer, to avoid a second migratio
 
 ```text
 %LOCALAPPDATA%\Programs\SteamWrapper\
-  SteamWrapper.exe                 # proposed Manager-only launcher
+  SteamWrapper.exe                 # implemented Manager-only launcher
   installation.json               # validated current/previous installation state
   versions\<release-tag>\          # one complete, immutable Manager layout
     SteamWrapper.Manager.exe
@@ -43,7 +43,7 @@ Choose the final layout before shipping an installer, to avoid a second migratio
   profiles.toml
   ui-settings.json
   bin\SteamWrapperRunner.exe       # unchanged stable Steam target
-  updates\trust-state.json         # proposed retained sequence/digest/clock state
+  updates\trust-state.json         # retained sequence/digest/clock state; update kernel only
   logs\, backups\, cache\
     cache\updates\<transaction>\  # proposed bounded download/helper workspace
 ```

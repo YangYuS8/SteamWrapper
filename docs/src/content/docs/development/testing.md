@@ -151,7 +151,7 @@ Runner process tests cover Linux `process_group`, Windows Job Object and `proces
 
 `winui-release.yml` runs the complete gates again for version tags or an explicit manual preview, then publishes the self-contained application, executes all publication/recovery regressions and inspects the complete layout. Version-tag runs validate the source/tag/version and bilingual notes before packaging a portable ZIP, checksums and metadata. Tag runs can publish an unsigned GitHub prerelease; manual runs only upload preview artifacts. See [release preparation](/SteamWrapper/development/distribution/) for the release boundary and optional CNB mirror.
 
-The former Dioxus Native E2E, AppImage job and NSIS release chain are removed. Workflow declarations do not prove that the latest run passed; inspect actual results separately. Automated WinUI native UI, installer and updater gates remain roadmap work.
+The former Dioxus Native E2E, AppImage job and NSIS release chain are removed. Workflow declarations do not prove that the latest run passed; inspect actual results separately. Manual release-workflow previews now run real isolated installer processes. Automated WinUI native UI, clean-client delivery and enabled updater acceptance remain roadmap work.
 
 <a id="限制"></a>
 
@@ -160,5 +160,5 @@ The former Dioxus Native E2E, AppImage job and NSIS release chain are removed. W
 - C# service/contract and publish checks do not establish native UI behavior, accessibility or a clean Windows installation. The automated WinUI native UI gate is still planned.
 - Routine automation does not operate real Steam. Live acceptance needs authorization, recorded original options, save protection, integrity checks and restoration. One-click Launch Options apply/restore remains a future feature.
 - Runner process fixtures prove only their tested platform and lifecycle scenario; they do not establish real Proton, breakaway, Unix daemonize/new-session or Steam Deck compatibility.
-- The supported preview is a complete self-contained Windows directory. Installer, update/uninstall and clean Windows VM acceptance remain separate delivery gates.
+- The preview includes a complete self-contained Windows directory and a separate unsigned installer. Isolated installation/removal tests do not establish clean Windows VM, native wizard or authenticated update acceptance.
 - The 2026-09-07–09-08 Dioxus records above are archived historical results, not current WinUI evidence.

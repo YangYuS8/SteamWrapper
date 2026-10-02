@@ -32,7 +32,7 @@ Inno 7.1.0 x64 已固定在 `packaging/windows/inno-toolchain.json`，工具脚�
 
 ```text
 %LOCALAPPDATA%\Programs\SteamWrapper\
-  SteamWrapper.exe                 # 拟议的 Manager 专用启动器
+  SteamWrapper.exe                 # 已实现的 Manager 专用启动器
   installation.json               # 已验证的当前／上一安装状态
   versions\<release-tag>\          # 一个完整、不可变的 Manager 目录
     SteamWrapper.Manager.exe
@@ -43,7 +43,7 @@ Inno 7.1.0 x64 已固定在 `packaging/windows/inno-toolchain.json`，工具脚�
   profiles.toml
   ui-settings.json
   bin\SteamWrapperRunner.exe       # 不变的稳定 Steam 启动目标
-  updates\trust-state.json         # 拟议的保留序号／摘要／时钟状态
+  updates\trust-state.json         # 保留序号／摘要／时钟状态；仅更新底层使用
   logs\, backups\, cache\
     cache\updates\<transaction>\  # 拟议的受限下载／辅助程序工作区
 ```

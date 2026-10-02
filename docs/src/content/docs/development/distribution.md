@@ -110,14 +110,14 @@ The [WinUI version release workflow](https://github.com/YangYuS8/SteamWrapper/bl
 | --- | --- |
 | Pull request or `main` push | Rust Windows/Linux checks, C# tests/contracts and actual WinUI compilation; no application archive |
 | Push a version tag | Full gates, complete Windows x64 portable ZIP, checksum/metadata and bilingual notes; unsigned GitHub prerelease |
-| **Run workflow** on a selected branch/ref | Full gates and complete `SteamWrapper-WinUI-preview-windows-x64` artifact; no public release |
+| **Run workflow** on a selected branch/ref | Full gates, complete `SteamWrapper-WinUI-preview-windows-x64` layout and tested unsigned `SteamWrapper-WinUI-installer-preview-windows-x64` artifact; no public release |
 | Relevant documentation changes on `main` | Independent documentation checks and GitHub Pages deployment |
 
 Release tags use `vMAJOR.MINOR.PATCH` with an optional SemVer prerelease suffix, such as `v0.2.1-preview.1`. The three-number base must match `<Version>` in `SteamWrapper.Manager.csproj` and the package versions in both `crates/core/Cargo.toml` and `crates/runner/Cargo.toml`. The commit must be reachable from `main`, and `releases/<tag>.en.md` plus `releases/<tag>.zh-CN.md` must be present in that revision. Invalid tags, mismatched versions or missing notes fail before delivery. A tag without a prerelease suffix still publishes as a GitHub prerelease while WinUI's delivery gates remain open.
 
 The current source version is `0.2.1`, advanced because the new Runner PE resources change its bytes. Existing tags and historical releases must not be overwritten. Future versions must coordinate Rust, Manager, Application and deployment product versions and lockfiles, with complete bilingual notes. Confirm the intended main revision passed CI before tagging it. Merging this work does not create a public version.
 
-For example, after a reviewed change has set all three source versions to `0.2.1` and added both `v0.2.1-preview.1` notes:
+For example, after a reviewed change has set all coordinated product/source versions to `0.2.1` and added both `v0.2.1-preview.1` notes:
 
 ```sh
 git fetch origin

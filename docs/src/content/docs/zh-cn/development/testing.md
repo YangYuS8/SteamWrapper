@@ -137,12 +137,12 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 
 `winui-release.yml` 在版本标签或明确请求的手动预览中重新执行完整门禁，再发布自包含应用，运行全部发布／恢复回归并检查完整布局。版本标签运行先验证源码／标签／版本和双语说明，再生成 portable ZIP、校验和及元数据。标签运行可公开未签名 GitHub 预发布；手动运行只上传预览产物。发布边界和可选 CNB 镜像见[发布准备](/SteamWrapper/zh-cn/development/distribution/)。
 
-旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；WinUI 自动化原生 UI、安装器与更新门禁仍属于路线图。
+旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；手动发布工作流预览现已运行真实隔离安装器进程。WinUI 自动化原生 UI、干净客户端交付和启用更新后的验收仍属于路线图。
 
 ## 限制
 
 - C# 服务/契约和发布检查不能证明原生 UI、可访问性或干净 Windows 安装；WinUI 自动化原生 UI 门禁尚在计划中。
 - 常规自动化不操作真实 Steam；真实验收需要授权、记录原启动项、保护存档、校验文件并恢复。一键应用/恢复 Launch Options 仍是后续功能。
 - Runner 进程 fixture 仅证明对应平台和已测生命周期场景，不证明真实 Proton、breakaway、Unix daemonize/新 session 或 Steam Deck 兼容性。
-- 当前预览是完整的 Windows 自包含目录；安装器、更新/卸载及干净 Windows VM 仍需独立验收。
+- 当前预览包含完整的 Windows 自包含目录和单独的未签名安装器；隔离安装／卸载测试不能证明干净 Windows VM、原生向导或经过认证的更新验收。
 - 上述 2026-09-07–09-08 Dioxus 记录是归档历史结果，不是当前 WinUI 证据。

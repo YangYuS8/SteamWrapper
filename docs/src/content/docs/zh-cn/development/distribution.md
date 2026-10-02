@@ -99,14 +99,14 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 | --- | --- |
 | 拉取请求或推送 `main` | Rust Windows/Linux 检查、C# 测试／契约与实际 WinUI 编译；不生成应用压缩包 |
 | 推送版本标签 | 完整门禁、完整 Windows x64 portable ZIP、校验和／元数据及双语说明；未签名 GitHub 预发布 |
-| 在所选分支／ref 上 **Run workflow** | 完整门禁与完整 `SteamWrapper-WinUI-preview-windows-x64` 产物；不公开发布 |
+| 在所选分支／ref 上 **Run workflow** | 完整门禁、完整 `SteamWrapper-WinUI-preview-windows-x64` 目录，以及通过测试的未签名 `SteamWrapper-WinUI-installer-preview-windows-x64` 产物；不公开发布 |
 | `main` 上相关文档变更 | 独立的文档检查与 GitHub Pages 部署 |
 
 发布标签采用 `vMAJOR.MINOR.PATCH`，可带 SemVer 预发布后缀，例如 `v0.2.1-preview.1`。三位基础版本必须与 `SteamWrapper.Manager.csproj` 的 `<Version>` 及 `crates/core/Cargo.toml`、`crates/runner/Cargo.toml` 的包版本一致。提交必须在 `main` 的历史中，且对应版本中须包含 `releases/<tag>.en.md` 与 `releases/<tag>.zh-CN.md`。无效标签、版本不匹配或缺失说明均会在交付前失败。WinUI 交付门槛仍未完成时，即使标签没有预发布后缀，也会标为 GitHub 预发布。
 
 当前源码版本为 `0.2.1`，因 Runner 新 PE 资源改变字节而递增。不要覆盖已有标签或历史发布。未来需协调 Rust、Manager、Application、部署产品版本及锁文件，并提供完整双语说明。打标签前确认所选主线提交已通过 CI；合并此次工作不会创建公开新版本。
 
-例如，已审阅的改动将三个源码版本都改为 `0.2.1`，并加入两份 `v0.2.1-preview.1` 说明后：
+例如，已审阅的改动将所有协调的产品与源码版本都改为 `0.2.1`，并加入两份 `v0.2.1-preview.1` 说明后：
 
 ```sh
 git fetch origin
