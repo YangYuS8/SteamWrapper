@@ -5,7 +5,7 @@ description: Configure a Windows game once, then launch it from its normal Steam
 
 SteamWrapper lets Steam launch the game executable or launcher you choose. **Manager is for configuration; the independent Runner handles daily launches.** Once setup is complete, Manager can stay closed.
 
-This guide uses the **WinUI Windows preview**. It currently targets Windows 11 24H2 x64. WinUI is the only Manager; its installer and automated tag-release pipeline have not been delivered. Start with [installation](/SteamWrapper/guides/installation/) if you do not yet have the complete preview directory.
+This guide uses the **WinUI Windows preview**. It currently targets Windows 11 24H2 x64. WinUI is the only Manager; version-tag packages are unsigned prereleases and its installer remains unfinished. Start with [installation](/SteamWrapper/guides/installation/) if you do not yet have the complete preview directory.
 
 ## Before configuring a game
 

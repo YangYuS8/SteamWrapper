@@ -125,7 +125,11 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 
 ## CI
 
-`v2-ci.yml` 现为 Windows / Ubuntu 的 Rust core/Runner 检查及平台进程测试。`winui-windows.yml` 在 Windows 运行 C# 测试、C# / Rust 契约和自包含发布/恢复检查。旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；WinUI 自动化原生 UI、安装器与更新门禁仍属于路线图。
+`v2-ci.yml` 定义 Windows / Ubuntu 的 Rust core/Runner 格式／检查／测试门禁及平台进程测试。`winui-windows.yml` 在拉取请求与 `main` 中运行 C# Application 和 Windows 解码器测试、C# / Rust 契约及实际 WinUI 编译。日常 CI 还使用一次性文件／API fixture 运行发布替换、发布包安全和 mock GitHub/CNB 发布器测试，不向外部 Release 写入。它上传测试证据，不生成应用包。
+
+`winui-release.yml` 在版本标签或明确请求的手动预览中重新执行完整门禁，再发布自包含应用，运行全部发布／恢复回归并检查完整布局。版本标签运行先验证源码／标签／版本和双语说明，再生成 portable ZIP、校验和及元数据。标签运行可公开未签名 GitHub 预发布；手动运行只上传预览产物。发布边界和可选 CNB 镜像见[发布准备](/SteamWrapper/zh-cn/development/distribution/)。
+
+旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；WinUI 自动化原生 UI、安装器与更新门禁仍属于路线图。
 
 ## 限制
 

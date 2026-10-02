@@ -18,6 +18,8 @@ Manager 默认英语，提供完整简体中文。切换语言保留游戏名称
 
 封面优先使用自定义与本地 Steam 图片。可选的官方 Steam CDN 补图默认关闭，使用有界的 SteamWrapper 缓存并提供清理入口；缺图不影响配置或启动。详见[封面设置](https://yangyus8.top/SteamWrapper/zh-cn/guides/configuration/#cover-settings)。
 
+拉取请求与 `main` 运行测试及编译检查。可下载的 Windows 包由发布工作流在推送版本标签时构建，也可以按需手动生成预览。Windows 交付门槛通过前，WinUI 标签发布仍标为未签名预发布。版本与发布要求见[发布准备](https://yangyus8.top/SteamWrapper/zh-cn/development/distribution/)。
+
 ## 文档
 
 [Astro Starlight 文档站](https://yangyus8.top/SteamWrapper/)是主要的使用与开发文档入口，提供完整[简体中文](https://yangyus8.top/SteamWrapper/zh-cn/)。

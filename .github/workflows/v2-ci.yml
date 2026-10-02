@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: ["main", "v2", "feat/runner-process-lifecycle"]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -68,18 +69,6 @@ jobs:
 
       - name: Cargo test
         run: cargo test --locked --workspace
-
-      - name: Build independent headless Runner
-        run: cargo build --locked --release -p steamwrapper-runner
-
-      - name: Upload platform Runner
-        uses: actions/upload-artifact@v7
-        with:
-          name: SteamWrapper-Runner-${{ runner.os }}
-          path: |
-            target/release/steamwrapper-runner
-            target/release/steamwrapper-runner.exe
-          if-no-files-found: error
 
       - name: Run Linux process-group integration test
         if: runner.os == 'Linux'

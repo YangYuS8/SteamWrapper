@@ -3,8 +3,6 @@ name: Sync to CNB
 on:
   push:
     branches: ["main", "v2"]
-    tags:
-      - "v*.*.*"
   workflow_dispatch:
 
 permissions:
@@ -28,12 +26,6 @@ jobs:
           test -n "${CNB_GIT_TOKEN:-}" || { echo "CNB_GIT_TOKEN is not configured" >&2; exit 1; }
           test -n "${CNB_REMOTE_URL:-}" || { echo "CNB_REMOTE_URL repository variable is not configured" >&2; exit 1; }
 
-          git remote add cnb "$CNB_REMOTE_URL"
-          git config --global credential.helper store
-          printf 'protocol=https\nhost=cnb.cool\nusername=cnb\npassword=%s\n\n' "$CNB_GIT_TOKEN" | git credential approve
-
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            git push cnb "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
-          else
-            git push cnb "HEAD:refs/heads/${GITHUB_REF_NAME}"
-          fi
+          test "${GITHUB_REF_TYPE}" = "branch" || { echo "Tag mirroring belongs to the version release workflow" >&2; exit 1; }
+          helper='!f() { printf "username=cnb\npassword=%s\n" "$CNB_GIT_TOKEN"; }; f'
+          git -c credential.helper= -c "credential.helper=$helper" push "$CNB_REMOTE_URL" "HEAD:refs/heads/${GITHUB_REF_NAME}"

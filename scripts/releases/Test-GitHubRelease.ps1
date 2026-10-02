@@ -1,0 +1,145 @@
+[CmdletBinding()]
+param([string]$PackageDirectory)
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+$root = Join-Path $repoRoot ('target/github-publisher-tests/' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $root -Force | Out-Null
+if (-not $PackageDirectory) {
+    . (Join-Path $repoRoot 'scripts/windows/WinUIRelease.TestFixtures.ps1')
+    $fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package')
+    $package = New-WinUIReleasePackage -Tag $fixture.Tag -Commit $fixture.Commit -RepositoryRoot $fixture.RepositoryRoot -PublishDirectory $fixture.PublishDirectory -OutputDirectory $fixture.OutputDirectory
+    $PackageDirectory = $package.Directory
+}
+$metadata = & (Join-Path $repoRoot 'scripts/windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $PackageDirectory
+$names = @($metadata.archive.fileName, "$($metadata.tag).en.md", "$($metadata.tag).zh-CN.md", 'release.json', 'SHA256SUMS')
+$mock = Join-Path $root 'gh-fixture.ps1'
+[IO.File]::WriteAllText($mock, @'
+$ErrorActionPreference = 'Stop'
+$global:LASTEXITCODE = 0
+$path = $env:STEAMWRAPPER_GH_FIXTURE
+$state = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -AsHashtable
+$arguments = @($args)
+$state.requests += ,$arguments
+function Save-State { [IO.File]::WriteAllText($path, ($state | ConvertTo-Json -Depth 12)) }
+function Fail-Fixture([string]$Message) { Save-State; $global:LASTEXITCODE = 1; Write-Output $Message }
+function Option-Value([string]$Name) {
+    $index = [Array]::IndexOf($arguments, $Name)
+    if ($index -lt 0) { throw "Missing fixture option $Name." }
+    return $arguments[$index + 1]
+}
+if ($arguments[0] -eq 'api') {
+    $state.apiCalls++
+    Save-State
+    if ($state.scenario -eq 'moved-tag' -and $state.apiCalls -gt 1) { Write-Output ('f' * 40) }
+    else { Write-Output $state.remoteCommit }
+    return
+}
+switch ($arguments[1]) {
+    'view' {
+        Save-State
+        if (-not $state.present) { Fail-Fixture 'release not found'; return }
+        $visible = @($state.assets | ForEach-Object { @{ name = $_.name; size = $_.size } })
+        if ($state.scenario -eq 'missing-upload' -and $state.uploads -gt 0) { $visible = @($visible | Select-Object -SkipLast 1) }
+        $target = $state.commit
+        if ($state.scenario -eq 'changed-draft' -and $state.uploads -gt 0) { $target = 'f' * 40 }
+        @{ tagName = $state.tag; targetCommitish = $target; isDraft = $state.draft; isPrerelease = $true; assets = $visible } | ConvertTo-Json -Depth 8 -Compress
+    }
+    'create' {
+        if ($arguments -notcontains '--draft' -or $arguments -notcontains '--prerelease' -or $arguments -notcontains '--latest=false' -or $arguments -notcontains '--verify-tag') { throw 'Unsafe fixture release creation flags.' }
+        $state.present = $true
+        $state.draft = $true
+        Save-State
+    }
+    'upload' {
+        $state.uploads++
+        if ($state.scenario -eq 'upload-failure' -and $state.uploads -eq 3) { Fail-Fixture 'fixture upload failure'; return }
+        if ($arguments -contains '--clobber') { throw 'The publisher tried to clobber an asset.' }
+        $source = $arguments[3]
+        $name = [IO.Path]::GetFileName($source)
+        $remote = Join-Path $state.remoteDirectory $name
+        Copy-Item -LiteralPath $source -Destination $remote
+        $state.assets += @{ name = $name; size = (Get-Item -LiteralPath $source).Length; file = $remote }
+        Save-State
+    }
+    'download' {
+        $name = Option-Value '--pattern'
+        $destination = Join-Path (Option-Value '--dir') $name
+        $asset = @($state.assets | Where-Object { $_.name -ceq $name })[0]
+        Copy-Item -LiteralPath $asset.file -Destination $destination
+        if ($state.scenario -eq 'corrupt-download') { [IO.File]::AppendAllText($destination, 'corrupted') }
+        Save-State
+    }
+    'edit' {
+        if ($arguments -notcontains '--draft=false' -or $arguments -notcontains '--prerelease' -or $arguments -notcontains '--latest=false') { throw 'Unsafe fixture publication flags.' }
+        $state.draft = $false
+        Save-State
+    }
+    default { throw 'Unexpected fixture gh command.' }
+}
+'@, [Text.UTF8Encoding]::new($false))
+
+function New-GhScenario([string]$Scenario, [bool]$Present = $false, [bool]$Draft = $true, [string[]]$Assets = @()) {
+    $caseRoot = Join-Path $root ([Guid]::NewGuid().ToString('N'))
+    $remote = Join-Path $caseRoot 'remote'
+    New-Item -ItemType Directory -Path $remote -Force | Out-Null
+    $records = foreach ($name in $Assets) {
+        $target = Join-Path $remote $name
+        Copy-Item -LiteralPath (Join-Path $PackageDirectory $name) -Destination $target -Force
+        @{ name = $name; size = (Get-Item -LiteralPath $target).Length; file = $target }
+    }
+    $state = @{ scenario = $Scenario; present = $Present; draft = $Draft; tag = $metadata.tag; commit = $metadata.commit; remoteCommit = $metadata.commit; uploads = 0; apiCalls = 0; assets = @($records); requests = @(); remoteDirectory = $remote }
+    if ($Scenario -eq 'wrong-tag') { $state.remoteCommit = 'f' * 40 }
+    $path = Join-Path $caseRoot 'state.json'
+    [IO.File]::WriteAllText($path, ($state | ConvertTo-Json -Depth 10))
+    $env:STEAMWRAPPER_GH_FIXTURE = $path
+    return $path
+}
+function Invoke-FixturePublication {
+    & (Join-Path $PSScriptRoot 'Publish-GitHubRelease.ps1') -PackageDirectory $PackageDirectory -GhExecutable $mock
+}
+function Read-FixtureState([string]$Path) { Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -AsHashtable }
+function Assert-GhRejected([string]$Label, [string]$Pattern) {
+    $rejected = $false
+    try { $null = Invoke-FixturePublication }
+    catch { if ($_.Exception.Message -notlike $Pattern) { throw }; $rejected = $true }
+    if (-not $rejected) { throw "$Label unexpectedly succeeded." }
+    Write-Output "PASS: $Label"
+}
+function Assert-NoGhWrites($State) {
+    if (@($State.requests | Where-Object { $_[0] -eq 'release' -and $_[1] -in @('create', 'upload', 'edit') }).Count -ne 0) { throw 'A rejected or unchanged release was mutated.' }
+}
+$previousFixture = $env:STEAMWRAPPER_GH_FIXTURE
+try {
+    $path = New-GhScenario 'success'
+    $null = Invoke-FixturePublication
+    $state = Read-FixtureState $path
+    if ($state.draft -or $state.uploads -ne 5 -or @($state.requests | Where-Object { $_[1] -eq 'download' }).Count -ne 5) { throw 'The complete draft/upload/download/publish sequence did not occur.' }
+    Write-Output 'PASS: a new prerelease verifies all five uploaded assets before publishing.'
+    $writes = @($state.requests | Where-Object { $_[1] -in @('create', 'upload', 'edit') }).Count
+    $null = Invoke-FixturePublication
+    $state = Read-FixtureState $path
+    if (@($state.requests | Where-Object { $_[1] -in @('create', 'upload', 'edit') }).Count -ne $writes) { throw 'Retry modified an already-published identical release.' }
+    Write-Output 'PASS: an identical published release is verified and reused without writes.'
+    $path = New-GhScenario 'retry' $true $true @($names[0])
+    $null = Invoke-FixturePublication
+    $state = Read-FixtureState $path
+    if ($state.draft -or $state.uploads -ne 4) { throw 'A partial draft was not resumed using only missing assets.' }
+    Write-Output 'PASS: a partial draft resumes without replacing its existing asset.'
+    $path = New-GhScenario 'duplicate' $true $false @($names[0], $names[0], $names[1], $names[2], $names[3])
+    Assert-GhRejected 'duplicate published asset names are rejected' '*duplicate*'
+    Assert-NoGhWrites (Read-FixtureState $path)
+    $path = New-GhScenario 'corrupt-download' $true $false $names
+    Assert-GhRejected 'different published bytes are rejected without mutation' '*Downloaded GitHub asset*'
+    Assert-NoGhWrites (Read-FixtureState $path)
+    $path = New-GhScenario 'wrong-tag'
+    Assert-GhRejected 'a remote tag mismatch is rejected before release writes' '*remote GitHub tag*'
+    Assert-NoGhWrites (Read-FixtureState $path)
+    foreach ($scenario in @('missing-upload', 'corrupt-download', 'upload-failure', 'changed-draft', 'moved-tag')) {
+        $path = New-GhScenario $scenario
+        Assert-GhRejected "$scenario leaves the new release as a draft" '*'
+        $state = Read-FixtureState $path
+        if (-not $state.draft -or @($state.requests | Where-Object { $_[1] -eq 'edit' }).Count -ne 0) { throw 'A failed release was made public.' }
+    }
+} finally { $env:STEAMWRAPPER_GH_FIXTURE = $previousFixture }
+Write-Output "GitHub publisher fixture tests passed: $root"

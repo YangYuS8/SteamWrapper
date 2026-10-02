@@ -18,7 +18,7 @@ description: "The WinUI/C# Manager, independent Rust Runner, and Windows-first d
 | Daily runtime | Independent Rust Runner | Existing CLI and process lifecycle; Manager closed during play |
 | Configuration | `profiles.toml` v2 | C# edits preserve unknown/unedited data; actual Rust consumption is tested |
 | Covers | Custom/local Steam images, optional official Steam CDN fallback and placeholders | Offline by default; bounded requests and SteamWrapper cache |
-| Delivery | Unpackaged self-contained Windows directory and CI artifact | Per-user installer, tagged WinUI releases and updater remain unimplemented |
+| Delivery | Unpackaged self-contained Windows layout; version-tag portable ZIP or manual preview artifact | Unsigned prereleases; per-user installer, signing and updater remain unfinished |
 | Platform | Windows 11 24H2 x64 preview | Existing Linux Runner compatibility/CI only; no Linux GUI |
 
 C# uses Tomlyn 2.10.1 syntax trees and field spans rather than whole-model serialization. It generates a Rust-readable TOML 1.0 string subset and preserves other source text. Fields, defaults, legacy aliases, paths and arguments are constrained by cross-language and real Runner tests. [Tomlyn package](https://www.nuget.org/packages/Tomlyn/2.10.1), [syntax API](https://github.com/xoofx/Tomlyn/blob/2.10.1/site/docs/low-level.md)
@@ -73,7 +73,7 @@ The preview targets Windows 11 24H2 (26100) x64, self-contained with trimming di
 
 Node/pnpm serve brand generation and the static docs site, not desktop runtime. `pnpm brand:generate` / `pnpm brand:check` use development-only `@resvg/resvg-js` for canonical SVG/PNG/ICO assets. The `docs/` workspace uses Astro 7.3.1 / Starlight 0.42.0; see [documentation maintenance](/SteamWrapper/development/documentation/).
 
-Windows CI produces the complete preview directory with `Runner/SteamWrapperRunner.exe` and version/hash metadata. Rust CI preserves Linux process compatibility. A WinUI installer, tag-release pipeline, updater and automatic Steam Launch Options writes are future [roadmap](/SteamWrapper/project/roadmap/) work; no Linux GUI package is advertised.
+Daily Windows CI tests/contracts and compiles the actual Manager without packaging it. The version-tag/manual release workflow produces the complete layout with `Runner/SteamWrapperRunner.exe` and version/hash metadata; tags add a portable ZIP, bilingual notes and checksums for an unsigned prerelease. Rust CI preserves Linux process compatibility. A WinUI installer, signing, updater and automatic Steam Launch Options writes remain [roadmap](/SteamWrapper/project/roadmap/) work; no Linux GUI package is advertised. See [distribution](/SteamWrapper/development/distribution/) for release preparation.
 
 <a id="不选的方向"></a>
 

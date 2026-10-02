@@ -139,7 +139,11 @@ Runner process tests cover Linux `process_group`, Windows Job Object and `proces
 
 ## CI
 
-`v2-ci.yml` now defines the Windows / Ubuntu Rust core/Runner checks and platform process tests. `winui-windows.yml` runs C# tests, C# / Rust contracts and self-contained publication/recovery checks on Windows. The former Dioxus Native E2E, AppImage job and NSIS release chain are removed. Workflow declarations do not prove that the latest run passed; inspect actual results separately. Automated WinUI native UI, installer and updater gates remain roadmap work.
+`v2-ci.yml` defines the Windows / Ubuntu Rust core/Runner format/check/test gates and platform process tests. `winui-windows.yml` runs C# Application and Windows decoder tests, C# / Rust contracts, and actual WinUI compilation on pull requests and `main`. Daily CI also runs publication-replacement and release-package safety tests plus mock GitHub/CNB publisher tests using disposable file/API fixtures; these do not write to external releases. It uploads test evidence, not an application package.
+
+`winui-release.yml` runs the complete gates again for version tags or an explicit manual preview, then publishes the self-contained application, executes all publication/recovery regressions and inspects the complete layout. Version-tag runs validate the source/tag/version and bilingual notes before packaging a portable ZIP, checksums and metadata. Tag runs can publish an unsigned GitHub prerelease; manual runs only upload preview artifacts. See [release preparation](/SteamWrapper/development/distribution/) for the release boundary and optional CNB mirror.
+
+The former Dioxus Native E2E, AppImage job and NSIS release chain are removed. Workflow declarations do not prove that the latest run passed; inspect actual results separately. Automated WinUI native UI, installer and updater gates remain roadmap work.
 
 <a id="限制"></a>
 

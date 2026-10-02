@@ -1,0 +1,186 @@
+name: WinUI version release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  # A manual run only produces a preview artifact, even when a tag is selected.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: winui-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Validate the selected source and version
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.source.outputs.tag }}
+      commit: ${{ steps.source.outputs.commit }}
+      publish: ${{ steps.source.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate an existing mainline tag or a manual preview
+        id: source
+        shell: pwsh
+        env:
+          RELEASE_EVENT: ${{ github.event_name }}
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $commit = (& git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[a-f0-9]{40}$') { throw 'Cannot resolve the selected commit.' }
+          $publish = $env:RELEASE_EVENT -eq 'push'
+          if ($publish) {
+            if (-not $env:RELEASE_REF.StartsWith('refs/tags/', [StringComparison]::Ordinal)) { throw 'Public releases require an existing version tag.' }
+            $null = & ./scripts/windows/Test-WinUIRelease.ps1 -Tag $env:RELEASE_TAG -Commit $commit
+            $tagCommit = (& git rev-parse "$($env:RELEASE_REF)^{commit}").Trim()
+            if ($LASTEXITCODE -ne 0 -or $tagCommit -ne $commit) { throw 'The checkout does not match the tagged commit.' }
+            & git merge-base --is-ancestor $commit origin/main
+            if ($LASTEXITCODE -ne 0) { throw 'The release commit must already be merged into main.' }
+            "tag=$($env:RELEASE_TAG)" >> $env:GITHUB_OUTPUT
+          }
+          "commit=$commit" >> $env:GITHUB_OUTPUT
+          "publish=$($publish.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+  validate_rust:
+    name: Recheck Rust on the selected revision
+    needs: preflight
+    uses: ./.github/workflows/v2-ci.yml
+
+  validate_windows:
+    name: Recheck WinUI on the selected revision
+    needs: preflight
+    uses: ./.github/workflows/winui-windows.yml
+
+  validate_docs:
+    name: Check localized documentation and brand assets
+    needs: preflight
+    runs-on: ubuntu-latest
+    env:
+      MISE_TASK_RUN_AUTO_INSTALL: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
+        with:
+          version: '2026.9.1'
+          install_args: 'node pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: mise run brand:check
+      - run: mise run docs:check
+      - run: mise run docs:build
+
+  build_windows:
+    name: Build the complete self-contained Windows x64 package
+    needs: [preflight, validate_rust, validate_windows, validate_docs]
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+      MISE_TASK_RUN_AUTO_INSTALL: 'false'
+      RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+      RELEASE_COMMIT: ${{ needs.preflight.outputs.commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
+        with:
+          version: '2026.9.1'
+          install_args: 'dotnet rust powershell'
+          cache: false
+      - name: Publish and run all five publication regressions
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
+      - name: Inspect and package the tagged preview release
+        if: needs.preflight.outputs.publish == 'true'
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIRelease.ps1 -Tag $env:RELEASE_TAG -Commit $env:RELEASE_COMMIT
+      - name: Upload a manual preview without publishing a Release
+        if: needs.preflight.outputs.publish != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: SteamWrapper-WinUI-preview-windows-x64
+          path: target/winui/publish/
+          if-no-files-found: error
+      - name: Upload the inspected versioned release assets
+        if: needs.preflight.outputs.publish == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: SteamWrapper-WinUI-release-assets
+          path: target/winui/releases/${{ needs.preflight.outputs.tag }}/
+          if-no-files-found: error
+
+  publish_github:
+    name: Publish a verified GitHub prerelease
+    needs: [preflight, build_windows]
+    if: needs.preflight.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: SteamWrapper-WinUI-release-assets
+          path: target/winui/releases/${{ needs.preflight.outputs.tag }}/
+      - name: Upload, download-verify and publish the prerelease
+        shell: pwsh
+        env:
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: ./scripts/releases/Publish-GitHubRelease.ps1 -PackageDirectory "target/winui/releases/$env:RELEASE_TAG" -Repository $env:RELEASE_REPOSITORY
+
+  mirror_cnb:
+    name: Mirror matching binary assets to CNB when configured
+    needs: [preflight, build_windows, publish_github]
+    if: needs.preflight.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    env:
+      CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN }}
+      CNB_GIT_TOKEN: ${{ secrets.CNB_GIT_TOKEN }}
+      RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+    steps:
+      - name: Check optional CNB release credentials
+        id: cnb
+        shell: bash
+        run: |
+          if [ -n "$CNB_RELEASE_TOKEN" ] && [ -n "$CNB_GIT_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CNB binary release was skipped: configure CNB_RELEASE_TOKEN with repo-release read/write scope and CNB_GIT_TOKEN. GitHub is the available release channel."
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: steps.cnb.outputs.configured == 'true'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Mirror the verified tag after GitHub publication
+        if: steps.cnb.outputs.configured == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Supply credentials to git without writing or displaying their values.
+          helper='!f() { printf "username=cnb\npassword=%s\n" "$CNB_GIT_TOKEN"; }; f'
+          git -c credential.helper= -c "credential.helper=$helper" push https://cnb.cool/Nesoriel/SteamWrapper "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        if: steps.cnb.outputs.configured == 'true'
+        with:
+          name: SteamWrapper-WinUI-release-assets
+          path: target/winui/releases/${{ needs.preflight.outputs.tag }}/
+      - name: Upload and verify identical CNB release assets
+        if: steps.cnb.outputs.configured == 'true'
+        shell: pwsh
+        run: ./scripts/releases/Publish-CnbRelease.ps1 -PackageDirectory "target/winui/releases/$env:RELEASE_TAG" -Repository Nesoriel/SteamWrapper

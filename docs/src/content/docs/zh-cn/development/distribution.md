@@ -7,7 +7,7 @@ description: "WinUI 预览目录、稳定 Runner 安装及剩余 Windows 交付�
 
 ## 原则
 
-WinUI 是唯一当前 Manager。已实现的交付形式为 **Windows 11 24H2 x64 自包含预览目录**，可本地构建，也由 Windows CI 生成。WinUI 每用户安装器、标签发布流水线、应用更新器及自动 Steam 启动项应用／恢复仍未实现。移除 Dioxus 不代表这些门槛已通过。详见[安装指南](/SteamWrapper/zh-cn/guides/installation/)与[路线图](/SteamWrapper/zh-cn/project/roadmap/)。
+WinUI 是唯一当前 Manager。已实现的交付形式为 **Windows 11 24H2 x64 自包含预览目录**，可本地生成或由发布工作流打包。版本标签触发经过测试的 portable ZIP 预发布；明确的手动运行可以只生成预览包，不公开发布。常规拉取请求与 `main` 只运行检查，不打包应用。WinUI 每用户安装器、应用更新器及自动 Steam 启动项应用／恢复仍未实现。详见[安装指南](/SteamWrapper/zh-cn/guides/installation/)与[路线图](/SteamWrapper/zh-cn/project/roadmap/)。
 
 未来安装不应要求开发工具或日常管理员权限。更新须保留用户数据和兼容的稳定 Runner。卸载应默认移除 Manager、保留 Runner 与用户数据，因为 Steam 可能仍引用它们。完整清理须明确选择并处理已知引用，不能假定手动粘贴或无法枚举的启动项已恢复。这些是验收要求，不是已有安装器行为。
 
@@ -19,7 +19,7 @@ GitHub/CNB 二进制发布须检查实际可下载产物。源码同步或发布
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 ```
 
-`target/winui/publish` 包含 Manager、.NET、Windows App SDK、原生／本地化资源、品牌资源及 `Runner/`。Windows 预览工作流将完整目录作为 **SteamWrapper-WinUI-preview-windows-x64** 上传。解压全部文件后从普通资源管理器打开 Manager，不宣称已有单 EXE 或安装向导。
+`target/winui/publish` 包含 Manager、.NET、Windows App SDK、原生／本地化资源、品牌资源及 `Runner/`。发布工作流将这套完整布局打包为 Windows x64 portable ZIP。解压全部文件后从普通资源管理器打开 Manager，不宣称已有单 EXE 或安装向导。
 
 `pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox` 使用一次性隔离数据；普通启动使用真实 `%LOCALAPPDATA%`。开发宿主可能重定向 AppData，因此路径存在不能证明 Steam 看到相同文件。Manager 检查最终共享文件位置，发现重定向时报告未就绪。详见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。
 
@@ -39,7 +39,7 @@ Dioxus Manager、NSIS/AppImage 链与 Native E2E 已从当前开发中移除。[
 
 ## Windows
 
-当前可下载预览为上述 CI 目录压缩包。完整 portable ZIP 与每用户 WinUI 安装器属于规划，名称和签名策略须随标签发布工作流确定。当前没有可运行的 WinUI setup.exe。
+可下载的 WinUI 预览是版本标签发布或明确手动请求生成的完整 portable ZIP。目前产物未签名，公开发布均标为预发布。每用户 WinUI 安装器和发布者签名仍属于规划。当前没有可运行的 WinUI setup.exe。
 
 未来 Manager 安装位置提案为 `%LOCALAPPDATA%\Programs\SteamWrapper`。无论 Manager 安装或解压到何处，Steam 均只引用稳定 Runner。移动／删除 Manager 不应静默移除 Runner 或用户数据。覆盖更新、文件占用、中断替换和恢复必须先验收，再描述为受支持的交付操作。
 
@@ -85,18 +85,51 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 
 ## CI / release 验证
 
-当前 Windows CI 验证 C# 服务、跨语言契约、真实 Runner fixture、自包含发布和安全产物替换，然后上传完整预览目录。Rust CI 继续 core／Runner 检查及受支持的 Windows/Linux 进程测试。没有 Dioxus bundle 门禁，也没有当前 WinUI 标签发布工作流。
+日常 Windows CI 测试 C# Application 服务与 Windows 解码器，验证跨语言契约和真实 Runner fixture，并编译实际 WinUI Manager。Rust CI 保留格式／检查／测试门禁和受支持的 Windows/Linux 进程测试。这些运行保留测试证据，但不执行自包含发布，也不上传应用包。GitHub Pages 继续独立从 `main` 自动部署文档。
 
-未来 WinUI 发布须构建准确的已审阅标签，检查安装器／portable 内容，验证 Runner 元数据与本地化资源，建立签名／信任机制，发布 SHA-256 和完整双语说明，并验证 GitHub/CNB 下载一致。干净系统安装、更新、回滚和卸载仍是独立验收门槛。上传 CI 预览不等于稳定发布。
+发布构建对所选源码重跑测试与编译门禁，再执行自包含发布、全部发布／恢复回归及实际包内容检查。portable ZIP 包含两种语言资源和经过验证的 Runner；校验和与发布元数据标识准确版本、提交和 Windows x64 平台。预发布不证明干净系统安装、更新、回滚或卸载通过；签名与 Windows 稳定交付仍是独立门槛。
+
+## 准备并触发发布
+
+[WinUI version release 工作流](https://github.com/YangYuS8/SteamWrapper/blob/main/.github/workflows/winui-release.yml)将应用交付与日常 CI 分开：
+
+| 触发方式 | 结果 |
+| --- | --- |
+| 拉取请求或推送 `main` | Rust Windows/Linux 检查、C# 测试／契约与实际 WinUI 编译；不生成应用压缩包 |
+| 推送版本标签 | 完整门禁、完整 Windows x64 portable ZIP、校验和／元数据及双语说明；未签名 GitHub 预发布 |
+| 在所选分支／ref 上 **Run workflow** | 完整门禁与完整 `SteamWrapper-WinUI-preview-windows-x64` 产物；不公开发布 |
+| `main` 上相关文档变更 | 独立的文档检查与 GitHub Pages 部署 |
+
+发布标签采用 `vMAJOR.MINOR.PATCH`，可带 SemVer 预发布后缀，例如 `v0.2.1-preview.1`。三位基础版本必须与 `SteamWrapper.Manager.csproj` 的 `<Version>` 及 `crates/core/Cargo.toml`、`crates/runner/Cargo.toml` 的包版本一致。提交必须在 `main` 的历史中，且对应版本中须包含 `releases/<tag>.en.md` 与 `releases/<tag>.zh-CN.md`。无效标签、版本不匹配或缺失说明均会在交付前失败。WinUI 交付门槛仍未完成时，即使标签没有预发布后缀，也会标为 GitHub 预发布。
+
+当前源码版本是 `0.2.0`；不要覆盖已有标签或历史发布。准备未来版本时，更新三个清单及 `Cargo.lock` 中受影响的 workspace 包版本，从[发布模板](https://github.com/YangYuS8/SteamWrapper/tree/main/releases)编写完整英语／简体中文说明，再将经过审阅的改动合入 `main`。打标签前确认所选主线提交已通过 CI。修改发布流程本身不会创建或公开新版本。
+
+例如，已审阅的改动将三个源码版本都改为 `0.2.1`，并加入两份 `v0.2.1-preview.1` 说明后：
+
+```sh
+git fetch origin
+git switch main
+git pull --ff-only origin main
+git tag -a v0.2.1-preview.1 -m "WinUI Windows preview 0.2.1-preview.1"
+git push origin v0.2.1-preview.1
+```
+
+这只是发布操作示例，不是要求现在创建该标签；执行前核对所选提交。工作流检出准确标签并重跑门禁，不沿用之前的分支构建。它先创建草稿，上传并验证全部附件，再公开预发布，不将其标为最新稳定版。附件为 `SteamWrapper-<tag>-win-x64.zip`、`<tag>.en.md`、`<tag>.zh-CN.md`、`release.json` 和 `SHA256SUMS`。ZIP 同时包含根目录 `LICENSE` 及 `ReleaseNotes/` 中的双语说明。
+
+按需预览使用 **Run workflow** 并选择 ref。没有发布模式输入：所有手动运行都只生成预览，即使选择了标签也不公开发布。发布上传失败时，解决原因后优先使用 **Re-run failed jobs**：发布 job 会复用同一个不可变的 `SteamWrapper-WinUI-release-assets` 构建产物。**Re-run all jobs** 会重新构建和打包；如果同版本的字节发生变化，发布必须拒绝覆盖。不同内容应使用新版本，不移动已发布标签，也不覆盖已发布附件。
+
+<a id="发布渠道"></a>
+
+## 发布渠道
+
+GitHub Releases 是版本标签二进制发布渠道。如果仓库配置了具有仓库 release 读／写权限的 `CNB_RELEASE_TOKEN`，以及已有的源码／标签同步密钥 `CNB_GIT_TOKEN`，工作流也能向 CNB 复制同一组附件，并对照生成的 SHA-256 验证上传后的下载副本。没有 release token 时跳过 CNB 二进制步骤；常规 `main` 源码同步独立保留。
+
+源码镜像或只有说明的 release 不等于二进制交付。宣传渠道前须检查该标签工作流实际的 GitHub/CNB 上传与下载结果，如实记录失败或跳过的镜像。旧 CNB 独立说明发布器已移除，避免与标签二进制工作流竞争。上传通过仍不完成干净系统、签名、更新器或卸载器验收。
 
 <a id="当前-dioxus-封面策略"></a>
 
 ## 封面与网络边界
 
-当前 WinUI 读取 Steam 本地 `appcache/librarycache/` 和各用户 `config/grid/` 图片，缺失时显示占位，不下载或持久缓存封面。
+当前 WinUI 优先读取 Steam 本地 `appcache/librarycache/` 和各用户 `config/grid/` 图片，再使用有效的 SteamWrapper 封面缓存。缺失或不可读时保留占位图；网络请求需要下面的明确选项。
 
 官方 Steam CDN 封面回退需明确选择开启，本地优先、默认关闭。仅为本地已发现 AppID 获取缺失封面，采用 HTTPS 主机／重定向白名单与有界传输／解码图片尺寸。下载的图片仅存放在 SteamWrapper 的 `cache/covers/`，提供配额、过期、淘汰与清理入口。关闭后取消下载并阻止新请求，有效缓存仍可离线使用。清理保留自定义图片、Steam／游戏文件、配置和 Runner，不包含账号查询、游戏库上传或第三方元数据服务。详见[封面设置](/SteamWrapper/zh-cn/guides/configuration/#cover-settings)、[实现限制](/SteamWrapper/zh-cn/development/architecture/#封面与安全边界)及剩余的[原生／玩家验收](/SteamWrapper/zh-cn/project/roadmap/)。
-
-## 发布渠道
-
-GitHub Releases 与 CNB Releases 是 WinUI 的目标发布渠道。源码同步或只有说明的 CNB release 都不能证明二进制交付。正式发布须提供相同二进制与 SHA-256、准确版本／提交／平台标识、签名信息、完整英中说明、已知限制及安装／更新／移除步骤。在实现并验收前，使用明确标注的 Windows CI 预览。

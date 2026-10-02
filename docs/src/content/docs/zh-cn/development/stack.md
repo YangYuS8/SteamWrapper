@@ -16,7 +16,7 @@ description: "WinUI/C# Manager、独立 Rust Runner 与 Windows 优先的开发�
 | 日常运行 | 独立 Rust Runner | 既有 CLI 与进程生命周期；游玩时关闭 Manager |
 | 配置 | `profiles.toml` v2 | C# 编辑保留未知／未编辑数据，测试实际 Rust 消费 |
 | 封面 | 自定义／本地 Steam 图片、可选官方 Steam CDN 回退与占位 | 默认离线；有界请求与 SteamWrapper 缓存 |
-| 交付 | unpackaged 自包含 Windows 目录与 CI 产物 | 每用户安装器、WinUI 标签发布和更新器未实现 |
+| 交付 | unpackaged 自包含 Windows 布局；版本标签 portable ZIP 或手动预览产物 | 未签名预发布；每用户安装器、签名与更新器仍待完成 |
 | 平台 | Windows 11 24H2 x64 预览 | 仅保留已有 Linux Runner 兼容性／CI，没有 Linux GUI |
 
 C# 使用 Tomlyn 2.10.1 语法树和字段跨度，而非全模型序列化；生成 Rust 可读的 TOML 1.0 字符串子集，保留其他源码。字段、缺省值、旧别名、路径与参数由跨语言及真实 Runner 测试约束。[Tomlyn 包](https://www.nuget.org/packages/Tomlyn/2.10.1)、[语法 API](https://github.com/xoofx/Tomlyn/blob/2.10.1/site/docs/low-level.md)
@@ -64,7 +64,7 @@ Manager 使用 Windows App SDK 2.4.0 组件集，直接固定 `Microsoft.Windows
 
 Node/pnpm 用于品牌资源生成和静态文档，不是桌面运行时。`pnpm brand:generate`／`pnpm brand:check` 使用仅开发期需要的 `@resvg/resvg-js` 处理统一 SVG/PNG/ICO。`docs/` 工作区使用 Astro 7.3.1 / Starlight 0.42.0，详见[文档维护](/SteamWrapper/zh-cn/development/documentation/)。
 
-Windows CI 生成完整预览目录，包含 `Runner/SteamWrapperRunner.exe` 和版本／摘要元数据。Rust CI 保留 Linux 进程兼容性。WinUI 安装器、标签发布流水线、更新器和自动 Steam 启动项写入属于后续[路线图](/SteamWrapper/zh-cn/project/roadmap/)工作；当前不提供 Linux GUI 包。
+日常 Windows CI 执行测试／契约并编译实际 Manager，不打包应用。版本标签／手动发布工作流生成包含 `Runner/SteamWrapperRunner.exe` 和版本／摘要元数据的完整布局；标签运行另生成 portable ZIP、双语说明和校验和，用于未签名预发布。Rust CI 保留 Linux 进程兼容性。WinUI 安装器、签名、更新器和自动 Steam 启动项写入仍属于[路线图](/SteamWrapper/zh-cn/project/roadmap/)工作；当前不提供 Linux GUI 包。发布准备见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
 
 ## 不选的方向
 
