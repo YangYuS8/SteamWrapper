@@ -59,13 +59,13 @@ tests/fixtures            # 真实 Runner 消费的受控进程，仅测试
 - 当前封面本地优先、AppID Steam CDN 回退；新 WinUI 本地封面目标不代表当前网络代码已改。
 - `Dioxus.toml` 管理图标、metadata 与 Runner resources；构建前 stage 当前平台 Runner。
 - `@wdio/dioxus-service` 1.0.0 embedded provider、`wdio-dioxus-embedded-driver` 1.0.0 仅用于 e2e feature；release 不带测试 bridge。
-- pnpm 用于 Native E2E、开发期资源工具以及静态文档开发与构建，不作为 UI 产品运行时。`mise run brand:generate`／`brand:check` 使用仅开发期需要的 `@resvg/resvg-js` 生成和验证统一 SVG／PNG／ICO 及 Dioxus 副本。独立工作区包 `docs/` 使用 Astro 7.3.1 和 Starlight 0.42.0，其 mise 任务与双语内容流程见[文档维护](/SteamWrapper/zh-cn/development/documentation/)。
+- pnpm 用于 Native E2E、开发期资源工具以及静态文档开发与构建，不作为 UI 产品运行时。`pnpm brand:generate`／`pnpm brand:check` 使用仅开发期需要的 `@resvg/resvg-js` 生成和验证统一 SVG／PNG／ICO 及 Dioxus 副本。独立工作区包 `docs/` 使用 Astro 7.3.1 和 Starlight 0.42.0，其 pnpm 命令与双语内容流程见[文档维护](/SteamWrapper/zh-cn/development/documentation/)。
 
 具体流程见 [Dioxus 技能](https://github.com/YangYuS8/SteamWrapper/blob/v2/skills/dioxus-manager/SKILL.md)。新 WinUI 不使用该技能的 DOM/RSX 或 bundle 步骤。
 
 ## 工具链与交付
 
-项目工具由 mise 管理，.NET SDK 10.0.400、Rust 1.98.1；本机重启后 MSVC/SDK 已复检。Manager 使用 Windows App SDK 2.4.0 对应的组件集：直接固定 `Microsoft.WindowsAppSDK.WinUI` 2.3.6、`Microsoft.WindowsAppSDK.InteractiveExperiences` 2.1.6 与 SDK.BuildTools 10.0.26100.7705。组件包版本不等于框架名称中的“WinUI 3”；显式固定 InteractiveExperiences 避免回落到 WinUI 包的最低依赖 2.1.3。保留依赖的版本和摘要与原 2.4.0 总包锁文件一致。
+mise 是可选的本地工具管理器。`global.json` 要求 .NET SDK 10.0.400；Rust 1.98.1 是可选 mise 配置记录的本地参考工具链。具体依赖和 SDK 组件以项目清单、锁文件、`packageManager` 与 `.vsconfig` 为准；直接 PowerShell/pnpm 命令不依赖 mise。本机重启后 MSVC/SDK 已复检。Manager 使用 Windows App SDK 2.4.0 对应的组件集：直接固定 `Microsoft.WindowsAppSDK.WinUI` 2.3.6、`Microsoft.WindowsAppSDK.InteractiveExperiences` 2.1.6 与 SDK.BuildTools 10.0.26100.7705。组件包版本不等于框架名称中的“WinUI 3”；显式固定 InteractiveExperiences 避免回落到 WinUI 包的最低依赖 2.1.3。保留依赖的版本和摘要与原 2.4.0 总包锁文件一致。
 
 按需组件引用是 Windows App SDK 官方支持的自包含部署方式。Manager 不引用未使用的 AI、ML、Search、Widgets 和 DWrite 组件，也不通过手动删除发布 DLL 精简。精简后目录约 171 MiB（457 文件，未压缩），最新产物字节数见[预览验收](/SteamWrapper/zh-cn/project/validation/winui/)；原 226.23 MiB 版本的启动/内存基准仍作为历史结果保留，精简后未重测这些指标。[官方组件包说明](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/release-notes/windows-app-sdk-1-8#version-180-18250907003)、[本机比较与发布验证](/SteamWrapper/zh-cn/project/decisions/manager-comparison/)
 

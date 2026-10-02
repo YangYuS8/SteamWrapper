@@ -25,7 +25,7 @@ Read the affected code and tests first, then choose checks that demonstrate the 
 | core / manager-core behavior | Add a test that reproduces the missing behavior and observe the expected failure before implementation; run affected crate tests; expand to workspace checks/tests when shared contracts or other crates are affected |
 | Runner launch / waiting | Real process regressions on the affected platform; expand to the workspace for CLI / TOML / shared-module changes |
 | Dioxus interaction / service wiring | Relevant Rust tests, `dx check` / build, and isolated Native E2E covering the behavior |
-| WinUI / C# services | `mise run winui:test`; add `winui:contracts` for profile-contract or Runner-distribution changes; use `winui:publish` and isolated native interaction for UI changes |
+| WinUI / C# services | `Invoke-WinUI.ps1 -Action Test`; add `Test-WinUIContracts.ps1` for profile-contract or Runner-distribution changes; use `Invoke-WinUI.ps1 -Action Publish` and isolated native interaction for UI changes (full commands below) |
 | Purely visual changes | Build and inspect affected screens in an isolated Desktop preview; select existing tests according to impact, without using fixed CSS strings as visual acceptance |
 | E2E tooling or dependencies | Frozen-lockfile install, TypeScript check, affected Native E2E |
 | Packaging / publication / toolchain or shared builds | Full quality gates, current-platform release Runner staging, actual package extraction inspection |
@@ -41,13 +41,13 @@ Behavioral regressions should verify externally observable results. Existing `ui
 Verify the existing file contract between C# configuration services and Rust Runner first, then demonstrate the UI and installer. Available commands:
 
 ```powershell
-mise run winui:test
-mise run winui:contracts
-mise run winui:publish
-mise run winui:sandbox
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
+pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
-`winui:test` covers profile fidelity/conflicts/replacement failure, local Steam, stable Runner installation and shared-file locations. `winui:contracts` starts from shared historical fixtures. Rust compares the complete TOML and Profile after C# changes one field, then controlled parent/child processes verify exact argv, cwd, job/root waiting differences, exit codes and error logs for a new C# profile. See the [contract guide](https://github.com/YangYuS8/SteamWrapper/blob/v2/tests/contracts/README.md). Test drivers, fixtures and generated user directories do not enter the publication directory.
+The `Test` action covers profile fidelity/conflicts/replacement failure, local Steam, stable Runner installation and shared-file locations. `Test-WinUIContracts.ps1` starts from shared historical fixtures. Rust compares the complete TOML and Profile after C# changes one field, then controlled parent/child processes verify exact argv, cwd, job/root waiting differences, exit codes and error logs for a new C# profile. See the [contract guide](https://github.com/YangYuS8/SteamWrapper/blob/v2/tests/contracts/README.md). Test drivers, fixtures and generated user directories do not enter the publication directory.
 
 Directory separation added regressions for AppID association, preservation of runtime paths outside the library, and actual installation conflicts across two libraries. That implementation passed 49/49 C# tests. Isolated native save, rescan and creation of an ambiguous profile were also verified; see the [directory-separation record](/SteamWrapper/guides/translated-games/). These isolated results alone do not establish live translated-game migration or achievement compatibility.
 
@@ -72,7 +72,7 @@ The added Windows CI retains the old workflows and runs these tests and director
 
 Routine automation uses isolated Steam/user data. Live Steam acceptance requires explicit user authorization; this user authorized galgame tests that preserve game files. Record original launch options, file integrity and save protection separately. Tests must not decide which progress to overwrite in an unresolved cloud conflict. Real user data, full Steam configuration and local test backups do not enter commits or CI artifacts. See the [main design](/SteamWrapper/project/design/windows-v2/#4-配置保真是第一个门槛) for configuration boundaries.
 
-For live acceptance, open `SteamWrapper.Manager.exe` from its complete publication directory through normal Windows File Explorer. Configure the profile and stable Runner, close Manager, then launch through Steam. On this machine, Codex's process environment previously mapped literal AppData paths into its package `LocalCache`. A shell or Manager reporting no package identity does not rule out redirection; final file-handle paths revealed the different views. See [shared data paths and live Steam acceptance](/SteamWrapper/development/windows/#shared-data-paths-and-live-steam-acceptance). Routine mise/sandbox workflows remain unchanged.
+For live acceptance, open `SteamWrapper.Manager.exe` from its complete publication directory through normal Windows File Explorer. Configure the profile and stable Runner, close Manager, then launch through Steam. On this machine, Codex's process environment previously mapped literal AppData paths into its package `LocalCache`. A shell or Manager reporting no package identity does not rule out redirection; final file-handle paths revealed the different views. See [shared data paths and live Steam acceptance](/SteamWrapper/development/windows/#shared-data-paths-and-live-steam-acceptance). Routine automation continues to use the isolated sandbox; mise aliases are optional.
 
 Actual 2026-09-07 record: `The NOexistenceN of you AND me` (AppID 2873080) formed `Steam 4268 → Runner 4624 → game 19752 → Unity 12996` at 12:46:03. Following a normal exit from the title screen, Steam recorded all three child processes exiting with code 0 at 12:53:33. The UI returned to “Play,” cloud status was up to date, displayed playtime rose from 11.2 to 11.4 hours, and launch options were restored to empty. Opening the same Manager through normal Explorer and installing/configuring in the real stable directory succeeded with the existing command format, without changing quoting or slash rules. Final independent SHA-256 checks matched 35/35 game files and 4/4 original saves to the initial baseline, with no redirection in save-handle paths. This result applies to that game on this machine, not other games, clean VMs or installers.
 
@@ -98,7 +98,7 @@ The 68 official files, three restored files and other non-save files remained un
 
 ## Local commands
 
-mise manages the Windows environment. Use `mise run windows:doctor` to inspect it and `mise run windows:verify` for existing quality gates. See [Windows development](/SteamWrapper/development/windows/) for setup and WinUI compilation. The following `just`/underlying commands remain available; the WinUI smoke does not replace application or Steam acceptance.
+Install Windows tools by your preferred method; mise is optional. Use `pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor` to inspect the full toolset and `pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify` for existing quality gates. See [Windows development](/SteamWrapper/development/windows/) for setup and WinUI compilation. The following `just`/underlying commands remain available; the WinUI smoke does not replace application or Steam acceptance.
 
 Prefer the root `justfile`:
 

@@ -7,12 +7,11 @@ The `docs/` directory is an independent package in the repository's pnpm workspa
 
 ## Local setup and preview
 
-Run these commands from the repository root. mise reads the pinned Node and pnpm versions from the project configuration:
+Use Node 24.18.0 (the verified reference version) and the pnpm version declared by the root `package.json`, installed by your preferred method, then run these commands from the repository root. The workspace manifests and lockfile define the site dependencies. mise is optional; its configuration records the local Node/pnpm tool versions:
 
 ```sh
-mise install node pnpm
-mise exec -c "pnpm install --frozen-lockfile"
-mise run docs:dev
+pnpm install --frozen-lockfile
+pnpm docs:dev
 ```
 
 Open the local URL printed by Astro, using `/SteamWrapper/` for English and `/SteamWrapper/zh-cn/` for Simplified Chinese. The development server reloads content edits. Keep dependencies in the shared lockfile; update version pins and the lockfile together when intentionally changing the site toolchain.
@@ -20,9 +19,9 @@ Open the local URL printed by Astro, using `/SteamWrapper/` for English and `/St
 Before submitting a documentation change, run:
 
 ```sh
-mise run docs:check
-mise run docs:build
-mise run docs:preview
+pnpm docs:check
+pnpm docs:build
+pnpm docs:preview
 ```
 
 | Command | Purpose |

@@ -30,25 +30,24 @@ The editable source is in [docs/](docs/README.md). Historical designs and valida
 
 ## Develop locally
 
-Work on `v2`. Use the pinned [mise tools](mise.toml) and follow the Windows setup guide for MSVC/SDK installation. The WinUI preview commands are:
+Work on `v2`. Install the tools needed for your change using your preferred method. [mise](mise.toml) is an optional convenience, not a contributor requirement. Follow the Windows setup guide for SDK versions and MSVC/SDK installation. With PowerShell 7, .NET and Rust on PATH, the WinUI preview commands are:
 
 ```powershell
-mise run winui:test
-mise run winui:contracts
-mise run winui:publish
-mise run winui:sandbox
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
+pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
 The published directory is `target/winui/publish`; keep it intact. The sandbox uses disposable Steam/user-data fixtures. `just dev` uses real local data; use `just dev-sandbox` for routine Dioxus previews. See the testing guide for retained Dioxus and platform-specific gates.
 
-To work only on the documentation:
+To work only on the documentation, use Node 24.18.0 (the verified reference version) and the pnpm version declared in `package.json`, installed by your preferred method, then run:
 
 ```sh
-mise install node pnpm
-mise exec -c "pnpm install --frozen-lockfile"
-mise run docs:dev
-mise run docs:check
-mise run docs:build
+pnpm install --frozen-lockfile
+pnpm docs:dev
+pnpm docs:check
+pnpm docs:build
 ```
 
 Node/pnpm are development and static-site build tools, not desktop application runtime requirements.

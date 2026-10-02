@@ -6,13 +6,14 @@ Read the published [SteamWrapper documentation](https://yangyus8.top/SteamWrappe
 
 This directory is the Astro Starlight workspace. Canonical Markdown lives in `src/content/docs/`; the matching `zh-cn/` subtree contains complete translations. `guides/` is for players, `development/` covers implementation and maintenance, and `project/` preserves design decisions and dated evidence. Do not duplicate full guides in the root README.
 
+Use Node 24.18.0 (the verified reference version) and the pnpm version declared in the root `package.json`, installed by your preferred method. mise is optional; its Node/pnpm pins are a convenient local reference. The workspace manifests and lockfile define the site dependencies.
+
 ```sh
-mise install node pnpm
-mise exec -c "pnpm install --frozen-lockfile"
-mise run docs:dev
-mise run docs:check
-mise run docs:build
-mise run docs:preview
+pnpm install --frozen-lockfile
+pnpm docs:dev
+pnpm docs:check
+pnpm docs:build
+pnpm docs:preview
 ```
 
 Run these commands from the repository root. The local URL includes `/SteamWrapper/`. Search is available after build in the production preview. Generated `.astro/` and `dist/` directories are ignored.

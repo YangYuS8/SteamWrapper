@@ -1,6 +1,6 @@
 ---
-title: "Windows development environment (mise)"
-description: "Set up the Windows toolchain with mise and review build and validation evidence."
+title: "Windows development environment"
+description: "Prepare the Windows SDKs and tools, run builds directly, and review validation evidence."
 ---
 
 <a id="windows-development-environment-mise"></a>
@@ -9,48 +9,59 @@ description: "Set up the Windows toolchain with mise and review build and valida
 
 
 
-Use the root `mise.toml` to manage project tools, `global.json` to select the .NET SDK, and `.vsconfig` to declare MSVC/Windows SDK components. The WinUI Manager is in `apps/manager-winui`; the existing Dioxus toolchain remains available for migration-baseline checks. The standalone template smoke project stays under ignored `target/toolchain-smoke/` for environment diagnostics.
+Install development tools using your preferred method. **mise is optional**, not a prerequisite for contributing or building. `global.json` selects the .NET SDK; project manifests and lockfiles define dependencies, the root `package.json` selects pnpm, and `.vsconfig` declares MSVC/Windows SDK components. The optional `mise.toml` / `mise.lock` record a convenient local toolset and shortcuts to the same scripts. The WinUI Manager is in `apps/manager-winui`; the existing Dioxus toolchain remains available for migration-baseline checks. The standalone template smoke project stays under ignored `target/toolchain-smoke/` for environment diagnostics.
 
 <a id="版本与管理范围"></a>
 
 ## Versions and management scope
 
-| Tool | Pinned version | Management |
+| Tool | Current version or component | Requirement / source |
 | --- | --- | --- |
-| .NET SDK | 10.0.400 | mise core; SDK roll-forward disabled in global.json |
-| Rust | 1.98.1, rustfmt/clippy | mise invokes existing rustup; Windows uses the MSVC host |
-| PowerShell | 7.6.5 | mise; tasks do not depend on Codex private runtime paths |
-| Node / pnpm | 24.18.0 / 11.10.0 | mise; aligned with existing CI / packageManager, for Dioxus E2E and brand asset generation/checks |
-| Dioxus CLI / just | 0.7.10 / 1.58.0 | mise; official Dioxus GitHub binaries |
-| WinUI CLI template | 0.0.6-alpha | `windows:templates` installs the official NuGet template; this is its preview version |
+| .NET SDK | 10.0.400 | Required by `global.json`, which disables SDK roll-forward |
+| Rust | 1.98.1, rustfmt/clippy | Local reference toolchain in optional mise configuration; Windows builds need an MSVC host; crates and `Cargo.lock` define Rust dependencies |
+| PowerShell | 7.6.5 local reference | Scripts require PowerShell 7 (`pwsh`) on PATH, with no dependency on Codex private runtimes |
+| Node / pnpm | 24.18.0 local reference / 11.10.0 | pnpm comes from root `packageManager`; needed for Dioxus E2E, brand tooling and docs, not a WinUI-only publish |
+| Dioxus CLI / just | 0.7.10 / 1.58.0 local reference | Dioxus workflow / optional recipe runner; neither is needed for WinUI-only publication |
+| WinUI CLI template | 0.0.6-alpha | `Install-WinUITemplates.ps1` pins the official preview template for independent smoke tests only |
 | WinUI smoke dependencies | Windows App SDK 2.4.0, SDK.BuildTools 10.0.26100.7705, WinApp 0.3.1 | The verification script pins direct package references independently of the machine-wide Windows SDK |
 | WinUI Manager components | WindowsAppSDK.WinUI 2.3.6, InteractiveExperiences 2.1.6, SDK.BuildTools 10.0.26100.7705 | Windows App SDK 2.4.0 component set; NuGet locks all transitive dependencies |
-| MSVC / Windows SDK | VC.Tools.x86.x64 / Windows11SDK.26100 | `windows:setup` invokes Microsoft's official installer; these are system components |
+| MSVC / Windows SDK | VC.Tools.x86.x64 / Windows11SDK.26100 | `.vsconfig`; `Install-BuildTools.ps1` uses Microsoft's official installer for these system components |
 
-`mise.lock` records available Windows x64 download URLs and hashes. Core .NET/Rust still delegate to the official installation script/rustup; the lockfile is not a complete offline mirror. The MSVC bootstrapper uses a verified 18.9.1 URL/SHA-256, while its components resolve through Microsoft's channel. mise cannot isolate or byte-pin every system component.
+For contributors who choose mise, `mise.lock` records available Windows x64 download URLs and hashes. Core .NET/Rust still delegate to the official installation script/rustup; the lockfile is not a complete offline mirror. The MSVC bootstrapper uses a verified 18.9.1 URL/SHA-256, while its components resolve through Microsoft's channel. mise cannot isolate or byte-pin every system component.
 
-The .NET core backend uses a shared SDK root. Pinning a mise version alone does not replace .NET's SDK resolver, so a matching `global.json` is also provided. [mise .NET management](https://mise.jdx.dev/lang/dotnet.html), [Rust management](https://mise.jdx.dev/lang/rust.html)
+When using mise, its .NET core backend uses a shared SDK root. Its version pin does not replace .NET's SDK resolver; `global.json` remains authoritative. [mise .NET management](https://mise.jdx.dev/lang/dotnet.html), [Rust management](https://mise.jdx.dev/lang/rust.html)
 
 <a id="首次准备"></a>
 
 ## Initial setup
 
-Run these commands from a Windows terminal at the repository root:
+For a WinUI-only build, install PowerShell 7, the .NET SDK selected by `global.json`, and Rust with an MSVC host using your normal installers or package manager. Make `pwsh`, `dotnet` and `cargo` available on PATH. Then, from the repository root:
 
 ```powershell
-mise trust
-mise install
-mise run windows:setup
-mise run windows:templates
-mise run windows:doctor
-mise run windows:winui-smoke
+pwsh -NoProfile -File scripts/windows/Install-BuildTools.ps1
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build
 ```
 
-`mise trust` trusts only the reviewed configuration in this repository. `mise install` installs its declared tools. The system-component task verifies the bootstrapper's SHA-256 and Microsoft signature, then installs the compiler/SDK and required dependencies from `.vsconfig`. It returns immediately when the full component set is already installed. The full Visual Studio IDE is not required. [Microsoft MSVC installation](https://learn.microsoft.com/en-us/cpp/overview/acquire-msvc?view=msvc-170)
+Node, pnpm, Dioxus CLI, just and the alpha WinUI template are not prerequisites for these two commands. Install them only for the corresponding workflows. The full environment diagnostic checks Node, pnpm and Dioxus CLI as well as .NET/Rust, so prepare that larger toolset before running it:
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor
+```
+
+To run the separate template smoke test:
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Install-WinUITemplates.ps1
+pwsh -NoProfile -File scripts/windows/Test-WinUIBuild.ps1
+```
+
+If you prefer mise, review the configuration, run `mise trust` and `mise install`, then use the existing `mise run windows:*` and `mise run winui:*` aliases. These are optional shortcuts, not a different build pipeline.
+
+The system-component script verifies the bootstrapper's SHA-256 and Microsoft signature, then installs the compiler/SDK and required dependencies from `.vsconfig`. It returns immediately when the full component set is already installed. The full Visual Studio IDE is not required. [Microsoft MSVC installation](https://learn.microsoft.com/en-us/cpp/overview/acquire-msvc?view=msvc-170)
 
 Microsoft's installer requires normal UAC permission. The script uses `--norestart` and never restarts automatically. Exit code 3010 explicitly means installation succeeded but a restart is required; it is neither an installation failure nor evidence that the restart has happened. [Official installer parameters](https://learn.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio?view=visualstudio)
 
-`windows:doctor` locates the required components with vswhere and loads Microsoft's Developer PowerShell. It does not permanently change PATH or print the full environment. mise supplies `pwsh`; tasks do not depend on Windows PowerShell 5.1 or Codex PATH injection. [Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=visualstudio)
+`Invoke-Build.ps1 -Action Doctor` locates the required components with vswhere and loads Microsoft's Developer PowerShell. It does not permanently change PATH or print the full environment. Install PowerShell 7 by your preferred method; scripts do not depend on Windows PowerShell 5.1 or Codex PATH injection. [Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=visualstudio)
 
 <a id="日常命令"></a>
 
@@ -59,11 +70,11 @@ Microsoft's installer requires normal UAC permission. The script uses `--noresta
 WinUI development entry points:
 
 ```powershell
-mise run winui:test       # Profile safety, local Steam, Runner installation and UI language services
-mise run winui:contracts  # C# / Rust round trips and controlled real Runner parent/child processes
-mise run winui:build      # Release XAML compilation; stage the current Rust Runner
-mise run winui:publish    # Self-contained target/winui/publish directory, including native resource indexes
-mise run winui:sandbox    # Publish and open the native preview with disposable Steam/user directories
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test     # Profile safety, local Steam, Runner installation and UI language services
+pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1          # C# / Rust round trips and controlled real Runner parent/child processes
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build    # Release XAML compilation; stage the current Rust Runner
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish  # Self-contained target/winui/publish directory, including native resource indexes
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox  # Publish and open the native preview with disposable Steam/user directories
 ```
 
 Each project's `packages.lock.json` pins NuGet dependencies, and daily commands use locked restore. The service project explicitly lists the win-x64 runtime identifier to prevent lockfile drift when alternating between tests and UI publication. Use `--force-evaluate` only when updating dependencies, and review the lockfile changes.
@@ -72,14 +83,14 @@ Manager now references the component packages above instead of the Windows App S
 
 Manager uses Windows App SDK's [native picker API](https://learn.microsoft.com/en-us/windows/apps/develop/files/using-file-folder-pickers). The project is maintained directly and does not depend on installing the alpha template. `EnableMsixTooling` generates the application PRI resource index; `WindowsPackageType=None` and disabled package generation/signing prevent registration of an MSIX debug identity. Publication checks include Manager PRI, .NET, WinUI and Runner. Compilation alone does not prove that XAML can load at startup.
 
-`winui:publish` first writes into a fresh `target/winui/publish-staging-<id>` directory. It validates the Manager executable/assemblies, PRI, .NET, WinUI, picker projections, Runner and manifest, then replaces `target/winui/publish`. Directory operations stay within this repository's `target/winui`, reject reparse paths, and serialize replacement with a publication lock. A preview running from the destination directory prevents replacement. Validation failure keeps the old version; an ordinary replacement failure restores the old directory. Blocked recovery or cleanup reports the retained location. Directory renames are not a power-loss transaction, and failed candidates remain available for investigation.
+`Invoke-WinUI.ps1 -Action Publish` first writes into a fresh `target/winui/publish-staging-<id>` directory. It validates the Manager executable/assemblies, PRI, .NET, WinUI, picker projections, Runner and manifest, then replaces `target/winui/publish`. Directory operations stay within this repository's `target/winui`, reject reparse paths, and serialize replacement with a publication lock. A preview running from the destination directory prevents replacement. Validation failure keeps the old version; an ordinary replacement failure restores the old directory. Blocked recovery or cleanup reports the retained location. Directory renames are not a power-loss transaction, and failed candidates remain available for investigation.
 
 The publication regression runs the real publish command, then tests recovery in isolated directories without another test framework:
 
 ```powershell
-mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
+pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
 # Check only directory replacement/recovery, without rebuilding:
-mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
+pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
 ```
 
 The full command contains five checks: no stale sentinel file, preservation of the old version when a resource is missing, rollback when a candidate is locked, successful replacement containing only new files, and rejection of out-of-scope paths. All test files stay under `target/winui`. Close any preview running from the publish directory before testing.
@@ -90,27 +101,27 @@ The UI defaults to English and offers English / 简体中文 in the sidebar. Bot
 
 WinUI's English neutral resources and Simplified Chinese satellite resources live under `SteamWrapper.Application/Localization`. The explicit .NET resource culture is independent of the OS language and does not change the process's global culture. When inspecting a published artifact, check `zh-CN/SteamWrapper.Application.resources.dll` as well as the existing native resources. [ResourceManager culture-specific lookup](https://learn.microsoft.com/en-us/dotnet/fundamentals/runtime-libraries/system-resources-resourcemanager-getstring)
 
-Brand assets are generated from `assets/brand/steamwrapper.svg`. After editing that source, run `mise run brand:generate`, then `mise run brand:check` to verify SVG, PNG, ICO and bundled copies. Do not edit exported icons separately.
+Brand assets are generated from `assets/brand/steamwrapper.svg`. After editing that source, run `pnpm brand:generate`, then `pnpm brand:check` to verify SVG, PNG, ICO and bundled copies. Do not edit exported icons separately.
 
 Legacy implementation and environment diagnostics:
 
 ```powershell
-mise run windows:doctor       # Tool versions, link/cl and SDK paths
-mise run windows:rust-test    # Current Rust workspace tests
-mise run windows:verify       # Rust / Dioxus builds and isolated Native E2E; stop on failure
-mise run windows:winui-smoke  # Self-contained publication of the independent XAML smoke project
+pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor    # Tool versions, link/cl and SDK paths
+pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action RustTest  # Current Rust workspace tests
+pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify    # Rust / Dioxus builds and isolated Native E2E; stop on failure
+pwsh -NoProfile -File scripts/windows/Test-WinUIBuild.ps1               # Self-contained publication of the independent XAML smoke project
 ```
 
-`windows:verify` installs frozen pnpm dependencies, stages the bundled Runner, and runs the existing quality gates. It does not build NSIS, publish a release, or operate real Steam automatically. Existing `just` commands remain available. These Windows entry points use PowerShell directly, without Bash cleanup scripts.
+`Invoke-Build.ps1 -Action Verify` installs frozen pnpm dependencies, stages the bundled Runner, and runs the existing quality gates. It does not build NSIS, publish a release, or operate real Steam automatically. Existing `just` commands remain available. These Windows entry points use PowerShell directly, without Bash cleanup scripts.
 
 For individual tool commands:
 
 ```powershell
-mise.exe exec -- dotnet --version
-mise.exe exec -- cargo test --locked -p steamwrapper-runner
+dotnet --version
+cargo test --locked -p steamwrapper-runner
 ```
 
-The local PowerShell `mise` activation function consumes the bare `--` separator in `exec` calls, so use `mise.exe` for these individual commands. `mise run ...` is unaffected. The user's PowerShell profile was not changed to work around this.
+If you use mise for one-off commands on Windows, use `mise.exe exec -- dotnet --version` (and the equivalent Cargo command). The local PowerShell activation function was observed to consume the bare `--` separator; `mise run ...` is unaffected. Direct commands above avoid that wrapper, and the user's PowerShell profile was not changed.
 
 <a id="共享数据路径与真实-steam-验收"></a>
 
@@ -127,7 +138,7 @@ With user authorization, follow the ordinary player launch path for live accepta
 3. Configure the profile and install the stable Runner in that Manager. Confirm no shared-location warning. Paste the existing-format launch options into Steam, close Manager, and launch the selected game from Steam. Record Runner/game processes, the title screen, Steam status after exit, and displayed playtime separately.
 4. Restore the original launch options and recheck game files and original saves. Steam returning to “Play” or reporting an up-to-date cloud state does not replace file-integrity verification.
 
-Daily development continues to use the mise and sandbox commands above. One live game acceptance through normal Explorer on this machine does not establish clean Windows VM, installer, update or uninstall acceptance.
+Daily development continues to use the direct scripts and sandbox commands above, or their optional mise aliases. One live game acceptance through normal Explorer on this machine does not establish clean Windows VM, installer, update or uninstall acceptance.
 
 <a id="winui-验证的边界"></a>
 

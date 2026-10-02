@@ -13,7 +13,7 @@ $output = Join-Path $repoRoot ('target/toolchain-smoke/' + [Guid]::NewGuid().ToS
     --dotnet-version net10.0 --target-platform-min-version 10.0.26100.0 `
     --UseLatestWindowsAppSDK false --windowsAppSdkVersion 2.4.0 `
     --windowsSdkBuildToolsVersion 10.0.26100.7705 --windowsSdkBuildToolsWinAppVersion 0.3.1
-if ($LASTEXITCODE -ne 0) { throw 'WinUI template generation failed. Run mise run windows:templates first.' }
+if ($LASTEXITCODE -ne 0) { throw 'WinUI template generation failed. Run pwsh -NoProfile -File scripts/windows/Install-WinUITemplates.ps1 (or mise run windows:templates).' }
 $project = Join-Path $output 'SteamWrapper.ToolchainSmoke.csproj'
 if (-not (Test-Path -LiteralPath $project)) { throw "WinUI template did not create the expected project: $project" }
 

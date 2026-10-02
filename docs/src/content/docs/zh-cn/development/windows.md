@@ -1,59 +1,70 @@
 ---
-title: "Windows 开发环境（mise）"
-description: "通过 mise 准备 Windows 工具链，查阅构建命令和验证证据。"
+title: "Windows 开发环境"
+description: "准备 Windows SDK 和工具，直接运行构建，并查阅验证证据。"
 ---
 
 <a id="windows-开发环境mise"></a>
 
-使用仓库根的 `mise.toml` 管理项目工具，`global.json` 固定 .NET SDK 选择，`.vsconfig` 声明 MSVC/Windows SDK 组件。WinUI Manager 位于 `apps/manager-winui`；现有 Dioxus 工具链保留供迁移基线验证。独立模板 smoke 继续保留在忽略的 `target/toolchain-smoke/` 下用于环境诊断。
+按自己的方式安装开发工具。**mise 是可选项**，不是贡献或构建的前提。`global.json` 选择 .NET SDK；项目清单及锁文件定义依赖，根 `package.json` 选择 pnpm，`.vsconfig` 声明 MSVC/Windows SDK 组件。可选的 `mise.toml` / `mise.lock` 记录便利的本地工具组合及同一脚本的快捷入口。WinUI Manager 位于 `apps/manager-winui`；现有 Dioxus 工具链保留供迁移基线验证。独立模板 smoke 继续保留在忽略的 `target/toolchain-smoke/` 下用于环境诊断。
 
 ## 版本与管理范围
 
-| 工具 | 固定版本 | 管理方式 |
+| 工具 | 当前版本或组件 | 要求／来源 |
 | --- | --- | --- |
-| .NET SDK | 10.0.400 | mise core；global.json 禁止 SDK roll-forward |
-| Rust | 1.98.1，rustfmt/clippy | mise 调用现有 rustup，Windows 使用 MSVC host |
-| PowerShell | 7.6.5 | mise；任务不依赖 Codex 私有运行时路径 |
-| Node / pnpm | 24.18.0 / 11.10.0 | mise；与现有 CI / packageManager 保持一致，用于 Dioxus E2E 和品牌资源生成/检查 |
-| Dioxus CLI / just | 0.7.10 / 1.58.0 | mise；Dioxus 官方 GitHub 二进制 |
-| WinUI CLI 模板 | 0.0.6-alpha | `windows:templates` 安装官方 NuGet 模板；这是模板的预览版本 |
+| .NET SDK | 10.0.400 | `global.json` 要求该版本，并禁止 SDK roll-forward |
+| Rust | 1.98.1，rustfmt/clippy | 可选 mise 配置中的本地参考工具链；Windows 构建需要 MSVC host；crate 清单和 `Cargo.lock` 定义 Rust 依赖 |
+| PowerShell | 本地参考版本 7.6.5 | 脚本要求 PATH 中存在 PowerShell 7（`pwsh`），不依赖 Codex 私有运行时 |
+| Node / pnpm | 本地参考版本 24.18.0 / 11.10.0 | pnpm 版本由根 `packageManager` 声明；用于 Dioxus E2E、品牌工具和文档，单独发布 WinUI 不需要 |
+| Dioxus CLI / just | 0.7.10 / 本地参考版本 1.58.0 | 分别用于 Dioxus 流程／可选命令配方；单独发布 WinUI 均不需要 |
+| WinUI CLI 模板 | 0.0.6-alpha | `Install-WinUITemplates.ps1` 固定官方预览模板，仅用于独立 smoke 测试 |
 | WinUI smoke 依赖 | Windows App SDK 2.4.0、SDK.BuildTools 10.0.26100.7705、WinApp 0.3.1 | 验证脚本固定直接包引用，独立于机器级 Windows SDK |
 | WinUI Manager 组件 | WindowsAppSDK.WinUI 2.3.6、InteractiveExperiences 2.1.6、SDK.BuildTools 10.0.26100.7705 | 对应 Windows App SDK 2.4.0 组件集；NuGet 锁定全部传递依赖 |
-| MSVC / Windows SDK | VC.Tools.x86.x64 / Windows11SDK.26100 | `windows:setup` 调用 Microsoft 官方安装器；属于系统组件 |
+| MSVC / Windows SDK | VC.Tools.x86.x64 / Windows11SDK.26100 | 由 `.vsconfig` 声明；`Install-BuildTools.ps1` 调用 Microsoft 官方安装器安装系统组件 |
 
-`mise.lock` 记录 Windows x64 可提供的下载地址/摘要；core .NET/Rust 仍委托官方安装脚本/rustup，锁文件不代表它们的完整离线镜像。MSVC bootstrapper 固定为核验过的 18.9.1 URL/SHA-256，实际组件按 Microsoft 通道解析，并非所有组件都可由 mise 隔离或逐字节锁定。
+选择 mise 时，`mise.lock` 记录 Windows x64 可提供的下载地址/摘要；core .NET/Rust 仍委托官方安装脚本/rustup，锁文件不代表它们的完整离线镜像。MSVC bootstrapper 固定为核验过的 18.9.1 URL/SHA-256，实际组件按 Microsoft 通道解析，并非所有组件都可由 mise 隔离或逐字节锁定。
 
-.NET core backend 使用共享 SDK 根目录，单独固定 mise 版本不能替代 .NET 的 SDK resolver，因此同时提供一致的 `global.json`。[mise .NET 管理](https://mise.jdx.dev/lang/dotnet.html)、[Rust 管理](https://mise.jdx.dev/lang/rust.html)
+使用 mise 时，其 .NET core backend 使用共享 SDK 根目录，单独固定工具版本不能替代 .NET 的 SDK resolver，SDK 选择仍以 `global.json` 为准。[mise .NET 管理](https://mise.jdx.dev/lang/dotnet.html)、[Rust 管理](https://mise.jdx.dev/lang/rust.html)
 
 ## 首次准备
 
-在仓库根目录的 Windows 终端执行：
+仅构建 WinUI 时，用常用安装器或包管理器安装 PowerShell 7、`global.json` 指定的 .NET SDK，以及使用 MSVC host 的 Rust。确保 PATH 中有 `pwsh`、`dotnet` 和 `cargo`，然后在仓库根目录执行：
 
 ```powershell
-mise trust
-mise install
-mise run windows:setup
-mise run windows:templates
-mise run windows:doctor
-mise run windows:winui-smoke
+pwsh -NoProfile -File scripts/windows/Install-BuildTools.ps1
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build
 ```
 
-`mise trust` 只信任已审阅的当前仓库配置；`mise install` 安装项目声明的工具。系统组件安装任务会验证 bootstrapper 的 SHA-256 和 Microsoft 签名，按 `.vsconfig` 安装编译器/SDK及其必需依赖；已有完整组件时直接返回。无需安装完整 Visual Studio IDE。[Microsoft MSVC 组件安装](https://learn.microsoft.com/en-us/cpp/overview/acquire-msvc?view=msvc-170)
+这两条命令不要求 Node、pnpm、Dioxus CLI、just 或 alpha WinUI 模板；仅在相关流程需要时安装。完整环境诊断除 .NET/Rust 外还会检查 Node、pnpm 和 Dioxus CLI，因此执行前应准备完整工具组合：
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor
+```
+
+如需独立模板 smoke 测试：
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Install-WinUITemplates.ps1
+pwsh -NoProfile -File scripts/windows/Test-WinUIBuild.ps1
+```
+
+如果偏好 mise，可先审阅配置，再运行 `mise trust`、`mise install`，随后使用已有的 `mise run windows:*` 和 `mise run winui:*` 别名。这些只是可选快捷入口，不是另一套构建流程。
+
+系统组件安装脚本会验证 bootstrapper 的 SHA-256 和 Microsoft 签名，按 `.vsconfig` 安装编译器/SDK及其必需依赖；已有完整组件时直接返回。无需安装完整 Visual Studio IDE。[Microsoft MSVC 组件安装](https://learn.microsoft.com/en-us/cpp/overview/acquire-msvc?view=msvc-170)
 
 Microsoft 安装需要正常 UAC 权限。脚本使用 `--norestart`，不会自动重启；若退出码为 3010，会明确报告安装完成但需要重启，不能当成未安装，也不能宣称重启已完成。[官方安装参数](https://learn.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio?view=visualstudio)
 
-`windows:doctor` 用 vswhere 查找所需组件，再加载官方 Developer PowerShell；不会永久改写系统 PATH，也不会输出全量环境变量。`pwsh` 由 mise 提供，不依赖 Windows PowerShell 5.1 或 Codex 的 PATH 注入。[Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=visualstudio)
+`Invoke-Build.ps1 -Action Doctor` 用 vswhere 查找所需组件，再加载官方 Developer PowerShell；不会永久改写系统 PATH，也不会输出全量环境变量。按自己的方式安装 PowerShell 7；脚本不依赖 Windows PowerShell 5.1 或 Codex 的 PATH 注入。[Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=visualstudio)
 
 ## 日常命令
 
 WinUI 实现入口：
 
 ```powershell
-mise run winui:test       # 配置安全、本地 Steam、Runner 安装及界面语言服务回归
-mise run winui:contracts  # C# / Rust 往返、真实 Runner 受控父子进程验证
-mise run winui:build      # Release XAML 编译，stage 当前 Rust Runner
-mise run winui:publish    # target/winui/publish 自包含目录，含原生资源索引
-mise run winui:sandbox    # 发布并打开一次性 Steam/用户目录中的原生预览
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test     # 配置安全、本地 Steam、Runner 安装及界面语言服务回归
+pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1          # C# / Rust 往返、真实 Runner 受控父子进程验证
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build    # Release XAML 编译，stage 当前 Rust Runner
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish  # target/winui/publish 自包含目录，含原生资源索引
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox  # 发布并打开一次性 Steam/用户目录中的原生预览
 ```
 
 NuGet 依赖由各项目 `packages.lock.json` 固定，日常命令使用 locked restore。服务项目显式列出 win-x64 runtime identifier，避免测试与 UI 发布轮换时造成锁文件漂移。更新依赖时才使用 `--force-evaluate` 并审查锁文件差异。
@@ -62,14 +73,14 @@ Manager 已从 Windows App SDK 2.4.0 总包改为上述组件包，保留原组�
 
 Manager 使用 Windows App SDK 的 [原生 picker API](https://learn.microsoft.com/en-us/windows/apps/develop/files/using-file-folder-pickers)。项目直接维护，不依赖 alpha 模板安装；`EnableMsixTooling` 用于生成应用 PRI 资源索引，`WindowsPackageType=None` 并关闭包生成/签名，因此不会注册 MSIX 调试身份。发布检查包含 Manager PRI、.NET、WinUI 和 Runner；只有编译成功不足以证明 XAML 能在启动时加载。
 
-`winui:publish` 先写入 `target/winui/publish-staging-<id>` 的全新目录，验证 Manager 程序/程序集、PRI、.NET、WinUI、picker 投影、Runner 与清单，再替换 `target/winui/publish`。目录操作限于本仓库 `target/winui`，拒绝重解析路径，发布锁串行处理替换；正在运行的该目录预览会阻止替换。校验失败保留旧版，普通替换失败恢复旧目录；恢复或清理受阻时会报告保留位置。目录重命名不构成断电事务，失败候选保留用于排查。
+`Invoke-WinUI.ps1 -Action Publish` 先写入 `target/winui/publish-staging-<id>` 的全新目录，验证 Manager 程序/程序集、PRI、.NET、WinUI、picker 投影、Runner 与清单，再替换 `target/winui/publish`。目录操作限于本仓库 `target/winui`，拒绝重解析路径，发布锁串行处理替换；正在运行的该目录预览会阻止替换。校验失败保留旧版，普通替换失败恢复旧目录；恢复或清理受阻时会报告保留位置。目录重命名不构成断电事务，失败候选保留用于排查。
 
 发布回归直接运行真实发布命令，再用隔离目录验证错误恢复，无需额外测试框架：
 
 ```powershell
-mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
+pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
 # 只检查目录替换/失败恢复，不重新构建：
-mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
+pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
 ```
 
 完整命令包含 5 项检查：旧哨兵文件不残留、缺失资源保留旧版、锁住候选时回滚、成功替换只含新文件、越界路径拒绝。测试文件均在 `target/winui` 中；运行前关闭发布目录中的预览。
@@ -80,27 +91,27 @@ mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -Sk
 
 WinUI 的中性英文资源和简体中文卫星资源位于 `SteamWrapper.Application/Localization`。查找资源时显式指定 .NET culture，不依赖系统显示语言，也不修改进程的全局 culture。检查发布目录时，除原有原生资源外还应确认 `zh-CN/SteamWrapper.Application.resources.dll` 存在。[ResourceManager 指定语言查找](https://learn.microsoft.com/en-us/dotnet/fundamentals/runtime-libraries/system-resources-resourcemanager-getstring)
 
-品牌资源由 `assets/brand/steamwrapper.svg` 统一生成。修改该源文件后运行 `mise run brand:generate`，再用 `mise run brand:check` 检查 SVG、PNG、ICO 及随包副本是否一致；不要分别手工修改导出图标。
+品牌资源由 `assets/brand/steamwrapper.svg` 统一生成。修改该源文件后运行 `pnpm brand:generate`，再用 `pnpm brand:check` 检查 SVG、PNG、ICO 及随包副本是否一致；不要分别手工修改导出图标。
 
 旧实现与环境诊断入口：
 
 ```powershell
-mise run windows:doctor       # 工具版本、link/cl 和 SDK 路径
-mise run windows:rust-test    # 当前 Rust workspace 测试
-mise run windows:verify       # Rust / Dioxus 构建与隔离 Native E2E，遇错即停
-mise run windows:winui-smoke  # 独立 XAML 项目的自包含目录发布验证
+pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor    # 工具版本、link/cl 和 SDK 路径
+pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action RustTest  # 当前 Rust workspace 测试
+pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify    # Rust / Dioxus 构建与隔离 Native E2E，遇错即停
+pwsh -NoProfile -File scripts/windows/Test-WinUIBuild.ps1               # 独立 XAML 项目的自包含目录发布验证
 ```
 
-`windows:verify` 会安装冻结的 pnpm 依赖、stage 随包 Runner，并运行现有质量门禁。它不打 NSIS、不发布版本，也不自动操作真实 Steam。现有 `just` 命令仍可用；Windows 的上述入口直接使用 PowerShell，不执行 Bash 清理脚本。
+`Invoke-Build.ps1 -Action Verify` 会安装冻结的 pnpm 依赖、stage 随包 Runner，并运行现有质量门禁。它不打 NSIS、不发布版本，也不自动操作真实 Steam。现有 `just` 命令仍可用；Windows 的上述入口直接使用 PowerShell，不执行 Bash 清理脚本。
 
 一次性工具调用可用：
 
 ```powershell
-mise.exe exec -- dotnet --version
-mise.exe exec -- cargo test --locked -p steamwrapper-runner
+dotnet --version
+cargo test --locked -p steamwrapper-runner
 ```
 
-本机 PowerShell 的 `mise` 激活函数会吞掉 `exec` 的裸 `--` 分隔符，因此一次性调用使用 `mise.exe`；`mise run ...` 不受此问题影响。没有为此修改用户 PowerShell 配置。
+如果在 Windows 上使用 mise 进行一次性调用，可执行 `mise.exe exec -- dotnet --version`（Cargo 命令同理）。本机曾观察到 PowerShell 激活函数会吞掉 `exec` 的裸 `--` 分隔符；`mise run ...` 不受影响。上面的直接命令不经过该包装，也没有为此修改用户 PowerShell 配置。
 
 ## 共享数据路径与真实 Steam 验收
 
@@ -115,7 +126,7 @@ Manager 和 Steam 启动的 Runner 必须看到同一份 `%LOCALAPPDATA%\SteamWr
 3. 在该 Manager 中完成配置与稳定 Runner 安装，确认没有共享位置警告。复制既有格式的启动项到 Steam，关闭 Manager，再从 Steam 启动所选游戏；分别记录 Runner/游戏进程、标题界面、退出后 Steam 状态与显示时长。
 4. 测试结束恢复原启动项，复查游戏文件与原存档。UI 回到“开始”或云显示最新，不能代替文件完整性核对。
 
-日常开发仍使用上面的 mise 与沙盒命令。通过本机普通 Explorer 的一次真实游戏验收，不等于干净 Windows VM、安装器、覆盖更新或卸载验收。
+日常开发使用上面的直接脚本和沙盒命令，或它们的可选 mise 别名。通过本机普通 Explorer 的一次真实游戏验收，不等于干净 Windows VM、安装器、覆盖更新或卸载验收。
 
 ## WinUI 验证的边界
 

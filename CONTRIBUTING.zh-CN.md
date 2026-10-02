@@ -16,25 +16,25 @@ SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成
 
 v2 的拉取请求应以 `v2` 为目标分支。GitHub 默认分支目前是 `main`，创建 PR 时请明确检查 base。不要将 `main` 上的旧版实现混入 v2 改动。
 
-使用仓库的 `mise.toml` 和 `mise.lock` 管理开发工具，保持 .NET 版本与 `global.json` 一致。官方 MSVC/SDK 前置条件及 mise 命令见 [Windows 开发环境](https://yangyus8.top/SteamWrapper/zh-cn/development/windows/)。WinUI 改动先执行：
+按自己的方式安装改动所需工具。mise 是可选项，其配置用于便利的本地工具准备。SDK 和依赖要求以 `global.json`、项目清单及锁文件、`package.json` 和 `.vsconfig` 为准；修改这些要求时保持可选的 mise 版本一致。官方 MSVC/SDK 前置条件及直接命令见 [Windows 开发环境](https://yangyus8.top/SteamWrapper/zh-cn/development/windows/)。WinUI 改动先执行：
 
 ```powershell
-mise run winui:test
-mise run winui:contracts
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
+pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
 ```
 
 根据[测试文档](https://yangyus8.top/SteamWrapper/zh-cn/development/testing/)选择其他检查。纯文档改动需要翻译及链接复核，不必人为执行全量构建。现有 CI 和发布门禁仍适用，不应削弱检查来掩盖失败。请准确区分通过、失败、受阻和未运行。
 
 ## 实现边界
 
-文档站改动须运行 `mise run docs:check` 和 `mise run docs:build`，在生产预览中检查两种语言的搜索与导航。完整流程见[文档维护指南](https://yangyus8.top/SteamWrapper/zh-cn/development/documentation/)；纯文字编辑无需构建桌面应用。
+文档站改动须运行 `pnpm docs:check` 和 `pnpm docs:build`，在生产预览中检查两种语言的搜索与导航。完整流程见[文档维护指南](https://yangyus8.top/SteamWrapper/zh-cn/development/documentation/)；纯文字编辑无需构建桌面应用。
 
 - Manager 负责配置；Steam 启动独立无界面 Runner，正常游戏启动不得显示 Manager。
 - 保持 TOML 兼容性、稳定数据路径、Runner CLI 含义及 `"<stable-runner-path>" --appid "<appid>" -- %command%`。
 - 保留未编辑和未知配置字段，不要把保留语法的编辑替换为全模型序列化。
 - 进程生命周期行为及真实进程测试应放在 Runner／平台代码中。
 - 默认界面和文档使用英语，维护完整简体中文对应版本。含义变化时同时更新语言资源和文档对；标识符、协议字段、命令和原始证据保持准确。
-- 保持统一 SVG／PNG／ICO 资源与 Dioxus 副本一致。修改源 SVG 后执行 `mise run brand:generate` 和 `mise run brand:check`。pnpm／`@resvg/resvg-js` 仅是开发期资源工具，不是应用运行时依赖。使用原创图形并尊重第三方商标。
+- 保持统一 SVG／PNG／ICO 资源与 Dioxus 副本一致。修改源 SVG 后执行 `pnpm brand:generate` 和 `pnpm brand:check`。pnpm／`@resvg/resvg-js` 仅是开发期资源工具，不是应用运行时依赖。使用原创图形并尊重第三方商标。
 
 ## 保护玩家数据
 

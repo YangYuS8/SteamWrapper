@@ -19,7 +19,7 @@ SteamWrapper v2 按行为、服务、UI 与安装包分层验证。WinUI 预览�
 | core / manager-core 行为 | 先写能复现缺失行为的测试并观察预期失败，再修改实现；运行受影响 crate 测试；共享契约或跨 crate 影响时运行 workspace 检查和测试 |
 | Runner 启动 / 等待 | 对应平台的真实进程回归测试；CLI / TOML / 公共模块变化再扩展到 workspace |
 | Dioxus 交互 / service 接线 | 相关 Rust 测试、`dx check` / 构建，以及覆盖该行为的隔离 Native E2E |
-| WinUI / C# 服务 | `mise run winui:test`；配置协议或 Runner 分发变化增加 `winui:contracts`；UI 变化使用 `winui:publish` 与隔离原生交互 |
+| WinUI / C# 服务 | `Invoke-WinUI.ps1 -Action Test`；配置协议或 Runner 分发变化增加 `Test-WinUIContracts.ps1`；UI 变化使用 `Invoke-WinUI.ps1 -Action Publish` 与隔离原生交互（完整命令见下文） |
 | 纯视觉调整 | 构建并在隔离 Desktop 预览中检查受影响界面；按影响选择现有测试，不用固定 CSS 字符串代替视觉验收 |
 | E2E 工具或依赖 | frozen lockfile 安装、TypeScript 检查、受影响 Native E2E |
 | 打包 / 发布 / 工具链或共享构建变化 | 完整质量门禁、当前平台 release Runner staging、实际安装包解包检查 |
@@ -33,13 +33,13 @@ CI / release 工作流仍执行各自完整门禁。上表限定日常本地工�
 先验证 C# 配置服务与 Rust Runner 的既有文件协议，再证明 UI 和安装器。已有入口：
 
 ```powershell
-mise run winui:test
-mise run winui:contracts
-mise run winui:publish
-mise run winui:sandbox
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
+pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
-`winui:test` 包含配置保真/冲突/替换失败、本地 Steam、稳定 Runner 安装与共享文件位置测试。`winui:contracts` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](https://github.com/YangYuS8/SteamWrapper/blob/v2/tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
+`Test` 动作包含配置保真/冲突/替换失败、本地 Steam、稳定 Runner 安装与共享文件位置测试。`Test-WinUIContracts.ps1` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](https://github.com/YangYuS8/SteamWrapper/blob/v2/tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
 
 目录分离新增 AppID 关联、库外运行路径保留和真实双库安装冲突回归，该实现轮 C# 共 49/49 通过。原生隔离保存、重新扫描和歧义新建配置也已验证；详见 [目录分离验证记录](/SteamWrapper/zh-cn/guides/translated-games/)。这些隔离结果本身不代表真实汉化迁移或成就触发通过。
 
@@ -64,7 +64,7 @@ mise run winui:sandbox
 
 常规自动化使用隔离 Steam/用户数据。真实 Steam 验收须有用户明确授权；本次用户已授权不损坏游戏文件的 galgame 测试。原启动项、文件完整性与存档保护需单独记录，未解决的云同步冲突不能由测试流程自动选择覆盖。真实用户数据、完整 Steam 配置和本机测试备份不进入提交或 CI 产物。具体配置边界见 [主方案](/SteamWrapper/zh-cn/project/design/windows-v2/#4-配置保真是第一个门槛)。
 
-真实验收中的 Manager 应从正常 Windows 资源管理器打开完整发布目录中的 `SteamWrapper.Manager.exe`，完成配置与稳定 Runner 安装后关闭，再由 Steam 启动游戏。本机 Codex 进程环境曾把字面上的 AppData 路径映射到包的 `LocalCache`；shell 或 Manager 没有 package identity，并不能排除此重定向。最终文件句柄路径才揭示两种视图不同。具体步骤见 [共享数据路径与真实 Steam 验收](/SteamWrapper/zh-cn/development/windows/#共享数据路径与真实-steam-验收)，常规 mise/sandbox 流程保持。
+真实验收中的 Manager 应从正常 Windows 资源管理器打开完整发布目录中的 `SteamWrapper.Manager.exe`，完成配置与稳定 Runner 安装后关闭，再由 Steam 启动游戏。本机 Codex 进程环境曾把字面上的 AppData 路径映射到包的 `LocalCache`；shell 或 Manager 没有 package identity，并不能排除此重定向。最终文件句柄路径才揭示两种视图不同。具体步骤见 [共享数据路径与真实 Steam 验收](/SteamWrapper/zh-cn/development/windows/#共享数据路径与真实-steam-验收)，常规自动化继续使用隔离沙盒，mise 别名是可选项。
 
 2026-09-07 的实际记录：`The NOexistenceN of you AND me`（AppID 2873080）在 12:46:03 形成 `Steam 4268 → Runner 4624 → 游戏 19752 → Unity 12996`，从标题界面正常退出后，Steam 在 12:53:33 记录三个子进程全部 exit 0；UI 回到“开始”、云显示最新，显示时长 11.2 → 11.4 小时，启动项已恢复为空。正常 Explorer 启动同一 Manager、在真实稳定目录配置安装后，原命令格式即成功，无需改动引号或斜杠规则。最终独立核对确认 35/35 个游戏文件及 4/4 份原存档 SHA-256 与初始基线一致，存档句柄路径未被重定向。此结果限于本机该款游戏，不扩大为其他游戏、干净 VM 或安装器通过。
 
@@ -86,7 +86,7 @@ mise run winui:sandbox
 
 ## 本地命令
 
-Windows 环境由 mise 管理，使用 `mise run windows:doctor` 检查、`mise run windows:verify` 执行现有质量门禁。安装与 WinUI 编译验证见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。以下 `just`/底层命令保留为现有流程；WinUI smoke 不替代应用或 Steam 验收。
+按自己的方式安装 Windows 工具；mise 是可选项。使用 `pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Doctor` 检查完整工具组合，使用 `pwsh -NoProfile -File scripts/windows/Invoke-Build.ps1 -Action Verify` 执行现有质量门禁。安装与 WinUI 编译验证见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。以下 `just`/底层命令保留为现有流程；WinUI smoke 不替代应用或 Steam 验收。
 
 优先使用根目录 `justfile`：
 

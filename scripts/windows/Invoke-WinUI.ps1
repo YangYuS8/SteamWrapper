@@ -23,7 +23,7 @@ if ($Action -eq 'Test') {
 }
 
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
-if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Run mise run windows:setup first.' }
+if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Install Build Tools first: pwsh -NoProfile -File scripts/windows/Install-BuildTools.ps1 (or mise run windows:setup).' }
 $components = (Get-Content -LiteralPath (Join-Path $repoRoot '.vsconfig') -Raw | ConvertFrom-Json).components
 $installation = & $vswhere -latest -products '*' -requires $components -property installationPath
 if ($LASTEXITCODE -ne 0 -or -not $installation) { throw 'Required MSVC/SDK components are missing.' }

@@ -32,17 +32,14 @@ If Windows reports a download or security problem, stop and confirm the package'
 
 This is the source-development option, not runtime preparation required from everyone using a downloaded preview.
 
-Use a Windows checkout of branch `v2` with [mise](https://mise.jdx.dev/) installed. From PowerShell at the repository root:
+Use a Windows checkout of branch `v2`. Install PowerShell 7, the .NET SDK selected by `global.json`, and Rust with an MSVC host using your preferred method. Make `pwsh`, `dotnet` and `cargo` available on PATH; mise is optional. From the repository root:
 
 ```powershell
-mise trust
-mise install
-mise run windows:setup
-mise run windows:doctor
-mise run winui:publish
+pwsh -NoProfile -File scripts/windows/Install-BuildTools.ps1
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 ```
 
-Review the repository configuration before trusting it. The setup task uses Microsoft's installer for the declared MSVC/Windows SDK components and may request UAC permission. If it reports that a restart is required, complete that restart before relying on the environment.
+The setup script uses Microsoft's installer for the declared MSVC/Windows SDK components and may request UAC permission. If it reports that a restart is required, complete that restart before relying on the environment.
 
 The published directory is:
 
@@ -55,12 +52,12 @@ Open that full directory in File Explorer and run Manager from there. The source
 For a disposable configuration preview that does not use your real Steam/user data, use:
 
 ```powershell
-mise run winui:sandbox
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
 The sandbox contains example manifests and isolated user directories. It does not contain your real library or a playable game; profiles created there are not real Steam setup.
 
-The exact commands and tool pins are maintained in [mise.toml](https://github.com/YangYuS8/SteamWrapper/blob/v2/mise.toml) and the [Windows build script](https://github.com/YangYuS8/SteamWrapper/blob/v2/scripts/windows/Invoke-WinUI.ps1).
+See [Windows development](/SteamWrapper/development/windows/) for authoritative manifests, optional mise aliases and the complete tool list. The [Windows build script](https://github.com/YangYuS8/SteamWrapper/blob/v2/scripts/windows/Invoke-WinUI.ps1) implements the direct commands. A WinUI-only publish does not require Node, pnpm, Dioxus CLI or just.
 
 ## Where Manager and Runner keep data
 

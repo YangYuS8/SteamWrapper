@@ -32,17 +32,14 @@ WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览�
 
 这是从源码开发和生成产物的方式，不是每位下载预览版的玩家都需要进行的运行环境准备。
 
-准备 Windows 上的 `v2` 分支工作副本，并安装 [mise](https://mise.jdx.dev/)。在仓库根目录的 PowerShell 中执行：
+准备 Windows 上的 `v2` 分支工作副本。按自己的方式安装 PowerShell 7、`global.json` 指定的 .NET SDK，以及使用 MSVC host 的 Rust。确保 PATH 中有 `pwsh`、`dotnet` 和 `cargo`；mise 是可选项。在仓库根目录执行：
 
 ```powershell
-mise trust
-mise install
-mise run windows:setup
-mise run windows:doctor
-mise run winui:publish
+pwsh -NoProfile -File scripts/windows/Install-BuildTools.ps1
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 ```
 
-信任前先审阅仓库配置。系统准备任务会通过 Microsoft 安装器安装声明的 MSVC/Windows SDK 组件，可能请求 UAC 权限。如果提示需要重启，请先完成重启，再依赖该环境进行后续操作。
+系统准备脚本会通过 Microsoft 安装器安装声明的 MSVC/Windows SDK 组件，可能请求 UAC 权限。如果提示需要重启，请先完成重启，再依赖该环境进行后续操作。
 
 发布目录为：
 
@@ -55,12 +52,12 @@ target\winui\publish\
 如果只想预览配置界面，不使用真实 Steam 或用户数据，可以运行：
 
 ```powershell
-mise run winui:sandbox
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
 沙盒包含示例 manifest 和隔离的用户目录，没有你的真实游戏库，也没有可玩的游戏。沙盒中创建的配置不是实际 Steam 配置。
 
-准确的命令和工具版本由 [mise.toml](https://github.com/YangYuS8/SteamWrapper/blob/v2/mise.toml)及 [Windows 构建脚本](https://github.com/YangYuS8/SteamWrapper/blob/v2/scripts/windows/Invoke-WinUI.ps1)维护。
+版本要求的实际清单、可选 mise 别名和完整工具列表见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。[Windows 构建脚本](https://github.com/YangYuS8/SteamWrapper/blob/v2/scripts/windows/Invoke-WinUI.ps1)实现上述直接命令。单独发布 WinUI 不要求 Node、pnpm、Dioxus CLI 或 just。
 
 ## Manager 与 Runner 的数据位置
 

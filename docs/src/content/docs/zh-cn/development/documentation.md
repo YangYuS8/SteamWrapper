@@ -7,12 +7,11 @@ description: "开发、翻译、检查和部署 SteamWrapper 双语文档站。"
 
 ## 本地准备与预览
 
-在仓库根目录执行下面的命令。mise 会读取项目配置中固定的 Node 和 pnpm 版本：
+按自己的方式安装 Node 24.18.0（已验证的参考版本）与根 `package.json` 声明的 pnpm 版本，再在仓库根目录执行下面的命令。站点依赖以工作区清单和锁文件为准。mise 是可选项，其配置记录了本地 Node/pnpm 工具版本：
 
 ```sh
-mise install node pnpm
-mise exec -c "pnpm install --frozen-lockfile"
-mise run docs:dev
+pnpm install --frozen-lockfile
+pnpm docs:dev
 ```
 
 打开 Astro 输出的本地地址；英语入口为 `/SteamWrapper/`，简体中文入口为 `/SteamWrapper/zh-cn/`。开发服务器会重新加载内容改动。依赖保存在共用锁文件中；有意更新文档工具链时，应同时更新版本固定值和锁文件。
@@ -20,9 +19,9 @@ mise run docs:dev
 提交文档改动前执行：
 
 ```sh
-mise run docs:check
-mise run docs:build
-mise run docs:preview
+pnpm docs:check
+pnpm docs:build
+pnpm docs:preview
 ```
 
 | 命令 | 用途 |

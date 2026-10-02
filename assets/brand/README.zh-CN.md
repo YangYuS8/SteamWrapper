@@ -10,11 +10,11 @@ SteamWrapper 原创图标以 Rust 风格的铜橙色齿轮、让人联想到 Ste
 Dioxus 中的副本须逐字节一致。ICO 包含分别从矢量渲染的 16、20、24、32、40、48、
 64、96、128 和 256 像素图像。透明背景适用于浅色和深色界面。
 
-使用仓库的 mise 工具，执行 `pnpm install --frozen-lockfile` 后：
+按自己的方式安装 Node 和根 `package.json` 声明的 pnpm 版本（mise 是可选项）。在仓库根目录执行 `pnpm install --frozen-lockfile` 后：
 
 ```sh
-mise run brand:generate
-mise run brand:check
+pnpm brand:generate
+pnpm brand:check
 ```
 
 本地预览可执行 `node scripts/generate-brand.mjs --preview`，输出位于忽略的

@@ -54,7 +54,7 @@ $principal = [Security.Principal.WindowsPrincipal]::new([Security.Principal.Wind
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { $parameters.Verb = 'RunAs' }
 $process = Start-Process @parameters
 if ($process.ExitCode -eq 3010) {
-    throw 'Build Tools installed but Windows requires a restart (3010). Restart manually, then rerun mise run windows:doctor.'
+    throw 'Build Tools installed but Windows requires a restart (3010). Restart manually, rerun pwsh -NoProfile -File scripts/windows/Install-BuildTools.ps1 (or mise run windows:setup) to confirm the components, then continue your build.'
 }
 if ($process.ExitCode -ne 0) { throw "Build Tools installer failed with exit code $($process.ExitCode)." }
 if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Installer finished, but vswhere is missing.' }

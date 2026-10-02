@@ -29,7 +29,7 @@ Default uninstall removes Manager only, retaining stable Runner, configuration, 
 
 ## Local WinUI preview directory
 
-`mise run winui:publish` generates the Windows 11 24H2 x64 preview in `target/winui/publish`. The complete directory includes Manager, .NET, Windows App SDK, brand resources, and `Runner/`. There is no single-EXE or installer promise. `winui:sandbox` launches the preview using disposable isolated directories; ordinarily running the EXE uses real `%LOCALAPPDATA%`.
+`pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish` generates the Windows 11 24H2 x64 preview in `target/winui/publish`. The complete directory includes Manager, .NET, Windows App SDK, brand resources, and `Runner/`. There is no single-EXE or installer promise. `pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox` launches the preview using disposable isolated directories; ordinarily running the EXE uses real `%LOCALAPPDATA%`.
 
 The build generates `runner-manifest.json` (schemaVersion 1 / contractVersion 2) from Runner's Cargo version and actual binary SHA-256. The C# installer accepts only hash-matching resources and installs atomically to stable `bin/`. It preserves newer compatible versions and rejects unknown versions or same-version/different-hash replacements. Hash-bound `runner-releases/` metadata supports recognition after an interrupted binary/sidecar commit. Hashes check consistency; they are not publisher signatures and do not establish package authentication.
 
@@ -47,7 +47,7 @@ Dioxus `0.7.10` packages Manager using `apps/manager-dioxus/Dioxus.toml`:
 
 Dioxus `asset_dir` handles Manager CSS/SVG and other UI assets only. Runner must be included explicitly in `[bundle].resources`. The current bundler does not support directories as resource entries, so two file paths are listed.
 
-Canonical brand assets are `assets/brand/steamwrapper.svg`, `.png`, and `.ico`, with matching Dioxus copies. After editing the original SVG, use `mise run brand:generate`; verify the checked-in outputs with `mise run brand:check`. pnpm and `@resvg/resvg-js` are development asset tooling, not application runtime dependencies. Preserve the asset checks during packaging.
+Canonical brand assets are `assets/brand/steamwrapper.svg`, `.png`, and `.ico`, with matching Dioxus copies. After editing the original SVG, use `pnpm brand:generate`; verify the checked-in outputs with `pnpm brand:check`. pnpm and `@resvg/resvg-js` are development asset tooling, not application runtime dependencies. Preserve the asset checks during packaging.
 
 On 2026-09-08, the final local Dioxus NSIS build produced `SteamWrapperManager_0.2.0_x64-setup.exe` at **5,167,920 bytes**, with English and Simplified Chinese (`English`, `SimpChinese`) installer resources. The installer and the actual packaged Manager PE each contained all 10 canonical icon sizes (16, 20, 24, 32, 40, 48, 64, 96, 128, and 256 pixels), with every frame's SHA-256 matching the canonical ICO. Inspection confirmed the WebView2 download bootstrapper, no offline runtime installer, and `silent = true` in the WebView installation configuration. Bundled Runner was **1,180,160 bytes**, with its SHA-256 matching the release Runner. The local records are `target/dioxus-nsis-i18n-verified-20260908T095032Z/inspection.json` and `bundle.log` in the same ignored directory. This was a build and package-content check: the installer was not run, and installation, runtime download, updates/uninstall, clean-system behavior, and WinUI delivery were not validated by it.
 

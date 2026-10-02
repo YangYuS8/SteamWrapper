@@ -30,25 +30,24 @@
 
 ## 本地开发
 
-请在 `v2` 上开发。使用固定版本的 [mise 工具](mise.toml)，按 Windows 环境指南安装 MSVC/SDK。WinUI 预览命令如下：
+请在 `v2` 上开发。按自己的方式安装改动所需工具；[mise](mise.toml) 是可选的便利工具，不是贡献者要求。SDK 版本与 MSVC/SDK 安装见 Windows 环境指南。在 PATH 中准备好 PowerShell 7、.NET 和 Rust 后，WinUI 预览命令如下：
 
 ```powershell
-mise run winui:test
-mise run winui:contracts
-mise run winui:publish
-mise run winui:sandbox
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
+pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
 发布目录为 `target/winui/publish`，请保持整个目录完整。沙盒使用一次性的 Steam／用户数据夹具。`just dev` 会读取真实本地数据；日常 Dioxus 预览应使用 `just dev-sandbox`。保留的 Dioxus 与各平台门禁见测试指南。
 
-仅维护文档时：
+仅维护文档时，按自己的方式安装 Node 24.18.0（已验证的参考版本）和 `package.json` 声明的 pnpm 版本，再执行：
 
 ```sh
-mise install node pnpm
-mise exec -c "pnpm install --frozen-lockfile"
-mise run docs:dev
-mise run docs:check
-mise run docs:build
+pnpm install --frozen-lockfile
+pnpm docs:dev
+pnpm docs:check
+pnpm docs:build
 ```
 
 Node/pnpm 用于开发和静态文档构建，不是桌面应用的运行要求。

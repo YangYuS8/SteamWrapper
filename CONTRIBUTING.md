@@ -16,25 +16,25 @@ Discuss changes to profile formats, Runner CLI behavior, supported platforms, pa
 
 Target `v2` for v2 pull requests. The repository's GitHub default branch is currently `main`, so check the pull request base explicitly. Do not mix the legacy implementation on `main` into a v2 change.
 
-Manage development tools through the checked-in `mise.toml` and `mise.lock`; keep the .NET pin aligned with `global.json`. Follow [Windows development](https://yangyus8.top/SteamWrapper/development/windows/) for the official MSVC/SDK prerequisites and mise commands. For WinUI changes, start with:
+Install the tools needed for your change using your preferred method. mise is optional; its configuration records a convenient local toolset. SDK and dependency requirements come from `global.json`, project manifests and lockfiles, `package.json`, and `.vsconfig`; keep optional mise pins aligned when those requirements change. Follow [Windows development](https://yangyus8.top/SteamWrapper/development/windows/) for official MSVC/SDK prerequisites and direct commands. For WinUI changes, start with:
 
 ```powershell
-mise run winui:test
-mise run winui:contracts
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
+pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
 ```
 
 Choose further checks from [testing](https://yangyus8.top/SteamWrapper/development/testing/). Documentation-only changes need translation and link review, not an artificial full build. Existing CI and release gates still apply; do not weaken a gate to hide a failure. Report passed, failed, blocked, and not-run checks accurately.
 
 ## Implementation boundaries
 
-For documentation-site changes, run `mise run docs:check` and `mise run docs:build`. Review both languages in the production preview, including search and navigation. See the [documentation workflow](https://yangyus8.top/SteamWrapper/development/documentation/); application builds are not required for prose-only edits.
+For documentation-site changes, run `pnpm docs:check` and `pnpm docs:build`. Review both languages in the production preview, including search and navigation. See the [documentation workflow](https://yangyus8.top/SteamWrapper/development/documentation/); application builds are not required for prose-only edits.
 
 - Manager configures profiles; Steam starts the independent, headless Runner. A normal game launch must not show Manager.
 - Preserve TOML compatibility, stable data paths, Runner CLI meaning, and `"<stable-runner-path>" --appid "<appid>" -- %command%`.
 - Preserve unedited and unknown configuration fields. Do not replace syntax-preserving edits with whole-model serialization.
 - Keep process lifecycle behavior and its real process tests in Runner/platform code.
 - Keep English as the default UI/documentation language and maintain complete Simplified Chinese counterparts. Update both language resources and document pairs when meaning changes; identifiers, protocol fields, commands, and literal evidence remain exact.
-- Keep the canonical SVG/PNG/ICO assets and their Dioxus copies consistent. After editing the source SVG, run `mise run brand:generate` and `mise run brand:check`. pnpm / `@resvg/resvg-js` are development asset tooling, not application runtime dependencies. Use original artwork and respect third-party trademarks.
+- Keep the canonical SVG/PNG/ICO assets and their Dioxus copies consistent. After editing the source SVG, run `pnpm brand:generate` and `pnpm brand:check`. pnpm / `@resvg/resvg-js` are development asset tooling, not application runtime dependencies. Use original artwork and respect third-party trademarks.
 
 ## Protect player data
 

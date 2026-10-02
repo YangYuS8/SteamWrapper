@@ -12,11 +12,11 @@ ICO are generated from it; the Dioxus copies must match byte for byte. The ICO
 contains independently rendered 16, 20, 24, 32, 40, 48, 64, 96, 128 and 256 px images.
 The transparent background works on light and dark surfaces.
 
-With the repository's mise tools and `pnpm install --frozen-lockfile`:
+Install Node and the pnpm version declared in the root `package.json` using your preferred method (mise is optional). From the repository root, run `pnpm install --frozen-lockfile`, then:
 
 ```sh
-mise run brand:generate
-mise run brand:check
+pnpm brand:generate
+pnpm brand:check
 ```
 
 For local previews, run `node scripts/generate-brand.mjs --preview`; outputs go to

@@ -1,6 +1,12 @@
 # Windows C# / Rust contract checks
 
-Run `mise run winui:contracts` on Windows with the pinned project toolchain. The
+On Windows, prepare the SDKs and tools in the [Windows development guide](https://yangyus8.top/SteamWrapper/development/windows/), then run:
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
+```
+
+mise is optional; `mise run winui:contracts` remains an alias for this script. The
 script creates a unique fixture directory under ignored `target/winui-contracts/`
 and prints its location. It never uses the real Steam or SteamWrapper data paths.
 

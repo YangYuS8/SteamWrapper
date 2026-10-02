@@ -21,7 +21,7 @@ WinUI 目标安装包同时携带 .NET 与 Windows App SDK，独立 Rust Runner 
 
 ## WinUI 本地预览目录
 
-`mise run winui:publish` 在 `target/winui/publish` 生成 Windows 11 24H2 x64 预览。整个目录包括 Manager、.NET、Windows App SDK、品牌资源与 `Runner/`；没有单 EXE 或安装器承诺。`winui:sandbox` 使用一次性隔离目录启动预览，普通运行 EXE 则使用真实 `%LOCALAPPDATA%`。
+`pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish` 在 `target/winui/publish` 生成 Windows 11 24H2 x64 预览。整个目录包括 Manager、.NET、Windows App SDK、品牌资源与 `Runner/`；没有单 EXE 或安装器承诺。`pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox` 使用一次性隔离目录启动预览，普通运行 EXE 则使用真实 `%LOCALAPPDATA%`。
 
 构建从 Runner Cargo 版本和实际二进制 SHA-256 生成 `runner-manifest.json`（schemaVersion 1 / contractVersion 2）。C# 安装器只接受摘要匹配的资源，原子安装到稳定 `bin/`；较新兼容版本保留，未知版本或同版本不同摘要拒绝覆盖。摘要绑定的 `runner-releases/` 元数据支持二进制/sidecar 提交中断后的识别。摘要用于一致性校验，不是发行者签名；不能据此宣称安装包已认证。
 
@@ -39,7 +39,7 @@ Manager 由 Dioxus `0.7.10` 打包，配置位于 `apps/manager-dioxus/Dioxus.to
 
 Dioxus `asset_dir` 仅解决 Manager CSS / SVG 等 UI 资产；Runner 必须由 `[bundle].resources` 明确包含。目录不被当前 bundler 支持为 resource entry，因此资源以两个文件路径列出。
 
-统一品牌资源为 `assets/brand/steamwrapper.svg`、`.png` 和 `.ico`，Dioxus 中保留匹配副本。修改原创 SVG 后执行 `mise run brand:generate`，用 `mise run brand:check` 验证已提交的输出。pnpm 和 `@resvg/resvg-js` 仅是开发期资源工具，不是应用运行时依赖；打包时保留资源检查。
+统一品牌资源为 `assets/brand/steamwrapper.svg`、`.png` 和 `.ico`，Dioxus 中保留匹配副本。修改原创 SVG 后执行 `pnpm brand:generate`，用 `pnpm brand:check` 验证已提交的输出。pnpm 和 `@resvg/resvg-js` 仅是开发期资源工具，不是应用运行时依赖；打包时保留资源检查。
 
 2026-09-08 的最终本机 Dioxus NSIS 构建生成 `SteamWrapperManager_0.2.0_x64-setup.exe`，大小为 **5,167,920 字节**，包含英语和简体中文（`English`、`SimpChinese`）安装器资源。安装器及实际随包 Manager PE 均包含统一图标的全部 10 个尺寸（16、20、24、32、40、48、64、96、128、256 像素），每一帧 SHA-256 均与统一 ICO 对应帧一致。检查确认包含 WebView2 下载引导程序，不包含离线运行时安装器，WebView 安装配置为 `silent = true`。随包 Runner 为 **1,180,160 字节**，SHA-256 与 release Runner 一致。本机记录为 `target/dioxus-nsis-i18n-verified-20260908T095032Z/inspection.json` 及同一忽略目录中的 `bundle.log`。这只是构建和包内容检查，没有运行安装器，不能证明安装、运行时下载、更新／卸载、干净系统行为或 WinUI 交付已通过。
 
