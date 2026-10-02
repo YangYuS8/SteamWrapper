@@ -5,7 +5,7 @@ description: "Build, try, repair and remove the unsigned per-user installer, wit
 
 ## Current boundary
 
-The Inno Setup installer and C# deployment component are implemented for **Windows 11 24H2 or newer, x64**, as an **unsigned preview**. They include the complete self-contained WinUI layout, both languages and the independent Runner. Normal branch CI tests and compiles source; it does not produce a setup executable. An explicit manual release-workflow run builds an installer preview. Public version tags still use the existing portable ZIP release contract until installer and signing acceptance pass.
+The Inno Setup installer and C# deployment component are implemented for **Windows 11 24H2 or newer, x64**, as an **unsigned preview**. They include the complete self-contained WinUI layout, both languages and the independent Runner. Normal branch CI tests and compiles source; it does not produce a setup executable. An explicit manual release-workflow run builds an installer preview. Public version tags currently use the existing portable ZIP release contract. The [execution queue](/SteamWrapper/project/roadmap/#execution-queue-2026-10-03) plans a public unsigned installer after delivery acceptance and an artifact-schema change, before Foundation application; production signing has its own later gate.
 
 This is not a signed or stable release. Isolated process tests on a development machine or hosted Windows Server do not establish clean Windows 11 acceptance. The remaining clean-client, normal-protection download, multi-user, scaling and real Steam delivery gates are recorded in the [delivery plan](/SteamWrapper/project/design/windows-delivery/). Do not disable Windows protection to run the preview.
 
@@ -20,6 +20,8 @@ pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.1-preview
 ```
 
 The last command produces `target/winui/installers/v0.2.1-preview.1/SteamWrapper-v0.2.1-preview.1-win-x64-setup.exe` and inspection metadata. The tag must match the numeric source version. It labels a local artifact; the command does not create a Git tag or publish a Release. Do not reuse a public version for changed bytes.
+
+Changing only the prerelease suffix does not provide an upgrade path: the deployment manifest changes while the numeric version remains the same, and installation rejects different content at the same base. New installable payloads need a new coordinated three-part source/product version; retry an existing build with its exact immutable files. See [release version rules](/SteamWrapper/development/distribution/#prepare-and-trigger-a-release).
 
 Inno Setup 7.1.0 x64 is downloaded only from the official site, with the pinned SHA-256 and publisher signature verified. It is installed under `target/toolchain`; contributors may also supply a matching verified compiler using `-Compiler`. mise aliases are optional conveniences. Developer SDKs and Inno are build tools, not player requirements.
 

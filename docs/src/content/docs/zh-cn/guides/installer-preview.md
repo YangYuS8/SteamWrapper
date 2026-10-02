@@ -5,7 +5,7 @@ description: "构建、试用、修复和卸载未签名的按用户安装器，
 
 ## 当前边界
 
-Inno Setup 安装器和 C# 部署组件已实现，面向 **Windows 11 24H2 或更新版本、x64**，目前是**未签名预览版**。包含完整的自包含 WinUI 文件、两种语言和独立 Runner。普通分支 CI 只测试和编译，不生成安装包；显式手动运行发布工作流会构建安装器预览。安装器和签名验收通过前，公开版本标签继续使用现有便携 ZIP 发布契约。
+Inno Setup 安装器和 C# 部署组件已实现，面向 **Windows 11 24H2 或更新版本、x64**，目前是**未签名预览版**。包含完整的自包含 WinUI 文件、两种语言和独立 Runner。普通分支 CI 只测试和编译，不生成安装包；显式手动运行发布工作流会构建安装器预览。公开版本标签当前使用现有便携 ZIP 发布契约。[执行队列](/SteamWrapper/zh-cn/project/roadmap/#执行队列2026-10-03)规划在交付验收及产物结构改动后、Foundation 申请前公开未签名安装器；生产签名另有后续门槛。
 
 这不是已签名或稳定发布。开发机或托管 Windows Server 的隔离进程测试不等于干净 Windows 11 验收。干净客户端、正常防护下的下载、多用户、缩放以及真实 Steam 交付门槛仍在[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)中记录。不要为了运行预览关闭 Windows 防护。
 
@@ -20,6 +20,8 @@ pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.1-preview
 ```
 
 最后一条命令生成 `target/winui/installers/v0.2.1-preview.1/SteamWrapper-v0.2.1-preview.1-win-x64-setup.exe` 和检查元数据。标签必须匹配源码的三段版本号，仅用于标识本地产物；命令不会创建 Git 标签或发布 Release。已公开版本不能复用于不同字节。
+
+仅改变预发布后缀不能形成升级路径：部署清单改变、数字版本不变，安装会拒绝同基础版本的不同内容。新的可安装载荷需使用新的协调三段源码／产品版本；重试已有构建时复用完全相同的不可变文件。见[发布版本规则](/SteamWrapper/zh-cn/development/distribution/#准备并触发发布)。
 
 Inno Setup 7.1.0 x64 仅从官方网站下载，检查固定 SHA-256 和发布者签名后安装到 `target/toolchain`。贡献者也可以用 `-Compiler` 提供版本匹配且验证通过的编译器。mise 别名只是可选便利工具。开发 SDK 和 Inno 是构建工具，不是玩家运行要求。
 
