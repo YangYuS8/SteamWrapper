@@ -117,6 +117,10 @@ Release tags use `vMAJOR.MINOR.PATCH` with an optional SemVer prerelease suffix,
 
 The current source version is `0.2.1`, advanced because the new Runner PE resources change its bytes. Existing tags and historical releases must not be overwritten. Future versions must coordinate Rust, Manager, Application and deployment product versions and lockfiles, with complete bilingual notes. Confirm the intended main revision passed CI before tagging it. Merging this work does not create a public version.
 
+For installer upgrades, advance the three-part base for every new installable payload/manifest, not just the prerelease suffix. `v0.2.1-preview.1` → `v0.2.1-preview.2` changes the deployment manifest while both identify numeric `0.2.1`, and is rejected by the current same-version/different-content protection. Manual run-number artifacts are independent trials, not an upgrade sequence. Real upgrade acceptance uses a frozen old bundle and a genuinely compiled next unused base; first production signing also needs a new base when it changes payload bytes. Keep immutable retries unchanged.
+
+The [execution queue](/SteamWrapper/project/roadmap/#execution-queue-2026-10-03) plans to extend the current tag pipeline with an explicit schema-2 unsigned installer release after clean-client/recovery acceptance, before Foundation application; production signed releases follow approval. The trigger table and five current assets below describe implemented behavior until that workflow change passes its own gates. Optional app updates and Steam apply/restore do not block the first stable P0–P2 release.
+
 For example, after a reviewed change has set all coordinated product/source versions to `0.2.1` and added both `v0.2.1-preview.1` notes:
 
 ```sh
