@@ -13,6 +13,8 @@ WinUI is the only current Manager. The implemented delivery is a **self-containe
 
 Future installation should require no developer tools or routine administrator rights. Updates must preserve user data and compatible stable Runner versions. Uninstall should remove Manager while retaining Runner and user data by default, because Steam may still reference them. Full removal needs an explicit choice and handling of known references; manually pasted or unenumerable options cannot be assumed restored. These are acceptance requirements, not existing installer behavior.
 
+The [Windows installation, signing and updates plan](/SteamWrapper/project/design/windows-delivery/) proposes a per-user Inno installer, a shared C# deployment protocol, SignPath Foundation signing and optional authenticated Manager updates. It records the maintainer's free-signing preference, source constraints, implementation stages and acceptance gates. These components and external signing approval remain proposed.
+
 GitHub/CNB binary releases require inspection of actual downloadable artifacts. Source synchronization or release notes alone do not establish a binary release. Clean-system installation, update, recovery and uninstall need separate Windows evidence.
 
 <a id="winui-本地预览目录"></a>

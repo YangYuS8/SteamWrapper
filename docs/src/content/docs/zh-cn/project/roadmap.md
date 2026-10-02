@@ -74,6 +74,8 @@ P0 反馈和 P1 打包准备可以并行。WinUI 稳定发布需要 P0–P2 验�
 
 **交付目标：**由同一应用布局生成 unpackaged、自包含的 WinUI 每用户安装器和完整 portable ZIP。
 
+[Windows 交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)将 P1–P3 拆为 D1a/D1b 安装与恢复、D2/D3 签名准备与发行、D4/D5 可选检查与确认更新，建议采用每用户 Inno 安装器及优先免费的 SignPath Foundation，通过同一 C# 部署协议保留稳定 Runner 和数据的所有权边界。研究和书面方案不表示实施或验收勾选项已完成。
+
 - [ ] 打包 .NET、Windows App SDK、原生／本地化资源和独立 Runner。普通玩家无需安装 SDK 或准备运行时，不承诺单文件 EXE。
 - [ ] Manager 按用户安装，日常安装不要求管理员权限。数据保持在 `%LOCALAPPDATA%\SteamWrapper\`，Steam 引用稳定的 `bin\SteamWrapperRunner.exe`，不引用带版本的 Manager 或解压目录。
 - [ ] 在没有开发工具的干净受支持 Windows 11 x64 VM 中，验证安装、双语、首次配置、实际共享数据路径，以及关闭 Manager 后通过稳定 Runner 启动。
