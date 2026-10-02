@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Tomlyn": {
+        "type": "Transitive",
+        "resolved": "2.10.1",
+        "contentHash": "ykjOY3IpYmC4SpPcAZRTl/w2jTmhPMDydHq8xcV7tTBAQ22nKBsOkPqauIrZlMjHm03cmKfV23UOPscKp+J4Og=="
+      },
+      "steamwrapper.application": {
+        "type": "Project",
+        "dependencies": {
+          "Tomlyn": "[2.10.1, )"
+        }
+      }
+    }
+  }
+}

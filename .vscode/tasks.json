@@ -2,40 +2,39 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "build",
-        "${workspaceFolder}/SteamWrapper.csproj",
-        "/property:GenerateFullPaths=true",
-        "/consoleloggerparameters:NoSummary;ForceNoAlign"
-      ],
-      "problemMatcher": "$msCompile"
+      "label": "manager: lint",
+      "type": "shell",
+      "command": "pnpm --filter steamwrapper-manager lint",
+      "group": "test",
+      "problemMatcher": "$tsc"
     },
     {
-      "label": "publish",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "publish",
-        "${workspaceFolder}/SteamWrapper.csproj",
-        "/property:GenerateFullPaths=true",
-        "/consoleloggerparameters:NoSummary;ForceNoAlign"
-      ],
-      "problemMatcher": "$msCompile"
+      "label": "manager: build",
+      "type": "shell",
+      "command": "pnpm --filter steamwrapper-manager build",
+      "group": "build",
+      "problemMatcher": "$tsc"
     },
     {
-      "label": "watch",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "watch",
-        "run",
-        "--project",
-        "${workspaceFolder}/SteamWrapper.csproj"
-      ],
-      "problemMatcher": "$msCompile"
+      "label": "rust: fmt check",
+      "type": "shell",
+      "command": "cargo fmt --all -- --check",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "rust: check",
+      "type": "shell",
+      "command": "cargo check --workspace",
+      "group": "build",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "rust: test",
+      "type": "shell",
+      "command": "cargo test --workspace",
+      "group": "test",
+      "problemMatcher": "$rustc"
     }
   ]
 }

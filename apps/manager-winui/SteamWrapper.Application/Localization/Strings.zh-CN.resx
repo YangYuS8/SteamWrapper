@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="Tagline" xml:space="preserve"><value>从 Steam 照常开始</value></data>
+  <data name="AddGame" xml:space="preserve"><value>＋ 添加游戏</value></data>
+  <data name="ConfiguredGames" xml:space="preserve"><value>已配置的游戏</value></data>
+  <data name="Reload" xml:space="preserve"><value>重新读取配置</value></data>
+  <data name="Preview" xml:space="preserve"><value>Windows 预览版</value></data>
+  <data name="WelcomeTitle" xml:space="preserve"><value>配置一次，照常开始</value></data>
+  <data name="WelcomeDescription" xml:space="preserve"><value>让 Steam 启动你选择的汉化程序或启动器。配置完成后，直接从 Steam 开始游戏即可。</value></data>
+  <data name="WelcomeSteps" xml:space="preserve"><value>1  添加 Steam 游戏
+2  选择要运行的程序
+3  保存并复制启动项到 Steam</value></data>
+  <data name="GameProfile" xml:space="preserve"><value>游戏配置</value></data>
+  <data name="EditorDescription" xml:space="preserve"><value>选择 Steam 启动时实际运行的程序。</value></data>
+  <data name="GameName" xml:space="preserve"><value>游戏名称</value></data>
+  <data name="AppIdExample" xml:space="preserve"><value>例如 123456</value></data>
+  <data name="SteamInstallation" xml:space="preserve"><value>Steam 安装位置</value></data>
+  <data name="SteamInstallationHelp" xml:space="preserve"><value>由 Steam 管理，此处仅用于查看。</value></data>
+  <data name="RuntimeFolder" xml:space="preserve"><value>实际运行文件夹</value></data>
+  <data name="Browse" xml:space="preserve"><value>浏览…</value></data>
+  <data name="ChooseRuntimeFolder" xml:space="preserve"><value>选择实际运行文件夹</value></data>
+  <data name="RuntimeFolderHelp" xml:space="preserve"><value>可选择 Steam 库外的汉化目录。工作目录留空时使用此文件夹。</value></data>
+  <data name="Target" xml:space="preserve"><value>要运行的程序</value></data>
+  <data name="TargetPlaceholder" xml:space="preserve"><value>选择汉化程序或启动器 .exe</value></data>
+  <data name="ChooseProgram" xml:space="preserve"><value>选择程序…</value></data>
+  <data name="Advanced" xml:space="preserve"><value>高级设置</value></data>
+  <data name="WorkingDirectory" xml:space="preserve"><value>工作目录（留空使用实际运行文件夹）</value></data>
+  <data name="Arguments" xml:space="preserve"><value>启动参数</value></data>
+  <data name="ArgumentsHelp" xml:space="preserve"><value>每项是一个参数，含空格无需另加引号。</value></data>
+  <data name="AddArgument" xml:space="preserve"><value>添加参数</value></data>
+  <data name="WaitMode" xml:space="preserve"><value>何时结束 Steam 运行状态</value></data>
+  <data name="WaitJob" xml:space="preserve"><value>等待程序及其子进程（推荐）</value></data>
+  <data name="WaitRoot" xml:space="preserve"><value>仅等待直接启动的程序</value></data>
+  <data name="WaitProcessName" xml:space="preserve"><value>等待指定进程名称</value></data>
+  <data name="WaitNone" xml:space="preserve"><value>启动后立即结束</value></data>
+  <data name="WaitProcessGroup" xml:space="preserve"><value>进程组（Linux / SteamOS）</value></data>
+  <data name="ProcessName" xml:space="preserve"><value>进程名称（按进程名等待时必填）</value></data>
+  <data name="Save" xml:space="preserve"><value>保存并生成启动项</value></data>
+  <data name="LaunchTitle" xml:space="preserve"><value>最后一步：粘贴到 Steam</value></data>
+  <data name="LaunchInstructions" xml:space="preserve"><value>在 Steam 中右键该游戏 → 属性 → 通用 → 启动选项，粘贴下面的内容。</value></data>
+  <data name="LaunchBackup" xml:space="preserve"><value>粘贴前请先复制并保留原来的启动选项；需要恢复时，将原值粘贴回 Steam。</value></data>
+  <data name="Copy" xml:space="preserve"><value>复制启动项</value></data>
+  <data name="LaunchDone" xml:space="preserve"><value>粘贴完成后，可关闭 SteamWrapper，直接从 Steam 启动游戏。</value></data>
+  <data name="Language" xml:space="preserve"><value>语言</value></data>
+  <data name="LoadFailed" xml:space="preserve"><value>无法读取配置，原文件保持不变。{0}</value></data>
+  <data name="NewProfile" xml:space="preserve"><value>添加游戏配置</value></data>
+  <data name="ForeignProfile" xml:space="preserve"><value>这是其他平台的配置，可查看；请在对应平台修改。</value></data>
+  <data name="DuplicateProfiles" xml:space="preserve"><value>同一 AppID 对应多份配置，请先处理配置冲突。</value></data>
+  <data name="FolderPickerFailed" xml:space="preserve"><value>无法打开文件夹选择器：{0}</value></data>
+  <data name="PickProgram" xml:space="preserve"><value>选择此程序</value></data>
+  <data name="ProgramPickerFailed" xml:space="preserve"><value>无法选择程序：{0}</value></data>
+  <data name="ArgumentPlaceholder" xml:space="preserve"><value>参数（允许空字符串）</value></data>
+  <data name="Remove" xml:space="preserve"><value>移除</value></data>
+  <data name="UnknownSteamInstallation" xml:space="preserve"><value>暂时无法确认 Steam 安装位置；可继续配置实际运行文件夹。</value></data>
+  <data name="InvalidGameDirectory" xml:space="preserve"><value>请选择已存在的实际运行文件夹（完整路径）。</value></data>
+  <data name="InvalidTarget" xml:space="preserve"><value>请选择已存在的 .exe 程序。</value></data>
+  <data name="InvalidWorkingDirectory" xml:space="preserve"><value>工作目录不存在，请检查高级设置。</value></data>
+  <data name="SavedWithStatus" xml:space="preserve"><value>配置已保存。{0}</value></data>
+  <data name="SavedReady" xml:space="preserve"><value>配置已保存，启动程序已就绪。请复制启动项到 Steam。</value></data>
+  <data name="SavedRunnerFailed" xml:space="preserve"><value>配置已保存，但启动程序尚未就绪。{0}</value></data>
+  <data name="SaveFailed" xml:space="preserve"><value>未保存。{0}</value></data>
+  <data name="Copied" xml:space="preserve"><value>已复制。请粘贴到 Steam 的启动选项；复制不会自动修改 Steam。</value></data>
+  <data name="CopyFailed" xml:space="preserve"><value>复制失败，可手动选中上方文字复制。{0}</value></data>
+  <data name="UnsavedTitle" xml:space="preserve"><value>还有未保存的修改</value></data>
+  <data name="UnsavedBody" xml:space="preserve"><value>离开此配置将放弃本次修改。</value></data>
+  <data name="Discard" xml:space="preserve"><value>放弃修改</value></data>
+  <data name="KeepEditing" xml:space="preserve"><value>继续编辑</value></data>
+  <data name="SearchGames" xml:space="preserve"><value>搜索游戏名称或 AppID</value></data>
+  <data name="AddSteamGame" xml:space="preserve"><value>添加 Steam 游戏</value></data>
+  <data name="UseGame" xml:space="preserve"><value>使用此游戏</value></data>
+  <data name="ManualAppId" xml:space="preserve"><value>手动填写 AppID</value></data>
+  <data name="Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="BrowseSteam" xml:space="preserve"><value>选择 Steam 文件夹…</value></data>
+  <data name="PickSteam" xml:space="preserve"><value>选择 Steam 文件夹</value></data>
+  <data name="PickFolderFailed" xml:space="preserve"><value>无法选择文件夹：{0}</value></data>
+  <data name="AddSteamDescription" xml:space="preserve"><value>从本机 Steam 游戏中选择，或手动添加。</value></data>
+  <data name="Scanning" xml:space="preserve"><value>正在读取本机 Steam 游戏…</value></data>
+  <data name="NoGames" xml:space="preserve"><value>未找到已安装游戏。可选择 Steam 文件夹，或手动填写 AppID。</value></data>
+  <data name="GamesFound" xml:space="preserve"><value>找到 {0} 款本机游戏</value></data>
+  <data name="ScanFailed" xml:space="preserve"><value>读取失败，可手动添加。{0}</value></data>
+  <data name="ProfilesRead" xml:space="preserve"><value>无法读取配置文件，请检查文件权限和 UTF-8 编码。</value></data>
+  <data name="SnapshotMismatch" xml:space="preserve"><value>这份编辑快照不属于当前配置文件。请重新加载。 </value></data>
+  <data name="ProfileExists" xml:space="preserve"><value>此配置标识已经存在，请编辑现有配置。</value></data>
+  <data name="ProfileMissing" xml:space="preserve"><value>原配置已不存在，请重新加载。 </value></data>
+  <data name="ProfileConflict" xml:space="preserve"><value>多个配置关联了相同 AppID，无法安全确定 Runner 会使用哪一项。请先消除冲突。 </value></data>
+  <data name="ProfilesSave" xml:space="preserve"><value>无法安全保存配置。请检查文件占用、权限和磁盘空间；原文件未被主动覆盖。</value></data>
+  <data name="ProfilesBusy" xml:space="preserve"><value>另一个 Manager 正在保存此配置，请稍后重新加载。{0}</value></data>
+  <data name="ProfilesChanged" xml:space="preserve"><value>配置文件已被其他程序或窗口修改。请重新加载后再保存，外部改动已保留。 </value></data>
+  <data name="ProfileVersion" xml:space="preserve"><value>只支持 version = 2 的配置文件。此文件保持原样，不会降级覆盖。 </value></data>
+  <data name="ProfileToml" xml:space="preserve"><value>配置不是有效的 TOML，文件已保留。请修复后重新加载。</value></data>
+  <data name="ProfileField" xml:space="preserve"><value>配置字段 {0} 的类型或取值不受支持，不能安全编辑。 </value></data>
+  <data name="ProfileRequired" xml:space="preserve"><value>请填写游戏名称、游戏目录和目标程序。 </value></data>
+  <data name="ProfileNul" xml:space="preserve"><value>配置不能包含 NUL 字符。 </value></data>
+  <data name="ProfileWindowsWait" xml:space="preserve"><value>Windows 不支持进程组等待，请选择等待程序及其子进程或其他 Windows 等待方式。 </value></data>
+  <data name="ProfileProcessRequired" xml:space="preserve"><value>按进程名称等待时，请填写实际游戏进程名。 </value></data>
+  <data name="ProfileNewId" xml:space="preserve"><value>新配置需要明确的数字 AppID，并明确指定 Windows 平台。 </value></data>
+  <data name="ProfileIdDigits" xml:space="preserve"><value>Steam AppID 只能包含数字。旧别名表键可以保留。 </value></data>
+  <data name="ProfileLayout" xml:space="preserve"><value>此配置使用内联或点号表结构；当前编辑器只安全修改显式 [profiles.标识] 表，文件已保留。 </value></data>
+  <data name="SandboxData" xml:space="preserve"><value>沙盒模式需要位于 STEAMWRAPPER_E2E_ROOT 内的 LOCALAPPDATA，已阻止访问实际用户配置。</value></data>
+  <data name="DataLocation" xml:space="preserve"><value>无法确定 Windows 本地应用数据目录。</value></data>
+  <data name="RunnerPath" xml:space="preserve"><value>Runner 路径必须是稳定目录中的 SteamWrapperRunner.exe 完整路径。</value></data>
+  <data name="AppIdInvalid" xml:space="preserve"><value>Steam AppID 必须是有效的正整数。</value></data>
+  <data name="RunnerBundleInvalid" xml:space="preserve"><value>随包 Runner 的版本或文件校验失败，请重新下载完整安装包。</value></data>
+  <data name="RunnerMissing" xml:space="preserve"><value>尚未安装启动组件。保存配置后可安装到稳定目录。</value></data>
+  <data name="RunnerReady" xml:space="preserve"><value>启动组件已就绪。</value></data>
+  <data name="RunnerUnknown" xml:space="preserve"><value>现有启动组件的版本无法确认，已保留原文件。请使用与现有组件匹配的安装包处理，配置仍可编辑。</value></data>
+  <data name="RunnerContract" xml:space="preserve"><value>现有启动组件使用不同的配置协议，已保留原文件。请使用匹配的 Manager 版本。</value></data>
+  <data name="RunnerNewer" xml:space="preserve"><value>已保留兼容的较新启动组件。</value></data>
+  <data name="RunnerSameVersion" xml:space="preserve"><value>检测到同版本但内容不同的启动组件，无法判断新旧，已保留原文件。请使用匹配的完整安装包。</value></data>
+  <data name="RunnerUpdate" xml:space="preserve"><value>启动组件可更新，现有版本仍可使用。</value></data>
+  <data name="RunnerInspect" xml:space="preserve"><value>无法检查启动组件：{0}。配置仍可编辑。</value></data>
+  <data name="RunnerCopyHash" xml:space="preserve"><value>复制后的启动组件校验失败，原文件未被替换。</value></data>
+  <data name="RunnerChanged" xml:space="preserve"><value>启动组件已被其他程序修改，请重新检查。</value></data>
+  <data name="RunnerInstalledHash" xml:space="preserve"><value>已安装启动组件的复读校验失败。</value></data>
+  <data name="RunnerInstalled" xml:space="preserve"><value>启动组件已安装到稳定目录。</value></data>
+  <data name="RunnerRollback" xml:space="preserve"><value> 恢复旧组件失败，旧文件保留在 {0}：{1}</value></data>
+  <data name="RunnerInstall" xml:space="preserve"><value>无法安装启动组件（文件可能仍在使用）：{0}。配置已保留。{1}</value></data>
+  <data name="RunnerManifestLarge" xml:space="preserve"><value>启动组件清单过大。</value></data>
+  <data name="RunnerManifestEmpty" xml:space="preserve"><value>启动组件清单为空。</value></data>
+  <data name="RunnerManifestInvalid" xml:space="preserve"><value>启动组件清单无效。</value></data>
+  <data name="SandboxSteam" xml:space="preserve"><value>沙盒模式需要位于 STEAMWRAPPER_E2E_ROOT 内的 STEAM_DIR，已阻止扫描实际游戏库。</value></data>
+  <data name="SteamNotFound" xml:space="preserve"><value>未找到 Steam，请选择 Steam 安装目录或手动填写 AppID。</value></data>
+  <data name="SteamUnreadable" xml:space="preserve"><value>无法读取 Steam 目录：{0}</value></data>
+  <data name="SandboxLibrary" xml:space="preserve"><value>沙盒模式已跳过范围外的游戏库：{0}</value></data>
+  <data name="SteamLibraries" xml:space="preserve"><value>无法读取库列表，仍会扫描 Steam 主目录：{0}</value></data>
+  <data name="SteamAppState" xml:space="preserve"><value>缺少 AppState。</value></data>
+  <data name="SteamAppId" xml:space="preserve"><value>无效的 AppID。</value></data>
+  <data name="SteamManifestId" xml:space="preserve"><value>清单文件名与 AppID 不一致。</value></data>
+  <data name="SteamGameDirectory" xml:space="preserve"><value>缺少或不安全的游戏目录。</value></data>
+  <data name="SteamOutsideLibrary" xml:space="preserve"><value>游戏目录超出 Steam 库。</value></data>
+  <data name="SteamAmbiguous" xml:space="preserve"><value>AppID {0} 对应多个安装目录，无法确认 Steam 安装位置；实际运行文件夹仍可自行选择。</value></data>
+  <data name="SteamManifestSkipped" xml:space="preserve"><value>已跳过清单 {0}：{1}</value></data>
+  <data name="SteamLibraryUnreadable" xml:space="preserve"><value>无法读取游戏库 {0}：{1}</value></data>
+  <data name="VdfLarge" xml:space="preserve"><value>VDF 清单过大。</value></data>
+  <data name="VdfDeep" xml:space="preserve"><value>VDF 嵌套过深。</value></data>
+  <data name="VdfUnclosedObject" xml:space="preserve"><value>VDF 对象未闭合。</value></data>
+  <data name="VdfExtraBrace" xml:space="preserve"><value>多余的 VDF 右括号。</value></data>
+  <data name="VdfKey" xml:space="preserve"><value>缺少 VDF 键。</value></data>
+  <data name="VdfValue" xml:space="preserve"><value>缺少 VDF 值。</value></data>
+  <data name="VdfDuplicate" xml:space="preserve"><value>重复的 VDF 键：{0}</value></data>
+  <data name="VdfUnclosedString" xml:space="preserve"><value>VDF 字符串未闭合。</value></data>
+  <data name="SharedReopen" xml:space="preserve"><value>当前启动方式重定向了配置或启动组件的位置，无法确认 Steam 能访问。请关闭 Manager，从资源管理器中打开 Manager 后重新保存配置</value></data>
+  <data name="SharedPlatform" xml:space="preserve"><value>当前系统无法核实 Windows 配置或启动组件的位置。</value></data>
+  <data name="SharedVerify" xml:space="preserve"><value>无法核实配置或启动组件的实际位置，请从资源管理器重新打开 Manager。</value></data>
+  <data name="SharedLong" xml:space="preserve"><value>配置或启动组件的实际路径过长，无法安全核实位置。</value></data>
+  <data name="SharedLinks" xml:space="preserve"><value>配置或启动组件的路径包含过多文件链接，无法安全核实位置。</value></data>
+  <data name="SettingsRead" xml:space="preserve"><value>无法读取语言偏好，已使用英语。{0}</value></data>
+  <data name="SettingsSave" xml:space="preserve"><value>无法保存语言偏好；当前语言和原设置文件保持不变。{0}</value></data>
+  <data name="SettingsInvalid" xml:space="preserve"><value>语言设置文件不是有效的 JSON 对象，已保留原文件。</value></data>
+  <data name="SettingsLarge" xml:space="preserve"><value>语言设置文件过大，已保留原文件。</value></data>
+  <data name="SettingsChanged" xml:space="preserve"><value>语言设置已被其他窗口修改，请重试。</value></data>
+  <data name="CloseStatus" xml:space="preserve"><value>关闭状态消息</value></data>
+</root>

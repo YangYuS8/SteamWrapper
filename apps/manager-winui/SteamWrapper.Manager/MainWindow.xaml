@@ -1,0 +1,92 @@
+<Window x:Class="SteamWrapper.Manager.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Window.SystemBackdrop><MicaBackdrop /></Window.SystemBackdrop>
+  <Grid x:Name="Root" Loaded="OnLoaded" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="280"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <Grid Padding="20,24,16,20" RowSpacing="20">
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <Image Source="ms-appx:///Assets/steamwrapper.svg" Width="36" Height="36"/>
+        <StackPanel><TextBlock Text="SteamWrapper" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="LocalizedTagline" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/></StackPanel>
+      </StackPanel>
+      <Button Grid.Row="1" x:Name="AddGameButton" HorizontalAlignment="Stretch" Style="{StaticResource AccentButtonStyle}" Click="AddGame_Click" AutomationProperties.AutomationId="AddGame"/>
+      <Grid Grid.Row="2" RowSpacing="8">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <TextBlock x:Name="LocalizedConfiguredGames" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        <ListView Grid.Row="1" x:Name="ProfilesList" SelectionChanged="ProfilesList_SelectionChanged" AutomationProperties.AutomationId="Profiles" />
+      </Grid>
+      <StackPanel Grid.Row="3" Spacing="10">
+        <ComboBox x:Name="LanguageInput" Header="Language" HorizontalAlignment="Stretch" SelectionChanged="Language_Changed" AutomationProperties.AutomationId="Language">
+          <ComboBoxItem Content="English" Tag="en-US"/>
+          <ComboBoxItem Content="简体中文" Tag="zh-CN"/>
+        </ComboBox>
+        <Button x:Name="ReloadButton" Click="Reload_Click" HorizontalAlignment="Stretch"/>
+        <TextBlock x:Name="LocalizedPreview" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+      </StackPanel>
+    </Grid>
+    <Border Grid.Column="1" Margin="0,12,12,12" CornerRadius="12" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
+      <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Padding="32" Spacing="24" MaxWidth="850" HorizontalAlignment="Stretch">
+            <StackPanel x:Name="WelcomePanel" Spacing="16" Margin="0,48,0,0">
+              <FontIcon Glyph="&#xE7FC;" FontSize="48" HorizontalAlignment="Left" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+              <TextBlock x:Name="LocalizedWelcomeTitle" FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap"/>
+              <TextBlock x:Name="LocalizedWelcomeDescription" TextWrapping="Wrap" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+              <TextBlock x:Name="LocalizedWelcomeSteps" FontSize="15" LineHeight="32"/>
+            </StackPanel>
+            <ContentControl x:Name="EditorPanel" Visibility="Collapsed" HorizontalContentAlignment="Stretch">
+            <StackPanel Spacing="24">
+              <StackPanel Spacing="6"><TextBlock x:Name="EditorHeading" FontSize="28" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock x:Name="LocalizedEditorDescription" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/></StackPanel>
+              <ContentControl x:Name="FormFields" HorizontalContentAlignment="Stretch">
+              <StackPanel Spacing="16">
+                <TextBox x:Name="NameInput" TextChanged="FieldChanged" AutomationProperties.AutomationId="ProfileName"/>
+                <TextBox x:Name="AppIdInput" Header="Steam AppID" TextChanged="FieldChanged" AutomationProperties.AutomationId="AppId"/>
+                <StackPanel Spacing="6">
+                  <TextBox x:Name="SteamInstallationInput" IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.AutomationId="SteamInstallationDirectory"/>
+                  <TextBlock x:Name="LocalizedSteamInstallationHelp" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+                <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <TextBox x:Name="GameDirectoryInput" TextChanged="FieldChanged" AutomationProperties.AutomationId="GameDirectory"/>
+                  <Button x:Name="LocalizedBrowse" Grid.Column="1" VerticalAlignment="Bottom" Click="GameDirectory_Click" />
+                </Grid>
+                <TextBlock x:Name="LocalizedRuntimeFolderHelp" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <TextBox x:Name="TargetInput" TextChanged="FieldChanged" AutomationProperties.AutomationId="Target"/>
+                  <Button x:Name="LocalizedChooseProgram" Grid.Column="1" VerticalAlignment="Bottom" Click="Target_Click" AutomationProperties.AutomationId="ChooseTarget"/>
+                </Grid>
+                <Expander x:Name="Advanced" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                  <StackPanel Spacing="16">
+                    <TextBox x:Name="WorkingDirectoryInput" TextChanged="FieldChanged"/>
+                    <StackPanel Spacing="8"><TextBlock x:Name="LocalizedArguments" /><TextBlock x:Name="LocalizedArgumentsHelp" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/><StackPanel x:Name="ArgumentRows" Spacing="8"/><Button x:Name="LocalizedAddArgument" Click="AddArgument_Click"/></StackPanel>
+                    <ComboBox x:Name="WaitModeInput" HorizontalAlignment="Stretch" SelectionChanged="WaitMode_Changed">
+                      <ComboBoxItem x:Name="LocalizedWaitJob" Tag="job"/>
+                      <ComboBoxItem x:Name="LocalizedWaitRoot" Tag="root"/>
+                      <ComboBoxItem x:Name="LocalizedWaitProcessName" Tag="process_name"/>
+                      <ComboBoxItem x:Name="LocalizedWaitNone" Tag="none"/>
+                      <ComboBoxItem x:Name="LocalizedWaitProcessGroup" Tag="process_group"/>
+                    </ComboBox>
+                    <TextBox x:Name="ProcessNameInput" TextChanged="FieldChanged"/>
+                  </StackPanel>
+                </Expander>
+              </StackPanel>
+              </ContentControl>
+              <Button x:Name="SaveButton" Style="{StaticResource AccentButtonStyle}" Click="Save_Click" AutomationProperties.AutomationId="SaveProfile"/>
+              <StackPanel x:Name="LaunchPanel" Visibility="Collapsed" Spacing="12">
+                <TextBlock x:Name="LocalizedLaunchTitle" FontSize="20" FontWeight="SemiBold"/>
+                <TextBlock x:Name="LocalizedLaunchInstructions" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="LocalizedLaunchBackup" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBox x:Name="LaunchOptionsText" IsReadOnly="True" TextWrapping="Wrap" AutomationProperties.AutomationId="LaunchOptions"/>
+                <Button x:Name="CopyButton" Click="Copy_Click" AutomationProperties.AutomationId="CopyLaunchOptions"/>
+                <TextBlock x:Name="LocalizedLaunchDone" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+              </StackPanel>
+            </StackPanel>
+            </ContentControl>
+          </StackPanel>
+        </ScrollViewer>
+        <InfoBar Grid.Row="1" x:Name="StatusBar" IsClosable="True" Margin="24,0,24,20" AutomationProperties.AutomationId="Status"/>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

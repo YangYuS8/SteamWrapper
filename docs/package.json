@@ -1,0 +1,23 @@
+{
+  "name": "steamwrapper-docs",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "check": "node scripts/check-content.mjs && astro check",
+    "build": "astro build && node scripts/redirects.mjs && node scripts/check-site.mjs",
+    "preview": "astro preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "7.3.0",
+    "@astrojs/starlight": "0.42.0",
+    "astro": "7.3.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "linkedom": "0.18.13",
+    "typescript": "6.0.3",
+    "yaml": "2.9.0"
+  }
+}

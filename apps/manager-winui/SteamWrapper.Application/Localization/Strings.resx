@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="Tagline" xml:space="preserve"><value>Launch as usual from Steam</value></data>
+  <data name="AddGame" xml:space="preserve"><value>＋ Add game</value></data>
+  <data name="ConfiguredGames" xml:space="preserve"><value>Configured games</value></data>
+  <data name="Reload" xml:space="preserve"><value>Reload profiles</value></data>
+  <data name="Preview" xml:space="preserve"><value>Windows preview</value></data>
+  <data name="WelcomeTitle" xml:space="preserve"><value>Configure once. Play as usual.</value></data>
+  <data name="WelcomeDescription" xml:space="preserve"><value>Choose the translated game or launcher that Steam should run. After setup, start your game from Steam as usual.</value></data>
+  <data name="WelcomeSteps" xml:space="preserve"><value>1  Add a Steam game
+2  Choose the program to run
+3  Save and copy launch options to Steam</value></data>
+  <data name="GameProfile" xml:space="preserve"><value>Game profile</value></data>
+  <data name="EditorDescription" xml:space="preserve"><value>Choose the program to run when you start this game from Steam.</value></data>
+  <data name="GameName" xml:space="preserve"><value>Game name</value></data>
+  <data name="AppIdExample" xml:space="preserve"><value>For example, 123456</value></data>
+  <data name="SteamInstallation" xml:space="preserve"><value>Steam installation</value></data>
+  <data name="SteamInstallationHelp" xml:space="preserve"><value>Managed by Steam. Shown here for reference.</value></data>
+  <data name="RuntimeFolder" xml:space="preserve"><value>Game runtime folder</value></data>
+  <data name="Browse" xml:space="preserve"><value>Browse…</value></data>
+  <data name="ChooseRuntimeFolder" xml:space="preserve"><value>Choose game runtime folder</value></data>
+  <data name="RuntimeFolderHelp" xml:space="preserve"><value>You can choose a translation folder outside the Steam library. This is also the working directory unless you set another one.</value></data>
+  <data name="Target" xml:space="preserve"><value>Program to run</value></data>
+  <data name="TargetPlaceholder" xml:space="preserve"><value>Choose a translated game or launcher .exe</value></data>
+  <data name="ChooseProgram" xml:space="preserve"><value>Choose program…</value></data>
+  <data name="Advanced" xml:space="preserve"><value>Advanced settings</value></data>
+  <data name="WorkingDirectory" xml:space="preserve"><value>Working directory (leave empty to use the game runtime folder)</value></data>
+  <data name="Arguments" xml:space="preserve"><value>Launch arguments</value></data>
+  <data name="ArgumentsHelp" xml:space="preserve"><value>Each entry is one argument. Spaces do not require extra quotes.</value></data>
+  <data name="AddArgument" xml:space="preserve"><value>Add argument</value></data>
+  <data name="WaitMode" xml:space="preserve"><value>When Steam should stop showing the game as running</value></data>
+  <data name="WaitJob" xml:space="preserve"><value>Wait for the program and its children (recommended)</value></data>
+  <data name="WaitRoot" xml:space="preserve"><value>Wait only for the launched program</value></data>
+  <data name="WaitProcessName" xml:space="preserve"><value>Wait for a named process</value></data>
+  <data name="WaitNone" xml:space="preserve"><value>Finish immediately after launch</value></data>
+  <data name="WaitProcessGroup" xml:space="preserve"><value>Process group (Linux / SteamOS)</value></data>
+  <data name="ProcessName" xml:space="preserve"><value>Process name (required when waiting for a named process)</value></data>
+  <data name="Save" xml:space="preserve"><value>Save and generate launch options</value></data>
+  <data name="LaunchTitle" xml:space="preserve"><value>One last step: paste into Steam</value></data>
+  <data name="LaunchInstructions" xml:space="preserve"><value>In Steam, right-click the game → Properties → General → Launch Options, then paste the text below.</value></data>
+  <data name="LaunchBackup" xml:space="preserve"><value>First copy and keep the original launch options. To restore them later, paste the original value back into Steam.</value></data>
+  <data name="Copy" xml:space="preserve"><value>Copy launch options</value></data>
+  <data name="LaunchDone" xml:space="preserve"><value>Once pasted, you can close SteamWrapper and launch the game from Steam.</value></data>
+  <data name="Language" xml:space="preserve"><value>Language</value></data>
+  <data name="LoadFailed" xml:space="preserve"><value>Could not load profiles. The original file is unchanged. {0}</value></data>
+  <data name="NewProfile" xml:space="preserve"><value>Add game profile</value></data>
+  <data name="ForeignProfile" xml:space="preserve"><value>This profile is for another platform. You can view it here; edit it on that platform.</value></data>
+  <data name="DuplicateProfiles" xml:space="preserve"><value>Multiple profiles use this AppID. Resolve the conflict before continuing.</value></data>
+  <data name="FolderPickerFailed" xml:space="preserve"><value>Could not open the folder picker: {0}</value></data>
+  <data name="PickProgram" xml:space="preserve"><value>Choose this program</value></data>
+  <data name="ProgramPickerFailed" xml:space="preserve"><value>Could not choose a program: {0}</value></data>
+  <data name="ArgumentPlaceholder" xml:space="preserve"><value>Argument (empty strings are allowed)</value></data>
+  <data name="Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="UnknownSteamInstallation" xml:space="preserve"><value>The Steam installation could not be confirmed. You can still choose the game runtime folder.</value></data>
+  <data name="InvalidGameDirectory" xml:space="preserve"><value>Choose an existing game runtime folder using its full path.</value></data>
+  <data name="InvalidTarget" xml:space="preserve"><value>Choose an existing .exe program.</value></data>
+  <data name="InvalidWorkingDirectory" xml:space="preserve"><value>The working directory does not exist. Check the advanced settings.</value></data>
+  <data name="SavedWithStatus" xml:space="preserve"><value>Profile saved. {0}</value></data>
+  <data name="SavedReady" xml:space="preserve"><value>Profile saved and Runner is ready. Copy the launch options to Steam.</value></data>
+  <data name="SavedRunnerFailed" xml:space="preserve"><value>Profile saved, but Runner is not ready. {0}</value></data>
+  <data name="SaveFailed" xml:space="preserve"><value>Not saved. {0}</value></data>
+  <data name="Copied" xml:space="preserve"><value>Copied. Paste into Steam's Launch Options; copying does not change Steam automatically.</value></data>
+  <data name="CopyFailed" xml:space="preserve"><value>Could not copy. You can select and copy the text above manually. {0}</value></data>
+  <data name="UnsavedTitle" xml:space="preserve"><value>Unsaved changes</value></data>
+  <data name="UnsavedBody" xml:space="preserve"><value>Leaving this profile will discard your changes.</value></data>
+  <data name="Discard" xml:space="preserve"><value>Discard changes</value></data>
+  <data name="KeepEditing" xml:space="preserve"><value>Keep editing</value></data>
+  <data name="SearchGames" xml:space="preserve"><value>Search by game name or AppID</value></data>
+  <data name="AddSteamGame" xml:space="preserve"><value>Add Steam game</value></data>
+  <data name="UseGame" xml:space="preserve"><value>Use this game</value></data>
+  <data name="ManualAppId" xml:space="preserve"><value>Enter AppID manually</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="BrowseSteam" xml:space="preserve"><value>Choose Steam folder…</value></data>
+  <data name="PickSteam" xml:space="preserve"><value>Choose Steam folder</value></data>
+  <data name="PickFolderFailed" xml:space="preserve"><value>Could not choose a folder: {0}</value></data>
+  <data name="AddSteamDescription" xml:space="preserve"><value>Choose a locally installed Steam game, or add one manually.</value></data>
+  <data name="Scanning" xml:space="preserve"><value>Reading locally installed Steam games…</value></data>
+  <data name="NoGames" xml:space="preserve"><value>No installed games found. Choose a Steam folder or enter an AppID manually.</value></data>
+  <data name="GamesFound" xml:space="preserve"><value>Found {0} locally installed games</value></data>
+  <data name="ScanFailed" xml:space="preserve"><value>Could not read games. You can add one manually. {0}</value></data>
+  <data name="ProfilesRead" xml:space="preserve"><value>Could not read the profiles file. Check its permissions and UTF-8 encoding.</value></data>
+  <data name="SnapshotMismatch" xml:space="preserve"><value>This edit snapshot belongs to a different profiles file. Reload before editing.</value></data>
+  <data name="ProfileExists" xml:space="preserve"><value>This profile ID already exists. Edit the existing profile.</value></data>
+  <data name="ProfileMissing" xml:space="preserve"><value>The original profile no longer exists. Reload before editing.</value></data>
+  <data name="ProfileConflict" xml:space="preserve"><value>Multiple profiles refer to the same AppID. Runner's profile cannot be determined safely. Resolve the conflict first.</value></data>
+  <data name="ProfilesSave" xml:space="preserve"><value>Could not safely save profiles. Check file locks, permissions and disk space. The original file was not deliberately overwritten.</value></data>
+  <data name="ProfilesBusy" xml:space="preserve"><value>Another Manager is saving these profiles. Reload shortly. {0}</value></data>
+  <data name="ProfilesChanged" xml:space="preserve"><value>The profiles file was changed by another app or window. Reload before saving. External changes have been preserved.</value></data>
+  <data name="ProfileVersion" xml:space="preserve"><value>Only version = 2 profiles are supported. This file is unchanged and will not be downgraded.</value></data>
+  <data name="ProfileToml" xml:space="preserve"><value>The profiles file is not valid TOML. It has been preserved. Fix it and reload.</value></data>
+  <data name="ProfileField" xml:space="preserve"><value>Profile field {0} has an unsupported type or value and cannot be edited safely.</value></data>
+  <data name="ProfileRequired" xml:space="preserve"><value>Enter the game name, game directory and target program.</value></data>
+  <data name="ProfileNul" xml:space="preserve"><value>Profiles cannot contain NUL characters.</value></data>
+  <data name="ProfileWindowsWait" xml:space="preserve"><value>Windows does not support process-group waiting. Choose the program and its children, or another Windows wait mode.</value></data>
+  <data name="ProfileProcessRequired" xml:space="preserve"><value>Enter the actual game process name when waiting for a named process.</value></data>
+  <data name="ProfileNewId" xml:space="preserve"><value>A new profile needs a numeric AppID and the Windows platform.</value></data>
+  <data name="ProfileIdDigits" xml:space="preserve"><value>Steam AppID can contain only digits. Existing alias table keys can be kept.</value></data>
+  <data name="ProfileLayout" xml:space="preserve"><value>This profile uses an inline or dotted table. The editor can safely edit only explicit [profiles.ID] tables. The file has been preserved.</value></data>
+  <data name="SandboxData" xml:space="preserve"><value>Sandbox mode requires LOCALAPPDATA inside STEAMWRAPPER_E2E_ROOT. Access to real user profiles was blocked.</value></data>
+  <data name="DataLocation" xml:space="preserve"><value>Could not determine the Windows local application data directory.</value></data>
+  <data name="RunnerPath" xml:space="preserve"><value>Runner must use the full path to SteamWrapperRunner.exe in its stable directory.</value></data>
+  <data name="AppIdInvalid" xml:space="preserve"><value>Steam AppID must be a valid positive integer.</value></data>
+  <data name="RunnerBundleInvalid" xml:space="preserve"><value>The bundled Runner failed its version or file check. Download the complete package again.</value></data>
+  <data name="RunnerMissing" xml:space="preserve"><value>Runner is not installed yet. Saving a profile can install it in the stable directory.</value></data>
+  <data name="RunnerReady" xml:space="preserve"><value>Runner is ready.</value></data>
+  <data name="RunnerUnknown" xml:space="preserve"><value>The installed Runner version is unknown. Its file has been preserved. Use a matching package; profiles remain editable.</value></data>
+  <data name="RunnerContract" xml:space="preserve"><value>The installed Runner uses a different profile contract. Its file has been preserved. Use a matching Manager version.</value></data>
+  <data name="RunnerNewer" xml:space="preserve"><value>The newer, compatible Runner has been kept.</value></data>
+  <data name="RunnerSameVersion" xml:space="preserve"><value>Runner has the same version but different contents. Its file has been preserved because update order is unknown. Use a matching complete package.</value></data>
+  <data name="RunnerUpdate" xml:space="preserve"><value>A Runner update is available. The installed version is still usable.</value></data>
+  <data name="RunnerInspect" xml:space="preserve"><value>Could not inspect Runner: {0} Profiles remain editable.</value></data>
+  <data name="RunnerCopyHash" xml:space="preserve"><value>The copied Runner failed verification. The original file was not replaced.</value></data>
+  <data name="RunnerChanged" xml:space="preserve"><value>Runner was changed by another app. Check it again.</value></data>
+  <data name="RunnerInstalledHash" xml:space="preserve"><value>The installed Runner failed verification after installation.</value></data>
+  <data name="RunnerInstalled" xml:space="preserve"><value>Runner is installed in the stable directory.</value></data>
+  <data name="RunnerRollback" xml:space="preserve"><value> Could not restore the previous Runner. Its backup remains at {0}: {1}</value></data>
+  <data name="RunnerInstall" xml:space="preserve"><value>Could not install Runner (the file may still be in use): {0} Profiles have been preserved.{1}</value></data>
+  <data name="RunnerManifestLarge" xml:space="preserve"><value>The Runner manifest is too large.</value></data>
+  <data name="RunnerManifestEmpty" xml:space="preserve"><value>The Runner manifest is empty.</value></data>
+  <data name="RunnerManifestInvalid" xml:space="preserve"><value>The Runner manifest is invalid.</value></data>
+  <data name="SandboxSteam" xml:space="preserve"><value>Sandbox mode requires STEAM_DIR inside STEAMWRAPPER_E2E_ROOT. Scanning real game libraries was blocked.</value></data>
+  <data name="SteamNotFound" xml:space="preserve"><value>Steam was not found. Choose its installation folder or enter an AppID manually.</value></data>
+  <data name="SteamUnreadable" xml:space="preserve"><value>Could not read the Steam folder: {0}</value></data>
+  <data name="SandboxLibrary" xml:space="preserve"><value>Sandbox mode skipped a library outside its scope: {0}</value></data>
+  <data name="SteamLibraries" xml:space="preserve"><value>Could not read the library list. The main Steam folder will still be scanned: {0}</value></data>
+  <data name="SteamAppState" xml:space="preserve"><value>AppState is missing.</value></data>
+  <data name="SteamAppId" xml:space="preserve"><value>Invalid AppID.</value></data>
+  <data name="SteamManifestId" xml:space="preserve"><value>The manifest filename does not match its AppID.</value></data>
+  <data name="SteamGameDirectory" xml:space="preserve"><value>The game directory is missing or unsafe.</value></data>
+  <data name="SteamOutsideLibrary" xml:space="preserve"><value>The game directory is outside the Steam library.</value></data>
+  <data name="SteamAmbiguous" xml:space="preserve"><value>AppID {0} has multiple installation folders. The Steam installation cannot be confirmed; you can still choose the game runtime folder.</value></data>
+  <data name="SteamManifestSkipped" xml:space="preserve"><value>Skipped manifest {0}: {1}</value></data>
+  <data name="SteamLibraryUnreadable" xml:space="preserve"><value>Could not read game library {0}: {1}</value></data>
+  <data name="VdfLarge" xml:space="preserve"><value>The VDF manifest is too large.</value></data>
+  <data name="VdfDeep" xml:space="preserve"><value>The VDF nesting is too deep.</value></data>
+  <data name="VdfUnclosedObject" xml:space="preserve"><value>An object in the VDF is not closed.</value></data>
+  <data name="VdfExtraBrace" xml:space="preserve"><value>Unexpected closing brace in the VDF.</value></data>
+  <data name="VdfKey" xml:space="preserve"><value>A VDF key is missing.</value></data>
+  <data name="VdfValue" xml:space="preserve"><value>A VDF value is missing.</value></data>
+  <data name="VdfDuplicate" xml:space="preserve"><value>Duplicate VDF key: {0}</value></data>
+  <data name="VdfUnclosedString" xml:space="preserve"><value>A string in the VDF is not closed.</value></data>
+  <data name="SharedReopen" xml:space="preserve"><value>The current launch method redirected profiles or Runner to a private location that Steam may not access. Close Manager, open it from File Explorer, and save the profile again.</value></data>
+  <data name="SharedPlatform" xml:space="preserve"><value>This system cannot verify the Windows profiles or Runner location.</value></data>
+  <data name="SharedVerify" xml:space="preserve"><value>Could not verify the physical profiles or Runner location. Reopen Manager from File Explorer.</value></data>
+  <data name="SharedLong" xml:space="preserve"><value>The physical profiles or Runner path is too long to verify safely.</value></data>
+  <data name="SharedLinks" xml:space="preserve"><value>The profiles or Runner path contains too many links to verify safely.</value></data>
+  <data name="SettingsRead" xml:space="preserve"><value>Could not read the language preference. English is being used. {0}</value></data>
+  <data name="SettingsSave" xml:space="preserve"><value>Could not save the language preference. The current language and settings file are unchanged. {0}</value></data>
+  <data name="SettingsInvalid" xml:space="preserve"><value>The language settings file is not a valid JSON object. The original file has been preserved.</value></data>
+  <data name="SettingsLarge" xml:space="preserve"><value>The language settings file is too large. The original file has been preserved.</value></data>
+  <data name="SettingsChanged" xml:space="preserve"><value>Language settings were changed by another window. Try again.</value></data>
+  <data name="CloseStatus" xml:space="preserve"><value>Dismiss status message</value></data>
+</root>

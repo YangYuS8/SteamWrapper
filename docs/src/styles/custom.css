@@ -1,0 +1,14 @@
+:root {
+  --sl-color-accent-low: #372119;
+  --sl-color-accent: #cc7147;
+  --sl-color-accent-high: #f2c6ad;
+  --sl-font: 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #f7e6dc;
+  --sl-color-accent: #96441f;
+  --sl-color-accent-high: #482414;
+}
+
+.site-title img { width: 2rem; height: 2rem; }

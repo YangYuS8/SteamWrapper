@@ -1,0 +1,53 @@
+# 参与 SteamWrapper 开发
+
+[English](CONTRIBUTING.md) | 简体中文
+
+SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成。修改产品边界前，请阅读 [README](README.zh-CN.md)、[架构](https://yangyus8.top/SteamWrapper/zh-cn/development/architecture/)和[路线](https://yangyus8.top/SteamWrapper/zh-cn/project/roadmap/)。WinUI Manager 仍是预览；WinUI 是唯一的 Manager，安装器和稳定发布交付门槛仍待完成。
+
+## 问题与提案
+
+请先搜索[现有 issue](https://github.com/YangYuS8/SteamWrapper/issues)。使用缺陷、功能或求助模板，注明版本或提交、分支、平台及 Manager 实现。模板文件在默认分支 `main` 中维护，GitHub 实际模板选择器使用该分支。项目主语言为英语，也欢迎使用简体中文提交问题。
+
+报告缺陷时说明预期、实际行为及最小复现步骤，只附相关且已脱敏的日志片段。优先提供模拟 Steam 库和小型进程 fixture，不上传游戏、Steam 账号数据或存档。疑似安全漏洞请依照 [SECURITY.zh-CN.md](SECURITY.zh-CN.md)处理，并遵守[行为准则](CODE_OF_CONDUCT.zh-CN.md)。
+
+涉及配置格式、Runner CLI 行为、支持平台、打包或外部服务的较大改动，请先讨论。提案不代表项目承诺交付或接受。
+
+## 分支与开发环境
+
+请从 `main` 创建聚焦的功能分支，并将拉取请求提交到 `main`。默认分支已包含 v2；`v2` 分支保留为迁移参考。历史 v1 版本单独保留，不自动回移新修改。
+
+按自己的方式安装改动所需工具。mise 是可选项，其配置用于便利的本地工具准备。SDK 和依赖要求以 `global.json`、项目清单及锁文件、`package.json` 和 `.vsconfig` 为准；修改这些要求时保持可选的 mise 版本一致。官方 MSVC/SDK 前置条件及直接命令见 [Windows 开发环境](https://yangyus8.top/SteamWrapper/zh-cn/development/windows/)。WinUI 改动先执行：
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
+pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
+```
+
+根据[测试文档](https://yangyus8.top/SteamWrapper/zh-cn/development/testing/)选择其他检查。纯文档改动需要翻译及链接复核，不必人为执行全量构建。现有 CI 和发布门禁仍适用，不应削弱检查来掩盖失败。请准确区分通过、失败、受阻和未运行。
+
+## 实现边界
+
+文档站改动须运行 `pnpm docs:check` 和 `pnpm docs:build`，在生产预览中检查两种语言的搜索与导航。完整流程见[文档维护指南](https://yangyus8.top/SteamWrapper/zh-cn/development/documentation/)；纯文字编辑无需构建桌面应用。
+
+- Manager 负责配置；Steam 启动独立无界面 Runner，正常游戏启动不得显示 Manager。
+- 保持 TOML 兼容性、稳定数据路径、Runner CLI 含义及 `"<stable-runner-path>" --appid "<appid>" -- %command%`。
+- 保留未编辑和未知配置字段，不要把保留语法的编辑替换为全模型序列化。
+- 进程生命周期行为及真实进程测试应放在 Runner／平台代码中。
+- 默认界面和文档使用英语，维护完整简体中文对应版本。含义变化时同时更新语言资源和文档对；标识符、协议字段、命令和原始证据保持准确。
+- 保持统一 SVG／PNG／ICO 资源与文档站 favicon 一致；WinUI 使用统一资源。修改源 SVG 后执行 `pnpm brand:generate` 和 `pnpm brand:check`。pnpm／`@resvg/resvg-js` 仅是开发期资源工具，不是应用运行时依赖。使用原创图形并尊重第三方商标。
+
+## 保护玩家数据
+
+自动化测试必须使用一次性 Steam 和用户数据 fixture。未得到明确授权，不得用他人的真实游戏库测试。日常测试不得修补、替换、通过 Steam 校验、卸载或清理游戏文件；Steam 校验可能覆盖第三方汉化。
+
+经授权进行真实验收时，保存所选游戏原有 Launch Options，测试后恢复，并按[真实验收流程](https://yangyus8.top/SteamWrapper/zh-cn/project/validation/steam/)比较文件清单和哈希。遇到未解决的存档或云冲突必须停止。不要上传凭据、账号配置、存档、游戏二进制或未脱敏的个人路径。生成的用户数据和本机证据不得提交。
+
+## 拉取请求
+
+保持 PR 聚焦，说明用户遇到的问题、修改后的行为、相关测试与剩余限制。可见界面改动应附已移除个人信息的截图。同步更新受影响文档的两种语言，并区分现有实现、方案和已验证的平台证据。
+
+请使用[拉取请求模板](.github/PULL_REQUEST_TEMPLATE/zh-CN.md)。不能通过无关测试推定 Steam 时长、成就、Windows 安装或其他平台兼容性。行为修复应按需加入聚焦回归，避免只重复实现字符串的测试。
+
+## 许可证
+
+`main` 上当前的 v2 实现使用 [Apache-2.0 许可证](LICENSE)，贡献按此许可提交。历史 v1 标签和提交保留其原有许可证。本指南不增加贡献者许可协议，也不要求新的签署流程。
