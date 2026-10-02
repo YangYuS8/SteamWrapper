@@ -10,6 +10,9 @@ namespace SteamWrapper.Manager;
 
 public sealed partial class MainWindow : Window
 {
+    internal event EventHandler? InitializationCompleted;
+    internal void ReportDeploymentFailure(Exception error) =>
+        ShowStatus(Messages.Text("DeploymentHealthFailed", error), InfoBarSeverity.Warning);
     private readonly DataPaths paths = DataPaths.FromEnvironment();
     private readonly Localizer localizer = new();
     private readonly UiSettingsStore settings;
@@ -50,6 +53,7 @@ public sealed partial class MainWindow : Window
         await ReloadAsync();
         if (preference.ReadError is not null)
             ShowStatus(Messages.Text("SettingsRead", preference.ReadError), InfoBarSeverity.Warning);
+        InitializationCompleted?.Invoke(this, EventArgs.Empty);
     }
 
     private async Task ReloadAsync()

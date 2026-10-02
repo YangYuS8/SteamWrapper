@@ -99,6 +99,14 @@ The 68 official files, three restored files and other non-save files remained un
 
 <a id="本地命令"></a>
 
+## Installer and signing commands
+
+`Invoke-WinUI.ps1 -Action Test` also runs the deployment-library process/manifest/journal regressions. `Test-WinUIInstallerScripts.ps1` tests packaging guards without producing an application installer; `Test-WindowsSigning.ps1` exercises policy fixtures and real Windows trust failures without requesting signing. `Test-RunnerSigningMetadata.ps1` inspects the built Runner PE without executing it. These checks are part of daily Windows CI.
+
+After full publication, `Test-WinUIProductMetadata.ps1` inspects all seven own EXE/DLL products, including Chinese resources, and the actual x64/GUI NativeAOT Host. The release workflow requires this gate; it does not execute those files or establish their publisher signature.
+
+After a complete publish and verified Inno toolchain installation, `Test-WinUIInstaller.ps1` runs real setup/uninstall processes with isolated program/data roots. Use the [installer guide](/SteamWrapper/guides/installer-preview/) for prerequisites and evidence limits. Manual preview workflows run this gate and separately build setup; ordinary branch CI does not package setup. A clean Windows 11 client, native wizard/Explorer behavior and registry/shortcut/power-loss failure acceptance remain independent gates.
+
 ## Local commands
 
 Install Windows tools by your preferred method; mise is optional. See [Windows development](/SteamWrapper/development/windows/) for SDK requirements and the PowerShell wrappers. The Rust workspace contains only core and Runner. On Linux it no longer needs GTK/WebKit, Dioxus CLI, Xvfb or a desktop session.

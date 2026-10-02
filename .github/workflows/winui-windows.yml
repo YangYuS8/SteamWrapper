@@ -73,6 +73,15 @@ jobs:
       - name: Test version validation and release packaging safeguards
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIReleaseScripts.ps1
 
+      - name: Test deployment packaging and signing safeguards without producing an installer
+        run: |
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerScripts.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Installer script regressions failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WindowsSigning.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Signing policy regressions failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-RunnerSigningMetadata.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Runner product metadata is invalid.' }
+
       - name: Test GitHub and CNB publishers without network writes
         run: |
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1

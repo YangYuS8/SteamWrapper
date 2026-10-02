@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <Version>0.2.1</Version>
+    <Product>SteamWrapper</Product>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.4.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.4.0" />
+    <ProjectReference Include="../SteamWrapper.Deployment/SteamWrapper.Deployment.csproj" />
+    <ProjectReference Include="../SteamWrapper.Host/SteamWrapper.Host.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../SteamWrapper.Deployment.ProcessFixture/SteamWrapper.Deployment.ProcessFixture.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

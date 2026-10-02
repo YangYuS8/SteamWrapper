@@ -9,7 +9,7 @@ SteamWrapper's WinUI 3/C# Manager is an **unsigned prerelease for Windows 11 24H
 ## Known limits
 
 - <Describe version-specific unresolved issues and the scope of verification.>
-- Publisher signing, a WinUI installer, clean-system/update/uninstall acceptance and the optional application updater remain unfinished.
+- Publisher signing, clean-system/update/uninstall acceptance and an enabled application updater remain unfinished. The unsigned installer is currently a separate manual-workflow preview, not an asset of this portable release.
 - Configure games in Manager, then launch through Steam with Manager closed. Steam Launch Options are copied manually; automatic apply/restore is not included.
 - Game, launcher, Overlay and achievement observations apply only to the recorded tested scenarios.
 

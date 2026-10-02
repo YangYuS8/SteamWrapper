@@ -5,7 +5,7 @@ description: "每用户安装器、SignPath 签名及可选 Manager 更新的拟
 
 ## 状态与范围
 
-**拟议实施方案，调研日期为 2026-10-03。** 维护者优先选择免费开源签名，并接受以 **SignPath Foundation** 作为证书发布者。本文没有实现签名服务订阅、证书审批、安装器、客户端更新器、部署启动器或更新源。
+**已批准方案及实施阶段，调研日期为 2026-10-03。** 维护者优先选择免费开源签名，并接受以 **SignPath Foundation** 作为证书发布者。未签名 Inno 安装器、C# NativeAOT 启动器／部署日志、Manager 生命周期锁和签名政策测试现已实现；[安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)记录命令、修复边界与暂存残留。D1b 干净客户端验收、Foundation 申请／批准、生产签名和已启用更新源／客户端仍待完成。以下要求不表示所有阶段均已通过。
 
 当前产品是面向 Windows 11 24H2 x64 的非打包、自包含 WinUI 3/C# Manager，以及独立 Rust Runner。日常 CI、版本标签发行及手动便携包构建已经实现。已有行为见[当前分发方式](/SteamWrapper/zh-cn/development/distribution/)；本文细化[路线图](/SteamWrapper/zh-cn/project/roadmap/)的 P1–P3，不代表其复选框已经完成。
 
@@ -22,7 +22,7 @@ description: "每用户安装器、SignPath 签名及可选 Manager 更新的拟
 
 微软支持将完整的非打包、自包含目录放入自定义安装器。.NET 与 Windows App SDK 依赖都必须包含；WinUI 单文件可执行程序不是本方案的交付目标。[微软部署指南](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps)。
 
-Inno 的版本是实施时应固定的调研基准，尚未作为新工具安装到仓库。添加到构建前，应从官方渠道下载并核验摘要与发布者。继续支持直接调用编译器；mise 可以提供可选便利。[官方下载](https://jrsoftware.org/isdl.php/Inno-Setup-Downloads)。
+Inno 7.1.0 x64 已固定在 `packaging/windows/inno-toolchain.json`，工具脚本验证官方下载摘要及发布者后安装到忽略的 `target/toolchain`。继续支持直接命令，mise 提供可选别名。[官方下载](https://jrsoftware.org/isdl.php/Inno-Setup-Downloads)。
 
 如有企业部署需求，再考虑 WiX/MSI/Burn。MSIX/Store 需要单独验证包身份、共享数据和卸载行为。Velopack 保留为备选实验：其默认目录可能与现有数据根目录冲突，Windows 更新器也可能尝试终止锁定当前目录的进程。它不能代替我们的数据、Runner、信任和进程策略。[Velopack Windows 生命周期](https://docs.velopack.io/packaging/operating-systems/windows)。
 
@@ -58,7 +58,7 @@ Inno 的版本是实施时应固定的调研基准，尚未作为新工具安装
 
 ## 统一部署事务
 
-拟议源码边界为：`packaging/windows/` 保存 Inno 定义，`apps/deployment-windows/` 保存共享 C# 部署逻辑和启动器／辅助程序。这些名称是实施建议，不是已有项目。值得试验一个小型 NativeAOT 部署可执行程序，使其恢复时无需加载正在替换的 Manager 版本；体积、构建、本地化及签名支持都需验证。
+已实现的源码边界为：`packaging/windows/` 保存 Inno 定义，`apps/deployment-windows/` 保存共享 C# 部署逻辑和 NativeAOT 启动器／辅助程序，恢复时无需加载被替换的 Manager。完整版本清理、跨实例正常退出请求、注册表／快捷方式／断电整体恢复仍属开发或验收工作；预览版拒绝占用中的操作，提示用户正常关闭 Manager。
 
 Inno 管理安装／卸载入口、注册项及快捷方式，并将输入文件解压到临时工作区。部署组件拥有稳定启动器及清单跟踪的暂存／版本目录。Inno 的 `[Files]` 卸载日志不会自动跟踪其他进程重命名后的暂存目录，不能依靠它删除转为正式版本的目录。安装与卸载钩子必须明确向共享组件交接所有权和锁的生命周期，包括注册项／快捷方式失败时的处理。
 
@@ -117,7 +117,7 @@ Inno 管理安装／卸载入口、注册项及快捷方式，并将输入文件
 
 应用自行执行离线验证时，使用 WinVerifyTrust 的 `WTD_CACHE_ONLY_URL_RETRIEVAL`；仅禁用吊销检查不能阻止其他证书获取请求。缓存信任不代表吊销状态是最新的。缺少可信证书链／时间戳证据时，验证失败并说明修复／离线问题，不接受不可信安装包。明确授权更新期间的在线吊销验证可能独立于 GitHub 产物请求，联系证书颁发机构端点；应记录受限超时及无法访问／已吊销的处理结果。Runner 或普通离线 Manager 启动均不发起此类查询。操作系统自身的检查和警告与应用请求分开看待。[微软信任标志](https://learn.microsoft.com/en-us/windows/win32/api/wintrust/ns-wintrust-wintrust_data)。
 
-当前 `Invoke-WinUI.ps1` 在签名前计算 Runner SHA-256，需将暂存与最终清单生成分开。当前 Runner 没有版本 JSON 探针或 Windows 版本资源构建步骤；应增加并测试自有 PE 元数据，不执行未知的已安装二进制文件。所有自有 EXE／DLL／模板都应明确设置 `ProductName=SteamWrapper` 及 Foundation 要求的一致产品版本，包括 Application、本地化自有程序集、启动器／辅助程序及卸载器。当前 Application 没有明确版本；SDK 信息版本可能追加源码哈希，因此不能假设它们与 Manager／Rust 产品版本一致。源码提交保留在发行元数据中。当前 `RunnerInstaller` 比较三段数字版本，并拒绝版本相同而哈希不同的字节，因此签名或时间戳变化可能导致安装冲突。
+未签名发布流程在签名前计算 Runner SHA-256。Runner 现有已测试的 Windows PE 元数据，自有 C# 产品与安装器采用协调的 `0.2.1` 产品版本，不追加 SDK 提交后缀。`WindowsSigning.ps1` 可验证最终已签名 Runner 字节并原子重建暂存清单，但尚未连接生产签名服务。D3 仍需接入签名顺序并检查每个自有 PE／模板；不执行未知已安装文件来获取版本。源码提交保留在发行元数据中。`RunnerInstaller` 比较三段数字版本，同版本不同摘要拒绝覆盖，签名或时间戳变化需使用新基础版本。
 
 首个已签名系列保留现有协调一致的数字版本，每次重新构建／签名发行都递增基础版本。例如，不能为 `v0.2.1-preview.1` 和 `v0.2.1-preview.2` 重新签出不同的 Runner 字节，却仍将两者都标为 `0.2.1`。引入签名时使用尚未发布的新基础版本；不重新签已有公开标签。重试失败的发布任务时复用完全相同的不可变已签名产物。以后可以设计独立组件契约／版本及复用未变更的已签名 Runner，但需明确兼容性元数据并采用服务方批准的产物策略，不能违反统一产品版本限制，也不能简单删除版本门槛。
 

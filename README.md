@@ -12,13 +12,13 @@ English | [简体中文](README.zh-CN.md)
 
 ## Current status
 
-Windows is the priority. The **WinUI 3/C# Manager is a working preview** with local Steam discovery, native pickers, syntax-preserving configuration, advanced arguments and Launch Options copying. WinUI is the only Manager; the retired Dioxus UI and release chain have been removed. Read the installation guide before choosing an artifact. Clean-system acceptance and a WinUI installer remain unfinished.
+Windows is the priority. The **WinUI 3/C# Manager is a working preview** with local Steam discovery, native pickers, syntax-preserving configuration, advanced arguments and Launch Options copying. WinUI is the only Manager; the retired Dioxus UI and release chain have been removed. An unsigned [per-user installer preview](https://yangyus8.top/SteamWrapper/guides/installer-preview/) is implemented; clean-system acceptance and production signing remain open.
 
 Manager defaults to English and includes complete Simplified Chinese localization. Language changes preserve game names, paths, arguments and saved profiles. Keep official Steam installations separate from third-party translations; see [translated games, saves and achievements](https://yangyus8.top/SteamWrapper/guides/translated-games/). Compatibility observations are recorded per game and scenario, not promised for every title.
 
 Covers prefer custom and local Steam images. Optional official Steam CDN fallback is off by default, with a bounded SteamWrapper cache and a clear action; missing artwork never blocks configuration or launch. See [cover settings](https://yangyus8.top/SteamWrapper/guides/configuration/#cover-settings).
 
-Pull requests and `main` run tests and compile checks. Downloadable Windows packages are built by the release workflow when a version tag is pushed, or on demand for a manual preview. Tagged WinUI releases remain unsigned prereleases until the Windows delivery gates pass. See [release preparation](https://yangyus8.top/SteamWrapper/development/distribution/) for versioning and release requirements.
+Pull requests and `main` run tests and compile checks. Version tags build portable prereleases; manual workflow runs also build and test an unsigned installer preview. Tagged WinUI releases remain unsigned prereleases until the Windows delivery gates pass. See [release preparation](https://yangyus8.top/SteamWrapper/development/distribution/) and the [code-signing policy](https://yangyus8.top/SteamWrapper/project/design/code-signing/).
 
 ## Documentation
 

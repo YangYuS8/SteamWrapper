@@ -160,4 +160,7 @@
   <data name="CoverSettingsSave" xml:space="preserve"><value>Could not save cover preferences. The previous preference is still in use. {0}</value></data>
   <data name="ClearCoversFailed" xml:space="preserve"><value>Could not clear all downloaded covers. Local artwork is unchanged. {0}</value></data>
   <data name="CloseStatus" xml:space="preserve"><value>Dismiss status message</value></data>
+  <data name="DeploymentTitle" xml:space="preserve"><value>SteamWrapper installation</value></data>
+  <data name="DeploymentBlocked" xml:space="preserve"><value>This installed version cannot open. Finish the installation or use Repair, then try again. {0}</value></data>
+  <data name="DeploymentHealthFailed" xml:space="preserve"><value>The application opened, but its recovery record could not be confirmed. Keep the previous version available and use Repair if needed. {0}</value></data>
 </root>

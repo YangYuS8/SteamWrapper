@@ -69,6 +69,12 @@ crates/core                                 # shared configuration/path contract
 
 `ProfileSteamInstallation` associates a read-only Steam path by AppID for display. It is not serialized and never overwrites `game_dir`, the actual runtime folder, which may be outside Steam. See [translated-game directories](/SteamWrapper/guides/translated-games/).
 
+### Manager deployment
+
+`apps/deployment-windows` contains a GUI-independent C# deployment library and NativeAOT `SteamWrapper.exe` launcher/helper. Manager acquires a shared installation lease before initialization and keeps it until process exit; its health acknowledgment binds the current transaction. Inno and explicit repair/rollback/uninstall use the same exclusive lease and manifest/journal engine. This component launches Manager only and never touches games, Steam options or the stable Runner/data tree. See [installer ownership and recovery](/SteamWrapper/guides/installer-preview/).
+
+Application update validation is an internal, injected-trust service; no production feed or update UI is enabled. SignPath signing and D1b clean-client delivery remain external/acceptance prerequisites.
+
 ### `crates/core`
 
 Core is a GUI-independent Rust library. Runner uses its Profile/TOML and path semantics. Existing Steam metadata, cover URL, and Launch Options utilities do not provide WinUI services: C# implements the file contract directly. Core contains no platform process-waiting API.

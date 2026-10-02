@@ -9,6 +9,8 @@ Set-Location -LiteralPath $repoRoot
 $project = Join-Path $repoRoot 'apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj'
 $tests = Join-Path $repoRoot 'apps/manager-winui/SteamWrapper.Application.Tests/SteamWrapper.Application.Tests.csproj'
 $windowsTests = Join-Path $repoRoot 'apps/manager-winui/SteamWrapper.Windows.Tests/SteamWrapper.Windows.Tests.csproj'
+$deploymentTests = Join-Path $repoRoot 'apps/deployment-windows/SteamWrapper.Deployment.Tests/SteamWrapper.Deployment.Tests.csproj'
+$deploymentHost = Join-Path $repoRoot 'apps/deployment-windows/SteamWrapper.Host/SteamWrapper.Host.csproj'
 $publishRoot = Join-Path $repoRoot 'target/winui'
 $output = Join-Path $publishRoot 'publish'
 
@@ -22,6 +24,8 @@ if ($Action -eq 'Test') {
     Invoke-Checked dotnet @('test', $tests, '--no-restore', '--configuration', 'Release')
     Invoke-Checked dotnet @('restore', $windowsTests, '--locked-mode')
     Invoke-Checked dotnet @('test', $windowsTests, '--no-restore', '--configuration', 'Release')
+    Invoke-Checked dotnet @('restore', $deploymentTests, '--locked-mode')
+    Invoke-Checked dotnet @('test', $deploymentTests, '--no-restore', '--configuration', 'Release')
     return
 }
 
@@ -49,6 +53,8 @@ if ($versionMatch.Count -ne 1) { throw 'Runner package must have one three-part 
 Invoke-Checked dotnet @('restore', $project, '--locked-mode', '-r', 'win-x64', '-p:Platform=x64')
 if ($Action -eq 'Build') {
     Invoke-Checked dotnet @('build', $project, '--no-restore', '--configuration', 'Release', '-p:Platform=x64')
+    Invoke-Checked dotnet @('restore', $deploymentHost, '--locked-mode', '-r', 'win-x64')
+    Invoke-Checked dotnet @('build', $deploymentHost, '--no-restore', '--configuration', 'Release', '-r', 'win-x64')
     return
 }
 . (Join-Path $PSScriptRoot 'Complete-WinUIPublish.ps1')
@@ -57,6 +63,13 @@ Assert-WinUIBuildPath $candidate
 New-Item -ItemType Directory -Path $candidate | Out-Null
 try {
     Invoke-Checked dotnet @('publish', $project, '--no-restore', '--configuration', 'Release', '--runtime', 'win-x64', '--self-contained', 'true', '-p:Platform=x64', '--output', $candidate)
+    # One independent NativeAOT executable is both the stable Manager launcher
+    # and the on-demand installation/repair helper. It never launches games.
+    Invoke-Checked dotnet @('restore', $deploymentHost, '--locked-mode', '-r', 'win-x64')
+    $deploymentOutput = Join-Path $publishRoot ('deployment-staging-' + [Guid]::NewGuid().ToString('N'))
+    Invoke-Checked dotnet @('publish', $deploymentHost, '--no-restore', '--configuration', 'Release', '--runtime', 'win-x64', '--self-contained', 'true', '-p:PublishAot=true', '--output', $deploymentOutput)
+    New-Item -ItemType Directory -Path (Join-Path $candidate 'Deployment') | Out-Null
+    Copy-Item -LiteralPath (Join-Path $deploymentOutput 'SteamWrapper.exe') -Destination (Join-Path $candidate 'Deployment/SteamWrapper.exe')
 } catch {
     Write-Warning "The previous release is unchanged. Failed publish output is retained at $candidate"
     throw
@@ -72,6 +85,7 @@ $output = Complete-WinUIPublish -Root $publishRoot -Candidate $candidate -Requir
     'Runner/SteamWrapperRunner.exe', 'Runner/runner-manifest.json',
     'Assets/steamwrapper.svg', 'Assets/steamwrapper.ico',
     'zh-CN/SteamWrapper.Application.resources.dll'
+    'SteamWrapper.Deployment.dll', 'Deployment/SteamWrapper.exe'
 )
 Write-Output "WinUI preview: $output"
 if ($Action -ne 'Sandbox') { return }

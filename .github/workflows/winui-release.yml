@@ -100,6 +100,8 @@ jobs:
           cache: false
       - name: Publish and run all five publication regressions
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
+      - name: Inspect coordinated product versions and the actual NativeAOT launcher
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIProductMetadata.ps1
       - name: Inspect and package the tagged preview release
         if: needs.preflight.outputs.publish == 'true'
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIRelease.ps1 -Tag $env:RELEASE_TAG -Commit $env:RELEASE_COMMIT
@@ -109,6 +111,24 @@ jobs:
         with:
           name: SteamWrapper-WinUI-preview-windows-x64
           path: target/winui/publish/
+          if-no-files-found: error
+      - name: Build and test an isolated installer for a manual preview
+        if: needs.preflight.outputs.publish != 'true'
+        run: |
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compiler verification failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Isolated installer acceptance failed.' }
+          $sourceVersion = ([xml](Get-Content apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ }
+          $tag = "v$sourceVersion-preview.$env:GITHUB_RUN_NUMBER"
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag $tag
+          if ($LASTEXITCODE -ne 0) { throw 'Installer preview packaging failed.' }
+      - name: Upload the unsigned installer preview without publishing a Release
+        if: needs.preflight.outputs.publish != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: SteamWrapper-WinUI-installer-preview-windows-x64
+          path: target/winui/installers/v*-preview.${{ github.run_number }}/
           if-no-files-found: error
       - name: Upload the inspected versioned release assets
         if: needs.preflight.outputs.publish == 'true'

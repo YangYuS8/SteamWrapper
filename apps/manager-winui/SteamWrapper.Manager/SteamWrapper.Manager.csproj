@@ -21,7 +21,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
+    <Product>SteamWrapper</Product>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.6" />
@@ -29,6 +31,7 @@
     <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.1.6" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
     <ProjectReference Include="..\SteamWrapper.Application\SteamWrapper.Application.csproj" />
+    <ProjectReference Include="..\..\deployment-windows\SteamWrapper.Deployment\SteamWrapper.Deployment.csproj" />
     <Manifest Include="$(ApplicationManifest)" />
     <Content Include="..\..\..\assets\brand\steamwrapper.svg" Link="Assets\steamwrapper.svg" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\..\assets\brand\steamwrapper.ico" Link="Assets\steamwrapper.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

@@ -13,6 +13,17 @@ namespace SteamWrapper.Application.Tests;
 public sealed class LocalizationTests
 {
     [TestMethod]
+    public void InstallationFailuresUseTheSelectedLanguageAndPreserveDiagnostics()
+    {
+        var diagnostic = new IOException("Busy: C:\\测试 {0}\\installation.json");
+        var message = Messages.Text("DeploymentBlocked", diagnostic);
+        StringAssert.Contains(new Localizer().Format(message), "Repair");
+        StringAssert.Contains(new Localizer("zh-CN").Format(message), "修复");
+        StringAssert.Contains(new Localizer("zh-CN").Format(message), diagnostic.Message);
+        StringAssert.Contains(new Localizer("zh-CN").Format(Messages.Text("DeploymentHealthFailed", diagnostic)), diagnostic.Message);
+    }
+
+    [TestMethod]
     public async Task ServicesDefaultToEnglishWithoutChangingUserData()
     {
         using var fixture = new ServiceFixture();

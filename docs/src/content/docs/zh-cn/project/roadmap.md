@@ -74,7 +74,7 @@ P0 反馈和 P1 打包准备可以并行。WinUI 稳定发布需要 P0–P2 验�
 
 **交付目标：**由同一应用布局生成 unpackaged、自包含的 WinUI 每用户安装器和完整 portable ZIP。
 
-[Windows 交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)将 P1–P3 拆为 D1a/D1b 安装与恢复、D2/D3 签名准备与发行、D4/D5 可选检查与确认更新，建议采用每用户 Inno 安装器及优先免费的 SignPath Foundation，通过同一 C# 部署协议保留稳定 Runner 和数据的所有权边界。研究和书面方案不表示实施或验收勾选项已完成。
+已批准的[Windows 交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)将 P1–P3 拆为 D1a/D1b 安装与恢复、D2/D3 签名准备与发行、D4/D5 可选检查与确认更新。未签名的[Inno／C# 安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)、生命周期锁、日志／人工修复和签名保护底层已实现；内部更新认证仅使用测试夹具。下列干净客户端及完整交付勾选项仍待验收，Foundation 批准和生产已签名发布尚不可用。
 
 - [ ] 打包 .NET、Windows App SDK、原生／本地化资源和独立 Runner。普通玩家无需安装 SDK 或准备运行时，不承诺单文件 EXE。
 - [ ] Manager 按用户安装，日常安装不要求管理员权限。数据保持在 `%LOCALAPPDATA%\SteamWrapper\`，Steam 引用稳定的 `bin\SteamWrapperRunner.exe`，不引用带版本的 Manager 或解压目录。
@@ -98,7 +98,7 @@ P0 反馈和 P1 打包准备可以并行。WinUI 稳定发布需要 P0–P2 验�
 
 **验收：**另一位维护者能够识别源码标签，从两个渠道下载每个公开产物、验证摘要及适用签名，并按文档安装／更新／卸载。签名凭据与发布密钥不进入仓库。合并分支、打标签或上传 CI 预览，都不能单独完成该门槛。
 
-[标签工作流与维护者步骤](/SteamWrapper/zh-cn/development/distribution/#准备并触发发布)实现了 P2 的自动化切片，不会仅因合并代码就创建公开新版本。当前源码版本保持 `0.2.0`；未来版本需要经过审阅的清单／锁文件改动及完整双语发布说明。公开标签下载核验、已配置的 CNB 二进制渠道、签名与安装器／干净系统验收，仍须在实际发布中执行才能完成。
+[标签工作流与维护者步骤](/SteamWrapper/zh-cn/development/distribution/#准备并触发发布)实现 P2 自动化，合并不会发布新版本。当前源码为 `0.2.1`，因 Runner PE 元数据而递增。手动预览工作流也构建／测试未签名安装器；D1b／D3 前，公开标签交付仍采用便携五产物契约。下载核验、已配置 CNB 二进制、签名和干净客户端验收需实际发布证据。
 
 ## P3. 可选应用更新
 
@@ -137,4 +137,4 @@ P0 反馈和 P1 打包准备可以并行。WinUI 稳定发布需要 P0–P2 验�
 
 当前源码包含 WinUI Manager、C# 配置服务及独立 Rust core／Runner。Manager 支持本地 Steam 发现／封面、TOML 编辑、稳定 Runner 安装和启动项生成。已移除的 [Dioxus 应用](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/apps/manager-dioxus)、[Rust 管理层](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/crates/manager-core)和[旧 UI 发布工作流](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09e/.github/workflows/release.yml)可在 `ca6a09e` 查阅，属于历史参考，不是当前 Windows UI 或交付证据。
 
-旧路线的 Dioxus、Linux/AppImage 勾选是历史实现记录，可在 `31a609d:docs/roadmap.md` 查阅；不继续混放在新路线作为当前验收。上述 A/B/C 勾选保留原有范围，包括当时保留的工作流。2026-10-02 的移除不改写早先测试结果，也不完成剩余交付门槛。WinUI 配置预览和契约已实现，详见[环境记录](/SteamWrapper/zh-cn/development/windows/)。封面已包含修复后的本地发现及上述可选 CDN／缓存切片，保持默认离线。日常 CI 与版本标签／手动交付现已分离，标签预发布自动化切片已实现。安装器、签名／稳定交付、可选应用更新器和 Steam 一键应用／恢复仍待完成。自动化不会扩大游戏／成就保证，也不能证明尚未执行的发布验收通过。
+旧路线的 Dioxus、Linux/AppImage 勾选是历史实现记录，可在 `31a609d:docs/roadmap.md` 查阅；不继续混放在新路线作为当前验收。上述 A/B/C 勾选保留原有范围，包括当时保留的工作流。2026-10-02 的移除不改写早先测试结果，也不完成剩余交付门槛。WinUI 配置预览和契约已实现，详见[环境记录](/SteamWrapper/zh-cn/development/windows/)。封面已包含修复后的本地发现及上述可选 CDN／缓存切片，保持默认离线。日常 CI 与版本标签／手动交付现已分离，标签预发布自动化切片已实现。未签名安装器原型及签名／更新认证底层已实现，干净客户端交付、生产签名、已启用更新器和 Steam 一键应用／恢复仍待完成。自动化不会扩大游戏／成就保证，也不能证明尚未执行的发布验收通过。

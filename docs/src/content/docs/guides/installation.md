@@ -5,7 +5,7 @@ description: Get the complete WinUI preview, understand its data locations, and 
 
 The WinUI Manager is currently a **self-contained directory preview for Windows 11 24H2 x64**. It bundles .NET and Windows App SDK files alongside the application. Keep the complete directory together.
 
-There is no new WinUI setup wizard, single-file executable, or completed clean-system/update/uninstall guarantee. WinUI is the only Manager, with executable `SteamWrapper.Manager.exe`. Current version-tag releases are unsigned prereleases; Dioxus releases are historical and do not contain the current WinUI Manager.
+An unsigned [per-user setup preview](/SteamWrapper/guides/installer-preview/) is implemented separately. Clean-system/update/uninstall acceptance is not complete; there is no single-file WinUI executable. WinUI is the only Manager, with executable `SteamWrapper.Manager.exe`. Current version-tag releases are unsigned portable prereleases; Dioxus releases are historical and do not contain the current WinUI Manager.
 
 ## Get a versioned preview
 
@@ -23,6 +23,8 @@ If no WinUI release is available, use a manual workflow preview or the local bui
 Ordinary pull requests and merges into `main` run CI without uploading an application package. A maintainer can open the [WinUI version release workflow](https://github.com/YangYuS8/SteamWrapper/actions/workflows/winui-release.yml), select the intended branch or ref under **Run workflow**, and request a build. A manual run performs the full build and gates but never publishes a public release.
 
 From a successful manual run, download **`SteamWrapper-WinUI-preview-windows-x64`** and extract every file. Do not use the separate test-evidence artifact as the application. Workflow artifact downloads may require GitHub sign-in and expire with the retention period. Maintainers should provide the selected source revision with the preview.
+
+The separate **`SteamWrapper-WinUI-installer-preview-windows-x64`** artifact contains an unsigned setup preview and inspection metadata. Read the [installer guide](/SteamWrapper/guides/installer-preview/) before using it; it has not passed the clean-client/signing gates.
 
 ## Open the complete application
 
