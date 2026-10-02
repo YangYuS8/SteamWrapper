@@ -17,7 +17,7 @@ description: "The WinUI/C# Manager, independent Rust Runner, and Windows-first d
 | Manager services | C# Application | Profiles, local Steam discovery, Runner installation, logs; no Rust FFI or helper |
 | Daily runtime | Independent Rust Runner | Existing CLI and process lifecycle; Manager closed during play |
 | Configuration | `profiles.toml` v2 | C# edits preserve unknown/unedited data; actual Rust consumption is tested |
-| Covers | Local images and placeholders | Optional official CDN fallback is planned, not implemented |
+| Covers | Custom/local Steam images, optional official Steam CDN fallback and placeholders | Offline by default; bounded requests and SteamWrapper cache |
 | Delivery | Unpackaged self-contained Windows directory and CI artifact | Per-user installer, tagged WinUI releases and updater remain unimplemented |
 | Platform | Windows 11 24H2 x64 preview | Existing Linux Runner compatibility/CI only; no Linux GUI |
 

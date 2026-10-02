@@ -39,7 +39,9 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
-`Test` 动作包含配置保真/冲突/替换失败、本地 Steam、稳定 Runner 安装与共享文件位置测试。`Test-WinUIContracts.ps1` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](https://github.com/YangYuS8/SteamWrapper/blob/main/tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
+`Test` 动作同时运行 `SteamWrapper.Application.Tests` 与 `SteamWrapper.Windows.Tests`，包含配置保真／冲突／替换失败、本地 Steam、封面偏好／下载／缓存服务、稳定 Runner 安装与共享文件位置测试，以及实际 Windows 图片解码器。Windows 测试项目直接链接生产解码器源码，不加载 WinUI 或创建窗口，不属于原生 UI 自动化。`Test-WinUIContracts.ps1` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](https://github.com/YangYuS8/SteamWrapper/blob/main/tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
+
+封面回归使用一次性的 Steam／设置／缓存 fixture 与注入的 HTTP handler，不请求真实账号，也不写入真实游戏库。验证自定义／本地候选优先级与哈希布局、默认关闭与偏好持久化、离线缓存复用、取消／超时／404／限流及冷却、重定向白名单、有界字节／并发、缓存配额／过期／清理及无关文件保留。Windows 解码器测试涵盖有效 PNG／JPEG、截断容器、CRC 有效但 zlib 数据损坏的 PNG、尺寸／像素／字节限制、预先取消及可用 WebP codec 行为。codec 测试不证明行图片呈现、流畅编辑、语言布局或对话框取消，这些仍需 P0 实际 WinUI 验收。
 
 目录分离新增 AppID 关联、库外运行路径保留和真实双库安装冲突回归，该实现轮 C# 共 49/49 通过。原生隔离保存、重新扫描和歧义新建配置也已验证；详见 [目录分离验证记录](/SteamWrapper/zh-cn/guides/translated-games/)。这些隔离结果本身不代表真实汉化迁移或成就触发通过。
 
@@ -79,7 +81,8 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 | 层 | 命令 | 验证内容 |
 | --- | --- | --- |
 | Rust core / Runner | `cargo test --locked --workspace` | TOML、VDF、路径、Steam 元数据、Launch Options 与平台 Runner 行为；无 GUI 依赖 |
-| C# 服务 | `Invoke-WinUI.ps1 -Action Test` | 配置保真和安全写入、本地发现、语言设置、稳定 Runner 安装与共享数据位置 |
+| C# 服务 | `Invoke-WinUI.ps1 -Action Test` | 配置保真和安全写入、本地发现、语言／封面设置、有界封面请求／缓存、稳定 Runner 安装与共享数据位置 |
+| Windows 图片解码器 | `Invoke-WinUI.ps1 -Action Test` | 生产解码器及 Windows codec；有效／损坏图片、资源限制与预先取消，不创建 WinUI 窗口 |
 | C# / Rust 契约 | `Test-WinUIContracts.ps1` | 未编辑语义全量比对，以及真实受控 Runner 的 argv/cwd、等待、退出和错误行为 |
 | Windows 发布 | `Test-WinUIPublish.ps1` | 自包含 Manager/Runner 资源与发布目录替换、恢复 |
 | WinUI 交互 | `Invoke-WinUI.ps1 -Action Sandbox` 加单独记录的原生交互 | 一次性数据、真实窗口/picker；自动化原生 UI 门禁仍在计划中 |

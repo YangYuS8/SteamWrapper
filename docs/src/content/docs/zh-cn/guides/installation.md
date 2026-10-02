@@ -76,11 +76,11 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 | 位置 | 用途 |
 | --- | --- |
 | `profiles.toml` | Runner 使用的游戏配置 |
-| `ui-settings.json` | Manager 的显示语言偏好 |
+| `ui-settings.json` | Manager 的语言与可选 Steam 封面下载偏好 |
 | `bin\SteamWrapperRunner.exe` | Steam 引用的稳定、独立 Runner |
 | `logs` | Runner 诊断，以及能够记录时的 Manager 启动诊断 |
 | `backups` | 配置备份，不是自动游戏存档保护 |
-| `cache` | SteamWrapper 的缓存位置 |
+| `cache\covers` | 有界的已下载封面缓存；清理会保留 Steam／自定义图片 |
 
 游戏存档可能位于游戏目录、Windows 用户目录或 Steam 存储中，需要另行识别并保护。
 

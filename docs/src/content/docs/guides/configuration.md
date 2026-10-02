@@ -114,8 +114,22 @@ Keep `%command%` in its final position after `--`. Current Runner receives and l
 
 Use the sidebar's **Language** selector for **English** or **简体中文**. A successful change updates application-owned controls, validation and status messages immediately while retaining unsaved names, paths and arguments.
 
-The preference is saved separately in `%LOCALAPPDATA%\SteamWrapper\ui-settings.json`. Both Managers use `en-US` or `zh-CN`; missing or unknown values default to English. `en` and `zh-Hans` are accepted aliases. The language preference never enters `profiles.toml` or changes the Runner CLI.
+The preference is saved separately in `%LOCALAPPDATA%\SteamWrapper\ui-settings.json`. Manager uses `en-US` or `zh-CN`; missing or unknown values default to English. `en` and `zh-Hans` are accepted aliases. The language preference never enters `profiles.toml` or changes the Runner CLI.
 
 If saving the preference fails, the current language remains selected and an error is shown. A malformed settings file is preserved. OS-owned picker text and original diagnostic/log content may remain in their own language.
+
+<a id="cover-settings"></a>
+
+## Cover settings
+
+Cover display is **local-first and offline by default**. Custom artwork saved by Steam takes priority, followed by Steam's local library cache. Both older filenames and newer nested hash directories are supported. Local images are read without changing Steam files. A missing or unreadable cover uses the gamepad placeholder; you can still select the game, edit, save and launch it.
+
+In **Add Steam game**, enable **Download missing covers from Steam** only if you want Manager to request missing images for games discovered in your local Steam library. Each image request includes that game's AppID and normal HTTPS connection information. It does not query your account or upload your library list. Manual AppID entry does not start a metadata lookup. Steam may not provide an image at the fixed portrait address, so some games can still show placeholders.
+
+The choice persists alongside the language preference in `ui-settings.json`, without changing profiles or Launch Options. Turning it off cancels active downloads and prevents new image requests. Already downloaded, valid cached covers remain available offline; local/custom art still takes priority.
+
+Select **Clear downloaded covers** to remove only images downloaded by SteamWrapper. The cache lives in `%LOCALAPPDATA%\SteamWrapper\cache\covers\`, holds at most 32 MiB and 64 covers, and expires images after thirty days. Clearing does not remove custom Steam art, Steam's cache, game files, profiles or Runner, and does not immediately refill the cache. With the option enabled, a later scan or dialog opening can fetch missing art again.
+
+Requests have time, size and concurrency limits. Connection failures, unavailable images and invalid responses leave placeholders rather than blocking configuration. See [missing-cover troubleshooting](/SteamWrapper/guides/troubleshooting/#missing-covers) for practical checks and [architecture](/SteamWrapper/development/architecture/#covers-and-safety-boundaries) for exact limits.
 
 The implementation boundaries are in the [profile store](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-winui/SteamWrapper.Application/Profiles/ProfileStore.cs) and [Runner profile model](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/profile.rs).

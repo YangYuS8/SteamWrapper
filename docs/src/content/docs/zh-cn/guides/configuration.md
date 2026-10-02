@@ -114,8 +114,22 @@ Manager 先验证路径和 AppID、保存配置，再准备稳定 Runner。保�
 
 侧栏的 **语言** 选择器提供 **English** 和 **简体中文**。成功切换后，应用自有控件、验证和状态消息立即更新，尚未保存的名称、路径与参数保持不变。
 
-偏好单独保存在 `%LOCALAPPDATA%\SteamWrapper\ui-settings.json`。两套 Manager 使用 `en-US` 或 `zh-CN`，缺失或未知值默认英语；也兼容 `en` 与 `zh-Hans` 别名。语言偏好不进入 `profiles.toml`，也不会修改 Runner CLI。
+偏好单独保存在 `%LOCALAPPDATA%\SteamWrapper\ui-settings.json`。Manager 使用 `en-US` 或 `zh-CN`，缺失或未知值默认英语；也兼容 `en` 与 `zh-Hans` 别名。语言偏好不进入 `profiles.toml`，也不会修改 Runner CLI。
 
 如果保存偏好失败，界面保留当前语言并显示错误；损坏的设置文件会原样保留。系统 picker 自有文案和原始诊断、日志可能继续使用它们自身的语言。
+
+<a id="cover-settings"></a>
+
+## 封面设置
+
+封面显示**本地优先、默认离线**。优先使用 Steam 保存的自定义图片，再使用 Steam 本地库缓存；支持旧式文件名与新的嵌套哈希目录。读取本地图片不会修改 Steam 文件。缺失或不可读的封面显示手柄占位，仍可选择游戏、编辑、保存和启动。
+
+只有希望 Manager 为本地 Steam 库中已发现的游戏获取缺失图片时，才在**添加 Steam 游戏**中开启**从 Steam 下载缺失封面**。每次图片请求包含该游戏 AppID 和普通 HTTPS 连接信息，不查询你的账号，也不上传游戏库清单。手动填写 AppID 不会触发元数据查询。Steam 不一定在固定竖图地址提供图片，因此部分游戏仍可能显示占位。
+
+该选择与语言偏好一起保存在 `ui-settings.json`，不改变配置或启动项。关闭后会取消正在进行的下载，并阻止新图片请求。已经下载且有效的缓存封面仍可离线显示，本地／自定义图片始终优先。
+
+选择**清除已下载封面**，只删除 SteamWrapper 下载的图片。缓存位于 `%LOCALAPPDATA%\SteamWrapper\cache\covers\`，最多保存 32 MiB、64 张封面，三十天后过期。清理不会删除自定义 Steam 图片、Steam 缓存、游戏文件、配置或 Runner，也不会立即重新填充缓存。保持选项开启时，之后的扫描或打开对话框可以再次获取缺失图片。
+
+请求受时间、大小和并发限制。连接失败、图片不可获取或响应无效时保留占位，不阻塞配置。实用检查见[缺失封面排查](/SteamWrapper/zh-cn/guides/troubleshooting/#missing-covers)，具体限制见[架构](/SteamWrapper/zh-cn/development/architecture/#封面与安全边界)。
 
 实现边界见[配置保存服务](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-winui/SteamWrapper.Application/Profiles/ProfileStore.cs)和 [Runner 配置模型](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/profile.rs)。

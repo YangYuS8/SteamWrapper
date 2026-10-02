@@ -76,11 +76,11 @@ The extracted Manager directory holds application files. Persistent Windows data
 | Location | Purpose |
 | --- | --- |
 | `profiles.toml` | Game profiles used by Runner |
-| `ui-settings.json` | Manager's display-language preference |
+| `ui-settings.json` | Manager language and optional Steam-cover download preferences |
 | `bin\SteamWrapperRunner.exe` | Stable, independent Runner referenced by Steam |
 | `logs` | Runner diagnostics and Manager startup diagnostics when available |
 | `backups` | Configuration backups, not automatic game-save protection |
-| `cache` | SteamWrapper's cache location |
+| `cache\covers` | Bounded downloaded-cover cache; clearing it retains Steam/custom art |
 
 Game saves may instead be inside the game directory, Windows user folders or Steam storage. Identify and protect them separately.
 

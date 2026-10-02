@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.4.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.4.0" />
+    <ProjectReference Include="../SteamWrapper.Application/SteamWrapper.Application.csproj" />
+    <!-- Exercises the exact production decoder without loading WinUI or creating a window. -->
+    <Compile Include="../SteamWrapper.Manager/CoverImageValidator.cs" Link="CoverImageValidator.cs" />
+  </ItemGroup>
+</Project>

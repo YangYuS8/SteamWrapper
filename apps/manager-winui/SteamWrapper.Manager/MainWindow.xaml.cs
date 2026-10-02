@@ -152,7 +152,7 @@ public sealed partial class MainWindow : Window
     private async void AddGame_Click(object sender, RoutedEventArgs e)
     {
         if (snapshot is null || !await CanLeaveAsync()) return;
-        var dialog = new AddGameDialog(this, localizer) { XamlRoot = Root.XamlRoot };
+        var dialog = new AddGameDialog(this, localizer, paths, settings) { XamlRoot = Root.XamlRoot };
         await dialog.ShowAsync();
         if (!dialog.Manual && dialog.SelectedGame is null) return;
         installedGames = dialog.DiscoveredGames;

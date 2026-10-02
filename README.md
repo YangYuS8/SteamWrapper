@@ -16,6 +16,8 @@ Windows is the priority. The **WinUI 3/C# Manager is a working preview** with lo
 
 Manager defaults to English and includes complete Simplified Chinese localization. Language changes preserve game names, paths, arguments and saved profiles. Keep official Steam installations separate from third-party translations; see [translated games, saves and achievements](https://yangyus8.top/SteamWrapper/guides/translated-games/). Compatibility observations are recorded per game and scenario, not promised for every title.
 
+Covers prefer custom and local Steam images. Optional official Steam CDN fallback is off by default, with a bounded SteamWrapper cache and a clear action; missing artwork never blocks configuration or launch. See [cover settings](https://yangyus8.top/SteamWrapper/guides/configuration/#cover-settings).
+
 ## Documentation
 
 The [Astro Starlight documentation site](https://yangyus8.top/SteamWrapper/) is the primary usage and development reference, with complete [Simplified Chinese](https://yangyus8.top/SteamWrapper/zh-cn/).

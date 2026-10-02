@@ -16,6 +16,8 @@
 
 Manager 默认英语，提供完整简体中文。切换语言保留游戏名称、路径、参数与已保存配置。请将官方 Steam 安装与第三方汉化版分开放置，详见[汉化游戏、存档与成就](https://yangyus8.top/SteamWrapper/zh-cn/guides/translated-games/)。兼容性记录限定于具体游戏和场景，不保证所有游戏均可用。
 
+封面优先使用自定义与本地 Steam 图片。可选的官方 Steam CDN 补图默认关闭，使用有界的 SteamWrapper 缓存并提供清理入口；缺图不影响配置或启动。详见[封面设置](https://yangyus8.top/SteamWrapper/zh-cn/guides/configuration/#cover-settings)。
+
 ## 文档
 
 [Astro Starlight 文档站](https://yangyus8.top/SteamWrapper/)是主要的使用与开发文档入口，提供完整[简体中文](https://yangyus8.top/SteamWrapper/zh-cn/)。

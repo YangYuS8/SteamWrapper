@@ -15,7 +15,7 @@ description: "WinUI/C# Manager、独立 Rust Runner 与 Windows 优先的开发�
 | Manager 服务 | C# Application | 配置、本地 Steam 发现、Runner 安装、日志；无 Rust FFI 或 helper |
 | 日常运行 | 独立 Rust Runner | 既有 CLI 与进程生命周期；游玩时关闭 Manager |
 | 配置 | `profiles.toml` v2 | C# 编辑保留未知／未编辑数据，测试实际 Rust 消费 |
-| 封面 | 本地图片与占位 | 可选官方 CDN 回退属于规划，尚未实现 |
+| 封面 | 自定义／本地 Steam 图片、可选官方 Steam CDN 回退与占位 | 默认离线；有界请求与 SteamWrapper 缓存 |
 | 交付 | unpackaged 自包含 Windows 目录与 CI 产物 | 每用户安装器、WinUI 标签发布和更新器未实现 |
 | 平台 | Windows 11 24H2 x64 预览 | 仅保留已有 Linux Runner 兼容性／CI，没有 Linux GUI |
 

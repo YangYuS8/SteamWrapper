@@ -95,7 +95,7 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 
 当前 WinUI 读取 Steam 本地 `appcache/librarycache/` 和各用户 `config/grid/` 图片，缺失时显示占位，不下载或持久缓存封面。
 
-规划中的官方 Steam CDN 回退需明确选择开启，本地优先、默认离线。仅为已知本地 AppID 获取缺失封面，采用 HTTPS 主机／重定向白名单、有界传输／图片尺寸和 SteamWrapper 自有 `cache/` 下的配额缓存。保留自定义图片及 Steam／游戏文件；关闭后停止新请求，清理只触碰 SteamWrapper 下载的封面，失败不影响配置可用性。不包含账号查询、游戏库上传或第三方元数据服务。这是后续[路线图](/SteamWrapper/zh-cn/project/roadmap/)功能，不是从已移除 Dioxus UI 继承的现有能力。
+官方 Steam CDN 封面回退需明确选择开启，本地优先、默认关闭。仅为本地已发现 AppID 获取缺失封面，采用 HTTPS 主机／重定向白名单与有界传输／解码图片尺寸。下载的图片仅存放在 SteamWrapper 的 `cache/covers/`，提供配额、过期、淘汰与清理入口。关闭后取消下载并阻止新请求，有效缓存仍可离线使用。清理保留自定义图片、Steam／游戏文件、配置和 Runner，不包含账号查询、游戏库上传或第三方元数据服务。详见[封面设置](/SteamWrapper/zh-cn/guides/configuration/#cover-settings)、[实现限制](/SteamWrapper/zh-cn/development/architecture/#封面与安全边界)及剩余的[原生／玩家验收](/SteamWrapper/zh-cn/project/roadmap/)。
 
 ## 发布渠道
 

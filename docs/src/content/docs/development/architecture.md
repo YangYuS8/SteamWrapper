@@ -31,7 +31,7 @@ Steam status, playtime, achievements, and cloud behavior need their own scoped a
 ```text
 Open WinUI Manager
 → scan local Steam manifests and covers
-→ show local art or a friendly placeholder
+→ show custom/local art, optional cached/CDN fallback, or a friendly placeholder
 → select the actual executable/launcher and preserve advanced settings
 → save the profile and install/check stable Runner
 → generate/copy Launch Options for manual application
@@ -65,7 +65,7 @@ crates/core                                 # shared configuration/path contract
 
 `ProfileStore` uses Tomlyn syntax spans to edit only changed fields, preserving other text and unknown data. New Windows profiles explicitly use `job`; omitted legacy `wait_mode` remains `root`. Saves use a cooperative lock, byte-version conflict checks, a flushed same-directory temporary file, atomic replacement, and backup. Inline/dotted profiles are read-only. Non-cooperating editors can still race between the final check and replacement.
 
-`SteamScanner` reads local metadata/covers. `RunnerInstaller` checks hash-bound version metadata and actual shared file locations before reporting ready; it uses stable paths and atomic replacement, preserving newer compatible versions and rejecting unknown replacements. GUI code never launches or waits for games. Cross-language tests and controlled process fixtures verify actual Rust consumption and are excluded from published output.
+`SteamScanner` reads local metadata/covers. `CoverService` owns optional image requests and its bounded cache, while WinUI supplies image decoding and updates visible rows asynchronously. `RunnerInstaller` checks hash-bound version metadata and actual shared file locations before reporting ready; it uses stable paths and atomic replacement, preserving newer compatible versions and rejecting unknown replacements. GUI code never launches or waits for games. Cross-language tests and controlled process fixtures verify actual Rust consumption and are excluded from published output.
 
 `ProfileSteamInstallation` associates a read-only Steam path by AppID for display. It is not serialized and never overwrites `game_dir`, the actual runtime folder, which may be outside Steam. See [translated-game directories](/SteamWrapper/guides/translated-games/).
 
@@ -108,6 +108,8 @@ wait_mode = "job"
 
 WinUI uses `ui-settings.json` beside `profiles.toml`. `language` is `en-US` or `zh-CN`; trimmed, case-insensitive `en` and `zh-Hans` aliases are accepted, with missing/unknown values defaulting to English. Saves preserve unknown JSON fields and refuse to overwrite invalid settings.
 
+`steamCdnCovers` is a separate boolean in the same file, defaulting to `false` when missing. Preference writes preserve each other's value and unknown fields; a successful persisted change enables downloads. A failed write leaves the prior preference in effect.
+
 The sidebar selector refreshes application-owned text after successful persistence; failure retains the previous language and reports an error. Unsaved input, user names, paths, arguments, protocol identifiers, and logs remain unchanged. Language does not alter Runner/TOML behavior.
 
 <a id="等待模式"></a>
@@ -148,9 +150,13 @@ Existing Linux Runner uses `$XDG_DATA_HOME/SteamWrapper/`, falling back to `~/.l
 
 ## Covers and safety boundaries
 
-Current WinUI reads local Steam `appcache/librarycache/` and per-user `config/grid/` images; unavailable art uses a friendly placeholder. It performs no cover downloads.
+WinUI prefers per-user custom Steam `config/grid/` images, then local `appcache/librarycache/` art, including hashed filenames and nested hash directories. It never writes to either directory. Friendly placeholders cover missing or unreadable images without blocking editing, saving or Runner.
 
-The [roadmap](/SteamWrapper/project/roadmap/) plans an explicit optional official Steam CDN fallback: local-first, offline by default, known local AppIDs, allowlisted HTTPS hosts/redirects, bounded requests and cache under SteamWrapper's `cache/`. It must preserve custom images and remain usable after errors. The preference, downloader, and persistent cover cache are unimplemented. No third-party metadata service, account lookup, or library upload is included.
+Official Steam CDN fallback is an explicit preference, disabled by default and limited to locally discovered AppIDs. Requests contain the individual AppID and normal HTTPS connection information; there are no account lookups, library uploads, cookies, authentication or third-party metadata services. Only `shared.steamstatic.com` and `shared.fastly.steamstatic.com` over HTTPS are allowed, with the same checks before each manually followed redirect. The fixed portrait endpoint is best effort: newer assets may need a different path, and a 404 retains the placeholder rather than querying another service. Valve documents the [library capsule and its half-size variant](https://partner.steamgames.com/doc/store/assets/libraryassets?l=english); the filename does not guarantee a 600×900 decoded image.
+
+`CoverService` limits downloads to two concurrent operations, ten seconds per operation including response reads and redirects, at most two redirects, and 4 MiB encoded image data. Image validation also has a two-operation limit. WinUI decodes static JPEG, PNG or WebP using available Windows codecs and rejects malformed content or images above 4096 pixels on either edge or eight million pixels in total. A failed request has a five-minute cooldown instead of automatic retries. Disabling fallback cancels the active dialog's in-flight requests and prevents new ones there.
+
+Only downloaded covers are managed under `%LOCALAPPDATA%\SteamWrapper\cache\covers\`: a 32 MiB/64-file quota, thirty-day expiry, eviction and a clear action. Cache changes use an exclusive cross-process file lease; an in-use cache leaves a placeholder or a recoverable clear error. Cleanup does not touch custom art, Steam cache files, games, profiles, Runner or other SteamWrapper data. See [cover settings](/SteamWrapper/guides/configuration/#cover-settings) and remaining [P0 native acceptance](/SteamWrapper/project/roadmap/).
 
 SteamWrapper does not inject DLLs, patch Steam/game files, bypass DRM, or upload user data. Unresolved save/cloud conflicts stop live acceptance.
 

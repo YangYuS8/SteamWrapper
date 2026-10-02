@@ -5,7 +5,7 @@ using SteamWrapper.Application.Localization;
 
 namespace SteamWrapper.Application.Services;
 
-public sealed record UiSettings(string Language, Exception? ReadError = null);
+public sealed record UiSettings(string Language, Exception? ReadError = null, bool SteamCdnCovers = false);
 
 /// <summary>Shared Manager preference contract, separate from profiles.toml and Runner.</summary>
 public sealed class UiSettingsStore(string path)
@@ -20,12 +20,19 @@ public sealed class UiSettingsStore(string path)
         {
             var (_, document) = await ReadAsync(cancellationToken);
             var language = document["language"] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
-            return new(Localizer.NormalizeLanguage(language));
+            var covers = document["steamCdnCovers"] is JsonValue coverValue && coverValue.TryGetValue<bool>(out var enabled) && enabled;
+            return new(Localizer.NormalizeLanguage(language), SteamCdnCovers: covers);
         }
         catch (Exception error) when (IsSettingsError(error)) { return new(Localizer.English, error); }
     }
 
-    public async Task SaveLanguageAsync(string? language, CancellationToken cancellationToken = default)
+    public Task SaveLanguageAsync(string? language, CancellationToken cancellationToken = default) =>
+        SaveAsync(document => document["language"] = Localizer.NormalizeLanguage(language), cancellationToken);
+
+    public Task SaveSteamCdnCoversAsync(bool enabled, CancellationToken cancellationToken = default) =>
+        SaveAsync(document => document["steamCdnCovers"] = enabled, cancellationToken);
+
+    private async Task SaveAsync(Action<JsonObject> update, CancellationToken cancellationToken)
     {
         var writer = Writers.GetOrAdd(path, _ => new SemaphoreSlim(1, 1));
         await writer.WaitAsync(cancellationToken);
@@ -37,7 +44,7 @@ public sealed class UiSettingsStore(string path)
             // Independent Manager processes use this same short-lived lease.
             using var lease = new FileStream(path + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             var (before, document) = await ReadAsync(cancellationToken);
-            document["language"] = Localizer.NormalizeLanguage(language);
+            update(document);
             var output = JsonSerializer.SerializeToUtf8Bytes(document, new JsonSerializerOptions { WriteIndented = true });
             if (output.Length > MaximumBytes) throw Messages.Format("SettingsLarge");
             temporary = path + $".tmp-{Guid.NewGuid():N}";
@@ -81,7 +88,7 @@ public sealed class UiSettingsStore(string path)
             if (json.StartsWith(new byte[] { 0xEF, 0xBB, 0xBF })) json = json[3..];
             var parsed = JsonNode.Parse(json) as JsonObject ?? throw Messages.Format("SettingsInvalid");
             // JsonNode parses lazily. Validate unknown objects and array elements too,
-            // so both Managers reject duplicate properties before selecting a language or writing.
+            // so Manager rejects duplicate properties before selecting preferences or writing.
             ValidateObjects(parsed);
             return (bytes, parsed);
         }
