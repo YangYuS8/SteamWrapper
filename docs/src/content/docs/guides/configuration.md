@@ -118,4 +118,4 @@ The preference is saved separately in `%LOCALAPPDATA%\SteamWrapper\ui-settings.j
 
 If saving the preference fails, the current language remains selected and an error is shown. A malformed settings file is preserved. OS-owned picker text and original diagnostic/log content may remain in their own language.
 
-The implementation boundaries are in the [profile store](https://github.com/YangYuS8/SteamWrapper/blob/v2/apps/manager-winui/SteamWrapper.Application/Profiles/ProfileStore.cs) and [Runner profile model](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/core/src/profile.rs).
+The implementation boundaries are in the [profile store](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-winui/SteamWrapper.Application/Profiles/ProfileStore.cs) and [Runner profile model](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/profile.rs).

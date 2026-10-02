@@ -30,7 +30,7 @@
 
 ## 本地开发
 
-请在 `v2` 上开发。按自己的方式安装改动所需工具；[mise](mise.toml) 是可选的便利工具，不是贡献者要求。SDK 版本与 MSVC/SDK 安装见 Windows 环境指南。在 PATH 中准备好 PowerShell 7、.NET 和 Rust 后，WinUI 预览命令如下：
+请从 `main` 创建聚焦的功能分支，并将拉取请求提交到 `main`。按自己的方式安装改动所需工具；[mise](mise.toml) 是可选的便利工具，不是贡献者要求。SDK 版本与 MSVC/SDK 安装见 Windows 环境指南。在 PATH 中准备好 PowerShell 7、.NET 和 Rust 后，WinUI 预览命令如下：
 
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
@@ -56,6 +56,6 @@ Node/pnpm 用于开发和静态文档构建，不是桌面应用的运行要求�
 
 请阅读[贡献指南](CONTRIBUTING.zh-CN.md)、[行为准则](CODE_OF_CONDUCT.zh-CN.md)、[安全策略](SECURITY.zh-CN.md)和[使用帮助](SUPPORT.zh-CN.md)。欢迎英语和简体中文反馈。报告中不得包含凭据、未脱敏用户数据、存档或游戏二进制。SteamWrapper 不注入 DLL、不修补游戏／Steam 二进制、不绕过 DRM，也不上传用户数据。
 
-`v2` 分支使用 [Apache-2.0](LICENSE)。GitHub 默认分支仍为 `main`，其中旧实现及其许可证独立保留。此实现的贡献应提交到 `v2`；GitHub 社区模板入口跟随默认分支。文档通过 GitHub Pages Actions 从 `v2` 部署。
+默认分支 `main` 包含 v2，使用 [Apache-2.0](LICENSE)。历史 v1 标签和提交保留其原有许可证。拉取请求以 `main` 为目标，社区模板和 GitHub Pages 文档也由该分支提供。合入主线不代表 WinUI 预览已成为稳定版本；后续工作见[交付路线图](https://yangyus8.top/SteamWrapper/zh-cn/project/roadmap/)。
 
 [原创项目图标](assets/brand/README.zh-CN.md)结合了 Rust 风格的铜色齿轮和 Steam 风格的连杆。SteamWrapper 与 Valve 或 Rust 项目没有隶属或背书关系。

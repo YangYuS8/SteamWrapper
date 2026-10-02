@@ -2,9 +2,9 @@ name: v2 CI
 
 on:
   push:
-    branches: ["v2"]
+    branches: ["main", "v2"]
   pull_request:
-    branches: ["v2", "feat/runner-process-lifecycle"]
+    branches: ["main", "v2", "feat/runner-process-lifecycle"]
   workflow_dispatch:
 
 permissions:

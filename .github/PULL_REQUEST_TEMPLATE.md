@@ -1,6 +1,6 @@
-<!-- v2 pull requests must target v2; GitHub currently defaults to main. -->
+<!-- Pull requests target main, the canonical branch for v2. -->
 <!-- English is the primary project language. A complete Simplified Chinese template is linked below. -->
-[简体中文模板](https://github.com/YangYuS8/SteamWrapper/blob/v2/.github/PULL_REQUEST_TEMPLATE/zh-CN.md)
+[简体中文模板](https://github.com/YangYuS8/SteamWrapper/blob/main/.github/PULL_REQUEST_TEMPLATE/zh-CN.md)
 
 ## Problem and resulting behavior
 
@@ -16,8 +16,8 @@
 
 ## Review checklist
 
-- [ ] The base branch is `v2` for v2 work.
-- [ ] I followed the [contribution guide](https://github.com/YangYuS8/SteamWrapper/blob/v2/CONTRIBUTING.md) and [Code of Conduct](https://github.com/YangYuS8/SteamWrapper/blob/v2/CODE_OF_CONDUCT.md).
+- [ ] The base branch is `main`.
+- [ ] I followed the [contribution guide](https://github.com/YangYuS8/SteamWrapper/blob/main/CONTRIBUTING.md) and [Code of Conduct](https://github.com/YangYuS8/SteamWrapper/blob/main/CODE_OF_CONDUCT.md).
 - [ ] Relevant English and Simplified Chinese resources/documentation are consistent.
 - [ ] TOML, stable Runner paths, CLI, and unedited configuration remain compatible, or an intentional change is explained.
 - [ ] No credentials, personal data, game files, saves, or generated local evidence are included.

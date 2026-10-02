@@ -4,13 +4,13 @@ body:
   -
     type: "markdown"
     attributes:
-      value: "疑似漏洞请先阅读[安全策略](https://github.com/YangYuS8/SteamWrapper/blob/v2/SECURITY.zh-CN.md)。不要公开利用细节、凭据、存档、游戏二进制、完整 Steam 配置或未脱敏的个人路径。"
+      value: "疑似漏洞请先阅读[安全策略](https://github.com/YangYuS8/SteamWrapper/blob/main/SECURITY.zh-CN.md)。不要公开利用细节、凭据、存档、游戏二进制、完整 Steam 配置或未脱敏的个人路径。"
   -
     type: "input"
     id: "version"
     attributes:
       label: "版本、分支或提交"
-      description: "例如 v2 与构建使用的提交；不要假定默认分支就是 v2。"
+      description: "请提供应用版本、分支（main 或功能分支）及构建使用的提交。"
     validations:
       required: true
   -
@@ -30,7 +30,7 @@ body:
         - "WinUI 预览"
         - "Dioxus"
         - "仅 Runner"
-        - "旧版 main"
+        - "旧版 v1"
         - "不确定"
     validations:
       required: true
@@ -55,7 +55,7 @@ body:
     id: "checks"
     attributes:
       label: "提交前检查"
-      description: "[行为准则](https://github.com/YangYuS8/SteamWrapper/blob/v2/CODE_OF_CONDUCT.zh-CN.md)"
+      description: "[行为准则](https://github.com/YangYuS8/SteamWrapper/blob/main/CODE_OF_CONDUCT.zh-CN.md)"
       options:
         -
           label: "我已搜索现有 issue 和文档。"

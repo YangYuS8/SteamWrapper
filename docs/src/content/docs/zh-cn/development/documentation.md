@@ -3,7 +3,7 @@ title: "维护文档"
 description: "开发、翻译、检查和部署 SteamWrapper 双语文档站。"
 ---
 
-`docs/` 是仓库 pnpm 工作区中的独立包，使用 **Astro 7.3.1 和 Starlight 0.42.0**，构建静态文档站。Node 和 pnpm 属于开发／构建工具，不增加 Manager 或 Runner 的运行时要求。精确依赖记录在 [docs/package.json](https://github.com/YangYuS8/SteamWrapper/blob/v2/docs/package.json) 和根目录锁文件中。
+`docs/` 是仓库 pnpm 工作区中的独立包，使用 **Astro 7.3.1 和 Starlight 0.42.0**，构建静态文档站。Node 和 pnpm 属于开发／构建工具，不增加 Manager 或 Runner 的运行时要求。精确依赖记录在 [docs/package.json](https://github.com/YangYuS8/SteamWrapper/blob/main/docs/package.json) 和根目录锁文件中。
 
 ## 本地准备与预览
 
@@ -51,7 +51,7 @@ description: "简短说明本页用途。"
 ---
 ```
 
-正文以介绍段落或二级标题开始。Starlight 会生成页面标题、语言选择器和编辑链接，因此正文不再重复一级标题、手工语言导航或编辑链接。将新页面加入导航时，应同时更新 [astro.config.mjs](https://github.com/YangYuS8/SteamWrapper/blob/v2/docs/astro.config.mjs) 中对应的侧栏条目和中文标签。
+正文以介绍段落或二级标题开始。Starlight 会生成页面标题、语言选择器和编辑链接，因此正文不再重复一级标题、手工语言导航或编辑链接。将新页面加入导航时，应同时更新 [astro.config.mjs](https://github.com/YangYuS8/SteamWrapper/blob/main/docs/astro.config.mjs) 中对应的侧栏条目和中文标签。
 
 修改英文页面时同步维护完整中文。命令、字段名、原样路径、测量值和证据边界保持一致。应完整翻译解释，不能缩成摘要。两个版本必须能一起审阅。
 
@@ -66,9 +66,9 @@ description: "简短说明本页用途。"
 [测试](/SteamWrapper/zh-cn/development/testing/)
 ```
 
-中文页面通常链接到中文目标。跳转同一页面时使用 `#section-anchor`。修改标题时保留显式锚点，尤其是带日期的记录。指向仓库源码、社区文件或脚本的链接使用 `https://github.com/YangYuS8/SteamWrapper/blob/v2/` 加仓库相对路径，并保留需要的片段标识。页面编辑目标单独由 Starlight 管理。
+中文页面通常链接到中文目标。跳转同一页面时使用 `#section-anchor`。修改标题时保留显式锚点，尤其是带日期的记录。指向仓库源码、社区文件或脚本的链接使用 `https://github.com/YangYuS8/SteamWrapper/blob/main/` 加仓库相对路径，并保留需要的片段标识。页面编辑目标单独由 Starlight 管理。
 
-保持 [legacy-routes.json](https://github.com/YangYuS8/SteamWrapper/blob/v2/docs/legacy-routes.json) 与旧 Markdown 链接的目标一致。该文件把旧文档文件名映射到不带 `/SteamWrapper/` base 的站点路由，同时应保留旧链接使用的锚点。站点资源放在适用的站点资源位置，由 `docs:build` 验证生成的 URL。生成的 `docs/dist/` 不是需要提交的源内容。
+保持 [legacy-routes.json](https://github.com/YangYuS8/SteamWrapper/blob/main/docs/legacy-routes.json) 与旧 Markdown 链接的目标一致。该文件把旧文档文件名映射到不带 `/SteamWrapper/` base 的站点路由，同时应保留旧链接使用的锚点。站点资源放在适用的站点资源位置，由 `docs:build` 验证生成的 URL。生成的 `docs/dist/` 不是需要提交的源内容。
 
 ## 搜索
 
@@ -82,12 +82,12 @@ Starlight 在生产构建时通过 Pagefind 生成本地搜索索引。搜索可
 
 ## GitHub Pages 部署
 
-正式地址为 `https://yangyus8.top/SteamWrapper/`：项目 Pages 沿用账号现有的自定义域名。[site.config.mjs](https://github.com/YangYuS8/SteamWrapper/blob/v2/docs/site.config.mjs) 统一提供 Astro、跳转页生成和产物校验所用的站点域名与基础路径。修改地址时须同步仓库文档链接；本项目已启用强制 HTTPS。
+正式地址为 `https://yangyus8.top/SteamWrapper/`：项目 Pages 沿用账号现有的自定义域名。[site.config.mjs](https://github.com/YangYuS8/SteamWrapper/blob/main/docs/site.config.mjs) 统一提供 Astro、跳转页生成和产物校验所用的站点域名与基础路径。修改地址时须同步仓库文档链接；本项目已启用强制 HTTPS。
 
-文档工作流为 [`.github/workflows/docs-pages.yml`](https://github.com/YangYuS8/SteamWrapper/blob/v2/.github/workflows/docs-pages.yml)。推送到 `v2` 且命中文档相关路径过滤时，会检查、构建静态站点并部署。拉取请求只检查和构建，不部署。修改构建输入时，请查看工作流中准确的触发路径和部署条件。
+文档工作流为 [`.github/workflows/docs-pages.yml`](https://github.com/YangYuS8/SteamWrapper/blob/main/.github/workflows/docs-pages.yml)。推送到 `main` 且命中文档相关路径过滤时，会检查、构建静态站点并部署。推送到 `v2` 及拉取请求只检查和构建，不部署。修改构建输入时，请查看工作流中准确的触发路径和部署条件。
 
-仓库维护者需要将 **Settings → Pages → Source** 设为 **GitHub Actions**，并在 `github-pages` 环境的部署规则中允许 `v2`。默认分支保持 `main`，部署文档不要求修改它。仓库设置和成功部署都需要单独确认，本地构建通过不能替代。参见 [GitHub 自定义 Pages 工作流说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
+仓库维护者需要将 **Settings → Pages → Source** 设为 **GitHub Actions**，并在 `github-pages` 环境的部署规则中仅允许 `main`。默认分支为 `main`，包含当前实现和文档。仓库设置和成功部署都需要单独确认，本地构建通过不能替代。参见 [GitHub 自定义 Pages 工作流说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
 
-只有工作流已经位于默认分支时，GitHub 才提供手动 `workflow_dispatch` 执行。`docs-pages.yml` 只在 `v2` 中时，应通过符合条件的推送，或重新运行已有工作流记录触发；不要依赖 Run workflow 按钮。参见 [GitHub 手动运行工作流的要求](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)。
+只有工作流已经位于默认分支时，GitHub 才提供手动 `workflow_dispatch` 执行。工作流已位于 `main`；手动生产部署请选择 `main`，选择 `v2` 只构建而不部署。参见 [GitHub 手动运行工作流的要求](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)。
 
 部署后检查工作流报告的 Pages 地址、两个语言入口、导航、资源和搜索。应报告实际部署结果；新增工作流或写下这些步骤，不代表网站已经上线。

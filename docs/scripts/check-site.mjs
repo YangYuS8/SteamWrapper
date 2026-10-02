@@ -23,7 +23,7 @@ for (const [file, document] of documents) {
     const value = element.getAttribute('href') ?? element.getAttribute('src');
     if (!value || /^(data:|mailto:|tel:)/.test(value)) continue;
     const target = new URL(value, current);
-    const repoLink = /^\/YangYuS8\/SteamWrapper\/(?:blob|tree|edit)\/v2\/(.+)$/.exec(target.pathname);
+    const repoLink = /^\/YangYuS8\/SteamWrapper\/(?:blob|tree|edit)\/(?:main|v2)\/(.+)$/.exec(target.pathname);
     if (target.hostname === 'github.com' && repoLink) {
       const path = resolve(repository, decodeURIComponent(repoLink[1]));
       if (!(await stat(path).catch(() => undefined))) errors.add(`${file}: missing repository target ${value}`);

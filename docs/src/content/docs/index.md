@@ -36,7 +36,7 @@ The WinUI 3 Windows Manager is a preview. The retained Dioxus Manager has a sepa
 
 Start with the [Windows development environment](/SteamWrapper/development/windows/), then read the [architecture](/SteamWrapper/development/architecture/) and choose relevant [tests](/SteamWrapper/development/testing/). The [documentation guide](/SteamWrapper/development/documentation/) explains how to edit, translate, preview and publish this site.
 
-[Contributions](https://github.com/YangYuS8/SteamWrapper/blob/v2/CONTRIBUTING.md), [bug reports](https://github.com/YangYuS8/SteamWrapper/issues), and [security reports](https://github.com/YangYuS8/SteamWrapper/blob/v2/SECURITY.md) have separate guidance. English is the primary project language; every documentation page has a complete Simplified Chinese counterpart available from the language selector.
+[Contributions](https://github.com/YangYuS8/SteamWrapper/blob/main/CONTRIBUTING.md), [bug reports](https://github.com/YangYuS8/SteamWrapper/issues), and [security reports](https://github.com/YangYuS8/SteamWrapper/blob/main/SECURITY.md) have separate guidance. English is the primary project language; every documentation page has a complete Simplified Chinese counterpart available from the language selector.
 
 ## Understand the project
 

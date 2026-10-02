@@ -19,7 +19,7 @@ export default defineConfig({
         'zh-cn': { label: '简体中文', lang: 'zh-CN' },
       },
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/YangYuS8/SteamWrapper' }],
-      editLink: { baseUrl: 'https://github.com/YangYuS8/SteamWrapper/edit/v2/docs/' },
+      editLink: { baseUrl: 'https://github.com/YangYuS8/SteamWrapper/edit/main/docs/' },
       customCss: ['./src/styles/custom.css'],
       sidebar: [
         { slug: 'index' },

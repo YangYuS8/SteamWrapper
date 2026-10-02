@@ -6,7 +6,7 @@ SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成
 
 ## 问题与提案
 
-请先搜索[现有 issue](https://github.com/YangYuS8/SteamWrapper/issues)。使用缺陷、功能或求助模板，注明版本或提交、分支、平台及 Manager 实现。模板文件在 `v2` 中维护，GitHub 实际模板选择器使用默认分支。项目主语言为英语，也欢迎使用简体中文提交问题。
+请先搜索[现有 issue](https://github.com/YangYuS8/SteamWrapper/issues)。使用缺陷、功能或求助模板，注明版本或提交、分支、平台及 Manager 实现。模板文件在默认分支 `main` 中维护，GitHub 实际模板选择器使用该分支。项目主语言为英语，也欢迎使用简体中文提交问题。
 
 报告缺陷时说明预期、实际行为及最小复现步骤，只附相关且已脱敏的日志片段。优先提供模拟 Steam 库和小型进程 fixture，不上传游戏、Steam 账号数据或存档。疑似安全漏洞请依照 [SECURITY.zh-CN.md](SECURITY.zh-CN.md)处理，并遵守[行为准则](CODE_OF_CONDUCT.zh-CN.md)。
 
@@ -14,7 +14,7 @@ SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成
 
 ## 分支与开发环境
 
-v2 的拉取请求应以 `v2` 为目标分支。GitHub 默认分支目前是 `main`，创建 PR 时请明确检查 base。不要将 `main` 上的旧版实现混入 v2 改动。
+请从 `main` 创建聚焦的功能分支，并将拉取请求提交到 `main`。默认分支已包含 v2；`v2` 分支保留为迁移参考。历史 v1 版本单独保留，不自动回移新修改。
 
 按自己的方式安装改动所需工具。mise 是可选项，其配置用于便利的本地工具准备。SDK 和依赖要求以 `global.json`、项目清单及锁文件、`package.json` 和 `.vsconfig` 为准；修改这些要求时保持可选的 mise 版本一致。官方 MSVC/SDK 前置条件及直接命令见 [Windows 开发环境](https://yangyus8.top/SteamWrapper/zh-cn/development/windows/)。WinUI 改动先执行：
 
@@ -50,4 +50,4 @@ pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
 
 ## 许可证
 
-`v2` 分支沿用现有 [Apache-2.0 许可证](LICENSE)，对该分支的贡献按此许可提交。本指南不改变旧版 `main` 分支的许可证，不增加贡献者许可协议，也不要求新的签署流程。
+`main` 上当前的 v2 实现使用 [Apache-2.0 许可证](LICENSE)，贡献按此许可提交。历史 v1 标签和提交保留其原有许可证。本指南不增加贡献者许可协议，也不要求新的签署流程。

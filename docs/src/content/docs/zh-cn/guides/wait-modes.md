@@ -78,4 +78,4 @@ Runner 启动所选程序，并等待这个直接进程退出。
 
 观察实际游戏是否打开、启动器是否先退出，以及正常结束游戏后 Steam 是否回到停止状态。如果 Steam 一直显示运行中，先识别残留进程，再决定如何结束；启动器可能保留了辅助程序。不要仅为了清除状态指示，就强行终止仍有未保存进度的游戏。
 
-日志与常见症状请参考[排错指南](/SteamWrapper/zh-cn/guides/troubleshooting/)。准确实现见 [Runner 等待逻辑](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/runner/src/platform/mod.rs)与 [Windows Job 实现](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/runner/src/platform/windows.rs)。
+日志与常见症状请参考[排错指南](/SteamWrapper/zh-cn/guides/troubleshooting/)。准确实现见 [Runner 等待逻辑](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/platform/mod.rs)与 [Windows Job 实现](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/platform/windows.rs)。

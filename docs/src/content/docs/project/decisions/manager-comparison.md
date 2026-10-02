@@ -41,13 +41,13 @@ A second probe supplied both **actual service implementations** with the same sy
 
 The Runner version probe represented `0.3.0` and `0.2.0` using synthetic files with hash/version manifests. It did not execute them or establish that those product versions were released. Cross-language gates separately verified executable Runner behavior.
 
-These are service-implementation differences. The old [save service](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/manager-core/src/lib.rs) reconstructs Profile, [configuration serialization](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/core/src/config.rs) regenerates the file, and [Runner installation](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/manager-core/src/runner.rs) selects replacement by hash. Dioxus can fix these behaviors; they are not caused by WebView or Rust. C# safeguards come from the new implementation/tests, not from WinUI alone.
+These are service-implementation differences. The old [save service](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/lib.rs) reconstructs Profile, [configuration serialization](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/config.rs) regenerates the file, and [Runner installation](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/runner.rs) selects replacement by hash. Dioxus can fix these behaviors; they are not caused by WebView or Rust. C# safeguards come from the new implementation/tests, not from WinUI alone.
 
 <a id="依赖精简前的资源测量"></a>
 
 ## Resource measurements before component reduction
 
-The [comparison script](https://github.com/YangYuS8/SteamWrapper/blob/v2/scripts/windows/Measure-ManagerComparison.ps1) measured sequentially after both builds/functional tests completed and test windows exited. Both used the same isolated directory with 10 profiles, 10 Steam manifests, local covers, and the same release Runner; the real Steam library was untouched.
+The [comparison script](https://github.com/YangYuS8/SteamWrapper/blob/main/scripts/windows/Measure-ManagerComparison.ps1) measured sequentially after both builds/functional tests completed and test windows exited. Both used the same isolated directory with 10 profiles, 10 Steam manifests, local covers, and the same release Runner; the real Steam library was untouched.
 
 The machine ran Windows build 26200, an i7-12700H (20 logical processors), and 31.62 GiB of OS-visible physical memory. Dioxus children used WebView2 145.0.3800.97. Measurements used release artifacts built earlier that day; the script did not rebuild them. Binary SHA-256, timestamps, and machine information are in `metadata.json`. A worktree commit ID alone does not establish correspondence between binaries and uncommitted source.
 

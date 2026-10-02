@@ -36,7 +36,7 @@ WinUI 3 Windows Manager 仍是预览版；保留的 Dioxus Manager 使用独立�
 
 从 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)开始，再阅读[架构](/SteamWrapper/zh-cn/development/architecture/)，按改动选择相关[测试](/SteamWrapper/zh-cn/development/testing/)。[文档维护指南](/SteamWrapper/zh-cn/development/documentation/)说明本站的编辑、翻译、预览和发布流程。
 
-[代码贡献](https://github.com/YangYuS8/SteamWrapper/blob/v2/CONTRIBUTING.zh-CN.md)、[问题反馈](https://github.com/YangYuS8/SteamWrapper/issues)与[安全报告](https://github.com/YangYuS8/SteamWrapper/blob/v2/SECURITY.zh-CN.md)分别有对应指南。项目主语言为英语，每篇文档均有完整简体中文版本，可通过语言选择器切换。
+[代码贡献](https://github.com/YangYuS8/SteamWrapper/blob/main/CONTRIBUTING.zh-CN.md)、[问题反馈](https://github.com/YangYuS8/SteamWrapper/issues)与[安全报告](https://github.com/YangYuS8/SteamWrapper/blob/main/SECURITY.zh-CN.md)分别有对应指南。项目主语言为英语，每篇文档均有完整简体中文版本，可通过语言选择器切换。
 
 ## 了解项目
 

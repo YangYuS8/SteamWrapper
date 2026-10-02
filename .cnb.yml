@@ -29,11 +29,12 @@ $:
             fi
             {
               printf '## SteamWrapper %s\n\n' "$TAG_NAME"
-              printf 'SteamWrapper v2 LTS 同步发布。\n\n'
+              printf 'SteamWrapper 标签发布说明。/ Tag release notes.\n\n'
               printf '## 下载说明\n\n'
-              printf -- '- 国内玩家优先使用 CNB Release 下载。\n'
-              printf -- '- Windows 用户优先下载 setup.exe；Linux / SteamOS 用户下载 AppImage 或 tar.gz。\n'
-              printf -- '- 更新时覆盖安装或替换程序文件，用户配置目录会保留。\n\n'
+              printf -- '- 此工作流同步标签和说明，不构建或上传二进制附件。/ This workflow publishes tag notes, not binary assets.\n'
+              printf -- '- 实际可用产物及安装限制以安装指南为准。/ See the installation guide for available artifacts and limitations.\n'
+              printf -- '- https://yangyus8.top/SteamWrapper/guides/installation/\n'
+              printf -- '- https://yangyus8.top/SteamWrapper/zh-cn/guides/installation/\n\n'
               printf '## Changes\n\n'
               git log "$range" --reverse --pretty=format:'- %s (`%h`, %an)' || true
               if [ -n "$compare_url" ]; then

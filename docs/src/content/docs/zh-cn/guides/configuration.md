@@ -118,4 +118,4 @@ Manager 先验证路径和 AppID、保存配置，再准备稳定 Runner。保�
 
 如果保存偏好失败，界面保留当前语言并显示错误；损坏的设置文件会原样保留。系统 picker 自有文案和原始诊断、日志可能继续使用它们自身的语言。
 
-实现边界见[配置保存服务](https://github.com/YangYuS8/SteamWrapper/blob/v2/apps/manager-winui/SteamWrapper.Application/Profiles/ProfileStore.cs)和 [Runner 配置模型](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/core/src/profile.rs)。
+实现边界见[配置保存服务](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-winui/SteamWrapper.Application/Profiles/ProfileStore.cs)和 [Runner 配置模型](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/profile.rs)。

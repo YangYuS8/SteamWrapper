@@ -138,7 +138,7 @@ WinUI 已显示只读 Steam 安装位置和独立可编辑的实际运行文件�
 
 2026-09-08 14:06:56–14:08:31（Asia/Shanghai），从实际汉化文件夹双击恢复后的 `nine_kokoiro_chs.exe`，CHS 启动器先退出，实际游戏继续运行。标题与首句剧情为中文；主菜单英文、顶部菜单日文、退出确认中文，未将开场通过表述为全部界面汉化。测试没有手动保存或载入存档。
 
-14:15:53–14:18:15 的 Steam 路径观察到 `Runner 14212 → CHS 18876 → 游戏 16512`。CHS 在 14:15:55 先退出后，实际游戏与 Runner 继续约 2 分 21 秒，直到普通退出。Manager 中已确认 `job`；独立观察记录零采样错误、零元数据失败和最终无残留。这验证了本机这个 CHS 启动器先退的场景，不证明所有启动器兼容，也不是对 Job 成员的直接查询。日志仅确认 CHS 与 Runner 的 exit 0；当前 [Windows job 实现](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/runner/src/platform/windows.rs)最终返回启动器状态，实际游戏退出码未记录。
+14:15:53–14:18:15 的 Steam 路径观察到 `Runner 14212 → CHS 18876 → 游戏 16512`。CHS 在 14:15:55 先退出后，实际游戏与 Runner 继续约 2 分 21 秒，直到普通退出。Manager 中已确认 `job`；独立观察记录零采样错误、零元数据失败和最终无残留。这验证了本机这个 CHS 启动器先退的场景，不证明所有启动器兼容，也不是对 Job 成员的直接查询。日志仅确认 CHS 与 Runner 的 exit 0；当前 [Windows job 实现](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/platform/windows.rs)最终返回启动器状态，实际游戏退出码未记录。
 
 Steam 显示时长由 36 增至 38 分钟，退出后恢复“开始”；云始终开启并显示最新，未出现冲突。成就仍为 0/4，本次未达到触发条件，成就兼容及汉化存档云同步仍未验证。
 

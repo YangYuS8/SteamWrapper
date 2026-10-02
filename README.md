@@ -30,7 +30,7 @@ The editable source is in [docs/](docs/README.md). Historical designs and valida
 
 ## Develop locally
 
-Work on `v2`. Install the tools needed for your change using your preferred method. [mise](mise.toml) is an optional convenience, not a contributor requirement. Follow the Windows setup guide for SDK versions and MSVC/SDK installation. With PowerShell 7, .NET and Rust on PATH, the WinUI preview commands are:
+Start a focused feature branch from `main` and target pull requests to `main`. Install the tools needed for your change using your preferred method. [mise](mise.toml) is an optional convenience, not a contributor requirement. Follow the Windows setup guide for SDK versions and MSVC/SDK installation. With PowerShell 7, .NET and Rust on PATH, the WinUI preview commands are:
 
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
@@ -56,6 +56,6 @@ Node/pnpm are development and static-site build tools, not desktop application r
 
 Read [Contributing](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md), [Security](SECURITY.md) and [Support](SUPPORT.md). English and Simplified Chinese reports are welcome. Never include credentials, unredacted user data, saves or game binaries in reports. SteamWrapper does not inject DLLs, patch game/Steam binaries, bypass DRM or upload user data.
 
-This `v2` branch uses [Apache-2.0](LICENSE). GitHub's default branch remains `main`, whose legacy implementation and license are separate. Target `v2` for this implementation; GitHub's community-template chooser follows the default branch. Documentation deploys from `v2` through GitHub Pages Actions.
+The default `main` branch contains v2 and uses [Apache-2.0](LICENSE). Historical v1 tags and commits retain their original license. Pull requests target `main`, which also supplies the community templates and GitHub Pages documentation. Mainline integration does not make the WinUI preview a stable release; see the [delivery roadmap](https://yangyus8.top/SteamWrapper/project/roadmap/).
 
 The [original project icon](assets/brand/README.md) combines a Rust-inspired copper gear and a Steam-inspired connecting rod. SteamWrapper is not affiliated with or endorsed by Valve or the Rust project.

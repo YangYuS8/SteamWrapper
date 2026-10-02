@@ -61,7 +61,7 @@ tests/fixtures            # 真实 Runner 消费的受控进程，仅测试
 - `@wdio/dioxus-service` 1.0.0 embedded provider、`wdio-dioxus-embedded-driver` 1.0.0 仅用于 e2e feature；release 不带测试 bridge。
 - pnpm 用于 Native E2E、开发期资源工具以及静态文档开发与构建，不作为 UI 产品运行时。`pnpm brand:generate`／`pnpm brand:check` 使用仅开发期需要的 `@resvg/resvg-js` 生成和验证统一 SVG／PNG／ICO 及 Dioxus 副本。独立工作区包 `docs/` 使用 Astro 7.3.1 和 Starlight 0.42.0，其 pnpm 命令与双语内容流程见[文档维护](/SteamWrapper/zh-cn/development/documentation/)。
 
-具体流程见 [Dioxus 技能](https://github.com/YangYuS8/SteamWrapper/blob/v2/skills/dioxus-manager/SKILL.md)。新 WinUI 不使用该技能的 DOM/RSX 或 bundle 步骤。
+具体流程见 [Dioxus 技能](https://github.com/YangYuS8/SteamWrapper/blob/main/skills/dioxus-manager/SKILL.md)。新 WinUI 不使用该技能的 DOM/RSX 或 bundle 步骤。
 
 ## 工具链与交付
 

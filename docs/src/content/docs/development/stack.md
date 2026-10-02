@@ -73,7 +73,7 @@ New Windows profiles default to a Job Object; new Linux profiles default to a PO
 - `@wdio/dioxus-service` 1.0.0 embedded provider and `wdio-dioxus-embedded-driver` 1.0.0 are used only with the e2e feature; releases contain no test bridge.
 - pnpm is for Native E2E, development asset tooling, and static documentation development/builds, not a UI product runtime. `pnpm brand:generate` / `pnpm brand:check` generate and verify the canonical SVG/PNG/ICO and Dioxus copies using development-only `@resvg/resvg-js`. The independent `docs/` workspace package uses Astro 7.3.1 and Starlight 0.42.0; see [documentation maintenance](/SteamWrapper/development/documentation/) for its pnpm commands and bilingual content workflow.
 
-See the [Dioxus skill](https://github.com/YangYuS8/SteamWrapper/blob/v2/skills/dioxus-manager/SKILL.md) for that workflow. New WinUI work does not use its DOM/RSX or bundle steps.
+See the [Dioxus skill](https://github.com/YangYuS8/SteamWrapper/blob/main/skills/dioxus-manager/SKILL.md) for that workflow. New WinUI work does not use its DOM/RSX or bundle steps.
 
 <a id="工具链与交付"></a>
 

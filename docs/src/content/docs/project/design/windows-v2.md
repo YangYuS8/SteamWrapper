@@ -23,7 +23,7 @@ The requirements below come from repository history, not speculation about unava
 
 | Repository material | Confirmed requirement |
 | --- | --- |
-| `f95770b:README.md` (legacy main) | A Windows utility for Steam playtime with translated/custom-launcher galgames |
+| `f95770b:README.md` (historical v1 baseline) | A Windows utility for Steam playtime with translated/custom-launcher galgames |
 | `6cb8835:README.md` (first v2 design) | Configure once; separate Manager/Runner; Windows first; no player-installed .NET Runtime, no default SteamEdit requirement, and no full wrapper copied into every game |
 | `e244269:docs/architecture.md` | Steam Launch Options calls an independent Runner; read configuration by AppID; no injection, client modification, DRM bypass, or persistent service |
 | `c871c21:docs/roadmap.md` | Basic Windows flow → safe Windows one-click apply → Windows compatibility, with Linux/SteamOS in later major versions |
@@ -100,8 +100,8 @@ These contracts remain unchanged: v2 `profiles.toml` format, fields, and enum me
 
 Current source exposes two behaviors to fix rather than directly port:
 
-- [Manager saving](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/manager-core/src/lib.rs) reconstructs Profile, resetting `args`, `working_dir`, `wait_mode`, and `process_name`. Changing a target path must not discard those settings.
-- [Configuration saving](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/core/src/config.rs) calls `fs::write` directly, without atomic replacement or editing-conflict checks. Atomic Runner installation does not make profile saving safe.
+- [Manager saving](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/lib.rs) reconstructs Profile, resetting `args`, `working_dir`, `wait_mode`, and `process_name`. Changing a target path must not discard those settings.
+- [Configuration saving](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/config.rs) calls `fs::write` directly, without atomic replacement or editing-conflict checks. Atomic Runner installation does not make profile saving safe.
 
 The new configuration service must satisfy:
 
@@ -120,11 +120,11 @@ Choose the TOML library using this roundtrip experiment, not by first pinning an
 
 ## 5. Runner and Steam acceptance
 
-[Current Runner](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/runner/src/main.rs) launches the profile's `target` and `args`. It receives/logs `steam_command`, without executing or automatically appending it. Keeping `%command%` is a compatibility contract, **not implemented original-command forwarding**. Migration must not also launch the original executable, automatically fall back to the official game, or change argument semantics.
+[Current Runner](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/main.rs) launches the profile's `target` and `args`. It receives/logs `steam_command`, without executing or automatically appending it. Keeping `%command%` is a compatibility contract, **not implemented original-command forwarding**. Migration must not also launch the original executable, automatically fall back to the official game, or change argument semantics.
 
 New Windows profiles default to `job`. Real tests must cover launcher-first exit, later child exit, launch failure, Chinese/spaced paths, argv/cwd, Runner error exit, and logs. `root` waits only for the direct child. `process_name` is an explicit compatibility choice, not proof that a same-name process belongs to the game.
 
-The local Episode 1 CHS launcher-first scenario passed: after the launcher exited at 14:15:55, the actual game and Runner continued for about 2 minutes 21 seconds until ordinary exit at 14:18:15; Steam playtime changed from 36 to 38 minutes. UI confirmed `job`, independent process observations had no sampling or metadata failures, and no processes remained. This does not directly establish Job membership or guarantee arbitrary launchers. The current [Windows implementation](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/runner/src/platform/windows.rs) returns the launcher's status after Job completion; CHS/Runner exit 0 in this log is not the actual game's exit 0.
+The local Episode 1 CHS launcher-first scenario passed: after the launcher exited at 14:15:55, the actual game and Runner continued for about 2 minutes 21 seconds until ordinary exit at 14:18:15; Steam playtime changed from 36 to 38 minutes. UI confirmed `job`, independent process observations had no sampling or metadata failures, and no processes remained. This does not directly establish Job membership or guarantee arbitrary launchers. The current [Windows implementation](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/platform/windows.rs) returns the launcher's status after Job completion; CHS/Runner exit 0 in this log is not the actual game's exit 0.
 
 Job Objects do not cover arbitrary escape behavior. Child membership depends on creation, breakaway, and parent-job conditions. General completion-port notifications cannot be treated as universally guaranteed delivery. Query and verify actual process state for exceptional cases rather than declaring correctness from API use alone. [Windows Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)
 

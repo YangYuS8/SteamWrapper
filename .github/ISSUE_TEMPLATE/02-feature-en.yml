@@ -4,13 +4,13 @@ body:
   -
     type: "markdown"
     attributes:
-      value: "Read the [security policy](https://github.com/YangYuS8/SteamWrapper/blob/v2/SECURITY.md) before reporting a suspected vulnerability. Do not post exploit details, credentials, saves, game binaries, full Steam configuration, or unredacted personal paths."
+      value: "Read the [security policy](https://github.com/YangYuS8/SteamWrapper/blob/main/SECURITY.md) before reporting a suspected vulnerability. Do not post exploit details, credentials, saves, game binaries, full Steam configuration, or unredacted personal paths."
   -
     type: "input"
     id: "version"
     attributes:
       label: "Version, branch, or commit"
-      description: "For example, v2 and the commit used to build it; the default branch is not necessarily v2."
+      description: "Include the app version, branch (main or your feature branch), and build commit."
     validations:
       required: true
   -
@@ -30,7 +30,7 @@ body:
         - "WinUI preview"
         - "Dioxus"
         - "Runner only"
-        - "Legacy main"
+        - "Legacy v1"
         - "Not sure"
     validations:
       required: true
@@ -55,7 +55,7 @@ body:
     id: "checks"
     attributes:
       label: "Before submitting"
-      description: "[Code of Conduct](https://github.com/YangYuS8/SteamWrapper/blob/v2/CODE_OF_CONDUCT.md)"
+      description: "[Code of Conduct](https://github.com/YangYuS8/SteamWrapper/blob/main/CODE_OF_CONDUCT.md)"
       options:
         -
           label: "I searched existing issues and the documentation."

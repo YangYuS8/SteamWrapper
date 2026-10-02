@@ -3,7 +3,7 @@ title: "Maintain the documentation"
 description: "Develop, translate, check, and deploy the bilingual SteamWrapper documentation site."
 ---
 
-The `docs/` directory is an independent package in the repository's pnpm workspace, using **Astro 7.3.1 and Starlight 0.42.0**. It builds a static documentation site. Node and pnpm are development/build tools; they are not added to Manager or Runner's runtime requirements. Exact dependencies live in [docs/package.json](https://github.com/YangYuS8/SteamWrapper/blob/v2/docs/package.json) and the root lockfile.
+The `docs/` directory is an independent package in the repository's pnpm workspace, using **Astro 7.3.1 and Starlight 0.42.0**. It builds a static documentation site. Node and pnpm are development/build tools; they are not added to Manager or Runner's runtime requirements. Exact dependencies live in [docs/package.json](https://github.com/YangYuS8/SteamWrapper/blob/main/docs/package.json) and the root lockfile.
 
 ## Local setup and preview
 
@@ -51,7 +51,7 @@ description: "A short description of the page's purpose."
 ---
 ```
 
-Start the body with an introduction or a second-level heading. Starlight supplies the page title, language selector, and edit link, so do not repeat a first-level heading, manual language navigation, or an edit link in the body. When adding a page to the navigation, update the corresponding sidebar entry and Chinese label in [astro.config.mjs](https://github.com/YangYuS8/SteamWrapper/blob/v2/docs/astro.config.mjs).
+Start the body with an introduction or a second-level heading. Starlight supplies the page title, language selector, and edit link, so do not repeat a first-level heading, manual language navigation, or an edit link in the body. When adding a page to the navigation, update the corresponding sidebar entry and Chinese label in [astro.config.mjs](https://github.com/YangYuS8/SteamWrapper/blob/main/docs/astro.config.mjs).
 
 Maintain a complete translation at the same time as the English page. Keep commands, field names, literal paths, measurements, and evidence boundaries consistent. Translate explanations rather than shortening them into a summary. Both versions must be reviewable together.
 
@@ -66,9 +66,9 @@ Use absolute paths that include the project base for links within the site:
 [测试](/SteamWrapper/zh-cn/development/testing/)
 ```
 
-Chinese pages should normally link to Chinese destinations. Within the same page, use `#section-anchor`. Preserve explicit anchors when changing headings, especially in dated records. Links to repository source, community files, or scripts use `https://github.com/YangYuS8/SteamWrapper/blob/v2/` followed by the repository-relative path; keep any required fragment. Starlight manages the page's edit destination separately.
+Chinese pages should normally link to Chinese destinations. Within the same page, use `#section-anchor`. Preserve explicit anchors when changing headings, especially in dated records. Links to repository source, community files, or scripts use `https://github.com/YangYuS8/SteamWrapper/blob/main/` followed by the repository-relative path; keep any required fragment. Starlight manages the page's edit destination separately.
 
-Keep [legacy-routes.json](https://github.com/YangYuS8/SteamWrapper/blob/v2/docs/legacy-routes.json) aligned with the destinations of old Markdown links. It maps legacy documentation filenames to site routes without the `/SteamWrapper/` base. Retain the anchors those old links use. Put site assets in the appropriate site asset location and let `docs:build` verify their generated URLs. Generated `docs/dist/` output is not source content to commit.
+Keep [legacy-routes.json](https://github.com/YangYuS8/SteamWrapper/blob/main/docs/legacy-routes.json) aligned with the destinations of old Markdown links. It maps legacy documentation filenames to site routes without the `/SteamWrapper/` base. Retain the anchors those old links use. Put site assets in the appropriate site asset location and let `docs:build` verify their generated URLs. Generated `docs/dist/` output is not source content to commit.
 
 ## Search
 
@@ -82,12 +82,12 @@ Preserve complete historical content and useful anchors when reorganizing it. Lo
 
 ## GitHub Pages deployment
 
-The production URL is `https://yangyus8.top/SteamWrapper/`: project Pages inherits the account's existing custom domain. [site.config.mjs](https://github.com/YangYuS8/SteamWrapper/blob/v2/docs/site.config.mjs) is the shared source for the origin and base used by Astro, redirect generation and output validation. Keep repository documentation links aligned when changing that address. HTTPS is enforced for this project.
+The production URL is `https://yangyus8.top/SteamWrapper/`: project Pages inherits the account's existing custom domain. [site.config.mjs](https://github.com/YangYuS8/SteamWrapper/blob/main/docs/site.config.mjs) is the shared source for the origin and base used by Astro, redirect generation and output validation. Keep repository documentation links aligned when changing that address. HTTPS is enforced for this project.
 
-The documentation workflow is [`.github/workflows/docs-pages.yml`](https://github.com/YangYuS8/SteamWrapper/blob/v2/.github/workflows/docs-pages.yml). A push to `v2` that matches its documentation-related path filters runs checks, builds the static site, and deploys it. Pull requests run checks/builds without deploying. Read the workflow for the exact trigger paths and deployment conditions when changing build inputs.
+The documentation workflow is [`.github/workflows/docs-pages.yml`](https://github.com/YangYuS8/SteamWrapper/blob/main/.github/workflows/docs-pages.yml). A push to `main` that matches its documentation-related path filters runs checks, builds the static site, and deploys it. Pushes to `v2` and pull requests run checks/builds without deploying. Read the workflow for the exact trigger paths and deployment conditions when changing build inputs.
 
-A repository maintainer must set **Settings → Pages → Source** to **GitHub Actions** and allow `v2` in the `github-pages` environment's deployment rules. The default branch remains `main`; documentation deployment does not require changing it. These repository settings and a successful deployment are separate from a passing local build. See [GitHub's custom Pages workflow guidance](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+A repository maintainer must set **Settings → Pages → Source** to **GitHub Actions** and allow only `main` in the `github-pages` environment's deployment rules. The default branch is `main`, which contains the current implementation and documentation. These repository settings and a successful deployment are separate from a passing local build. See [GitHub's custom Pages workflow guidance](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
-GitHub exposes manual `workflow_dispatch` execution only when that workflow is present on the default branch. While `docs-pages.yml` exists only on `v2`, use an eligible push or re-run an existing workflow run; do not rely on a Run workflow button. See [GitHub's manual workflow requirements](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).
+GitHub exposes manual `workflow_dispatch` execution only when that workflow is present on the default branch. The workflow is present on `main`; select `main` for a manual production run. Selecting `v2` builds without deploying. See [GitHub's manual workflow requirements](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).
 
 After deployment, check the workflow's reported Pages URL, both language roots, navigation, assets, and search. Report the actual deployment result; adding the workflow or documenting these steps does not establish that the site is already online.

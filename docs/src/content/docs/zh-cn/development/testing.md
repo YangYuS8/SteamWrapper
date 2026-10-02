@@ -39,7 +39,7 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
-`Test` 动作包含配置保真/冲突/替换失败、本地 Steam、稳定 Runner 安装与共享文件位置测试。`Test-WinUIContracts.ps1` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](https://github.com/YangYuS8/SteamWrapper/blob/v2/tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
+`Test` 动作包含配置保真/冲突/替换失败、本地 Steam、稳定 Runner 安装与共享文件位置测试。`Test-WinUIContracts.ps1` 从共享历史 fixture 开始，C# 单字段修改后由 Rust 比较完整 TOML 和 Profile；再用受控父子进程验证 C# 新配置的精确 argv、cwd、job/root 等待差别、退出码和错误日志。详情见 [契约说明](https://github.com/YangYuS8/SteamWrapper/blob/main/tests/contracts/README.md)。测试驱动、fixture 及生成的用户目录都不进入发布目录。
 
 目录分离新增 AppID 关联、库外运行路径保留和真实双库安装冲突回归，该实现轮 C# 共 49/49 通过。原生隔离保存、重新扫描和歧义新建配置也已验证；详见 [目录分离验证记录](/SteamWrapper/zh-cn/guides/translated-games/)。这些隔离结果本身不代表真实汉化迁移或成就触发通过。
 
@@ -70,7 +70,7 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 
 2026-09-08 较早的隔离目录实测：9-nine 第二、三、四部和新章分别从 Steam 经稳定 Runner 运行库外汉化版，均确认中文开场、正常退出、Steam 运行状态和显示时长更新。第一部当时从现有原始入口启动即报产品 ID 检查处理启动失败，未到标题，也未开展 Steam 路径验收。该阶段失败记录保留，后续恢复 CHS 入口后的结果独立记录。
 
-第一部恢复后，14:06:56–14:08:31 普通文件夹直启和 14:15:53–14:18:15 Steam → Runner → CHS → 游戏均通过中文开场与普通退出；CHS 先退出后，游戏与 Runner 仍继续约 2 分 21 秒。UI 确认 `job`，独立观察零采样错误、零元数据失败和最终无残留，完成本机该 CHS 场景的真实 launcher 先退门槛。日志只记录 CHS 和 Runner 的 exit 0；[当前 job 实现](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/runner/src/platform/windows.rs)返回启动器状态，实际游戏退出码未知，不能由 UI 或进程父子关系证明 Job 成员。
+第一部恢复后，14:06:56–14:08:31 普通文件夹直启和 14:15:53–14:18:15 Steam → Runner → CHS → 游戏均通过中文开场与普通退出；CHS 先退出后，游戏与 Runner 仍继续约 2 分 21 秒。UI 确认 `job`，独立观察零采样错误、零元数据失败和最终无残留，完成本机该 CHS 场景的真实 launcher 先退门槛。日志只记录 CHS 和 Runner 的 exit 0；[当前 job 实现](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/platform/windows.rs)返回启动器状态，实际游戏退出码未知，不能由 UI 或进程父子关系证明 Job 成员。
 
 本次官方 68 文件、恢复的三个文件及其余非存档文件不变；启动前已有的四个存档差异单独记录，直接启动和 Steam 阶段各仅有五个 `savedata` 文件自然更新，24 份原始/检查点备份副本完整。五部共享 profile 已保存，临时 Steam 启动选项均恢复为空（第一部由字段缺失变为空字符串，语义相同）。第一部云始终开启、显示最新且无冲突，时长 36 → 38 分钟；成就 0/4，但未达到触发条件，不判定兼容失败。自然成就触发、汉化存档实际云同步、更广泛的启动器兼容性仍未验证。本轮没有产品源码改动，未重复编译和自动化全门禁。
 
@@ -174,9 +174,9 @@ fixture 包含中文路径与空格路径、一个本地 Steam game manifest，�
 
 ## Runner 稳定安装验证
 
-WinUI 的 [RunnerInstaller](https://github.com/YangYuS8/SteamWrapper/blob/v2/apps/manager-winui/SteamWrapper.Application/Services/RunnerInstaller.cs)在判定就绪前核验现存 Runner 与存在的 `profiles.toml`，并核验安装候选与安装后文件位置；缺少 profile 不影响独立健康检查。[位置检查](https://github.com/YangYuS8/SteamWrapper/blob/v2/apps/manager-winui/SteamWrapper.Application/Services/SharedDataFileLocation.cs)比较文件句柄最终路径与显式文件链接解析后的逻辑路径，发现重定向时返回非就绪并提示从资源管理器重新打开 Manager。现有 UI 仅在安装服务就绪后展示可复制启动项，Launch Options 字符串契约与 ProfileStore 保存算法未修改。
+WinUI 的 [RunnerInstaller](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-winui/SteamWrapper.Application/Services/RunnerInstaller.cs)在判定就绪前核验现存 Runner 与存在的 `profiles.toml`，并核验安装候选与安装后文件位置；缺少 profile 不影响独立健康检查。[位置检查](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-winui/SteamWrapper.Application/Services/SharedDataFileLocation.cs)比较文件句柄最终路径与显式文件链接解析后的逻辑路径，发现重定向时返回非就绪并提示从资源管理器重新打开 Manager。现有 UI 仅在安装服务就绪后展示可复制启动项，Launch Options 字符串契约与 ProfileStore 保存算法未修改。
 
-本次新增 9 条 [位置回归](https://github.com/YangYuS8/SteamWrapper/blob/v2/apps/manager-winui/SteamWrapper.Application.Tests/RunnerLocationTests.cs)：已安装 Runner 重定向、升级候选重定向且保留旧 Runner/清单/配置、首次安装候选重定向、仅 profile 重定向、路径查询失败、普通原生句柄、真实 junction 升级、中文/大小写/扩展前缀及 DOS/UNC 前缀规范化。四种重定向场景先观察旧实现错误返回就绪，再验证修复；最终 `mise run winui:test` 43/43 通过，`winui:contracts` 通过。红/绿证据位于忽略的 `target/runner-location-tests/`，本轮契约结果位于 `target/winui-contracts/bfad46a031ff4713b378d875f6f2f621/results`。
+本次新增 9 条 [位置回归](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-winui/SteamWrapper.Application.Tests/RunnerLocationTests.cs)：已安装 Runner 重定向、升级候选重定向且保留旧 Runner/清单/配置、首次安装候选重定向、仅 profile 重定向、路径查询失败、普通原生句柄、真实 junction 升级、中文/大小写/扩展前缀及 DOS/UNC 前缀规范化。四种重定向场景先观察旧实现错误返回就绪，再验证修复；最终 `mise run winui:test` 43/43 通过，`winui:contracts` 通过。红/绿证据位于忽略的 `target/runner-location-tests/`，本轮契约结果位于 `target/winui-contracts/bfad46a031ff4713b378d875f6f2f621/results`。
 
 服务测试后另行验证了新版发布产物的原生行为：受重定向的工具环境启动 Manager 后出现位置警告，保存不展示启动项或复制按钮；普通 Explorer 启动新版 Manager 后保存成功，生成完全一致的既有启动项。该原生复核与上述服务/进程证据分别记录，不替代干净 VM 或安装器验证。
 

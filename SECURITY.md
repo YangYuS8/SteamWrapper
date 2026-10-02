@@ -4,7 +4,7 @@ English | [简体中文](SECURITY.zh-CN.md)
 
 ## Scope and versions
 
-This policy covers SteamWrapper code and its configuration/launch workflow. The `v2` branch is under development; its WinUI Manager is a preview. There is no published security support window, response SLA, or guaranteed backport policy. Identify the affected version, branch, and commit when reporting an issue. This policy does not make a maintenance commitment for the legacy `main` branch.
+This policy covers SteamWrapper code and its configuration/launch workflow. The v2 implementation on `main` is under development; its WinUI Manager is a preview. There is no published security support window, response SLA, or guaranteed backport policy. Identify the affected version, branch, and commit when reporting an issue. This policy does not make a maintenance commitment for historical v1 releases.
 
 Game translations, third-party launchers, Steam, and antivirus products are separate software. A detection or missing file alone does not establish a SteamWrapper vulnerability or prove that a third-party executable is safe.
 

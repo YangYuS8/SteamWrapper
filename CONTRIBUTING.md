@@ -6,7 +6,7 @@ SteamWrapper v2 is a Windows-first configuration Manager and an independent Rust
 
 ## Issues and proposals
 
-Search [existing issues](https://github.com/YangYuS8/SteamWrapper/issues) first. Use the bug, feature, or help template and identify the version or commit, branch, platform, and Manager implementation. Template files are maintained on `v2`; GitHub's live template chooser uses the default branch. English is the project's primary language; English and Simplified Chinese reports are welcome.
+Search [existing issues](https://github.com/YangYuS8/SteamWrapper/issues) first. Use the bug, feature, or help template and identify the version or commit, branch, platform, and Manager implementation. Template files are maintained on `main`, the default branch used by GitHub's live template chooser. English is the project's primary language; English and Simplified Chinese reports are welcome.
 
 For a bug, explain what you expected, what happened, and the smallest reproducible steps. Include only relevant, redacted log excerpts. A fake Steam library and a small process fixture are preferable to uploading a game, Steam account data, or saved progress. Use [SECURITY.md](SECURITY.md) for suspected vulnerabilities and follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
@@ -14,7 +14,7 @@ Discuss changes to profile formats, Runner CLI behavior, supported platforms, pa
 
 ## Branch and development setup
 
-Target `v2` for v2 pull requests. The repository's GitHub default branch is currently `main`, so check the pull request base explicitly. Do not mix the legacy implementation on `main` into a v2 change.
+Create a focused feature branch from `main` and target pull requests to `main`. The default branch contains v2; `v2` remains a migration reference. Historical v1 releases are separate and do not receive implicit backports.
 
 Install the tools needed for your change using your preferred method. mise is optional; its configuration records a convenient local toolset. SDK and dependency requirements come from `global.json`, project manifests and lockfiles, `package.json`, and `.vsconfig`; keep optional mise pins aligned when those requirements change. Follow [Windows development](https://yangyus8.top/SteamWrapper/development/windows/) for official MSVC/SDK prerequisites and direct commands. For WinUI changes, start with:
 
@@ -50,4 +50,4 @@ Use the [pull request template](.github/PULL_REQUEST_TEMPLATE.md). Do not claim 
 
 ## License
 
-This `v2` branch uses the existing [Apache-2.0 license](LICENSE). Contributions to this branch are submitted under that license. This guide does not change the license of the legacy `main` branch, add a contributor license agreement, or require a new sign-off process.
+The current v2 implementation on `main` uses [Apache-2.0](LICENSE); contributions are submitted under that license. Historical v1 tags and commits retain their original license. This guide does not add a contributor license agreement or require a new sign-off process.

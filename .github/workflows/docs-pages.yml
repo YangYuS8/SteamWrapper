@@ -2,7 +2,7 @@ name: Documentation
 
 on:
   push:
-    branches: [v2]
+    branches: [main, v2]
     paths:
       - 'docs/**'
       - 'assets/brand/**'
@@ -14,7 +14,7 @@ on:
       - 'mise.lock'
       - '.github/workflows/docs-pages.yml'
   pull_request:
-    branches: [v2]
+    branches: [main, v2]
     paths:
       - 'docs/**'
       - 'assets/brand/**'
@@ -64,7 +64,7 @@ jobs:
 
   deploy:
     name: Publish GitHub Pages
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/v2'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10

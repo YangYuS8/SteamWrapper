@@ -78,4 +78,4 @@ Save the profile, preserve the previous Steam Launch Options, and use the genera
 
 Observe the actual game opening, whether a launcher exits first, and whether Steam returns to its stopped state after normal game exit. If Steam stays running, inspect the remaining processes before ending anything; a launcher may keep a helper alive. Avoid terminating an active game with unsaved progress just to clear a status indicator.
 
-See [troubleshooting](/SteamWrapper/guides/troubleshooting/) for logs and common symptoms, or the [Runner implementation](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/runner/src/platform/mod.rs) and [Windows Job implementation](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/runner/src/platform/windows.rs) for exact behavior.
+See [troubleshooting](/SteamWrapper/guides/troubleshooting/) for logs and common symptoms, or the [Runner implementation](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/platform/mod.rs) and [Windows Job implementation](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/platform/windows.rs) for exact behavior.

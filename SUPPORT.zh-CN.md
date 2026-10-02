@@ -4,7 +4,7 @@
 
 请先阅读 [README](README.zh-CN.md)、[Windows 开发与环境说明](https://yangyus8.top/SteamWrapper/zh-cn/development/windows/)及[汉化游戏目录指导](https://yangyus8.top/SteamWrapper/zh-cn/guides/translated-games/)。[真实验收记录](https://yangyus8.top/SteamWrapper/zh-cn/project/validation/steam/)明确说明了通过的本机场景和剩余限制。
 
-缺陷、功能提案或配置疑问可提交到 [GitHub Issues](https://github.com/YangYuS8/SteamWrapper/issues)。先搜索已有报告，再选择相应模板。模板文件在 `v2` 中维护，GitHub 实际模板选择器使用默认分支。2026-09-08 检查时，仓库未启用 GitHub Discussions。仓库没有公布专职支持服务或保证响应时间。
+缺陷、功能提案或配置疑问可提交到 [GitHub Issues](https://github.com/YangYuS8/SteamWrapper/issues)。先搜索已有报告，再选择相应模板。模板文件在默认分支 `main` 中维护，GitHub 实际模板选择器使用该分支。2026-09-08 检查时，仓库未启用 GitHub Discussions。仓库没有公布专职支持服务或保证响应时间。
 
 请提供 SteamWrapper 版本／提交和分支、Windows 版本、Manager 实现（WinUI 预览或 Dioxus）及最小复现步骤。启动问题还应说明等待模式、从目标程序自身目录正常启动同一 EXE 是否可用，以及 Steam 测试时 Manager 是否关闭。应区分进程创建、游戏标题出现、普通退出、Steam 状态／时长和成就。
 

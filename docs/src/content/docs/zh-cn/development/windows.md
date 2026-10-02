@@ -117,7 +117,7 @@ cargo test --locked -p steamwrapper-runner
 
 Manager 和 Steam 启动的 Runner 必须看到同一份 `%LOCALAPPDATA%\SteamWrapper\profiles.toml` 与 `bin\SteamWrapperRunner.exe`。本机发现：从 Codex 的进程环境启动 shell 或 Manager 时，字面上的常规 AppData 路径可以落到 Codex 包的 `LocalCache` 私有目录；文件存在、摘要匹配、直接运行成功都不足以证明普通 Steam 可访问它。shell 或 Manager 报告没有 package identity，也不能否认这种文件视图差异。此次差异由文件句柄的最终路径确认。
 
-[共享文件位置检查](https://github.com/YangYuS8/SteamWrapper/blob/v2/apps/manager-winui/SteamWrapper.Application/Services/SharedDataFileLocation.cs)在判定 Runner 就绪前核验现有 Runner 与存在的 profile，并在复制安装候选前、安装完成时核验对应文件。句柄最终路径与解析显式 junction/symlink 后的逻辑路径不符时，服务返回非就绪并提示从资源管理器重新打开 Manager；配置编辑算法和 Launch Options 格式不变。比较接受合法链接、大小写差异及 `\\?\` / UNC 前缀；缺少 profile 不影响独立 Runner 健康检查。此检查证明共享位置一致性，不替代真实 Steam 启动验收。
+[共享文件位置检查](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-winui/SteamWrapper.Application/Services/SharedDataFileLocation.cs)在判定 Runner 就绪前核验现有 Runner 与存在的 profile，并在复制安装候选前、安装完成时核验对应文件。句柄最终路径与解析显式 junction/symlink 后的逻辑路径不符时，服务返回非就绪并提示从资源管理器重新打开 Manager；配置编辑算法和 Launch Options 格式不变。比较接受合法链接、大小写差异及 `\\?\` / UNC 前缀；缺少 profile 不影响独立 Runner 健康检查。此检查证明共享位置一致性，不替代真实 Steam 启动验收。
 
 有用户授权后，真实验收按普通玩家的启动方式执行：
 

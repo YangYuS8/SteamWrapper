@@ -10,7 +10,7 @@ WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览�
 ## 获取 CI 预览包
 
 1. 打开仓库的 [WinUI Windows preview 工作流](https://github.com/YangYuS8/SteamWrapper/actions/workflows/winui-windows.yml)。
-2. 选择所需 `v2` 代码版本对应的一次成功运行。
+2. 选择所需 `main` 代码版本对应的一次成功运行。
 3. 如果该运行的产物仍然可用，下载 **`SteamWrapper-WinUI-preview-windows-x64`**。
 4. 将整个压缩包解压到准备保留的目录中。
 
@@ -32,7 +32,7 @@ WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览�
 
 这是从源码开发和生成产物的方式，不是每位下载预览版的玩家都需要进行的运行环境准备。
 
-准备 Windows 上的 `v2` 分支工作副本。按自己的方式安装 PowerShell 7、`global.json` 指定的 .NET SDK，以及使用 MSVC host 的 Rust。确保 PATH 中有 `pwsh`、`dotnet` 和 `cargo`；mise 是可选项。在仓库根目录执行：
+准备 Windows 上的 `main` 分支工作副本。按自己的方式安装 PowerShell 7、`global.json` 指定的 .NET SDK，以及使用 MSVC host 的 Rust。确保 PATH 中有 `pwsh`、`dotnet` 和 `cargo`；mise 是可选项。在仓库根目录执行：
 
 ```powershell
 pwsh -NoProfile -File scripts/windows/Install-BuildTools.ps1
@@ -57,7 +57,7 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 
 沙盒包含示例 manifest 和隔离的用户目录，没有你的真实游戏库，也没有可玩的游戏。沙盒中创建的配置不是实际 Steam 配置。
 
-版本要求的实际清单、可选 mise 别名和完整工具列表见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。[Windows 构建脚本](https://github.com/YangYuS8/SteamWrapper/blob/v2/scripts/windows/Invoke-WinUI.ps1)实现上述直接命令。单独发布 WinUI 不要求 Node、pnpm、Dioxus CLI 或 just。
+版本要求的实际清单、可选 mise 别名和完整工具列表见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。[Windows 构建脚本](https://github.com/YangYuS8/SteamWrapper/blob/main/scripts/windows/Invoke-WinUI.ps1)实现上述直接命令。单独发布 WinUI 不要求 Node、pnpm、Dioxus CLI 或 just。
 
 ## Manager 与 Runner 的数据位置
 

@@ -17,7 +17,7 @@ description: "Windows 产品需求、配置保真、架构与实施阶段。"
 
 | 仓库材料 | 可确认的需求 |
 | --- | --- |
-| `f95770b:README.md`（当前旧版 main） | Windows 小工具，解决汉化版/自定义启动器 galgame 的 Steam 游玩时长问题 |
+| `f95770b:README.md`（历史 v1 基线） | Windows 小工具，解决汉化版/自定义启动器 galgame 的 Steam 游玩时长问题 |
 | `6cb8835:README.md`（首个 v2 设计） | 配置一次；Manager/Runner 分离；Windows first；无需玩家安装 .NET Runtime、默认无需 SteamEdit、不再逐游戏复制完整 wrapper |
 | `e244269:docs/architecture.md` | Steam Launch Options 调用独立 Runner；按 AppID 读配置；无注入、客户端修改、DRM 绕过或常驻服务 |
 | `c871c21:docs/roadmap.md` | Windows 基础闭环 → Windows 安全一键应用 → Windows 兼容性，Linux/SteamOS 排在后续大版本 |
@@ -87,8 +87,8 @@ tests/contracts/                 # C# / Rust 共用的脱敏配置与进程 fixt
 
 当前源码揭示了两个需要修正、不能直接移植的行为：
 
-- [Manager 保存](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/manager-core/src/lib.rs)重建 Profile，会重置 `args`、`working_dir`、`wait_mode` 和 `process_name`。改一个目标路径不应丢失这些设置。
-- [配置保存](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/core/src/config.rs)直接 `fs::write`，没有配置文件原子替换或编辑冲突检测。Runner 二进制安装的原子逻辑不等于 profile 保存安全。
+- [Manager 保存](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/manager-core/src/lib.rs)重建 Profile，会重置 `args`、`working_dir`、`wait_mode` 和 `process_name`。改一个目标路径不应丢失这些设置。
+- [配置保存](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/config.rs)直接 `fs::write`，没有配置文件原子替换或编辑冲突检测。Runner 二进制安装的原子逻辑不等于 profile 保存安全。
 
 新的配置服务必须满足：
 
@@ -105,11 +105,11 @@ TOML 库选型以这个往返试验决定，不先锁定未经验证的包。测
 
 ## 5. Runner 与 Steam 验收
 
-[当前 Runner](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/runner/src/main.rs)启动 profile 的 `target` 与 `args`；`steam_command` 被接收并记录，未被执行或自动追加。保留 `%command%` 是兼容契约，**不等于已有原命令转发**。不能借迁移同时启动原 exe、自动回退原游戏或更改参数语义。
+[当前 Runner](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/main.rs)启动 profile 的 `target` 与 `args`；`steam_command` 被接收并记录，未被执行或自动追加。保留 `%command%` 是兼容契约，**不等于已有原命令转发**。不能借迁移同时启动原 exe、自动回退原游戏或更改参数语义。
 
 Windows 新配置默认 `job`。真实测试需验证 launcher 先退、子进程后退、目标无法启动、中文/空格路径、argv/cwd、Runner 错误退出和日志。`root` 仅等直接子进程；`process_name` 是显式兼容选择，不能证明同名进程属于该游戏。
 
-本机第一部 CHS 场景已通过真实先退验收：14:15:55 启动器退出后，实际游戏和 Runner 继续约 2 分 21 秒，至 14:18:15 普通退出，Steam 时长 36 → 38 分钟。UI 确认使用 `job`，独立进程观察无采样错误或元数据失败，最终无残留。此记录不直接证明 Job 成员，也不扩大为任意启动器保证。当前 [Windows 实现](https://github.com/YangYuS8/SteamWrapper/blob/v2/crates/runner/src/platform/windows.rs)等 Job 完成后返回启动器退出状态；这次日志的 CHS/Runner exit 0 不能解释为实际游戏 exit 0。
+本机第一部 CHS 场景已通过真实先退验收：14:15:55 启动器退出后，实际游戏和 Runner 继续约 2 分 21 秒，至 14:18:15 普通退出，Steam 时长 36 → 38 分钟。UI 确认使用 `job`，独立进程观察无采样错误或元数据失败，最终无残留。此记录不直接证明 Job 成员，也不扩大为任意启动器保证。当前 [Windows 实现](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/runner/src/platform/windows.rs)等 Job 完成后返回启动器退出状态；这次日志的 CHS/Runner exit 0 不能解释为实际游戏 exit 0。
 
 Job Object 不能覆盖任意脱离行为：子进程是否入 job 受创建方式、breakaway 和父 job 等条件影响；完成端口的一般通知也不能被笼统当成必达事件。异常场景需查询和验证实际进程状态，不能只根据使用了某个 API 宣称正确。[Windows Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)
 
