@@ -77,6 +77,23 @@ mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
 
 原生 Windows 窗口部件和操作系统诊断跟随系统语言。本次隔离复核没有触碰真实 Steam 启动项、profile 或游戏文件，也不证明干净系统安装、真实 Steam 兼容性或完整无障碍矩阵已通过。
 
+## 2026-10-03 封面验收
+
+[PR #10](https://github.com/YangYuS8/SteamWrapper/pull/10)加入本地优先封面、需主动开启的官方 Steam CDN 下载和独立限额缓存。下列结果仅对应封面切片，不替代上文带日期的配置与启动证据。
+
+| 检查 | 结果与边界 |
+| --- | --- |
+| 本地发现 | 只读扫描为本机 44 款已安装游戏全部找到封面候选，包含 AppID `1091500`、`3548580` 的新版哈希缓存目录。找到候选不代表每张图片均已实际渲染。 |
+| Windows 自动化门禁 | 2026-10-02，`a5debf1` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/37006387662)通过 99 项 Application 测试、9 项真实 Windows 解码测试、C#/Rust 契约、自包含发布和发布回归。用例覆盖默认离线、损坏图片、重定向／下载／解码限制、取消、缓存配额／过期／清理和偏好保留。 |
+| 其他 PR 门禁 | [Rust CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/37006387721)在 Windows、Linux 均通过。[双语文档 CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/37006387800)通过，PR 的 Pages 部署按预期跳过。 |
+| 恢复后的英语原生复核 | 隔离游戏库实际显示 `1091500`、`3548580` 的本地封面，离线显示 fixture 中的缓存 `480.cover`，并为没有封面的 `9999999` 保留占位图。筛选 Chill with You 后封面仍显示正常。 |
+| 简体中文原生复核 | 主窗口、添加游戏对话框、封面设置 Expander、隐私文案、未勾选的主动开启选项和清理提示均显示简体中文，游戏名称保持原文。关闭并重新打开后仍为中文界面。 |
+| 设置布局 | 在实际观察的 914 × 714 窗口中，英语和简体中文界面展开封面设置后，游戏列表均缩至 100 像素，控件与提示完整可见。中文折叠检查恢复 310 像素、可见 4 行的列表。此结果不代表完整缩放矩阵。 |
+| 原生官方 CDN 主动开启 | 独立 `1091500` fixture 起初没有本地图或缓存：默认关闭时显示占位图，且没有创建封面文件。通过英语界面勾选后保存 `true`，实际下载并显示 54,176 字节的官方竖图。关闭选项保存 `false`；关闭程序、重新启动并再次打开对话框后，选项仍未勾选，缓存竖图继续显示，其 SHA-256 和修改时间保持不变。 |
+| 原生缓存清理 | 中文清理移除 fixture 的 `480.cover`，英语清理移除实际下载的 `1091500.cover`，均恢复对应占位图并显示本地化提示。中文检查中的两张本地 Steam 图片仍显示且 SHA-256 不变，两次测试均未写入 profile。 |
+
+原生观察使用一次性 Manager／Steam fixture，未修改真实 Steam 启动项、profile 或游戏文件。未断开操作系统网络、抓包或在原生界面中断正在进行的 HTTP 请求；默认零请求和取消行为由上述服务回归覆盖。P0 的完整界面自动化／无障碍矩阵及干净系统安装器验收仍未完成，见[路线图](/SteamWrapper/zh-cn/project/roadmap/)。
+
 ## 尚未完成的验收
 
 最初的 Unity 游戏通过结果，已在 2026-09-08 扩展为五部独立汉化 9-nine，包括本机第一部 CHS 启动器先退的场景。这些观察仅覆盖[真实 Steam 验收](/SteamWrapper/zh-cn/project/validation/steam/)中实际使用的包和场景，不证明所有启动器、引擎或成就兼容。

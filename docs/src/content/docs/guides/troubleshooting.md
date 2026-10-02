@@ -29,6 +29,16 @@ A **Steam installation** shown as unknown can mean discovery failed or the same 
 
 If a profile already exists, open that profile. A conflict involving multiple profiles for one AppID needs resolution before an unambiguous command can be generated.
 
+<a id="missing-covers"></a>
+
+## A game shows a placeholder instead of its cover
+
+This does not mean the game or its configuration is damaged. Manager first reads custom Steam art and the local library cache, including newer hashed directories. Empty, locked, unreadable or invalid images are skipped. Open the game's library view in Steam if you want Steam itself to populate its normal artwork cache, then reopen **Add Steam game**.
+
+**Download missing covers from Steam** is off by default. Turn it on in that dialog only if you want official image requests. A valid previously downloaded cover can still appear with the option off; **Clear downloaded covers** removes SteamWrapper's copies without changing custom art or Steam files. See [cover settings](/SteamWrapper/guides/configuration/#cover-settings).
+
+Some Steam images have no working AppID-only portrait URL. Offline connections, timeouts, 404/rate-limited responses or malformed images also retain the placeholder; repeated failed requests are briefly suppressed. Selecting, saving and launching remain available. Do not run Steam integrity verification or replace game files just to repair a cover.
+
 ## Manager will not save the profile
 
 Check the fields named in the error:
@@ -122,7 +132,7 @@ Use the sidebar selector. A successful change updates application-owned UI and i
 %LOCALAPPDATA%\SteamWrapper\ui-settings.json
 ```
 
-English is the default for a missing or unknown language value. Both Managers use `en-US` and `zh-CN`. Changing this preference does not change profiles, user-entered text or log contents.
+English is the default for a missing or unknown language value. Manager uses `en-US` and `zh-CN`. Changing this preference does not change profiles, user-entered text or log contents.
 
 If the file is malformed, contains duplicate keys, exceeds the supported size/depth, or cannot be safely written, Manager reports the problem and preserves it. A failed preference write keeps the previous UI language. Keep a copy before manually repairing a settings file; do not delete `profiles.toml` to reset a language preference.
 

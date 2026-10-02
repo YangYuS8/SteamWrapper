@@ -4,7 +4,10 @@ using System.Text;
 
 namespace SteamWrapper.Application.Services;
 
-public sealed record SteamGame(string AppId, string Name, string GameDirectory, string? CoverPath, bool InstallationAmbiguous = false);
+public sealed record SteamGame(string AppId, string Name, string GameDirectory, string? CoverPath, bool InstallationAmbiguous = false)
+{
+    public IReadOnlyList<string> LocalCoverCandidates { get; init; } = [];
+}
 public sealed record SteamScanResult(IReadOnlyList<SteamGame> Games, IReadOnlyList<LocalMessage> WarningTexts, string? SteamRoot)
 {
     public IReadOnlyList<string> Warnings => WarningTexts.Select(message => message.ToString()).ToArray();
@@ -89,7 +92,11 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
                                     warnings.Add(Messages.Text("SteamAmbiguous", appId));
                             }
                         }
-                        else games.Add(appId, new SteamGame(appId, name, gameDirectory, FindCover(root, appId)));
+                        else
+                        {
+                            var covers = FindCovers(root, appId, cancellationToken);
+                            games.Add(appId, new SteamGame(appId, name, gameDirectory, covers.FirstOrDefault()) { LocalCoverCandidates = covers });
+                        }
                     }
                     catch (Exception ex) when (IsReadError(ex)) { warnings.Add(Messages.Text("SteamManifestSkipped", Path.GetFileName(manifest), ex)); }
                 }
@@ -122,42 +129,83 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
         (install?.StartsWith("Proton ", StringComparison.OrdinalIgnoreCase) ?? false) ||
         (install?.StartsWith("SteamLinuxRuntime", StringComparison.OrdinalIgnoreCase) ?? false);
 
-    private static string? FindCover(string root, string appId)
+    private static string[] FindCovers(string root, string appId, CancellationToken cancellationToken)
     {
-        var cache = Path.Combine(root, "appcache", "librarycache");
-        var locations = new List<(string Directory, string Prefix)>
+        var covers = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool Add(string directory, string prefix, bool localized)
         {
-            (cache, appId + "_library_600x900"), (Path.Combine(cache, appId), "library_600x900"),
-            (cache, appId + "_header"), (Path.Combine(cache, appId), "header"),
-            (cache, appId + "_library_hero"), (cache, appId)
-        };
+            foreach (var path in CoverFiles(directory, prefix, localized, cancellationToken))
+                if (seen.Add(path))
+                {
+                    covers.Add(path);
+                    if (covers.Count == 256) return false;
+                }
+            return true;
+        }
+        var grids = CoverDirectories(Path.Combine(root, "userdata"), cancellationToken)
+            .Select(user => Path.Combine(user, "config", "grid")).ToArray();
+        // Steam's custom portrait uses <appid>p; <appid> is the older landscape.
+        // Check portraits across all users before any landscape or client cache.
+        foreach (var name in new[] { appId + "p", appId })
+            foreach (var grid in grids)
+                if (!Add(grid, name, localized: false)) return covers.ToArray();
+
+        var cache = Path.Combine(root, "appcache", "librarycache");
+        var appCache = Path.Combine(cache, appId);
+        // Recent clients store art as <appid>/<40-character hash>/<art>_<language>.
+        // Visit exactly that level rather than recursively entering arbitrary folders.
+        var directories = new[] { appCache }.Concat(CoverDirectories(appCache, cancellationToken)
+            .Where(path => Path.GetFileName(path) is { Length: 40 } name && name.All(char.IsAsciiHexDigit))).ToArray();
+        foreach (var family in new[] { "library_600x900", "library_capsule", "library_header", "header" })
+        {
+            if (!Add(cache, appId + "_" + family, localized: true)) return covers.ToArray();
+            foreach (var directory in directories)
+                if (!Add(directory, family, localized: true)) return covers.ToArray();
+        }
+        return covers.ToArray();
+    }
+
+    private static string[] CoverDirectories(string directory, CancellationToken cancellationToken)
+    {
         try
         {
-            var userdata = Path.Combine(root, "userdata");
-            if (Directory.Exists(userdata))
-                foreach (var user in Directory.EnumerateDirectories(userdata).Order(StringComparer.Ordinal))
-                    locations.Add((Path.Combine(user, "config", "grid"), appId));
+            if (!Directory.Exists(directory)) return [];
+            return Directory.EnumerateDirectories(directory).Take(128).Where(path =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return (File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0;
+            }).Order(StringComparer.Ordinal).ToArray();
+        }
+        catch (Exception ex) when (IsReadError(ex)) { return []; }
+    }
+
+    private static string[] CoverFiles(string directory, string prefix, bool localized, CancellationToken cancellationToken)
+    {
+        var covers = new List<string>();
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!Directory.Exists(directory)) return [];
+            foreach (var path in Directory.EnumerateFiles(directory, prefix + "*").Take(128).Order(StringComparer.Ordinal))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var extension = Path.GetExtension(path).ToLowerInvariant();
+                if (extension is not (".jpg" or ".jpeg" or ".png" or ".webp")) continue;
+                var stem = Path.GetFileNameWithoutExtension(path);
+                if (!stem.Equals(prefix, StringComparison.OrdinalIgnoreCase) &&
+                    !(localized && stem.StartsWith(prefix + "_", StringComparison.OrdinalIgnoreCase))) continue;
+                try
+                {
+                    if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) continue;
+                    using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    if (stream.Length > 0 && stream.ReadByte() >= 0) covers.Add(path);
+                }
+                catch (Exception ex) when (IsReadError(ex)) { }
+            }
         }
         catch (Exception ex) when (IsReadError(ex)) { }
-        foreach (var location in locations)
-        {
-            try
-            {
-                if (!Directory.Exists(location.Directory)) continue;
-                var cover = Directory.EnumerateFiles(location.Directory).Order(StringComparer.Ordinal).FirstOrDefault(path =>
-                {
-                    var extension = Path.GetExtension(path).ToLowerInvariant();
-                    if (extension is not (".jpg" or ".jpeg" or ".png" or ".webp")) return false;
-                    var stem = Path.GetFileNameWithoutExtension(path);
-                    return stem.Equals(location.Prefix, StringComparison.OrdinalIgnoreCase) ||
-                        stem.StartsWith(location.Prefix + "_", StringComparison.OrdinalIgnoreCase) ||
-                        stem.Equals(location.Prefix + "p", StringComparison.OrdinalIgnoreCase);
-                });
-                if (cover is not null) return cover;
-            }
-            catch (Exception ex) when (IsReadError(ex)) { }
-        }
-        return null;
+        return covers.ToArray();
     }
 
     private static bool IsReadError(Exception ex) => ex is IOException or UnauthorizedAccessException or FormatException or ArgumentException;

@@ -8,6 +8,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 Set-Location -LiteralPath $repoRoot
 $project = Join-Path $repoRoot 'apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj'
 $tests = Join-Path $repoRoot 'apps/manager-winui/SteamWrapper.Application.Tests/SteamWrapper.Application.Tests.csproj'
+$windowsTests = Join-Path $repoRoot 'apps/manager-winui/SteamWrapper.Windows.Tests/SteamWrapper.Windows.Tests.csproj'
 $publishRoot = Join-Path $repoRoot 'target/winui'
 $output = Join-Path $publishRoot 'publish'
 
@@ -19,6 +20,8 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 if ($Action -eq 'Test') {
     Invoke-Checked dotnet @('restore', $tests, '--locked-mode')
     Invoke-Checked dotnet @('test', $tests, '--no-restore', '--configuration', 'Release')
+    Invoke-Checked dotnet @('restore', $windowsTests, '--locked-mode')
+    Invoke-Checked dotnet @('test', $windowsTests, '--no-restore', '--configuration', 'Release')
     return
 }
 
