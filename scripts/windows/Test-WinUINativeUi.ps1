@@ -2,12 +2,14 @@
 param(
     [Parameter(Position = 0)][string]$RepoRoot = (Join-Path $PSScriptRoot '../..'),
     [Parameter(Position = 1)][string]$PublishDirectory,
-    [switch]$Inspect
+    [switch]$Inspect,
+    [ValidateSet('add-local', 'manual-appid', 'dirty-add', 'keyboard', 'existing-editor', 'saved-editor')][string[]]$Cases = @()
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if (-not $IsWindows) { throw 'Native WinUI acceptance requires Windows.' }
+if ($Inspect -and $Cases.Count) { throw 'Inspection and focused native cases are separate modes.' }
 if (-not [Environment]::UserInteractive -or [Diagnostics.Process]::GetCurrentProcess().SessionId -eq 0) {
     throw 'Native WinUI acceptance requires an unlocked interactive Windows desktop. Service CI only compiles the developer harness.'
 }
@@ -47,5 +49,6 @@ try {
     Invoke-NativeUiCommand @('build', $project, '--no-restore', '--configuration', 'Release')
     $arguments = @('run', '--project', $project, '--no-build', '--no-restore', '--configuration', 'Release', '--', $repository, $publication)
     if ($Inspect) { $arguments += '--inspect' }
+    foreach ($case in $Cases) { $arguments += @('--case', $case) }
     Invoke-NativeUiCommand $arguments
 } finally { Pop-Location }

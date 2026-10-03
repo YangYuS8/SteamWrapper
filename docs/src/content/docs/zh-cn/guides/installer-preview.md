@@ -9,6 +9,8 @@ Inno Setup 安装器和 C# 部署组件已实现，面向 **Windows 11 24H2 或�
 
 这不是已签名或稳定发布。开发机或托管 Windows Server 的隔离进程测试不等于干净 Windows 11 验收。干净客户端、正常防护下的下载、多用户、缩放以及真实 Steam 交付门槛仍在[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)中记录。不要为了运行预览关闭 Windows 防护。
 
+已公开的 [v0.2.3-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1) 包含 Setup 与便携 ZIP。七个 GitHub 附件均已通过公开下载完整性核验；Setup 仍未签名。CNB 发布凭据未配置，二进制发布实际跳过。当前源码为 `0.2.4`，已具备 `v0.2.4-preview.1` 双语说明；公开可用性以实际 Releases 与标签工作流结果为准。
+
 ## 构建预览
 
 安装文档要求的 Windows 开发工具后，在仓库根目录运行：
@@ -16,10 +18,10 @@ Inno Setup 安装器和 C# 部署组件已实现，面向 **Windows 11 24H2 或�
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
-pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.3-preview.1
+pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.4-preview.1
 ```
 
-最后一条命令根据当前 `0.2.3` 源码生成 `target/winui/installers/v0.2.3-preview.1/SteamWrapper-v0.2.3-preview.1-win-x64-setup.exe` 和检查元数据。标签必须匹配源码的三段版本号，仅用于标识本地产物；命令不会创建 Git 标签或发布 Release。已公开版本不能复用于不同字节。有日期的 `0.2.1` 产物及 `0.2.1` → `0.2.2` 本地真实升级／回滚保留为历史证据。
+最后一条命令根据当前 `0.2.4` 源码生成 `target/winui/installers/v0.2.4-preview.1/SteamWrapper-v0.2.4-preview.1-win-x64-setup.exe` 和检查元数据。标签必须匹配源码的三段版本号，仅用于标识本地产物；命令不会创建 Git 标签或发布 Release。已公开版本不能复用于不同字节。此前产物和真实数字版本升级／回滚结果仍作为有日期的历史证据保留。
 
 仅改变预发布后缀不能形成升级路径：部署清单改变、数字版本不变，安装会拒绝同基础版本的不同内容。新的可安装载荷需使用新的协调三段源码／产品版本；重试已有构建时复用完全相同的不可变文件。见[发布版本规则](/SteamWrapper/zh-cn/development/distribution/#准备并触发发布)。
 
@@ -37,20 +39,22 @@ Host 语言命令在新建的 `target/winui/host-language-acceptance/<id>` 夹�
 
 后者在仓库 `target` 下新建目录，使用独立测试 AppId 和真实安装、兼容 maintenance 回滚及卸载进程，快捷方式重定向到一次性夹具目录。默认人工构造的下一版本文件只验证部署事务，不代表真实下一版本构建或签名证据。测试不使用真实游戏库；脚本会报告包含日志和 `evidence.json` 的隔离目录，其路径包含中文、空格和单引号，用于验证路径处理。
 
-真实数字版本升级验收应在替换发布目录前冻结完整的旧便携目录，拒绝重解析／私有输入，并记录源文件与副本的哈希。正常编译新的协调源码／产品版本；仅修改旧 Runner 清单或 PE 元数据不构成新版本二进制。已有经验证的冻结 `0.2.2` 目录和真正编译的当前 `0.2.3` 发布目录后，将 `REPLACE_WITH_ID` 替换为证据中记录的基线目录名：
+真实数字版本升级验收应在替换发布目录前冻结完整的旧便携目录，拒绝重解析／私有输入，并记录源文件与副本的哈希。正常编译新的协调源码／产品版本；仅修改旧 Runner 清单或 PE 元数据不构成新版本二进制。已有经验证的冻结 `0.2.3` 目录和真正编译的当前 `0.2.4` 发布目录后，将 `REPLACE_WITH_ID` 替换为证据中记录的基线目录名：
 
 ```powershell
-$baseline = 'target/winui/upgrade-baselines/REPLACE_WITH_ID/v0.2.2'
+$baseline = 'target/winui/upgrade-baselines/REPLACE_WITH_ID/v0.2.3'
 pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1 `
   -PublishDirectory $baseline `
   -UpgradePublishDirectory target/winui/publish `
-  -Tag v0.2.2-installertest.1 `
-  -UpgradeTag v0.2.3-installertest.1
+  -Tag v0.2.3-installertest.1 `
+  -UpgradeTag v0.2.4-installertest.1
 ```
 
 提供升级发布目录时，脚本会在调用编译器或安装器前检查两份完整布局中七个自有 PE 的产品和版本字段。成功证据应包含 `numericUpgradeUsesSyntheticMetadataFixture=false`，以及实际 maintenance 进程执行的兼容回滚，随后由真实新版安装器重新激活。检查记录的标签、版本、自有文件保留与用户数据哈希。命令使用隔离测试根目录，不操作生产安装。本地通过仍不等于干净 Windows、原生向导／Explorer、多用户或全部中断／注册表／快捷方式故障门槛通过。2026-10-03 本地准备期间没有可用的干净 VM。
 
-2026-10-03 最终本机运行使用冻结 `0.2.2` 和真正编译的 `0.2.3`，完成 **13 个符合预期的真实进程步骤**。实际 maintenance 回滚到 `0.2.2`，保留 1,066 个自有版本文件及维护程序／卸载器／快捷方式状态，再由 Inno 升级回来。自有文件占用和未知文件存在时按预期拒绝卸载；正常卸载、重新安装及最后卸载均成功，六个独立数据夹具的哈希保持不变。证据记录 `numericUpgradeUsesSyntheticMetadataFixture=false`、`unsigned=true` 和 `cleanVm=false`。更早的 `0.2.1` → `0.2.2` 结果仍在[测试](/SteamWrapper/zh-cn/development/testing/)中单独保留为有日期的证据。
+2026-10-03 已完成的 `0.2.3` 本机运行使用冻结 `0.2.2` 和真正编译的 `0.2.3`，完成 **13 个符合预期的真实进程步骤**。实际 maintenance 回滚到 `0.2.2`，保留 1,066 个自有版本文件及维护程序／卸载器／快捷方式状态，再由 Inno 升级回来。自有文件占用和未知文件存在时按预期拒绝卸载；正常卸载、重新安装及最后卸载均成功，六个独立数据夹具的哈希保持不变。证据记录 `numericUpgradeUsesSyntheticMetadataFixture=false`、`unsigned=true` 和 `cleanVm=false`。更早的 `0.2.1` → `0.2.2` 结果仍在[测试](/SteamWrapper/zh-cn/development/testing/)中单独保留为有日期的证据。
+
+2026-10-03 后续冻结 `0.2.3` → 真正编译 `0.2.4` 的运行也完成 **13 个符合预期的真实进程步骤**。实际 maintenance 回滚 `0.2.4 → 0.2.3` 保留 1,204 个自有版本文件及维护程序／卸载器／快捷方式状态，随后 Inno 再升级。迟到的自有文件锁和未知文件正确阻止卸载；后续正常卸载／重装通过，六个数据夹具哈希保持不变。证据为 `target/winui/installer acceptance 中文 ' f9b299a94e654ab78a528bd1ea227c37/evidence.json`，再次记录真实版本、未签名及 `cleanVm=false`。本机结果不代表干净客户端、版本保留或真实签名门槛完成。
 
 ## 安装与日常使用
 
@@ -85,6 +89,8 @@ pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1 `
 
 隔离部署测试在五个安装和两个恢复改名检查点停止真实编译的夹具进程，不执行作用域退出清理；验证持久日志、锁释放、完整版本修复及未知残留字节保留。受控可用空间测试验证新部署日志／版本创建前安全拒绝。这些测试不会填满真实系统盘，也不模拟注册表／快捷方式失败或整机断电。准确证据范围见[测试](/SteamWrapper/zh-cn/development/testing/)。
 
+新增聚焦的 14 项卸载用例在日志／隔离／停用／清理的六个检查点通过，仅让夹具结束自己的进程；原有七项安装／恢复用例另行通过。这不把此前完整的 99 项套件扩展为一次新的完整套件运行。
+
 Manager 初始化完成后才写入绑定本次事务的健康确认。未确认或启动缓慢不会导致强制关闭或无人值守回退，目前提供人工恢复。文件状态日志不能保证注册表、快捷方式和所有断电位置的整个事务原子性。
 
 ## 卸载
@@ -97,6 +103,6 @@ Manager 初始化完成后才写入绑定本次事务的健康确认。未确认
 
 ## 签名与更新
 
-[代码签名政策](/SteamWrapper/zh-cn/project/design/code-signing/)准备 SignPath Foundation 审核，并验证时间戳、发布者、明确证书指纹及最终 Runner 字节。Foundation 批准和生产签名尚未接入，校验和、PE 产品元数据不等于发布者签名。首次新签名载荷需使用新的协调基础版本（本系列采用 `0.2.4`），保留第三方适用许可证／notices 及上游签名，不重新签名随包运行时。
+[代码签名政策](/SteamWrapper/zh-cn/project/design/code-signing/)准备 SignPath Foundation 审核，并验证时间戳、发布者、明确证书指纹及最终 Runner 字节。Foundation 批准和生产签名尚未接入，校验和、PE 产品元数据不等于发布者签名。首次新签名载荷需使用尚未使用的协调基础版本，例如未签名 `0.2.4` 之后使用 `0.2.5`，保留第三方适用许可证／notices 及上游签名，不重新签名随包运行时。
 
 更新认证底层使用隔离夹具独立开发。目前没有启用生产更新地址、密钥、后台检查、自动下载或确认后调用安装器的流程。日常游戏启动继续独立于 Manager 和联网。

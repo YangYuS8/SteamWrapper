@@ -14,7 +14,7 @@ This dossier prepares the software part of the [official Foundation application]
 | Homepage | [SteamWrapper documentation](https://yangyus8.top/SteamWrapper/) |
 | Tagline | Configure a game once, then launch it normally from Steam. |
 | Build system | GitHub Actions, with GitHub-hosted runners and locked .NET/Rust dependencies |
-| Download page | [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases); identify the current WinUI technical-preview tag, not the historical v1 launcher |
+| Download page | [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases); the current-form [v0.2.3-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1) was publicly published and download-verified on 2026-10-03; later WinUI previews use their own immutable tags |
 | License | Apache-2.0 for current source; redistributed dependency/runtime terms are inventoried separately |
 | Privacy policy | [Privacy and user trust](/SteamWrapper/project/design/code-signing/#privacy-and-user-trust) |
 | Reputation | Small, publicly maintained project with source, issues, bilingual documentation and dated local validation. No independent audit, broad adoption or clean-client approval is claimed. |
@@ -25,6 +25,8 @@ Prepared description:
 
 Keep contact name and email out of committed software materials unless the maintainer deliberately chooses to publish them. The form requires the real contact's first name, last name, email and discovery channel, includes reCAPTCHA, and requires consent to processing personal details. A maintainer must supply these facts and complete those personal steps. Do not invent a company, external endorsements or a Wikipedia entry.
 
+The first current-form public preview comes from commit `c457f16b8ea8167c9ef4b8bd67b38a5030455bce` and successful [hosted release run 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907). All seven public assets were downloaded independently and verified against the schema-2 contract and GitHub digests/lengths. The downloaded seven own PE products matched `0.2.3`, Setup was correctly unsigned, and five actual NativeAOT recovery-language processes passed on the maintainer's Chinese Windows system. These are public-delivery and scoped local results, not clean-client or signing approval. The unconfigured CNB binary mirror was skipped; GitHub is the verified download channel.
+
 ## Technical attachments
 
 The reviewed templates and inventory tooling live in `packaging/windows/signpath/`. `payload-v1.xml` names exactly seven own PE files and enforces `ProductName=SteamWrapper`, the coordinated numeric version and SHA-256 signing. `uninstaller-v1.xml` and `setup-v1.xml` are separate drafts. Their XML validity does not mean that Foundation accepted the chained build policy.
@@ -34,6 +36,14 @@ The inventory distinguishes own binaries, upstream binaries, runtime packages, b
 Use the actual GitHub-hosted artifact identity as build-origin evidence. The current official submission action is pinned to commit `f6d04783b4569d051e0c80105fe66e82819d0092` (v3); adoption still requires a real organization, project, approved policies and restricted CI submitter. [Official action](https://github.com/SignPath/github-action-submit-signing-request/tree/f6d04783b4569d051e0c80105fe66e82819d0092), [GitHub origin verification](https://docs.signpath.io/trusted-build-systems/github).
 
 Ask Foundation to review this order: sign the own payload; verify final signatures and rebuild the Runner manifest; generate and sign the same-build Inno uninstaller; embed it in Setup; sign and verify final Setup; then record final hashes. Inno supports externally signed cached uninstallers, while the provider must accept their origin and the multi-stage policy. [Inno SignedUninstaller](https://jrsoftware.org/ishelp/topic_setup_signeduninstaller.htm), [SignedUninstallerDir](https://jrsoftware.org/ishelp/topic_setup_signeduninstallerdir.htm).
+
+## Technical precedents and limits
+
+The Foundation's [Nagi project page](https://signpath.org/projects/nagi/) identifies an admitted C#/WinUI 3 application. Its released [2.4.0 version](https://github.com/Anthonyy232/Nagi/releases/tag/2.4.0) enables self-contained [.NET publishing](https://github.com/Anthonyy232/Nagi/blob/2.4.0/src/Nagi.WinUI/Properties/PublishProfiles/win-x64.pubxml) and [Windows App SDK deployment](https://github.com/Anthonyy232/Nagi/blob/2.4.0/src/Nagi.WinUI/Nagi.WinUI.csproj), with a production [SignPath release workflow](https://github.com/Anthonyy232/Nagi/blob/2.4.0/.github/workflows/release.yml) and an [MSIX-bundle signing configuration](https://github.com/Anthonyy232/Nagi/blob/2.4.0/.signpath/artifact-configuration.xml).
+
+barcodrod.io provides a closer unpackaged example: its [v2.1 build script](https://github.com/MarkHopper24/barcodrod.io/blob/v2.1/installer/build-msi.ps1) publishes a self-contained WinUI 3/.NET application into an offline MSI. Its [signing configuration](https://github.com/MarkHopper24/barcodrod.io/blob/v2.1/.signpath/artifact-config-msi.xml) targets its own EXE/DLL and the MSI, and the successful [v2.1 release](https://github.com/MarkHopper24/barcodrod.io/releases/tag/v2.1) supplies x64 and ARM64 installers.
+
+These are technical precedents for the proposed stack, not approval of SteamWrapper. They do not establish acceptance of our Microsoft dependency versions or license classifications, the System Libraries exception, or the Inno multi-stage signing chain. Submit those details for this project's own provider review; do not copy another project's identity, policies or certificate pins.
 
 ## Required external setup
 

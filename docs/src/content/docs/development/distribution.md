@@ -51,6 +51,8 @@ The fixed installer root is `%LOCALAPPDATA%\Programs\SteamWrapper`. Steam refere
 
 On 2026-10-03, frozen `0.2.2` → genuinely compiled `0.2.3` passed 13 expected isolated real process steps, including actual maintenance rollback and Inno re-upgrade, late-file-lock/unknown-file refusal, uninstall and reinstall. Rollback preserved 1,066 owned version files, and six data fixtures retained their hashes. The new payload includes 601 files and the sealed third-party legal material. Evidence is explicitly unsigned, non-synthetic and `cleanVm=false`; the older `0.2.1` → `0.2.2` result remains separately dated. See [Testing](/SteamWrapper/development/testing/) for the actual records and remaining gates.
 
+A later 2026-10-03 run of frozen `0.2.3` → genuinely compiled `0.2.4` passed 13 expected isolated Inno/maintenance steps. Actual rollback preserved 1,204 owned version files and maintenance/uninstaller/shortcuts before re-upgrade; late owned-file locks and unknown files refused uninstall, with subsequent normal uninstall/reinstall passing. Six separate data fixtures remained unchanged, with `numericUpgradeUsesSyntheticMetadataFixture=false`, `unsigned=true` and `cleanVm=false`. Current own PE versions, five actual NativeAOT Host language cases and cross-language contracts passed separately. This is scoped local delivery evidence; clean-client and retention gates remain open.
+
 <a id="linux--steamos后续交付暂缓"></a>
 <a id="linux--steamos-later-delivery-deferred"></a>
 
@@ -115,22 +117,22 @@ The [WinUI version release workflow](https://github.com/YangYuS8/SteamWrapper/bl
 | **Run workflow** on a selected branch/ref | Full gates, complete `SteamWrapper-WinUI-preview-windows-x64` layout and tested unsigned `SteamWrapper-WinUI-installer-preview-windows-x64` artifact; no public release |
 | Relevant documentation changes on `main` | Independent documentation checks and GitHub Pages deployment |
 
-Release tags use `vMAJOR.MINOR.PATCH` with an optional SemVer prerelease suffix, such as the prepared `v0.2.3-preview.1`. The three-number base must match `<Version>` in `SteamWrapper.Manager.csproj` and the package versions in both `crates/core/Cargo.toml` and `crates/runner/Cargo.toml`. Production Application, Deployment and Host versions must be coordinated as well. The commit must be reachable from `main`, and `releases/<tag>.en.md` plus `releases/<tag>.zh-CN.md` must be present in that revision. Invalid tags, mismatched versions or missing notes fail before delivery. A tag without a prerelease suffix still publishes as a GitHub prerelease while WinUI's delivery gates remain open.
+Release tags use `vMAJOR.MINOR.PATCH` with an optional SemVer prerelease suffix, such as the planned `v0.2.4-preview.1`. The three-number base must match `<Version>` in `SteamWrapper.Manager.csproj` and the package versions in both `crates/core/Cargo.toml` and `crates/runner/Cargo.toml`. Production Application, Deployment and Host versions must be coordinated as well. The commit must be reachable from `main`, and `releases/<tag>.en.md` plus `releases/<tag>.zh-CN.md` must be present in that revision. Invalid tags, mismatched versions or missing notes fail before delivery. A tag without a prerelease suffix still publishes as a GitHub prerelease while WinUI's delivery gates remain open.
 
-The current coordinated source/product version is `0.2.3`, with `v0.2.3-preview.1` notes prepared for the unsigned technical preview. The frozen `0.2.1` → genuinely compiled `0.2.2` upgrade/rollback and earlier PE-resource results remain dated evidence. Existing tags and historical releases must not be overwritten. Future versions must coordinate Rust, Manager, Application and deployment product versions and lockfiles, with complete bilingual notes. Confirm the intended main revision passed CI before tagging it. Notes and merging do not prove that a public version was published.
+The current coordinated source/product version is `0.2.4`, with bilingual notes prepared for `v0.2.4-preview.1`; public availability follows the actual Releases and tag-workflow results. The unsigned [v0.2.3-preview.1 technical preview](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1) was published by successful [run 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907). All seven public GitHub assets were downloaded and verified against their lengths, API digests and schema-2 inventory; seven own PE product versions and five actual downloaded NativeAOT Host language cases also passed. See [Testing](/SteamWrapper/development/testing/) for the scope. Earlier upgrade/rollback and PE-resource records remain dated evidence. Existing tags and releases must not be overwritten. Future versions must coordinate Rust, Manager, Application and deployment product versions and lockfiles, with complete bilingual notes. Confirm the intended main revision passed CI before tagging it; prepared notes or merging alone do not prove publication.
 
-For installer upgrades, advance the three-part base for every new installable payload/manifest, not just the prerelease suffix. `v0.2.1-preview.1` → `v0.2.1-preview.2` changes the deployment manifest while both identify numeric `0.2.1`, and is rejected by the current same-version/different-content protection. Manual run-number artifacts are independent trials, not an upgrade sequence. Real upgrade acceptance uses a frozen old bundle and a genuinely compiled next unused base. The first newly signed payload in this series must use a new base, `0.2.4`, rather than newly signed/timestamped different Runner bytes under unsigned `0.2.3`. Keep immutable retries unchanged.
+For installer upgrades, advance the three-part base for every new installable payload/manifest, not just the prerelease suffix. `v0.2.1-preview.1` → `v0.2.1-preview.2` changes the deployment manifest while both identify numeric `0.2.1`, and is rejected by the current same-version/different-content protection. Manual run-number artifacts are independent trials, not an upgrade sequence. Real upgrade acceptance uses a frozen old bundle and a genuinely compiled next unused base. The first newly signed payload must also use an unused base, for example `0.2.5` after unsigned `0.2.4`, rather than place newly signed/timestamped different Runner bytes under the previous unsigned version. Keep immutable retries unchanged.
 
 The tag pipeline now uses an explicit schema-2 unsigned installable package while retaining the exact legacy schema-1 portable validator. The [execution queue](/SteamWrapper/project/roadmap/#execution-queue-2026-10-03) keeps native, clean-client/recovery and retention acceptance open for stable delivery. The technical prerelease supplies the current-form application artifact; actual signing still requires Foundation approval and configured trust. Optional app updates and Steam apply/restore do not block the first stable P0–P2 release.
 
-For the prepared `0.2.3` technical preview, after reviewing and merging the source/notes and confirming the selected revision's CI, the release operation is:
+For the planned `0.2.4` technical preview, after reviewing and merging the source/notes and confirming the selected revision's CI, the release operation is:
 
 ```sh
 git fetch origin
 git switch main
 git pull --ff-only origin main
-git tag -a v0.2.3-preview.1 -m "WinUI Windows preview 0.2.3-preview.1"
-git push origin v0.2.3-preview.1
+git tag -a v0.2.4-preview.1 -m "WinUI Windows preview 0.2.4-preview.1"
+git push origin v0.2.4-preview.1
 ```
 
 These commands describe an explicit release operation; their presence does not create a tag or prove publication. Check the selected commit before running them. The workflow checks out the exact tag and reruns its gates rather than borrowing a prior branch build. It creates a draft, uploads and verifies all assets, then publishes the prerelease without marking it as the latest stable release.
@@ -144,6 +146,8 @@ For an on-demand preview, use **Run workflow** and choose the ref. There are no 
 ## Release channels
 
 GitHub Releases is the version-tag binary channel. The workflow can also copy the same assets to CNB when the repository has `CNB_RELEASE_TOKEN` with repository-release read/write permissions and the existing `CNB_GIT_TOKEN` for source/tag synchronization. It checks the uploaded downloads against the generated SHA-256 values. Without the release token, the CNB binary step is skipped; ordinary `main` source synchronization remains separate.
+
+For `v0.2.3-preview.1`, all seven GitHub downloads were verified. CNB release credentials were not configured, so its binary mirror was skipped and no CNB binary download is advertised.
 
 A source mirror or notes-only release is not binary delivery. Check the tag workflow's actual GitHub and CNB upload/download results before advertising either channel, and record a failed or skipped mirror accurately. The old independent CNB notes-only publisher is removed so it cannot race the version-tag binary workflow. Clean-system installation, signing, updater and uninstaller acceptance remain open even when uploads pass.
 

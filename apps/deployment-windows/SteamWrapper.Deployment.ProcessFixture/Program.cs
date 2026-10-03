@@ -3,9 +3,10 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
-if (args.Length > 0 && args[0] is "stop-install" or "stop-repair")
+if (args.Length > 0 && args[0] is "stop-install" or "stop-repair" or "stop-uninstall")
 {
     var install = args[0] == "stop-install";
+    var uninstall = args[0] == "stop-uninstall";
     if (args.Length != (install ? 5 : 4) || Environment.GetEnvironmentVariable("STEAMWRAPPER_DEPLOYMENT_TEST") != "1") return 2;
     var root = Path.GetFullPath(args[1]);
     var fixture = Path.GetDirectoryName(root)!;
@@ -17,7 +18,9 @@ if (args.Length > 0 && args[0] is "stop-install" or "stop-repair")
     if (!Path.GetDirectoryName(receipt)!.Equals(fixture, StringComparison.OrdinalIgnoreCase)) return 2;
     var permitted = install
         ? new[] { "JournalWritten", "PayloadStaged", "VersionPromoted", "LauncherReplaced", "StateCommitted" }
-        : new[] { "RecoveryReceiptWritten", "RecoveryStageMoved" };
+        : uninstall
+            ? new[] { "UninstallJournalWritten", "UninstallVersionsIsolated", "UninstallDeactivated", "UninstallCleanupReserved", "UninstallFileDeleted", "UninstallCleanupComplete" }
+            : new[] { "RecoveryReceiptWritten", "RecoveryStageMoved" };
     if (!permitted.Contains(phase, StringComparer.Ordinal)) return 2;
     var engine = new DeploymentEngine(root, true, checkpoint =>
     {
@@ -34,6 +37,7 @@ if (args.Length > 0 && args[0] is "stop-install" or "stop-repair")
         if (!payload.StartsWith(fixture + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return 2;
         engine.Install(payload);
     }
+    else if (uninstall) engine.Uninstall();
     else engine.Repair();
     return 4; // The selected stop was not reached; this is not recovery evidence.
 }

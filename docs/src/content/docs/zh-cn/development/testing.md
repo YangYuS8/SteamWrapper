@@ -100,6 +100,8 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 **2026-10-03 后续系统语言记录：**新增实际窗口用例在本机 `zh-CN` Windows 桌面的 `0.2.2` 产物上先失败，因为首次启动仍显示英语。真正编译的 `0.2.3` 在四个可丢弃夹具中通过 **11 项原生用例**，包括自动中文且不保存 `language` 偏好，以及已有的明确英文／中文重启流程。注入文化的服务测试另覆盖未支持／繁体文化、明确无效值、损坏设置及仅保存封面偏好。这改变首次启动默认行为，不代表输入法、缩放或干净客户端验收。
 
+**2026-10-03 聚焦 `0.2.4` 记录：**WinUI 排队的 `TextChanged` 事件曾把刚载入且未改变的字段误标为未保存，阻断后续原生添加流程。修复后，真正编译的 `0.2.4` 发布通过本地游戏添加、手动 AppID 验证／添加、添加／导航时保留未保存编辑，以及键盘焦点／导航四个新增流程，另通过八个受影响的已有编辑用例，共 **12 项实际窗口用例**；六个夹具进程均正常退出。可用 `Test-WinUINativeUi.ps1 -Cases add-local`、`manual-appid`、`dirty-add`、`keyboard`、`existing-editor` 或 `saved-editor` 选择流程。键盘检查使用 HWND 消息并观察焦点，不证明物理键盘输入、中文输入法组合输入或 100%／150%／200% DPI 验收通过。W1 仍未完成。
+
 ## 安装器与签名命令
 
 `Invoke-WinUI.ps1 -Action Test` 也运行部署库的进程／清单／日志回归。`Test-WinUIInstallerScripts.ps1` 不生成应用安装包，仅测试打包保护；`Test-WindowsSigning.ps1` 使用政策夹具和真实 Windows 信任失败，不申请签名。`Test-RunnerSigningMetadata.ps1` 检查已构建 Runner 的 PE，不执行它。这些检查进入日常 Windows CI。
@@ -112,6 +114,8 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 磁盘准入预算包含载荷文件、清单、原子启动器副本、有界状态／日志替换和 16 MiB 余量。回归先观察到短预算被错误接受，再验证空间不足时不激活或改变旧文件。七个隔离子进程停止用例在五个安装、两个恢复检查点使用 `Environment.Exit(73)`，验证持久化回执／日志、操作系统释放租约、恢复／隔离残留及独立数据夹具不变。这是编译部署引擎的进程停止测试，不是整机断电、真实填满磁盘或注册表／快捷方式故障。版本清理仍待完成：直接扩展严格的旧状态／根目录结构会破坏旧二进制回滚，需要独立的兼容协议。
 
+**2026-10-03 新增卸载切片：**编译后的进程夹具在卸载日志创建、版本隔离、停用、清理预约、部分自有文件删除和清理完成六个检查点，使用 `Environment.Exit(73)` 结束自己的进程。聚焦的 **14 项卸载用例通过**，覆盖持久化阶段恢复、租约释放、未知／已改变字节保留、独立数据保留及隔离保护；共享夹具改变后，原有**七项安装／恢复进程停止用例另行通过**。测试仅触及新建且严格归属的临时目录，不终止其他程序。复现命令为 `dotnet test apps/deployment-windows/SteamWrapper.Deployment.Tests/SteamWrapper.Deployment.Tests.csproj --configuration Release --filter FullyQualifiedName~ProcessStopUninstallTests`，TRX 记录位于 `target/winui/test-results/uninstall-process/`。这个聚焦结果不替代此前完整的 99 项套件，也不宣称本机完整跑过 113 项、Inno／注册表／快捷方式中断、真实磁盘耗尽或版本保留。
+
 首次真实 `0.2.2 → 0.2.3` 安装器测试发现加入原始依赖许可后，长路径导致卸载拒绝。重点真实 Win32 回归复现了自有路径在隔离时由 248 增至 281 字符。修复对已核验的删除句柄采用 Unicode 扩展路径，保留所有权、哈希、大小、reparse／只读拒绝及锁定检查。修复后卸载／重装和独立数据保留通过；最终 Deployment 套件 **99/99** 通过，非法 root 的显式 CLI 语言也有实际进程覆盖。未修改 Windows 路径政策或玩家数据。
 
 `Test-WinUIInstallableReleaseScripts.ps1` 验证明确的第 2 版创建／下载校验，同时保留第 1 版校验器。GitHub／CNB 发布器测试分别运行默认旧输入和 `-Installable`，使用可丢弃 API，不写真实网络。`Test-SignPathConfiguration.ps1` 验证草案／声明前置条件与精确签名目标，不提交或读取凭据。[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)区分本地准备、外部批准及真实已签名产物验收。
@@ -119,6 +123,10 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 **2026-10-03 本地真实版本记录：**经哈希核验的冻结 `0.2.1` 目录与真正编译的 `0.2.2` 载荷完成 **13 个真实进程步骤，结果符合各自预期**，包括英文安装、中文修复／升级、实际 maintenance 回滚 `0.2.2 → 0.2.1`、Inno 再升级、占用／未知文件／迟到自有文件锁拒绝，以及卸载／重装。`numericUpgradeUsesSyntheticMetadataFixture=false`；回滚保留 928 个自有版本文件及 maintenance／卸载器／夹具快捷方式的哈希，六个数据夹具始终未变。两套 Setup 及项目自有 PE 产品匹配其真实数字版本；当前 C#／Rust 契约另行通过。日志与 `evidence.json` 保存在 `target/winui/installer acceptance 中文 ' <id>/`。证据明确标记 `unsigned=true`、`cleanVm=false`。没有可用的干净 VM；这不代表 W2、完整中断／注册表／快捷方式恢复、旧版本清理或认证交付完成。
 
 **2026-10-03 后续修正后的 `0.2.2 → 0.2.3` 记录：**冻结 `0.2.2` 目录与最终编译的 `0.2.3` 发布完成相同的 **13 个真实进程步骤**，包含长路径修正后成功卸载／重装。实际 maintenance 回滚 `0.2.3 → 0.2.2` 保留 1,066 个自有版本文件哈希和独立 maintenance／卸载器／快捷方式所有权，随后 Inno 再升级成功。六个数据夹具保持不变；升级为真实版本、本机未签名测试，`cleanVm=false`。该修正结果与保留的首次失败夹具分别记录，不代表剩余 W2 门槛完成。
+
+**2026-10-03 真实 `0.2.3 → 0.2.4` 记录：**经核验的冻结 `0.2.3` 目录与编译后的 `0.2.4` 发布完成 **13 个符合预期的真实 Inno／maintenance 步骤**。实际 maintenance 回滚 `0.2.4 → 0.2.3` 保留 1,204 个自有版本文件哈希及维护程序／卸载器／快捷方式，随后 Inno 再升级。迟到的自有文件锁和未知文件拒绝卸载，后续正常卸载／重装通过，六个数据夹具始终未变。证据为 `target/winui/installer acceptance 中文 ' f9b299a94e654ab78a528bd1ea227c37/evidence.json`，记录 `numericUpgradeUsesSyntheticMetadataFixture=false`、`unsigned=true`、`cleanVm=false`。当前七个自有 PE 产品版本和五项实际 NativeAOT Host 语言另行通过；跨语言契约结果位于 `target/winui-contracts/8091f4314b2a4d44af031837ef6ad933/results`。此前记录继续保留，这不代表干净客户端、完整中断、版本保留或签名门槛完成。
+
+**2026-10-03 公开下载记录：**[版本 `v0.2.3-preview.1`](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1)已由成功的[运行 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907)发布。从官方公开 URL 下载全部七个附件，核对 GitHub API 长度／摘要与第 2 版元数据；七个自有 PE 产品版本均匹配 `0.2.3`，Setup 正确识别为未签名。下载的 NativeAOT Host 在本机 `zh-CN` Windows 上五项实际语言用例通过。证据为 `target/winui/public-download/2d644b9cc4b344a78e2fc4a0d8c10e45/evidence.json`，标记 `signed=false`、`cleanVm=false`、`installedPublicSetup=false`：此次只检查下载的公开 Setup，没有安装它。CNB 发布凭据未配置，二进制发布实际跳过，因此不公告 CNB 二进制下载。这是下载完整性和限定范围的本机 Host 证据，不代表发布者签名或干净客户端验收。
 
 ## 本地命令
 
