@@ -1,11 +1,11 @@
 ---
 title: "Code signing policy"
-description: "Implemented signing preparation and the pending SignPath Foundation application, with human approval and release boundaries."
+description: "Implemented signing preparation and the submitted SignPath Foundation application awaiting review, with human approval and release boundaries."
 ---
 
 ## Current status
 
-**SignPath Foundation application: not submitted. No subscription, project certificate or production signing approval has been obtained.** The maintainer has selected the free OSS route and accepts Foundation as the future certificate publisher. Current unsigned previews must not claim that signing is available.
+**SignPath Foundation application: submitted on 2026-10-04; awaiting provider review. No subscription, project certificate or production signing approval has been obtained.** The official form confirmed submission. The maintainer has selected the free OSS route and accepts Foundation as the future certificate publisher. Current unsigned previews must not claim that signing is available.
 
 The repository provides Windows signing verification, post-sign Runner manifest generation, MSVC Runner PE resources, precise draft artifact configurations, dependency/license inventory tooling and a production-prerequisite validator. These are preparation tools, not a signing-provider connection. They do not export a private key, submit files to SignPath or establish an authenticated application update channel. See the [application dossier](/SteamWrapper/project/design/signing-application/) and [delivery plan](/SteamWrapper/project/design/windows-delivery/) for the remaining external and delivery gates.
 
@@ -60,7 +60,7 @@ These inspect real PE resources, reject an actual unsigned Runner and a modified
 
 ## Application dossier and remaining gates
 
-The maintainer has requested help completing signing. Prepare the [application dossier](/SteamWrapper/project/design/signing-application/) and verify these facts before submission; personal identity, CAPTCHA and data-processing consent must come from the maintainer:
+The [application dossier](/SteamWrapper/project/design/signing-application/) records the software facts for the submitted application. Keep the following evidence and onboarding requirements current during provider review; personal application details are not published here:
 
 1. A public current-form technical installer preview with its exact source tag, verified hosted build, local installation/recovery evidence and remaining clean-client limits. A preview does not waive stable-delivery gates.
 2. License/dependency inventory and a precise list of own files versus redistributed runtimes.
