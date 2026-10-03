@@ -14,7 +14,7 @@ description: "Foundation 申请的软件事实与真实人员／服务方前置�
 | 主页 | [SteamWrapper 文档](https://yangyus8.top/SteamWrapper/) |
 | 简介 | Configure a game once, then launch it normally from Steam. |
 | 构建系统 | GitHub Actions，使用 GitHub 托管执行器和锁定的 .NET／Rust 依赖 |
-| 下载页 | [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases)；标识当前 WinUI 技术预览标签，不能使用历史 v1 启动器代替 |
+| 下载页 | [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases)；当前产品形态的 [v0.2.3-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1) 已于 2026-10-03 公开发布并下载核验，后续 WinUI 预览使用独立不可变标签 |
 | 许可证 | 当前源码为 Apache-2.0；重新分发的依赖／运行时条款独立清点 |
 | 隐私政策 | [隐私与用户信任](/SteamWrapper/zh-cn/project/design/code-signing/#隐私与用户信任) |
 | 声誉 | 公开维护的小型项目，具有源码、问题跟踪、双语文档及有日期的本地验证；不宣称独立审计、广泛使用或干净客户端批准 |
@@ -25,6 +25,8 @@ description: "Foundation 申请的软件事实与真实人员／服务方前置�
 
 联系人姓名和邮箱不进入提交的软件材料，除非维护者明确选择公开。申请表需要真实联系人姓、名、邮箱和发现渠道，包含 reCAPTCHA，并要求同意处理个人资料。维护者需要提供这些事实并完成个人步骤，不能编造公司、外部背书或 Wikipedia 页面。
 
+首次当前形态的公开预览来自提交 `c457f16b8ea8167c9ef4b8bd67b38a5030455bce`，对应成功的[托管发行运行 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907)。七个公开附件均独立下载，并核对第 2 版契约和 GitHub 摘要／长度。下载包的七个自有 PE 产品版本均为 `0.2.3`，Setup 正确标识为未签名，五个真实 NativeAOT 恢复语言进程在维护者的中文 Windows 上通过。这是公开交付及限定本机结果，不等于干净客户端或签名批准。CNB 二进制镜像因未配置而跳过，GitHub 为已核验下载渠道。
+
 ## 技术附件
 
 已审阅模板与清单工具位于 `packaging/windows/signpath/`。`payload-v1.xml` 精确列出七个自有 PE，限制 `ProductName=SteamWrapper`、协调的数字版本及 SHA-256 签名；`uninstaller-v1.xml` 和 `setup-v1.xml` 为独立草案。XML 有效不代表 Foundation 接受多阶段构建政策。
@@ -34,6 +36,14 @@ description: "Foundation 申请的软件事实与真实人员／服务方前置�
 实际 GitHub 托管产物身份才是构建来源证据。当前官方提交 action 固定于提交 `f6d04783b4569d051e0c80105fe66e82819d0092`（v3）；接入仍需真实组织、项目、获批政策及受限 CI 提交者。[官方 action](https://github.com/SignPath/github-action-submit-signing-request/tree/f6d04783b4569d051e0c80105fe66e82819d0092)、[GitHub 来源验证](https://docs.signpath.io/trusted-build-systems/github)。
 
 请 Foundation 审核以下顺序：签自有载荷；验签并重建 Runner 清单；生成并签同一构建的 Inno 卸载器；嵌入 Setup；签最终 Setup 并验签；最后记录摘要。Inno 支持缓存外部签出的卸载器，服务方仍须接受其来源和多阶段政策。[Inno SignedUninstaller](https://jrsoftware.org/ishelp/topic_setup_signeduninstaller.htm)、[SignedUninstallerDir](https://jrsoftware.org/ishelp/topic_setup_signeduninstallerdir.htm)。
+
+## 技术先例与边界
+
+Foundation 的 [Nagi 官方项目页](https://signpath.org/projects/nagi/)列出已接纳的 C#／WinUI 3 应用。其已发行的 [2.4.0 版本](https://github.com/Anthonyy232/Nagi/releases/tag/2.4.0)同时启用 [.NET 自包含发布](https://github.com/Anthonyy232/Nagi/blob/2.4.0/src/Nagi.WinUI/Properties/PublishProfiles/win-x64.pubxml)和 [Windows App SDK 自包含部署](https://github.com/Anthonyy232/Nagi/blob/2.4.0/src/Nagi.WinUI/Nagi.WinUI.csproj)，并提供生产 [SignPath 发行工作流](https://github.com/Anthonyy232/Nagi/blob/2.4.0/.github/workflows/release.yml)及 [MSIX bundle 签名配置](https://github.com/Anthonyy232/Nagi/blob/2.4.0/.signpath/artifact-configuration.xml)。
+
+barcodrod.io 是更接近本项目的未打包先例：[v2.1 构建脚本](https://github.com/MarkHopper24/barcodrod.io/blob/v2.1/installer/build-msi.ps1)将 WinUI 3／.NET 自包含应用装入离线 MSI。[签名配置](https://github.com/MarkHopper24/barcodrod.io/blob/v2.1/.signpath/artifact-config-msi.xml)覆盖自有 EXE／DLL 与 MSI，成功发行的 [v2.1 版本](https://github.com/MarkHopper24/barcodrod.io/releases/tag/v2.1)提供 x64 和 ARM64 安装器。
+
+这些先例说明所选技术路线已有实际应用，不代表 SteamWrapper 获批，也不能证明本项目微软依赖的具体版本和许可分类、System Libraries 例外或 Inno 多阶段签名链已被接受。应将这些细节交由服务方独立审核，不能照搬其他项目的身份、政策或证书指纹。
 
 ## 必须完成的外部接入
 

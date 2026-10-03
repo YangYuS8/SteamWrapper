@@ -12,7 +12,7 @@ English | [简体中文](README.zh-CN.md)
 
 ## Current status
 
-Windows is the priority. The **WinUI 3/C# Manager is a working preview** with local Steam discovery, native pickers, syntax-preserving configuration, advanced arguments and Launch Options copying. WinUI is the only Manager; the retired Dioxus UI and release chain have been removed. An unsigned [per-user installer preview](https://yangyus8.top/SteamWrapper/guides/installer-preview/) is implemented; clean-system acceptance and production signing remain open.
+Windows is the priority. The **WinUI 3/C# Manager is a working preview** with local Steam discovery, native pickers, syntax-preserving configuration, advanced arguments and Launch Options copying. WinUI is the only Manager; the retired Dioxus UI and release chain have been removed. Download unsigned Windows Setup and complete portable ZIP previews from [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases), following the [installer guide](https://yangyus8.top/SteamWrapper/guides/installer-preview/). Clean-system acceptance and production signing remain open.
 
 Manager initially follows the supported system UI language, with English as the fallback and complete Simplified Chinese localization. A saved manual language choice takes priority. Language changes preserve game names, paths, arguments and saved profiles. Keep official Steam installations separate from third-party translations; see [translated games, saves and achievements](https://yangyus8.top/SteamWrapper/guides/translated-games/). Compatibility observations are recorded per game and scenario, not promised for every title.
 

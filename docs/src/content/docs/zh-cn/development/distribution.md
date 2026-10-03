@@ -47,6 +47,8 @@ Dioxus Manager、NSIS/AppImage 链与 Native E2E 已从当前开发中移除。[
 
 2026-10-03，冻结 `0.2.2` → 真正编译 `0.2.3` 的隔离运行完成 13 个符合预期的真实进程步骤，包括实际 maintenance 回滚与 Inno 再升级、迟到文件锁／未知文件拒绝、卸载与重新安装。回滚保留 1,066 个自有版本文件，六个数据夹具的哈希保持不变；新载荷包含 601 个文件及已封存的第三方法律材料。证据明确为未签名、非人工下一版本、`cleanVm=false`；更早 `0.2.1` → `0.2.2` 结果仍单独按日期保留。实际记录及剩余门槛见[测试](/SteamWrapper/zh-cn/development/testing/)。
 
+2026-10-03 后续冻结 `0.2.3` → 真正编译 `0.2.4` 的运行完成 13 个符合预期的隔离 Inno／maintenance 步骤。实际回滚保留 1,204 个自有版本文件及维护程序／卸载器／快捷方式，再升级；迟到的自有文件锁和未知文件拒绝卸载，随后正常卸载／重装通过。六个独立数据夹具始终未变，证据记录 `numericUpgradeUsesSyntheticMetadataFixture=false`、`unsigned=true`、`cleanVm=false`。当前自有 PE 版本、五项实际 NativeAOT Host 语言和跨语言契约另行通过。这是限定范围的本机交付证据，干净客户端及版本保留门槛仍未完成。
+
 <a id="linux--steamos后续交付暂缓"></a>
 
 ## Linux / SteamOS 兼容性
@@ -104,22 +106,22 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 | 在所选分支／ref 上 **Run workflow** | 完整门禁、完整 `SteamWrapper-WinUI-preview-windows-x64` 目录，以及通过测试的未签名 `SteamWrapper-WinUI-installer-preview-windows-x64` 产物；不公开发布 |
 | `main` 上相关文档变更 | 独立的文档检查与 GitHub Pages 部署 |
 
-发布标签采用 `vMAJOR.MINOR.PATCH`，可带 SemVer 预发布后缀，例如已准备说明的 `v0.2.3-preview.1`。三位基础版本必须与 `SteamWrapper.Manager.csproj` 的 `<Version>` 及 `crates/core/Cargo.toml`、`crates/runner/Cargo.toml` 的包版本一致，生产 Application、Deployment 和 Host 版本也须协调。提交必须在 `main` 的历史中，且对应版本中须包含 `releases/<tag>.en.md` 与 `releases/<tag>.zh-CN.md`。无效标签、版本不匹配或缺失说明均会在交付前失败。WinUI 交付门槛仍未完成时，即使标签没有预发布后缀，也会标为 GitHub 预发布。
+发布标签采用 `vMAJOR.MINOR.PATCH`，可带 SemVer 预发布后缀，例如计划中的 `v0.2.4-preview.1`。三位基础版本必须与 `SteamWrapper.Manager.csproj` 的 `<Version>` 及 `crates/core/Cargo.toml`、`crates/runner/Cargo.toml` 的包版本一致，生产 Application、Deployment 和 Host 版本也须协调。提交必须在 `main` 的历史中，且对应版本中须包含 `releases/<tag>.en.md` 与 `releases/<tag>.zh-CN.md`。无效标签、版本不匹配或缺失说明均会在交付前失败。WinUI 交付门槛仍未完成时，即使标签没有预发布后缀，也会标为 GitHub 预发布。
 
-当前协调的源码／产品版本为 `0.2.3`，已为未签名技术预览准备 `v0.2.3-preview.1` 说明。冻结 `0.2.1` → 真正编译 `0.2.2` 的升级／回滚与此前 PE 资源结果保留为有日期的证据。不要覆盖已有标签或历史发布。未来需协调 Rust、Manager、Application、部署产品版本及锁文件，并提供完整双语说明。打标签前确认所选主线提交已通过 CI；说明文件与代码合并都不证明新版本已经公开发布。
+当前协调的源码／产品版本为 `0.2.4`，已具备 `v0.2.4-preview.1` 双语说明；公开可用性以实际 Releases 与标签工作流结果为准。未签名的 [v0.2.3-preview.1 技术预览](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1)已由成功的[运行 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907)公开。已下载 GitHub 全部七个公开附件，核对长度、API 摘要和第 2 版清单；七个自有 PE 产品版本及下载后 NativeAOT Host 的五项实际语言用例也通过。具体范围见[测试](/SteamWrapper/zh-cn/development/testing/)。此前升级／回滚及 PE 资源记录保留为有日期的证据。不要覆盖已有标签或发布。未来需协调 Rust、Manager、Application、部署产品版本及锁文件，并提供完整双语说明。打标签前确认所选主线提交已通过 CI；准备说明或合并本身不证明发布。
 
-安装器升级时，每个新可安装载荷／清单都递增三段基础版本，不能只改预发布后缀。`v0.2.1-preview.1` → `v0.2.1-preview.2` 会改变部署清单，但两者数字版本均为 `0.2.1`，会被当前同版本不同内容保护拒绝。手动运行序号产物是独立试用，不是升级序列。真实升级验收使用冻结旧包和真正编译、尚未使用的新基础版本。本系列首次新签名载荷必须使用新基础版本 `0.2.4`，不能让重新签名／时间戳后的不同 Runner 字节继续使用未签名 `0.2.3`。不可变产物的重试保持原样。
+安装器升级时，每个新可安装载荷／清单都递增三段基础版本，不能只改预发布后缀。`v0.2.1-preview.1` → `v0.2.1-preview.2` 会改变部署清单，但两者数字版本均为 `0.2.1`，会被当前同版本不同内容保护拒绝。手动运行序号产物是独立试用，不是升级序列。真实升级验收使用冻结旧包和真正编译、尚未使用的新基础版本。首次新签名载荷也必须使用尚未使用的基础版本，例如未签名 `0.2.4` 之后使用 `0.2.5`，不能让重新签名／时间戳后的不同 Runner 字节复用此前未签名版本。不可变产物的重试保持原样。
 
 标签流水线现已使用明确的第 2 版未签名可安装产物，同时保留完整的第 1 版便携验证器。[执行队列](/SteamWrapper/zh-cn/project/roadmap/#执行队列2026-10-03)继续保留稳定交付所需的原生、干净客户端／恢复和旧版本保留验收。技术预发布为申请提供当前产品产物；实际签名仍需要 Foundation 批准及真实信任配置。可选应用更新及 Steam 应用／恢复不阻碍首个 P0–P2 稳定版。
 
-对已准备的 `0.2.3` 技术预览，审阅并合入源码／说明、确认所选提交 CI 后，发布操作如下：
+对计划中的 `0.2.4` 技术预览，审阅并合入源码／说明、确认所选提交 CI 后，发布操作如下：
 
 ```sh
 git fetch origin
 git switch main
 git pull --ff-only origin main
-git tag -a v0.2.3-preview.1 -m "WinUI Windows preview 0.2.3-preview.1"
-git push origin v0.2.3-preview.1
+git tag -a v0.2.4-preview.1 -m "WinUI Windows preview 0.2.4-preview.1"
+git push origin v0.2.4-preview.1
 ```
 
 这些命令描述明确的发布操作；写在文档中不会创建标签，也不证明已经发布。执行前核对所选提交。工作流检出准确标签并重跑门禁，不沿用之前的分支构建。它先创建草稿，上传并验证全部附件，再公开预发布，不将其标为最新稳定版。
@@ -133,6 +135,8 @@ git push origin v0.2.3-preview.1
 ## 发布渠道
 
 GitHub Releases 是版本标签二进制发布渠道。如果仓库配置了具有仓库 release 读／写权限的 `CNB_RELEASE_TOKEN`，以及已有的源码／标签同步密钥 `CNB_GIT_TOKEN`，工作流也能向 CNB 复制同一组附件，并对照生成的 SHA-256 验证上传后的下载副本。没有 release token 时跳过 CNB 二进制步骤；常规 `main` 源码同步独立保留。
+
+`v0.2.3-preview.1` 的七个 GitHub 下载附件均已核验。CNB 发布凭据未配置，二进制镜像实际跳过，因此不公告 CNB 二进制下载。
 
 源码镜像或只有说明的 release 不等于二进制交付。宣传渠道前须检查该标签工作流实际的 GitHub/CNB 上传与下载结果，如实记录失败或跳过的镜像。旧 CNB 独立说明发布器已移除，避免与标签二进制工作流竞争。上传通过仍不完成干净系统、签名、更新器或卸载器验收。
 

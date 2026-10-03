@@ -25,7 +25,11 @@ public sealed partial class MainWindow : Window
     private IReadOnlyList<SteamGame> installedGames = [];
     private ProfileSnapshot? snapshot;
     private ProfileData? editing;
+    private EditorValues? editorBaseline;
     private bool isNew, loading, dirty, busy, selecting, allowClose, confirming;
+
+    private sealed record EditorValues(string AppId, string Name, string GameDirectory, string Target,
+        string WorkingDirectory, string ProcessName, string? WaitMode, string[] Arguments);
 
     public MainWindow()
     {
@@ -37,6 +41,7 @@ public sealed partial class MainWindow : Window
         runner = new RunnerInstaller(paths, Path.Combine(AppContext.BaseDirectory, "Runner"));
         AppWindow.Closing += async (_, e) =>
         {
+            RefreshDirtyState();
             if (allowClose || (!dirty && !busy)) return;
             e.Cancel = true;
             if (busy) return;
@@ -65,6 +70,7 @@ public sealed partial class MainWindow : Window
             try { installedGames = (await new SteamScanner().ScanAsync()).Games; }
             catch (Exception) { installedGames = []; }
             editing = null;
+            editorBaseline = null;
             dirty = false;
             RefreshProfiles();
             WelcomePanel.Visibility = Visibility.Visible;
@@ -149,6 +155,7 @@ public sealed partial class MainWindow : Window
         selecting = true;
         ProfilesList.SelectedItem = create ? null : ProfilesList.Items.Cast<ListViewItem>().FirstOrDefault(item => ((ProfileData)item.Tag).Key == profile.Key);
         selecting = false;
+        editorBaseline = ReadEditorValues();
         loading = false;
         dirty = false;
     }
@@ -238,9 +245,29 @@ public sealed partial class MainWindow : Window
     private void MarkDirty()
     {
         if (loading || applyingLanguage || editing is null) return;
-        dirty = true;
+        RefreshDirtyState();
+        if (!dirty) return;
         LaunchPanel.Visibility = Visibility.Collapsed;
         StatusBar.IsOpen = false;
+    }
+
+    private EditorValues ReadEditorValues() => new(AppIdInput.Text, ReadText(NameInput),
+        ReadText(GameDirectoryInput), ReadText(TargetInput), ReadText(WorkingDirectoryInput),
+        ReadText(ProcessNameInput), (WaitModeInput.SelectedItem as ComboBoxItem)?.Tag as string,
+        arguments.Select(ReadText).ToArray());
+
+    private void RefreshDirtyState()
+    {
+        if (loading || applyingLanguage) return;
+        if (editing is null || editorBaseline is null) { dirty = false; return; }
+        var current = ReadEditorValues();
+        // WinUI may deliver programmatic TextChanged/SelectionChanged events after
+        // Edit has finished. Events are notifications, not evidence of a user edit.
+        dirty = current.AppId != editorBaseline.AppId || current.Name != editorBaseline.Name
+            || current.GameDirectory != editorBaseline.GameDirectory || current.Target != editorBaseline.Target
+            || current.WorkingDirectory != editorBaseline.WorkingDirectory || current.ProcessName != editorBaseline.ProcessName
+            || current.WaitMode != editorBaseline.WaitMode
+            || !current.Arguments.SequenceEqual(editorBaseline.Arguments, StringComparer.Ordinal);
     }
 
     private async void Save_Click(object sender, RoutedEventArgs e)
@@ -281,6 +308,7 @@ public sealed partial class MainWindow : Window
             RememberText(ProcessNameInput, editing.ProcessName ?? "");
             for (var index = 0; index < arguments.Count; index++) RememberText(arguments[index], editing.Arguments[index]);
             isNew = false;
+            editorBaseline = ReadEditorValues();
             dirty = false;
             saved = true;
             AppIdInput.IsReadOnly = true;
@@ -344,6 +372,7 @@ public sealed partial class MainWindow : Window
     private async Task<bool> CanLeaveAsync()
     {
         if (confirming) return false;
+        RefreshDirtyState();
         if (!dirty) return true;
         var dialog = new ContentDialog
         {
