@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using SteamWrapper.Application.Localization;
@@ -8,20 +9,23 @@ namespace SteamWrapper.Application.Services;
 public sealed record UiSettings(string Language, Exception? ReadError = null, bool SteamCdnCovers = false);
 
 /// <summary>Shared Manager preference contract, separate from profiles.toml and Runner.</summary>
-public sealed class UiSettingsStore(string path)
+public sealed class UiSettingsStore(string path, Func<CultureInfo>? systemUiCulture = null)
 {
     private const int MaximumBytes = 64 * 1024;
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Writers = new(StringComparer.OrdinalIgnoreCase);
     private readonly string path = Path.GetFullPath(path);
+    private readonly Func<CultureInfo> systemUiCulture = systemUiCulture ?? (() => CultureInfo.CurrentUICulture);
 
     public async Task<UiSettings> LoadAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             var (_, document) = await ReadAsync(cancellationToken);
-            var language = document["language"] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+            var language = document.TryGetPropertyValue("language", out var preference)
+                ? Localizer.NormalizeLanguage(preference is JsonValue value && value.TryGetValue<string>(out var text) ? text : null)
+                : Localizer.SystemLanguage(systemUiCulture());
             var covers = document["steamCdnCovers"] is JsonValue coverValue && coverValue.TryGetValue<bool>(out var enabled) && enabled;
-            return new(Localizer.NormalizeLanguage(language), SteamCdnCovers: covers);
+            return new(language, SteamCdnCovers: covers);
         }
         catch (Exception error) when (IsSettingsError(error)) { return new(Localizer.English, error); }
     }

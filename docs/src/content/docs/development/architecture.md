@@ -112,7 +112,7 @@ wait_mode = "job"
 
 ## Display language settings
 
-WinUI uses `ui-settings.json` beside `profiles.toml`. `language` is `en-US` or `zh-CN`; trimmed, case-insensitive `en` and `zh-Hans` aliases are accepted, with missing/unknown values defaulting to English. Saves preserve unknown JSON fields and refuse to overwrite invalid settings.
+WinUI uses `ui-settings.json` beside `profiles.toml`. An absent `language` key follows the supported system UI culture; `zh-CN`, `zh-SG` and explicitly `zh-Hans` cultures select Simplified Chinese, otherwise English. Explicit saved choices take priority; invalid explicit values and unreadable settings fall back to English. Canonical values are `en-US` and `zh-CN`; trimmed, case-insensitive `en`, `zh-SG` and `zh-Hans` aliases are accepted. Reads and cover-only writes do not persist a detected language. Saves preserve unknown JSON fields and refuse to overwrite invalid settings. Service diagnostics remain invariant English.
 
 `steamCdnCovers` is a separate boolean in the same file, defaulting to `false` when missing. Preference writes preserve each other's value and unknown fields; a successful persisted change enables downloads. A failed write leaves the prior preference in effect.
 

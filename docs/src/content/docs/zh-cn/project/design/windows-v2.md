@@ -41,7 +41,7 @@ Manager 是一个配置工具。首页以“已配置游戏”和“添加游戏
 
 状态分别表达“配置已保存”“启动项已复制”“已应用到 Steam”（后续写入并验证后才可显示）和“已人工验证启动”。不以按钮点击、TOML 保存或 Runner 退出码推断 Steam 时长正确。
 
-WinUI 封面保持本地优先、默认离线：自定义 Steam 图片优先于本地库缓存，并支持带哈希的文件名及嵌套哈希目录。需要明确启用、可随时关闭的偏好，为本地已发现 AppID 的缺失图片提供官方 Steam CDN 回退，限制请求并使用小型 SteamWrapper 缓存。缺失、不可读或不可获取的图片保留友好占位，不影响保存和启动。详见[封面设置](/SteamWrapper/zh-cn/guides/configuration/#cover-settings)及尚未完成的 [P0 验收门槛](/SteamWrapper/zh-cn/project/roadmap/)。默认英语及完整简体中文支持、键盘操作、原生文件选择、缩放及可恢复错误仍属于基本体验。
+WinUI 封面保持本地优先、默认离线：自定义 Steam 图片优先于本地库缓存，并支持带哈希的文件名及嵌套哈希目录。需要明确启用、可随时关闭的偏好，为本地已发现 AppID 的缺失图片提供官方 Steam CDN 回退，限制请求并使用小型 SteamWrapper 缓存。缺失、不可读或不可获取的图片保留友好占位，不影响保存和启动。详见[封面设置](/SteamWrapper/zh-cn/guides/configuration/#cover-settings)及尚未完成的 [P0 验收门槛](/SteamWrapper/zh-cn/project/roadmap/)。默认跟随已支持的系统语言、回退英语及完整简体中文支持、键盘操作、原生文件选择、缩放及可恢复错误仍属于基本体验。
 
 暂不做账号登录、在线游戏资料、通用 mod 管理、多目标切换、常驻托盘、后台更新服务、Linux/SteamOS 新 GUI、Proton 或商店分发。Steam Overlay、成就和所有第三方 launcher 的兼容性不是默认承诺。
 

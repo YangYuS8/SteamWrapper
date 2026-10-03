@@ -5,7 +5,7 @@ description: "Build, try, repair and remove the unsigned per-user installer, wit
 
 ## Current boundary
 
-The Inno Setup installer and C# deployment component are implemented for **Windows 11 24H2 or newer, x64**, as an **unsigned preview**. They include the complete self-contained WinUI layout, both languages and the independent Runner. Normal branch CI tests and compiles source; it does not produce a setup executable. An explicit manual release-workflow run builds an installer preview. Public version tags currently use the existing portable ZIP release contract. The [execution queue](/SteamWrapper/project/roadmap/#execution-queue-2026-10-03) plans a public unsigned installer after delivery acceptance and an artifact-schema change, before Foundation application; production signing has its own later gate.
+The Inno Setup installer and C# deployment component are implemented for **Windows 11 24H2 or newer, x64**, as an **unsigned technical preview**. They include the complete self-contained WinUI layout, both languages and the independent Runner. Normal branch CI tests and compiles source; it does not produce a setup executable. Explicit manual runs build preview artifacts only. Version-tag delivery packages Setup and portable ZIP using the explicit schema-2 contract, retaining the original portable validator. This current-form technical preview supports Foundation review; it does not waive the stable-delivery gates in the [execution queue](/SteamWrapper/project/roadmap/#execution-queue-2026-10-03).
 
 This is not a signed or stable release. Isolated process tests on a development machine or hosted Windows Server do not establish clean Windows 11 acceptance. The remaining clean-client, normal-protection download, multi-user, scaling and real Steam delivery gates are recorded in the [delivery plan](/SteamWrapper/project/design/windows-delivery/). Do not disable Windows protection to run the preview.
 
@@ -16,10 +16,10 @@ With the documented Windows development tools installed, run from the repository
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
-pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.2-preview.1
+pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.3-preview.1
 ```
 
-The last command produces `target/winui/installers/v0.2.2-preview.1/SteamWrapper-v0.2.2-preview.1-win-x64-setup.exe` and inspection metadata for the current `0.2.2` source. The tag must match the numeric source version. It labels a local artifact; the command does not create a Git tag or publish a Release. Do not reuse a public version for changed bytes. The dated `0.2.1` artifacts and verification records remain historical evidence.
+The last command produces `target/winui/installers/v0.2.3-preview.1/SteamWrapper-v0.2.3-preview.1-win-x64-setup.exe` and inspection metadata for the current `0.2.3` source. The tag must match the numeric source version. It labels a local artifact; the command does not create a Git tag or publish a Release. Do not reuse a public version for changed bytes. The dated `0.2.1` artifacts and `0.2.1` → `0.2.2` genuine local upgrade/rollback remain historical evidence.
 
 Changing only the prerelease suffix does not provide an upgrade path: the deployment manifest changes while the numeric version remains the same, and installation rejects different content at the same base. New installable payloads need a new coordinated three-part source/product version; retry an existing build with its exact immutable files. See [release version rules](/SteamWrapper/development/distribution/#prepare-and-trigger-a-release).
 
@@ -28,24 +28,29 @@ Inno Setup 7.1.0 x64 is downloaded only from the official site, with the pinned 
 For disposable acceptance:
 
 ```powershell
+pwsh -NoProfile -File scripts/windows/Test-WinUIHostLanguage.ps1
 pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerScripts.ps1
 pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1
 ```
 
+The Host-language command runs five real final NativeAOT maintenance processes under a fresh `target/winui/host-language-acceptance/<id>` fixture. Without a CLI language override, it checks the actual Windows UI language for missing or language-less preferences, explicit English/Chinese choices and malformed-settings fallback, preserving fixture bytes and the published Host. It reads no real user preferences. The 2026-10-03 local run passed on `zh-CN` Windows; this is not acceptance on every system language or a clean client.
+
 The latter runs real setup, compatible maintenance rollback and uninstall processes under a fresh repository `target` root, with a distinct test AppId and shortcuts redirected to a disposable fixture directory. Its default synthetic next-version bundle tests the deployment transaction only; it is not a real next-version build or signing evidence. It never uses the real game library. The script reports the isolated directory containing its logs and `evidence.json`; its path includes Chinese text, spaces and an apostrophe to test path handling.
 
-For genuine numeric-version upgrade acceptance, freeze the complete old portable publication before replacing it, reject reparse/private inputs, and record source/copy hashes. Build the new coordinated source/product version normally; changing the old Runner manifest or PE metadata does not create a new-version binary. With a verified frozen `0.2.1` directory and genuinely compiled `0.2.2` publication, replace `REPLACE_WITH_ID` with the recorded baseline directory name:
+For genuine numeric-version upgrade acceptance, freeze the complete old portable publication before replacing it, reject reparse/private inputs, and record source/copy hashes. Build the new coordinated source/product version normally; changing the old Runner manifest or PE metadata does not create a new-version binary. With a verified frozen `0.2.2` directory and genuinely compiled current `0.2.3` publication, replace `REPLACE_WITH_ID` with the recorded baseline directory name:
 
 ```powershell
-$baseline = 'target/winui/upgrade-baselines/REPLACE_WITH_ID/v0.2.1'
+$baseline = 'target/winui/upgrade-baselines/REPLACE_WITH_ID/v0.2.2'
 pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1 `
   -PublishDirectory $baseline `
   -UpgradePublishDirectory target/winui/publish `
-  -Tag v0.2.1-installertest.1 `
-  -UpgradeTag v0.2.2-installertest.1
+  -Tag v0.2.2-installertest.1 `
+  -UpgradeTag v0.2.3-installertest.1
 ```
 
 When an upgrade publication is supplied, the script checks all seven own PE product/version fields in both layouts before invoking the compiler or installer. The expected successful evidence includes `numericUpgradeUsesSyntheticMetadataFixture=false` and a compatible rollback executed by the actual maintenance process, followed by reactivation through the real upgraded installer. Inspect the recorded tags, versions, owned-file preservation and user-data hashes. This command uses the isolated test root, not the production installation. Local success still does not establish clean Windows, native wizard/Explorer, multi-user or every interruption/registry/shortcut failure gate. No clean VM was available for the local 2026-10-03 preparation.
+
+The final 2026-10-03 local run used frozen `0.2.2` and genuinely compiled `0.2.3`, with **13 expected real process steps**. Actual maintenance rollback to `0.2.2` preserved 1,066 owned version files and maintenance/uninstaller/shortcut state before Inno re-upgraded. Locked-owned and unknown-file removals were refused as expected; normal uninstall, reinstall and the final uninstall succeeded. Six separate data fixtures retained their hashes. Its evidence records `numericUpgradeUsesSyntheticMetadataFixture=false`, `unsigned=true` and `cleanVm=false`. The earlier `0.2.1` → `0.2.2` result remains separate dated evidence in [Testing](/SteamWrapper/development/testing/).
 
 ## Installation and daily use
 
@@ -76,7 +81,9 @@ Re-run the matching verified setup to restore a missing stable Manager launcher.
 
 Repair resolves a supported interrupted deployment journal and restores a missing launcher from its verified version. It refuses unknown or altered files rather than overwriting them. It is not a general repair of corrupted runtime files. Rollback selects the retained compatible previous version after verifying its complete manifest; it does not roll back profiles or stable Runner.
 
-If a staging copy is incomplete, repair preserves every uncertain byte in `.recovery-<transaction>` under the program root, with a recovery receipt. This directory is not launched or automatically cleared, and does not prevent use of the restored valid version. Retain it for diagnosis and review it manually before removing it. Uninstall also leaves it intact. Old complete versions currently remain available; automatic pruning and a disk quota are not implemented.
+If a staging copy is incomplete, repair preserves every uncertain byte in `.recovery-<transaction>` under the program root, with a recovery receipt. This directory is not launched or automatically cleared, and does not prevent use of the restored valid version. Retain it for diagnosis and review it manually before removing it. Uninstall also leaves it intact. Old complete versions currently remain available; automatic pruning and a retained-version disk quota are not implemented. Installation now admits a new payload only when reported free space covers its complete staged files and manifest, an atomic launcher copy, bounded state/journal writes and a 16 MiB reserve. This is an admission check, not a reservation against other disk writers.
+
+Isolated deployment tests stop real compiled fixture processes without unwinding at five installation and two recovery-rename checkpoints. They verify durable journals, released leases, complete-version repair and preservation of unknown partial bytes. Controlled free-space tests verify refusal before a new deployment journal or version is created. These tests do not fill the real system disk or simulate registry/shortcut failure or full-machine power loss. See [Testing](/SteamWrapper/development/testing/) for the exact evidence scope.
 
 A transaction-bound acknowledgment is written only after Manager initializes. An unhealthy/slow startup does not trigger forced shutdown or unattended rollback. Manual recovery is the current boundary. File-state journal recovery does not promise an atomic transaction across Windows registry, shortcuts and every power-loss point.
 
@@ -90,6 +97,6 @@ Uninstall retains **profiles, settings, stable Runner, backups, logs, downloaded
 
 ## Signing and updates
 
-The [code-signing policy](/SteamWrapper/project/design/code-signing/) prepares SignPath Foundation review and validates timestamp, publisher, explicit certificate pins and final Runner bytes. Foundation approval and production signing are not connected. Checksums and PE product metadata are not publisher signatures.
+The [code-signing policy](/SteamWrapper/project/design/code-signing/) prepares SignPath Foundation review and validates timestamp, publisher, explicit certificate pins and final Runner bytes. Foundation approval and production signing are not connected. Checksums and PE product metadata are not publisher signatures. The first newly signed payload needs a new coordinated base (`0.2.4` for this series), preserving applicable third-party licenses/notices and upstream signatures rather than re-signing the bundled runtimes.
 
 Authenticated update validation is developed separately against disposable fixtures. No production update feed, key, background checker, automatic download or confirmed installer invocation is enabled. Daily game launch remains independent of Manager and network access.

@@ -114,7 +114,7 @@ Manager 先验证路径和 AppID、保存配置，再准备稳定 Runner。保�
 
 侧栏的 **语言** 选择器提供 **English** 和 **简体中文**。成功切换后，应用自有控件、验证和状态消息立即更新，尚未保存的名称、路径与参数保持不变。
 
-偏好单独保存在 `%LOCALAPPDATA%\SteamWrapper\ui-settings.json`。Manager 使用 `en-US` 或 `zh-CN`，缺失或未知值默认英语；也兼容 `en` 与 `zh-Hans` 别名。语言偏好不进入 `profiles.toml`，也不会修改 Runner CLI。
+偏好单独保存在 `%LOCALAPPDATA%\SteamWrapper\ui-settings.json`。没有 `language` 键时，Manager 跟随系统界面语言：`zh-CN`、`zh-SG` 和明确使用简体脚本的 `zh-Hans` 文化显示简体中文；其他未支持语言（包括繁体中文）显示英语。已保存的选择优先，规范值为 `en-US` 与 `zh-CN`，也兼容 `en`、`zh-SG`、`zh-Hans` 别名。明确的无效值或无法读取的设置安全回退英语。仅打开 Manager 或保存封面偏好不会锁定自动识别的语言。语言偏好不进入 `profiles.toml`，也不会修改 Runner CLI。
 
 如果保存偏好失败，界面保留当前语言并显示错误；损坏的设置文件会原样保留。系统 picker 自有文案和原始诊断、日志可能继续使用它们自身的语言。
 

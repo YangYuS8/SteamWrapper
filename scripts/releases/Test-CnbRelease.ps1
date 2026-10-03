@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$Installable)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $publisher = Join-Path $PSScriptRoot 'Publish-CnbRelease.ps1'
@@ -42,17 +42,23 @@ public sealed class CnbReleaseFixtureHandler : HttpMessageHandler {
 }
 $root = Join-Path ((Resolve-Path (Join-Path $PSScriptRoot '../..')).Path) ('target/cnb-release-tests/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root -Force | Out-Null
-. (Join-Path $PSScriptRoot '../windows/WinUIRelease.TestFixtures.ps1')
-$fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package')
-$package = New-WinUIReleasePackage -Tag $fixture.Tag -Commit $fixture.Commit -RepositoryRoot $fixture.RepositoryRoot -PublishDirectory $fixture.PublishDirectory -OutputDirectory $fixture.OutputDirectory
+if ($Installable) {
+    . (Join-Path $PSScriptRoot '../windows/WinUIInstallableRelease.TestFixtures.ps1')
+    $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package')
+    $package = New-WinUIInstallableReleaseTestPackage $fixture
+} else {
+    . (Join-Path $PSScriptRoot '../windows/WinUIRelease.TestFixtures.ps1')
+    $fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package')
+    $package = New-WinUIReleasePackage -Tag $fixture.Tag -Commit $fixture.Commit -RepositoryRoot $fixture.RepositoryRoot -PublishDirectory $fixture.PublishDirectory -OutputDirectory $fixture.OutputDirectory
+}
 $root = $package.Directory
-$metadata = Test-WinUIReleasePackageDirectory -PackageDirectory $root
+. (Join-Path $PSScriptRoot '../windows/WinUIInstallableRelease.ps1')
+$metadata = Test-WinUIReleaseArtifactDirectory -PackageDirectory $root
 $tag = $metadata.tag
 $commit = $metadata.commit
 $archive = $metadata.archive.fileName
 $utf8 = [Text.UTF8Encoding]::new($false)
-$names = @($archive, "$tag.en.md", "$tag.zh-CN.md", 'release.json')
-$names += 'SHA256SUMS'
+$names = @(Get-WinUIReleaseAssetNames $metadata)
 function New-FixtureClient {
     $handler = [CnbReleaseFixtureHandler]::new()
     @{ Handler = $handler; Client = [Net.Http.HttpClient]::new($handler) }

@@ -32,7 +32,7 @@ In ordinary Windows File Explorer, open the extracted directory and double-click
 
 Retain its supporting DLLs, native `.pri` resources, `Assets`, `Runner` and `zh-CN` resources. Do not run the EXE from inside the ZIP, move it away from its supporting files, or use a contract-test driver as Manager.
 
-The interface defaults to English and provides an **English / 简体中文** language selector. Continue with [getting started](/SteamWrapper/guides/getting-started/) to add a game.
+With no saved preference, the interface follows the supported system UI language and falls back to English. The **English / 简体中文** selector saves a manual override. Continue with [getting started](/SteamWrapper/guides/getting-started/) to add a game.
 
 If Windows reports a download or security problem, stop and confirm the package's source and completeness. SteamWrapper does not require globally disabling Windows protection. A checksum confirms consistency with a particular artifact; it is not a publisher signature or a safety verdict for a third-party game.
 

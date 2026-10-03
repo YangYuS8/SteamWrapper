@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DRAFT: provider review required. Sign only these seven owned published PE files.
+     Upload the publish directory itself, with these paths at the artifact ZIP root.
+     Other included files retain their bytes and upstream signatures. This file
+     does not establish build provenance, admission, roles, MFA or certificate trust. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="SteamWrapper.Manager.exe" product-name="SteamWrapper" product-version="${version}"><authenticode-sign hash-algorithm="sha256" /></pe-file>
+    <pe-file path="SteamWrapper.Manager.dll" product-name="SteamWrapper" product-version="${version}"><authenticode-sign hash-algorithm="sha256" /></pe-file>
+    <pe-file path="SteamWrapper.Application.dll" product-name="SteamWrapper" product-version="${version}"><authenticode-sign hash-algorithm="sha256" /></pe-file>
+    <pe-file path="SteamWrapper.Deployment.dll" product-name="SteamWrapper" product-version="${version}"><authenticode-sign hash-algorithm="sha256" /></pe-file>
+    <pe-file path="zh-CN/SteamWrapper.Application.resources.dll" product-name="SteamWrapper" product-version="${version}"><authenticode-sign hash-algorithm="sha256" /></pe-file>
+    <pe-file path="Deployment/SteamWrapper.exe" product-name="SteamWrapper" product-version="${version}"><authenticode-sign hash-algorithm="sha256" /></pe-file>
+    <pe-file path="Runner/SteamWrapperRunner.exe" product-name="SteamWrapper" product-version="${version}"><authenticode-sign hash-algorithm="sha256" /></pe-file>
+  </zip-file>
+</artifact-configuration>

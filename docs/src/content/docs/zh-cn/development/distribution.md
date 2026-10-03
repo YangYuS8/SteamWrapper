@@ -7,7 +7,7 @@ description: "WinUI 预览目录、稳定 Runner 安装及剩余 Windows 交付�
 
 ## 原则
 
-WinUI 是唯一当前 Manager。交付包含 **Windows 11 24H2 x64 自包含预览目录**和未签名的[每用户安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)。版本标签仍触发便携 ZIP 预发布，手动工作流也构建和测试安装器，但不公开发布。常规拉取请求与 `main` 只检查，不打包应用。尚未启用更新器，自动 Steam 启动项应用／恢复也未实现。
+WinUI 是唯一当前 Manager。交付包含 **Windows 11 24H2 x64 自包含预览目录**和未签名的[每用户安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)。版本标签将 Setup 与便携 ZIP 打包为未签名技术预发布，手动工作流也构建和测试安装器，但不公开发布。常规拉取请求与 `main` 只检查，不打包应用。尚未启用更新器，自动 Steam 启动项应用／恢复也未实现。
 
 安装器预览包含运行时文件，使用固定每用户目录且通常无需提权；仅卸载 Manager 时保留稳定 Runner 和数据。Manager 占用会阻止变更，不强制结束进程。未知文件保留，复制中断的暂存文件可以隔离后人工排查。注册表／快捷方式／断电整体恢复、干净客户端交付及稳定状态仍是独立门槛。
 
@@ -41,9 +41,11 @@ Dioxus Manager、NSIS/AppImage 链与 Native E2E 已从当前开发中移除。[
 
 ## Windows
 
-标签预览仍为完整便携 ZIP，明确请求的手动工作流也生成未签名安装器。产物仍未签名，公开发布保持预发布。安装器目前仅有隔离验收；计划中的公开未签名安装器先通过干净 Windows 11／恢复门槛，生产签名是认证交付和稳定版资格的独立要求。
+版本标签将完整便携 ZIP 与每用户 Setup 打包为明确未签名的技术预发布；手动运行只生成预览产物，不创建公开 Release。本机隔离验收允许用技术预览提供 Foundation 审核所需的当前产品形式，不完成干净 Windows 11、更广原生交互、旧版本保留或稳定交付门槛。生产签名仍是认证交付和稳定版资格的独立要求。
 
 固定安装根目录为 `%LOCALAPPDATA%\Programs\SteamWrapper`，Steam 只引用独立数据目录中的稳定 Runner。`apps/deployment-windows` 拥有版本目录、清单、启动器和锁／日志恢复，Inno 拥有维护程序副本、卸载注册和快捷方式。修复／回退边界见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)。
+
+2026-10-03，冻结 `0.2.2` → 真正编译 `0.2.3` 的隔离运行完成 13 个符合预期的真实进程步骤，包括实际 maintenance 回滚与 Inno 再升级、迟到文件锁／未知文件拒绝、卸载与重新安装。回滚保留 1,066 个自有版本文件，六个数据夹具的哈希保持不变；新载荷包含 601 个文件及已封存的第三方法律材料。证据明确为未签名、非人工下一版本、`cleanVm=false`；更早 `0.2.1` → `0.2.2` 结果仍单独按日期保留。实际记录及剩余门槛见[测试](/SteamWrapper/zh-cn/development/testing/)。
 
 <a id="linux--steamos后续交付暂缓"></a>
 
@@ -98,19 +100,19 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 | 触发方式 | 结果 |
 | --- | --- |
 | 拉取请求或推送 `main` | Rust Windows/Linux 检查、C# 测试／契约与实际 WinUI 编译；不生成应用压缩包 |
-| 推送版本标签 | 完整门禁、完整 Windows x64 portable ZIP、校验和／元数据及双语说明；未签名 GitHub 预发布 |
+| 推送版本标签 | 完整构建／测试门禁、完整 Windows x64 Setup 与 portable ZIP、第 2 版校验和／元数据及双语说明；未签名技术 GitHub 预发布 |
 | 在所选分支／ref 上 **Run workflow** | 完整门禁、完整 `SteamWrapper-WinUI-preview-windows-x64` 目录，以及通过测试的未签名 `SteamWrapper-WinUI-installer-preview-windows-x64` 产物；不公开发布 |
 | `main` 上相关文档变更 | 独立的文档检查与 GitHub Pages 部署 |
 
-发布标签采用 `vMAJOR.MINOR.PATCH`，可带 SemVer 预发布后缀，例如未来的 `v0.2.3-preview.1`。三位基础版本必须与 `SteamWrapper.Manager.csproj` 的 `<Version>` 及 `crates/core/Cargo.toml`、`crates/runner/Cargo.toml` 的包版本一致，生产 Application、Deployment 和 Host 版本也须协调。提交必须在 `main` 的历史中，且对应版本中须包含 `releases/<tag>.en.md` 与 `releases/<tag>.zh-CN.md`。无效标签、版本不匹配或缺失说明均会在交付前失败。WinUI 交付门槛仍未完成时，即使标签没有预发布后缀，也会标为 GitHub 预发布。
+发布标签采用 `vMAJOR.MINOR.PATCH`，可带 SemVer 预发布后缀，例如已准备说明的 `v0.2.3-preview.1`。三位基础版本必须与 `SteamWrapper.Manager.csproj` 的 `<Version>` 及 `crates/core/Cargo.toml`、`crates/runner/Cargo.toml` 的包版本一致，生产 Application、Deployment 和 Host 版本也须协调。提交必须在 `main` 的历史中，且对应版本中须包含 `releases/<tag>.en.md` 与 `releases/<tag>.zh-CN.md`。无效标签、版本不匹配或缺失说明均会在交付前失败。WinUI 交付门槛仍未完成时，即使标签没有预发布后缀，也会标为 GitHub 预发布。
 
-当前源码版本为 `0.2.2`，用于对冻结的 `0.2.1` 发布目录执行真实升级验收。之前 `0.2.1` 的 PE 资源改动与产物保留为有日期的证据。不要覆盖已有标签或历史发布。未来需协调 Rust、Manager、Application、部署产品版本及锁文件，并提供完整双语说明。打标签前确认所选主线提交已通过 CI；合并此次工作不会创建公开新版本。
+当前协调的源码／产品版本为 `0.2.3`，已为未签名技术预览准备 `v0.2.3-preview.1` 说明。冻结 `0.2.1` → 真正编译 `0.2.2` 的升级／回滚与此前 PE 资源结果保留为有日期的证据。不要覆盖已有标签或历史发布。未来需协调 Rust、Manager、Application、部署产品版本及锁文件，并提供完整双语说明。打标签前确认所选主线提交已通过 CI；说明文件与代码合并都不证明新版本已经公开发布。
 
-安装器升级时，每个新可安装载荷／清单都递增三段基础版本，不能只改预发布后缀。`v0.2.1-preview.1` → `v0.2.1-preview.2` 会改变部署清单，但两者数字版本均为 `0.2.1`，会被当前同版本不同内容保护拒绝。手动运行序号产物是独立试用，不是升级序列。真实升级验收使用冻结旧包和真正编译、尚未使用的新基础版本；首次生产签名改变载荷字节时也需新基础版本。不可变产物的重试保持原样。
+安装器升级时，每个新可安装载荷／清单都递增三段基础版本，不能只改预发布后缀。`v0.2.1-preview.1` → `v0.2.1-preview.2` 会改变部署清单，但两者数字版本均为 `0.2.1`，会被当前同版本不同内容保护拒绝。手动运行序号产物是独立试用，不是升级序列。真实升级验收使用冻结旧包和真正编译、尚未使用的新基础版本。本系列首次新签名载荷必须使用新基础版本 `0.2.4`，不能让重新签名／时间戳后的不同 Runner 字节继续使用未签名 `0.2.3`。不可变产物的重试保持原样。
 
-[执行队列](/SteamWrapper/zh-cn/project/roadmap/#执行队列2026-10-03)计划在干净客户端／恢复验收后、Foundation 申请前，为当前标签流水线增加明确的第 2 版未签名安装器发行，获批后再交付生产已签名版本。该工作流改动通过自身门槛前，上方触发表和下方五个附件描述的是已实现行为。可选应用更新及 Steam 应用／恢复不阻碍首个 P0–P2 稳定版。
+标签流水线现已使用明确的第 2 版未签名可安装产物，同时保留完整的第 1 版便携验证器。[执行队列](/SteamWrapper/zh-cn/project/roadmap/#执行队列2026-10-03)继续保留稳定交付所需的原生、干净客户端／恢复和旧版本保留验收。技术预发布为申请提供当前产品产物；实际签名仍需要 Foundation 批准及真实信任配置。可选应用更新及 Steam 应用／恢复不阻碍首个 P0–P2 稳定版。
 
-在本地 `0.2.2` 试验后创建新载荷时，未来的示例审阅改动可将所有协调的产品与源码版本改为尚未使用的下一基础版本 `0.2.3`，并加入两份 `v0.2.3-preview.1` 说明：
+对已准备的 `0.2.3` 技术预览，审阅并合入源码／说明、确认所选提交 CI 后，发布操作如下：
 
 ```sh
 git fetch origin
@@ -120,7 +122,9 @@ git tag -a v0.2.3-preview.1 -m "WinUI Windows preview 0.2.3-preview.1"
 git push origin v0.2.3-preview.1
 ```
 
-这只是发布操作示例，不是要求现在创建该标签；执行前核对所选提交。工作流检出准确标签并重跑门禁，不沿用之前的分支构建。它先创建草稿，上传并验证全部附件，再公开预发布，不将其标为最新稳定版。附件为 `SteamWrapper-<tag>-win-x64.zip`、`<tag>.en.md`、`<tag>.zh-CN.md`、`release.json` 和 `SHA256SUMS`。ZIP 同时包含根目录 `LICENSE` 及 `ReleaseNotes/` 中的双语说明。
+这些命令描述明确的发布操作；写在文档中不会创建标签，也不证明已经发布。执行前核对所选提交。工作流检出准确标签并重跑门禁，不沿用之前的分支构建。它先创建草稿，上传并验证全部附件，再公开预发布，不将其标为最新稳定版。
+
+七个附件为 `SteamWrapper-<tag>-win-x64-setup.exe`、`SteamWrapper-<tag>-win-x64.zip`、`<tag>.en.md`、`<tag>.zh-CN.md`、`portable-release.json`、`release.json` 和 `SHA256SUMS`。外层 `release.json` 使用第 2 版结构，明确 `signed=false`、`installer=true`、`portable=true`，绑定两种产物的长度／摘要及部署清单。`portable-release.json` 保留第 1 版便携元数据和未放宽的旧验证门禁；`SHA256SUMS` 覆盖其余六个附件。ZIP 包含 `LICENSE` 及 `ReleaseNotes/` 中的双语说明。打包必须保留随附第三方的适用 notices／许可证和上游签名；Foundation 申请须确认 Microsoft 系统运行时例外，不能把全部依赖笼统描述为 MIT。
 
 按需预览使用 **Run workflow** 并选择 ref。没有发布模式输入：所有手动运行都只生成预览，即使选择了标签也不公开发布。发布上传失败时，解决原因后优先使用 **Re-run failed jobs**：发布 job 会复用同一个不可变的 `SteamWrapper-WinUI-release-assets` 构建产物。**Re-run all jobs** 会重新构建和打包；如果同版本的字节发生变化，发布必须拒绝覆盖。不同内容应使用新版本，不移动已发布标签，也不覆盖已发布附件。
 

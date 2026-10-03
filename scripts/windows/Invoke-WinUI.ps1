@@ -70,6 +70,7 @@ try {
     Invoke-Checked dotnet @('publish', $deploymentHost, '--no-restore', '--configuration', 'Release', '--runtime', 'win-x64', '--self-contained', 'true', '-p:PublishAot=true', '--output', $deploymentOutput)
     New-Item -ItemType Directory -Path (Join-Path $candidate 'Deployment') | Out-Null
     Copy-Item -LiteralPath (Join-Path $deploymentOutput 'SteamWrapper.exe') -Destination (Join-Path $candidate 'Deployment/SteamWrapper.exe')
+    Invoke-Checked pwsh @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'Stage-WinUIThirdPartyNotices.ps1'), '-PublishDirectory', $candidate)
 } catch {
     Write-Warning "The previous release is unchanged. Failed publish output is retained at $candidate"
     throw
@@ -86,6 +87,7 @@ $output = Complete-WinUIPublish -Root $publishRoot -Candidate $candidate -Requir
     'Assets/steamwrapper.svg', 'Assets/steamwrapper.ico',
     'zh-CN/SteamWrapper.Application.resources.dll'
     'SteamWrapper.Deployment.dll', 'Deployment/SteamWrapper.exe'
+    'THIRD_PARTY_NOTICES.md', 'LICENSES/index.json'
 )
 Write-Output "WinUI preview: $output"
 if ($Action -ne 'Sandbox') { return }

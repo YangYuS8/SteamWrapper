@@ -132,7 +132,7 @@ Use the sidebar selector. A successful change updates application-owned UI and i
 %LOCALAPPDATA%\SteamWrapper\ui-settings.json
 ```
 
-English is the default for a missing or unknown language value. Manager uses `en-US` and `zh-CN`. Changing this preference does not change profiles, user-entered text or log contents.
+Without a saved `language` key, Manager follows a supported system UI language and otherwise uses English. A saved manual choice takes priority. Unknown explicit values or unreadable settings fall back to English. Manager uses `en-US` and `zh-CN`; changing the preference does not change profiles, user-entered text or log contents.
 
 If the file is malformed, contains duplicate keys, exceeds the supported size/depth, or cannot be safely written, Manager reports the problem and preserves it. A failed preference write keeps the previous UI language. Keep a copy before manually repairing a settings file; do not delete `profiles.toml` to reset a language preference.
 

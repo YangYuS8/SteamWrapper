@@ -92,7 +92,7 @@ pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
 
 沙盒每次在 `target/winui/sandbox/<id>` 创建示例 Steam manifest、LOCALAPPDATA、XDG_DATA_HOME，并设置 STEAMWRAPPER_E2E_ROOT。示例游戏不带真实游戏程序，选择受控测试 exe 即可验证配置。脱离沙盒的产物会尝试使用常规用户数据位置；实际文件视图仍需按下节检查。常规自动化使用沙盒入口。不要从发布目录单独拷出 EXE。
 
-界面默认使用英语，侧栏可选择 English / 简体中文。WinUI Manager 使用与 `profiles.toml` 同级的独立 `SteamWrapper/ui-settings.json`，其中 `language` 的规范值为 `en-US`、`zh-CN`；兼容 `en`、`zh-Hans`，去除首尾空白且不区分大小写，缺失或未知值默认英语。成功保存偏好后，界面立即刷新应用自有标签、动态控件、状态和服务错误，保留尚未保存的输入；保存失败保留当前语言和原设置文件。未知 JSON 字段保留，损坏、重复键、非对象或过大的设置文件不会被覆盖。用户名称、路径、参数、协议标识和诊断日志不参与翻译；原生系统对话框中的系统文案沿用系统语言。
+没有已保存的偏好时，界面跟随已支持的系统界面文化，不支持时使用英语；已保存的手动选择优先。侧栏可选择 English / 简体中文。WinUI Manager 使用与 `profiles.toml` 同级的独立 `SteamWrapper/ui-settings.json`，其中 `language` 的规范值为 `en-US`、`zh-CN`；兼容 `en`、`zh-SG`、`zh-Hans`，去除首尾空白且不区分大小写。没有键时将 `zh-CN`、`zh-SG` 及明确的 `zh-Hans` 系统文化识别为简体中文；不支持的文化、明确的无效值或无法读取的设置使用英语。读取或仅保存封面偏好不会锁定识别出的语言。成功保存偏好后，界面立即刷新应用自有标签、动态控件、状态和服务错误，保留尚未保存的输入；保存失败保留当前语言和原设置文件。未知 JSON 字段保留，损坏、重复键、非对象或过大的设置文件不会被覆盖。用户名称、路径、参数、协议标识和诊断日志不参与翻译；原生系统对话框中的系统文案沿用系统语言。
 
 WinUI 的中性英文资源和简体中文卫星资源位于 `SteamWrapper.Application/Localization`。查找资源时显式指定 .NET culture，不依赖系统显示语言，也不修改进程的全局 culture。检查发布目录时，除原有原生资源外还应确认 `zh-CN/SteamWrapper.Application.resources.dll` 存在。[ResourceManager 指定语言查找](https://learn.microsoft.com/en-us/dotnet/fundamentals/runtime-libraries/system-resources-resourcemanager-getstring)
 

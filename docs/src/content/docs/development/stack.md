@@ -13,7 +13,7 @@ description: "The WinUI/C# Manager, independent Rust Runner, and Windows-first d
 
 | Area | Current choice | Boundary |
 | --- | --- | --- |
-| Manager UI | WinUI 3, C#, XAML | Native Windows controls, pickers and accessibility; English default and complete Simplified Chinese |
+| Manager UI | WinUI 3, C#, XAML | Native Windows controls, pickers and accessibility; supported system language by default, English fallback and complete Simplified Chinese |
 | Manager services | C# Application | Profiles, local Steam discovery, Runner installation, logs; no Rust FFI or helper |
 | Daily runtime | Independent Rust Runner | Existing CLI and process lifecycle; Manager closed during play |
 | Configuration | `profiles.toml` v2 | C# edits preserve unknown/unedited data; actual Rust consumption is tested |

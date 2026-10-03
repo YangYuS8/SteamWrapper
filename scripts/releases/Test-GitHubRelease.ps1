@@ -1,18 +1,25 @@
 [CmdletBinding()]
-param([string]$PackageDirectory)
+param([string]$PackageDirectory, [switch]$Installable)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $root = Join-Path $repoRoot ('target/github-publisher-tests/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root -Force | Out-Null
 if (-not $PackageDirectory) {
-    . (Join-Path $repoRoot 'scripts/windows/WinUIRelease.TestFixtures.ps1')
-    $fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package')
-    $package = New-WinUIReleasePackage -Tag $fixture.Tag -Commit $fixture.Commit -RepositoryRoot $fixture.RepositoryRoot -PublishDirectory $fixture.PublishDirectory -OutputDirectory $fixture.OutputDirectory
+    if ($Installable) {
+        . (Join-Path $repoRoot 'scripts/windows/WinUIInstallableRelease.TestFixtures.ps1')
+        $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package')
+        $package = New-WinUIInstallableReleaseTestPackage $fixture
+    } else {
+        . (Join-Path $repoRoot 'scripts/windows/WinUIRelease.TestFixtures.ps1')
+        $fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package')
+        $package = New-WinUIReleasePackage -Tag $fixture.Tag -Commit $fixture.Commit -RepositoryRoot $fixture.RepositoryRoot -PublishDirectory $fixture.PublishDirectory -OutputDirectory $fixture.OutputDirectory
+    }
     $PackageDirectory = $package.Directory
 }
 $metadata = & (Join-Path $repoRoot 'scripts/windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $PackageDirectory
-$names = @($metadata.archive.fileName, "$($metadata.tag).en.md", "$($metadata.tag).zh-CN.md", 'release.json', 'SHA256SUMS')
+. (Join-Path $repoRoot 'scripts/windows/WinUIInstallableRelease.ps1')
+$names = @(Get-WinUIReleaseAssetNames $metadata)
 $mock = Join-Path $root 'gh-fixture.ps1'
 [IO.File]::WriteAllText($mock, @'
 $ErrorActionPreference = 'Stop'
@@ -114,8 +121,8 @@ try {
     $path = New-GhScenario 'success'
     $null = Invoke-FixturePublication
     $state = Read-FixtureState $path
-    if ($state.draft -or $state.uploads -ne 5 -or @($state.requests | Where-Object { $_[1] -eq 'download' }).Count -ne 5) { throw 'The complete draft/upload/download/publish sequence did not occur.' }
-    Write-Output 'PASS: a new prerelease verifies all five uploaded assets before publishing.'
+    if ($state.draft -or $state.uploads -ne $names.Count -or @($state.requests | Where-Object { $_[1] -eq 'download' }).Count -ne $names.Count) { throw 'The complete draft/upload/download/publish sequence did not occur.' }
+    Write-Output "PASS: a new prerelease verifies all $($names.Count) uploaded assets before publishing."
     $writes = @($state.requests | Where-Object { $_[1] -in @('create', 'upload', 'edit') }).Count
     $null = Invoke-FixturePublication
     $state = Read-FixtureState $path
@@ -124,7 +131,7 @@ try {
     $path = New-GhScenario 'retry' $true $true @($names[0])
     $null = Invoke-FixturePublication
     $state = Read-FixtureState $path
-    if ($state.draft -or $state.uploads -ne 4) { throw 'A partial draft was not resumed using only missing assets.' }
+    if ($state.draft -or $state.uploads -ne $names.Count - 1) { throw 'A partial draft was not resumed using only missing assets.' }
     Write-Output 'PASS: a partial draft resumes without replacing its existing asset.'
     $path = New-GhScenario 'duplicate' $true $false @($names[0], $names[0], $names[1], $names[2], $names[3])
     Assert-GhRejected 'duplicate published asset names are rejected' '*duplicate*'

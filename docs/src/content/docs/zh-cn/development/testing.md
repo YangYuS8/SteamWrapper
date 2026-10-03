@@ -48,9 +48,9 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 
 后续默认英语/完整简体中文实现通过 59/59 项 C# 测试，其中新增 10 项本地化/偏好测试。两条默认英语测试先在旧服务中文消息上失败；UTF-8 BOM 偏好读取和嵌套 JSON 重复键拒绝也先失败再修复。测试覆盖英文与中文资源键和格式参数一致、已存在嵌套状态/错误切换、诊断和用户值不变、双语扫描/Runner 消息、规范语言持久化、未知字段与 profiles 保留、损坏/重复/过大 JSON 拒绝及 BOM 兼容。跨语言／Runner 契约和最终自包含发布通过。[后续语言验收](/SteamWrapper/zh-cn/project/validation/winui/#后续语言支持)记录隔离的原生切换、重启保持、输入／profile 字节保留和图标检查；这些不是干净系统或真实 Steam 证据。
 
-原生本地化验收应使用没有 `ui-settings.json` 的全新隔离数据根，确认无论 Windows 显示语言如何，首次启动均为英语。打开配置编辑、添加参数并触发验证/状态消息，切换到简体中文再切回英语；检查应用自有标签、参数行、等待模式、既有状态、对话框和 picker 动作按钮文案同步变化，未保存的名称、路径、参数及已生成启动项保持不变。重开沙盒 Manager 检查持久化，并检查两种语言的换行、截断、键盘操作和对话框布局；检查发布目录的 `zh-CN/SteamWrapper.Application.resources.dll`。服务/资源测试不能替代原生呈现或发布完整性验证。
+原生本地化验收应使用没有 `ui-settings.json` 的全新隔离数据根，确认首次启动跟随已支持的 Windows 界面语言，不支持时回退英语。打开配置编辑、添加参数并触发验证/状态消息，切换到简体中文再切回英语；检查应用自有标签、参数行、等待模式、既有状态、对话框和 picker 动作按钮文案同步变化，未保存的名称、路径、参数及已生成启动项保持不变。重开沙盒 Manager 检查持久化，并检查两种语言的换行、截断、键盘操作和对话框布局；检查发布目录的 `zh-CN/SteamWrapper.Application.resources.dll`。服务/资源测试不能替代原生呈现或发布完整性验证。
 
-WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language` 为 `en-US` / `zh-CN`；兼容 `en` / `zh-Hans`，去除首尾空白且不区分大小写。缺失或未知语言默认英语。保存成功后刷新界面而不重载正在编辑的配置；失败保留旧语言并报告错误，损坏的设置文件原样保留。系统 picker 自有文案和外部原始诊断保持原语言。测试必须使用一次性设置目录，不修改真实 AppData 或 Steam 配置。
+WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language` 为 `en-US` / `zh-CN`；兼容 `en` / `zh-SG` / `zh-Hans`，去除首尾空白且不区分大小写。没有键时跟随支持的系统界面文化（`zh-CN`、`zh-SG` 及明确的 `zh-Hans`），其余文化使用英语；已保存的明确选择优先，无效明确值或无法读取的设置回退英语。读取或仅保存封面偏好不会保存识别出的语言。保存成功后刷新界面而不重载正在编辑的配置；失败保留旧语言并报告错误，损坏的设置文件原样保留。系统 picker 自有文案和外部原始诊断保持原语言。测试必须使用一次性设置目录，不修改真实 AppData 或 Steam 配置。
 
 当前 Windows CI 运行 C# 测试、跨语言 Runner 契约和发布检查。历史提交 `3d322db` 的 [WinUI CI](https://github.com/YangYuS8/SteamWrapper/actions/runs/34081282718)已通过；这是有日期的记录，不代表最新提交。托管 Windows Server 2025 构建不是 Windows 11 干净系统或原生 UI 验收。完整验收范围如下；本机 Unity 游戏及 9-nine 五部独立汉化版已另行通过 Steam 闭环，第一部另覆盖 CHS 启动器先退场景，过程与边界见 [真实 Steam 验证](/SteamWrapper/zh-cn/project/validation/steam/)。
 
@@ -98,15 +98,27 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 **2026-10-03 本地记录：**包装脚本针对真正编译的 `0.2.2` 便携目录执行，**10 项原生用例全部通过**。三个可丢弃夹具分别覆盖普通编辑／重启、选择器／封面／成功保存流程和未知 Runner 失败。证据记录实际发布的 EXE／DLL／Runner／清单哈希及 `cleanVm=false`；成功保存另保留 TOML 注释、未知字段与备份字节。这是该切片的真实交互窗口证据，不代表 CI 原生执行、输入法／缩放／剪贴板、零 HTTP 或真实 Steam 验收。W1 仍未完成。
 
+**2026-10-03 后续系统语言记录：**新增实际窗口用例在本机 `zh-CN` Windows 桌面的 `0.2.2` 产物上先失败，因为首次启动仍显示英语。真正编译的 `0.2.3` 在四个可丢弃夹具中通过 **11 项原生用例**，包括自动中文且不保存 `language` 偏好，以及已有的明确英文／中文重启流程。注入文化的服务测试另覆盖未支持／繁体文化、明确无效值、损坏设置及仅保存封面偏好。这改变首次启动默认行为，不代表输入法、缩放或干净客户端验收。
+
 ## 安装器与签名命令
 
 `Invoke-WinUI.ps1 -Action Test` 也运行部署库的进程／清单／日志回归。`Test-WinUIInstallerScripts.ps1` 不生成应用安装包，仅测试打包保护；`Test-WindowsSigning.ps1` 使用政策夹具和真实 Windows 信任失败，不申请签名。`Test-RunnerSigningMetadata.ps1` 检查已构建 Runner 的 PE，不执行它。这些检查进入日常 Windows CI。
 
 完整发布后，`Test-WinUIProductMetadata.ps1` 检查全部七个自有 EXE／DLL 产品（含中文资源）及实际 x64／GUI NativeAOT Host。发布工作流要求此门禁，它不执行文件，也不证明发布者签名。
 
-完整 Publish 并安装已验证 Inno 工具后，`Test-WinUIInstaller.ps1` 在隔离程序／数据根目录运行真实安装／卸载及兼容 maintenance 回滚进程。默认下一版本输入是人工构造的元数据夹具。真实版本验收需冻结旧的完整目录，并用 `-UpgradePublishDirectory` 指向真正编译的新数字版本；命令与证据边界见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)。手动预览工作流执行隔离门禁并单独构建安装包；普通分支 CI 不打包安装器。本地真实版本通过仍不等于干净 Windows 11、原生向导／Explorer 或注册表／快捷方式／断电验收。
+`Test-WinUIHostLanguage.ps1` 在新建的隔离程序／数据夹具中单独启动发布后的 NativeAOT Host，不传 `--language`、不注入文化。本机 `zh-CN` Windows 上，缺失及未含语言键的偏好最初失败，因为 Host 发布时启用了 invariant globalization；移除该模式后，包含显式英／中选择和损坏设置回退的五项全部通过。设置、配置和独立 Runner 夹具字节保持不变。隔离路由要求既有 test-root 授权，并将程序／数据路径限定在同一 sandbox；生产偏好位置不变。这是真实本机 Host 证据，不代表另一种系统文化或干净虚拟机。
+
+完整 Publish 并安装已验证 Inno 工具后，`Test-WinUIInstaller.ps1` 在隔离程序／数据根目录运行真实安装／卸载及兼容 maintenance 回滚进程。默认下一版本输入是人工构造的元数据夹具。真实版本验收需冻结旧的完整目录，并用 `-UpgradePublishDirectory` 指向真正编译的新数字版本；命令与证据边界见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)。版本标签及手动预览工作流执行隔离门禁并单独构建安装包；普通分支 CI 不打包安装器。本地真实版本通过仍不等于干净 Windows 11、原生向导／Explorer 或注册表／快捷方式／断电验收。
+
+磁盘准入预算包含载荷文件、清单、原子启动器副本、有界状态／日志替换和 16 MiB 余量。回归先观察到短预算被错误接受，再验证空间不足时不激活或改变旧文件。七个隔离子进程停止用例在五个安装、两个恢复检查点使用 `Environment.Exit(73)`，验证持久化回执／日志、操作系统释放租约、恢复／隔离残留及独立数据夹具不变。这是编译部署引擎的进程停止测试，不是整机断电、真实填满磁盘或注册表／快捷方式故障。版本清理仍待完成：直接扩展严格的旧状态／根目录结构会破坏旧二进制回滚，需要独立的兼容协议。
+
+首次真实 `0.2.2 → 0.2.3` 安装器测试发现加入原始依赖许可后，长路径导致卸载拒绝。重点真实 Win32 回归复现了自有路径在隔离时由 248 增至 281 字符。修复对已核验的删除句柄采用 Unicode 扩展路径，保留所有权、哈希、大小、reparse／只读拒绝及锁定检查。修复后卸载／重装和独立数据保留通过；最终 Deployment 套件 **99/99** 通过，非法 root 的显式 CLI 语言也有实际进程覆盖。未修改 Windows 路径政策或玩家数据。
+
+`Test-WinUIInstallableReleaseScripts.ps1` 验证明确的第 2 版创建／下载校验，同时保留第 1 版校验器。GitHub／CNB 发布器测试分别运行默认旧输入和 `-Installable`，使用可丢弃 API，不写真实网络。`Test-SignPathConfiguration.ps1` 验证草案／声明前置条件与精确签名目标，不提交或读取凭据。[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)区分本地准备、外部批准及真实已签名产物验收。
 
 **2026-10-03 本地真实版本记录：**经哈希核验的冻结 `0.2.1` 目录与真正编译的 `0.2.2` 载荷完成 **13 个真实进程步骤，结果符合各自预期**，包括英文安装、中文修复／升级、实际 maintenance 回滚 `0.2.2 → 0.2.1`、Inno 再升级、占用／未知文件／迟到自有文件锁拒绝，以及卸载／重装。`numericUpgradeUsesSyntheticMetadataFixture=false`；回滚保留 928 个自有版本文件及 maintenance／卸载器／夹具快捷方式的哈希，六个数据夹具始终未变。两套 Setup 及项目自有 PE 产品匹配其真实数字版本；当前 C#／Rust 契约另行通过。日志与 `evidence.json` 保存在 `target/winui/installer acceptance 中文 ' <id>/`。证据明确标记 `unsigned=true`、`cleanVm=false`。没有可用的干净 VM；这不代表 W2、完整中断／注册表／快捷方式恢复、旧版本清理或认证交付完成。
+
+**2026-10-03 后续修正后的 `0.2.2 → 0.2.3` 记录：**冻结 `0.2.2` 目录与最终编译的 `0.2.3` 发布完成相同的 **13 个真实进程步骤**，包含长路径修正后成功卸载／重装。实际 maintenance 回滚 `0.2.3 → 0.2.2` 保留 1,066 个自有版本文件哈希和独立 maintenance／卸载器／快捷方式所有权，随后 Inno 再升级成功。六个数据夹具保持不变；升级为真实版本、本机未签名测试，`cleanVm=false`。该修正结果与保留的首次失败夹具分别记录，不代表剩余 W2 门槛完成。
 
 ## 本地命令
 
@@ -148,7 +160,7 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 
 `v2-ci.yml` 定义 Windows / Ubuntu 的 Rust core/Runner 格式／检查／测试门禁及平台进程测试。`winui-windows.yml` 在拉取请求与 `main` 中运行 C# Application 和 Windows 解码器测试、C# / Rust 契约、实际 WinUI 编译及原生 UI 工具的仅编译门禁；不在托管服务会话执行 UIA。日常 CI 还使用一次性文件／API fixture 运行发布替换、发布包安全和 mock GitHub/CNB 发布器测试，不向外部 Release 写入。它上传测试证据，不生成应用包。
 
-`winui-release.yml` 在版本标签或明确请求的手动预览中重新执行完整门禁，再发布自包含应用，运行全部发布／恢复回归并检查完整布局。版本标签运行先验证源码／标签／版本和双语说明，再生成 portable ZIP、校验和及元数据。标签运行可公开未签名 GitHub 预发布；手动运行只上传预览产物。发布边界和可选 CNB 镜像见[发布准备](/SteamWrapper/zh-cn/development/distribution/)。
+`winui-release.yml` 在版本标签或明确请求的手动预览中重新执行完整门禁，再发布自包含应用，运行全部发布／恢复回归并检查完整布局。版本标签运行先验证源码／标签／版本和双语说明，再生成明确的 schema 2 包：Setup、portable ZIP、两份本地化说明、旧 portable 描述符、安装版描述符及校验和。标签运行可公开未签名 GitHub 预发布；手动运行只上传预览产物。发布边界和可选 CNB 镜像见[发布准备](/SteamWrapper/zh-cn/development/distribution/)。
 
 旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；手动发布工作流预览运行真实隔离安装器进程，本地原生 UI 自动化现有首个回归切片。完整原生验收、干净客户端交付和启用更新后的验收仍属于路线图。
 

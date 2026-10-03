@@ -1,22 +1,44 @@
+using System.Globalization;
+
 namespace SteamWrapper.Deployment;
 
 /// <summary>User messages are separate from diagnostic exceptions; identifiers, paths and user data are never translated.</summary>
 public static class DeploymentMessages
 {
     public static string ReadPreferredLanguage(string? settingsPath = null)
+        => ReadPreferredLanguage(settingsPath, () => CultureInfo.CurrentUICulture);
+
+    internal static string ReadPreferredLanguage(string? settingsPath, Func<CultureInfo> systemUiCulture)
     {
         var path = settingsPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SteamWrapper", "ui-settings.json");
         try
         {
             SafePaths.CheckAncestors(path);
-            var bytes = DeploymentManifest.ReadJson(path, 64 * 1024);
+            using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (input.Length is < 2 or > 64 * 1024) throw new InvalidDataException("Missing or oversized settings file.");
+            var bytes = new byte[checked((int)input.Length)];
+            input.ReadExactly(bytes);
+            if (bytes.AsSpan().StartsWith(new byte[] { 0xEF, 0xBB, 0xBF })) bytes = bytes[3..];
+            DeploymentManifest.CheckJson(bytes);
             using var document = System.Text.Json.JsonDocument.Parse(bytes);
             var root = document.RootElement;
-            return root.ValueKind == System.Text.Json.JsonValueKind.Object && root.TryGetProperty("language", out var language) &&
-                language.ValueKind == System.Text.Json.JsonValueKind.String && language.GetString() == "zh-CN" ? "zh-CN" : "en";
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return "en";
+            if (!root.TryGetProperty("language", out var language)) return SystemLanguage(systemUiCulture());
+            return language.ValueKind == System.Text.Json.JsonValueKind.String &&
+                language.GetString()?.Trim().ToLowerInvariant() is "zh-cn" or "zh-sg" or "zh-hans" ? "zh-CN" : "en";
         }
+        catch (FileNotFoundException) { return SystemLanguage(systemUiCulture()); }
+        catch (DirectoryNotFoundException) { return SystemLanguage(systemUiCulture()); }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException)
         { return "en"; } // Read-only preference failure cannot block recovery or modify user settings.
+    }
+    private static string SystemLanguage(CultureInfo culture)
+    {
+        for (var current = culture; !string.IsNullOrEmpty(current.Name); current = current.Parent)
+            if (current.Name.Equals("zh-CN", StringComparison.OrdinalIgnoreCase) ||
+                current.Name.Equals("zh-SG", StringComparison.OrdinalIgnoreCase) ||
+                current.Name.Equals("zh-Hans", StringComparison.OrdinalIgnoreCase)) return "zh-CN";
+        return "en";
     }
     public static string ForError(Exception error, string language = "en")
     {

@@ -2,5 +2,5 @@
 param([Parameter(Mandatory)][string]$PackageDirectory)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-. (Join-Path $PSScriptRoot 'WinUIRelease.ps1')
-Test-WinUIReleasePackageDirectory -PackageDirectory $PackageDirectory
+. (Join-Path $PSScriptRoot 'WinUIInstallableRelease.ps1')
+Test-WinUIReleaseArtifactDirectory -PackageDirectory $PackageDirectory
