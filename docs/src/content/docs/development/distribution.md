@@ -45,7 +45,7 @@ On 2026-09-08, the final local Dioxus NSIS build produced `SteamWrapperManager_0
 
 ## Windows
 
-Tagged previews remain complete portable ZIPs; an explicitly requested manual workflow also produces an unsigned setup preview. Packages remain unsigned and public releases remain prereleases. Installer acceptance is isolated; a clean Windows 11 client and production signing are still required before public installer/stable delivery.
+Tagged previews remain complete portable ZIPs; an explicitly requested manual workflow also produces an unsigned setup preview. Packages remain unsigned and public releases remain prereleases. Installer acceptance is isolated; clean Windows 11/recovery gates precede the planned public unsigned installer, while production signing is a separate requirement for authenticated delivery and stable qualification.
 
 The fixed installer root is `%LOCALAPPDATA%\Programs\SteamWrapper`. Steam references only the stable Runner in the separate data tree. Version directories, manifests, launcher and lease/journal recovery are owned by `apps/deployment-windows`; Inno owns its maintenance copy, uninstall registration and shortcuts. Repair/rollback limits are in the [installer guide](/SteamWrapper/guides/installer-preview/).
 
@@ -98,7 +98,7 @@ Do not replace an identical or newer compatible Runner unnecessarily. Reject unk
 
 ## CI / release validation
 
-Daily Windows CI tests the C# Application services and Windows decoder, runs cross-language contracts and real Runner fixtures, and compiles the actual WinUI Manager. Rust CI retains format/check/test gates and supported Windows/Linux process tests. These runs retain test evidence but do not self-contained-publish or upload an application package. GitHub Pages keeps its independent `main` documentation deployment.
+Daily Windows CI tests the C# Application services and Windows decoder, runs cross-language contracts and real Runner fixtures, and compiles the actual WinUI Manager plus the developer-only native UI harness. The harness is not executed in hosted service sessions; actual native runs require an unlocked interactive desktop and disposable fixtures. Rust CI retains format/check/test gates and supported Windows/Linux process tests. These runs retain test evidence but do not self-contained-publish or upload an application package. GitHub Pages keeps its independent `main` documentation deployment.
 
 Release builds repeat the test and compile gates for the selected source, then run self-contained publication, all publication/recovery regressions and actual package inspection. The portable ZIP contains both language resources and the verified Runner. Its checksum and release metadata identify the exact version, commit and Windows x64 platform. Publishing a prerelease does not establish clean-system installation, update, rollback or uninstall acceptance. Signing and stable Windows delivery remain separate gates.
 
@@ -113,22 +113,22 @@ The [WinUI version release workflow](https://github.com/YangYuS8/SteamWrapper/bl
 | **Run workflow** on a selected branch/ref | Full gates, complete `SteamWrapper-WinUI-preview-windows-x64` layout and tested unsigned `SteamWrapper-WinUI-installer-preview-windows-x64` artifact; no public release |
 | Relevant documentation changes on `main` | Independent documentation checks and GitHub Pages deployment |
 
-Release tags use `vMAJOR.MINOR.PATCH` with an optional SemVer prerelease suffix, such as `v0.2.1-preview.1`. The three-number base must match `<Version>` in `SteamWrapper.Manager.csproj` and the package versions in both `crates/core/Cargo.toml` and `crates/runner/Cargo.toml`. The commit must be reachable from `main`, and `releases/<tag>.en.md` plus `releases/<tag>.zh-CN.md` must be present in that revision. Invalid tags, mismatched versions or missing notes fail before delivery. A tag without a prerelease suffix still publishes as a GitHub prerelease while WinUI's delivery gates remain open.
+Release tags use `vMAJOR.MINOR.PATCH` with an optional SemVer prerelease suffix, such as a future `v0.2.3-preview.1`. The three-number base must match `<Version>` in `SteamWrapper.Manager.csproj` and the package versions in both `crates/core/Cargo.toml` and `crates/runner/Cargo.toml`. Production Application, Deployment and Host versions must be coordinated as well. The commit must be reachable from `main`, and `releases/<tag>.en.md` plus `releases/<tag>.zh-CN.md` must be present in that revision. Invalid tags, mismatched versions or missing notes fail before delivery. A tag without a prerelease suffix still publishes as a GitHub prerelease while WinUI's delivery gates remain open.
 
-The current source version is `0.2.1`, advanced because the new Runner PE resources change its bytes. Existing tags and historical releases must not be overwritten. Future versions must coordinate Rust, Manager, Application and deployment product versions and lockfiles, with complete bilingual notes. Confirm the intended main revision passed CI before tagging it. Merging this work does not create a public version.
+The current source version is `0.2.2`, advanced for genuine upgrade acceptance against a frozen `0.2.1` publication. The earlier `0.2.1` PE-resource work and artifacts remain dated evidence. Existing tags and historical releases must not be overwritten. Future versions must coordinate Rust, Manager, Application and deployment product versions and lockfiles, with complete bilingual notes. Confirm the intended main revision passed CI before tagging it. Merging this work does not create a public version.
 
 For installer upgrades, advance the three-part base for every new installable payload/manifest, not just the prerelease suffix. `v0.2.1-preview.1` → `v0.2.1-preview.2` changes the deployment manifest while both identify numeric `0.2.1`, and is rejected by the current same-version/different-content protection. Manual run-number artifacts are independent trials, not an upgrade sequence. Real upgrade acceptance uses a frozen old bundle and a genuinely compiled next unused base; first production signing also needs a new base when it changes payload bytes. Keep immutable retries unchanged.
 
 The [execution queue](/SteamWrapper/project/roadmap/#execution-queue-2026-10-03) plans to extend the current tag pipeline with an explicit schema-2 unsigned installer release after clean-client/recovery acceptance, before Foundation application; production signed releases follow approval. The trigger table and five current assets below describe implemented behavior until that workflow change passes its own gates. Optional app updates and Steam apply/restore do not block the first stable P0–P2 release.
 
-For example, after a reviewed change has set all coordinated product/source versions to `0.2.1` and added both `v0.2.1-preview.1` notes:
+For a new payload after the local `0.2.2` trials, an example future reviewed change would set all coordinated product/source versions to the next unused base `0.2.3` and add both `v0.2.3-preview.1` notes:
 
 ```sh
 git fetch origin
 git switch main
 git pull --ff-only origin main
-git tag -a v0.2.1-preview.1 -m "WinUI Windows preview 0.2.1-preview.1"
-git push origin v0.2.1-preview.1
+git tag -a v0.2.3-preview.1 -m "WinUI Windows preview 0.2.3-preview.1"
+git push origin v0.2.3-preview.1
 ```
 
 These commands are an example release operation, not a request to create that tag now. Check the selected commit before running them. The workflow checks out the exact tag and reruns its gates rather than borrowing a prior branch build. It creates a draft, uploads and verifies all assets, then publishes the prerelease without marking it as the latest stable release. Attached assets are `SteamWrapper-<tag>-win-x64.zip`, `<tag>.en.md`, `<tag>.zh-CN.md`, `release.json` and `SHA256SUMS`. The ZIP also contains `LICENSE` and both notes under `ReleaseNotes/`.

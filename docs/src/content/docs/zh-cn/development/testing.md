@@ -5,7 +5,7 @@ description: "选择相关的服务、原生界面、Runner、包体和 Steam �
 
 <a id="测试"></a>
 
-SteamWrapper 分别验证跨 Windows/Linux 的 Rust core 与独立 Runner，以及 WinUI Manager 的 C# 服务、跨语言契约和自包含发布。Dioxus、其 Rust 管理服务、Native E2E 与旧打包流程已退役。Windows 最终交付仍按 [阶段门槛](/SteamWrapper/zh-cn/project/design/windows-v2/#8-实施顺序与停止条件)验收。
+SteamWrapper 分别验证跨 Windows/Linux 的 Rust core 与独立 Runner，以及 WinUI Manager 的 C# 服务、跨语言契约、自包含发布和本地交互原生 UI 回归切片。Dioxus、其 Rust 管理服务、Native E2E 与旧打包流程已退役。Windows 最终交付仍按 [阶段门槛](/SteamWrapper/zh-cn/project/design/windows-v2/#8-实施顺序与停止条件)验收。
 
 [Manager 实测比较](/SteamWrapper/zh-cn/project/decisions/manager-comparison/)是选型的归档证据；[测量脚本](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/scripts/windows/Measure-ManagerComparison.ps1)与 Dioxus 源码固定在提交 `ca6a09e`，不再是当前开发前置条件。
 
@@ -18,13 +18,13 @@ SteamWrapper 分别验证跨 Windows/Linux 的 Rust core 与独立 Runner，以�
 | 文档 / AGENTS / 技能 | 审核 diff、链接和指令冲突；文档/站点变更运行 `pnpm docs:check` 与 `pnpm docs:build` |
 | Rust core 行为 | 先写能复现缺失行为的测试并观察预期失败，再修改实现；运行受影响 crate 测试；共享契约或跨 crate 影响时运行 workspace 检查和测试 |
 | Runner 启动 / 等待 | 对应平台的真实进程回归测试；CLI / TOML / 公共模块变化再扩展到 workspace |
-| WinUI / C# 服务 | `Invoke-WinUI.ps1 -Action Test`；配置协议或 Runner 分发变化增加 `Test-WinUIContracts.ps1`；UI 变化使用 `Invoke-WinUI.ps1 -Action Publish` 与隔离原生交互（完整命令见下文） |
+| WinUI / C# 服务 | `Invoke-WinUI.ps1 -Action Test`；配置协议或 Runner 分发变化增加 `Test-WinUIContracts.ps1`；发布修改后的 UI，在解锁的交互 Windows 桌面运行 `Test-WinUINativeUi.ps1`，其余 UI 门槛另做限定范围的人工检查 |
 | 纯视觉调整 | 构建并在隔离 Desktop 预览中检查受影响界面；按影响选择现有测试，不用固定 CSS 字符串代替视觉验收 |
 | 发布 / 工具链或共享构建变化 | 相关 Rust/WinUI 门禁、当前 Windows Runner staging、完整发布目录与 `Test-WinUIPublish.ps1`；安装器另行验收 |
 
 CI 工作流仍执行各自完整门禁。上表限定日常本地工作量，不删减 CI。已通过的检查只在新改动、失败或未解决疑点出现时重跑；缺少工具时记录阻塞，不把未运行写成通过。
 
-行为回归优先验证外部结果。服务或源码声明测试不能证明原生窗口、可访问性、布局或文件选择行为。WinUI 自动化原生 UI 门禁尚未实现，见 [路线图](/SteamWrapper/zh-cn/project/roadmap/)；隔离的人工原生验收须单独记录。
+行为回归优先验证外部结果。服务或源码声明测试不能证明原生窗口、可访问性、布局或文件选择行为。现有仅用于开发的原生 UI 回归工具通过 Windows UI Automation 操作实际 WinUI 应用；首个切片不等于[原生验收路线图](/SteamWrapper/zh-cn/project/roadmap/)全部完成。实际执行用例与限定范围的人工检查须分别记录。
 
 <a id="winui-迁移的新增验收"></a>
 
@@ -36,6 +36,7 @@ CI 工作流仍执行各自完整门禁。上表限定日常本地工作量，�
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
 pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
+pwsh -NoProfile -File scripts/windows/Test-WinUINativeUi.ps1
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
@@ -85,7 +86,17 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 | Windows 图片解码器 | `Invoke-WinUI.ps1 -Action Test` | 生产解码器及 Windows codec；有效／损坏图片、资源限制与预先取消，不创建 WinUI 窗口 |
 | C# / Rust 契约 | `Test-WinUIContracts.ps1` | 未编辑语义全量比对，以及真实受控 Runner 的 argv/cwd、等待、退出和错误行为 |
 | Windows 发布 | `Test-WinUIPublish.ps1` | 自包含 Manager/Runner 资源与发布目录替换、恢复 |
-| WinUI 交互 | `Invoke-WinUI.ps1 -Action Sandbox` 加单独记录的原生交互 | 一次性数据、真实窗口/picker；自动化原生 UI 门禁仍在计划中 |
+| WinUI 交互 | 发布后运行 `Test-WinUINativeUi.ps1`；额外人工检查使用 `Invoke-WinUI.ps1 -Action Sandbox` | 可丢弃数据下实际窗口的 UIA 回归；其余选择器、输入、布局和玩家门槛单独限定范围 |
+
+## 原生 UI 回归
+
+完整发布后运行 `pwsh -NoProfile -File scripts/windows/Test-WinUINativeUi.ps1`，或可选的 `mise run winui:native-test`。包装脚本验证已有完整便携目录，以锁定依赖 restore/build `SteamWrapper.NativeUi.Tests`，再用新的可丢弃 Steam／用户数据夹具打开实际 Manager。它不重新发布 Manager、不构建安装器、不使用真实游戏库。`-PublishDirectory` 可选择具体的完整便携目录；已安装的版本目录会被拒绝。
+
+执行需要**解锁的交互 Windows 桌面**，套件操作夹具窗口期间应保持该桌面可用。CI 仅编译这个开发用控制台 UIA 工具。WPF 引用用于取得 Windows 自动化 API，不是另一个 Manager 实现，也不进入应用包。托管服务会话中的编译不能记为原生测试通过。
+
+首个切片检查英语启动、现有 AppID 不可改、切换语言时保留 Unicode 编辑、取消未保存导航／关闭窗口、外部保存冲突、重启后保留中文偏好／未知设置，以及未知 Runner 失败时不替换其字节。另覆盖取消原生目标选择器、CDN 关闭时选择／筛选封面缺失或损坏的本地游戏，以及成功保存后保留未知 TOML 并生成稳定 Runner 启动项。选择检查不能证明所有封面已正确呈现或网络请求为零。证据与窗口快照保存在 `target/winui/native-ui/`。工具仅正常关闭自己创建的夹具 Manager；未解决的夹具窗口与诊断文件会保留。中文输入法组合输入、显示缩放、可访问性／布局、剪贴板、实际下载／网络行为及更广玩家验收仍需单独证据。
+
+**2026-10-03 本地记录：**包装脚本针对真正编译的 `0.2.2` 便携目录执行，**10 项原生用例全部通过**。三个可丢弃夹具分别覆盖普通编辑／重启、选择器／封面／成功保存流程和未知 Runner 失败。证据记录实际发布的 EXE／DLL／Runner／清单哈希及 `cleanVm=false`；成功保存另保留 TOML 注释、未知字段与备份字节。这是该切片的真实交互窗口证据，不代表 CI 原生执行、输入法／缩放／剪贴板、零 HTTP 或真实 Steam 验收。W1 仍未完成。
 
 ## 安装器与签名命令
 
@@ -93,7 +104,9 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 完整发布后，`Test-WinUIProductMetadata.ps1` 检查全部七个自有 EXE／DLL 产品（含中文资源）及实际 x64／GUI NativeAOT Host。发布工作流要求此门禁，它不执行文件，也不证明发布者签名。
 
-完整 Publish 并安装已验证 Inno 工具后，`Test-WinUIInstaller.ps1` 在隔离程序／数据根目录运行真实安装和卸载进程。前置条件与证据边界见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)。手动预览工作流执行此门禁并单独构建安装包；普通分支 CI 不打包安装器。干净 Windows 11 客户端、原生向导／Explorer 行为和注册表／快捷方式／断电故障验收仍是独立门槛。
+完整 Publish 并安装已验证 Inno 工具后，`Test-WinUIInstaller.ps1` 在隔离程序／数据根目录运行真实安装／卸载及兼容 maintenance 回滚进程。默认下一版本输入是人工构造的元数据夹具。真实版本验收需冻结旧的完整目录，并用 `-UpgradePublishDirectory` 指向真正编译的新数字版本；命令与证据边界见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)。手动预览工作流执行隔离门禁并单独构建安装包；普通分支 CI 不打包安装器。本地真实版本通过仍不等于干净 Windows 11、原生向导／Explorer 或注册表／快捷方式／断电验收。
+
+**2026-10-03 本地真实版本记录：**经哈希核验的冻结 `0.2.1` 目录与真正编译的 `0.2.2` 载荷完成 **13 个真实进程步骤，结果符合各自预期**，包括英文安装、中文修复／升级、实际 maintenance 回滚 `0.2.2 → 0.2.1`、Inno 再升级、占用／未知文件／迟到自有文件锁拒绝，以及卸载／重装。`numericUpgradeUsesSyntheticMetadataFixture=false`；回滚保留 928 个自有版本文件及 maintenance／卸载器／夹具快捷方式的哈希，六个数据夹具始终未变。两套 Setup 及项目自有 PE 产品匹配其真实数字版本；当前 C#／Rust 契约另行通过。日志与 `evidence.json` 保存在 `target/winui/installer acceptance 中文 ' <id>/`。证据明确标记 `unsigned=true`、`cleanVm=false`。没有可用的干净 VM；这不代表 W2、完整中断／注册表／快捷方式恢复、旧版本清理或认证交付完成。
 
 ## 本地命令
 
@@ -133,15 +146,15 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 
 ## CI
 
-`v2-ci.yml` 定义 Windows / Ubuntu 的 Rust core/Runner 格式／检查／测试门禁及平台进程测试。`winui-windows.yml` 在拉取请求与 `main` 中运行 C# Application 和 Windows 解码器测试、C# / Rust 契约及实际 WinUI 编译。日常 CI 还使用一次性文件／API fixture 运行发布替换、发布包安全和 mock GitHub/CNB 发布器测试，不向外部 Release 写入。它上传测试证据，不生成应用包。
+`v2-ci.yml` 定义 Windows / Ubuntu 的 Rust core/Runner 格式／检查／测试门禁及平台进程测试。`winui-windows.yml` 在拉取请求与 `main` 中运行 C# Application 和 Windows 解码器测试、C# / Rust 契约、实际 WinUI 编译及原生 UI 工具的仅编译门禁；不在托管服务会话执行 UIA。日常 CI 还使用一次性文件／API fixture 运行发布替换、发布包安全和 mock GitHub/CNB 发布器测试，不向外部 Release 写入。它上传测试证据，不生成应用包。
 
 `winui-release.yml` 在版本标签或明确请求的手动预览中重新执行完整门禁，再发布自包含应用，运行全部发布／恢复回归并检查完整布局。版本标签运行先验证源码／标签／版本和双语说明，再生成 portable ZIP、校验和及元数据。标签运行可公开未签名 GitHub 预发布；手动运行只上传预览产物。发布边界和可选 CNB 镜像见[发布准备](/SteamWrapper/zh-cn/development/distribution/)。
 
-旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；手动发布工作流预览现已运行真实隔离安装器进程。WinUI 自动化原生 UI、干净客户端交付和启用更新后的验收仍属于路线图。
+旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；手动发布工作流预览运行真实隔离安装器进程，本地原生 UI 自动化现有首个回归切片。完整原生验收、干净客户端交付和启用更新后的验收仍属于路线图。
 
 ## 限制
 
-- C# 服务/契约和发布检查不能证明原生 UI、可访问性或干净 Windows 安装；WinUI 自动化原生 UI 门禁尚在计划中。
+- C# 服务/契约和发布检查不能证明原生 UI、可访问性或干净 Windows 安装；原生 UI 工具仅证明在交互桌面实际执行的夹具用例，不等于整个 W1 门槛通过。
 - 常规自动化不操作真实 Steam；真实验收需要授权、记录原启动项、保护存档、校验文件并恢复。一键应用/恢复 Launch Options 仍是后续功能。
 - Runner 进程 fixture 仅证明对应平台和已测生命周期场景，不证明真实 Proton、breakaway、Unix daemonize/新 session 或 Steam Deck 兼容性。
 - 当前预览包含完整的 Windows 自包含目录和单独的未签名安装器；隔离安装／卸载测试不能证明干净 Windows VM、原生向导或经过认证的更新验收。

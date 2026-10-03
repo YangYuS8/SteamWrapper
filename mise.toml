@@ -74,6 +74,10 @@ run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish"
 description = "Build and open WinUI with a disposable Steam library and data directories"
 run = "pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox"
 
+[tasks."winui:native-test"]
+description = "Run optional native UI acceptance on an interactive Windows desktop using an existing complete publication"
+run = "pwsh -NoProfile -File scripts/windows/Test-WinUINativeUi.ps1"
+
 [tasks."winui:installer-tools"]
 description = "Install and verify the pinned official Inno compiler under target"
 run = "pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1"

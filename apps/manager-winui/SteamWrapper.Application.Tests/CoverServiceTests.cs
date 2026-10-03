@@ -262,12 +262,14 @@ public sealed class CoverServiceTests
         await File.WriteAllBytesAsync(local, Image);
         var active = 0;
         var maximum = 0;
+        var maximumGate = new object();
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var handler = new FixtureHandler(_ => Response(Image));
         using var service = new CoverService(new DataPaths(fixture.Root), async (_, token) =>
         {
             var count = Interlocked.Increment(ref active);
-            maximum = Math.Max(maximum, count);
+            // A late count=1 writer must not overwrite an observed count=2 peak.
+            lock (maximumGate) { maximum = Math.Max(maximum, count); }
             if (count == 2) started.TrySetResult();
             try { await Task.Delay(Timeout.Infinite, token); return true; }
             finally { Interlocked.Decrement(ref active); }
@@ -374,13 +376,14 @@ public sealed class CoverServiceTests
 
     private sealed class BlockingHandler : HttpMessageHandler
     {
+        private readonly object maximumGate = new();
         public int Active, Maximum, Started;
         public TaskCompletionSource TwoStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource NextStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
         {
             var active = Interlocked.Increment(ref Active);
-            Maximum = Math.Max(Maximum, active);
+            lock (maximumGate) { Maximum = Math.Max(Maximum, active); }
             var started = Interlocked.Increment(ref Started);
             if (started == 2) TwoStarted.TrySetResult();
             if (started == 3) NextStarted.TrySetResult();

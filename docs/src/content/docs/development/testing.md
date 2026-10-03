@@ -9,7 +9,7 @@ description: "Choose relevant service, native UI, Runner, package, and Steam val
 
 
 
-SteamWrapper verifies the Rust core and independent Runner across Windows/Linux, and the WinUI Manager through C# service tests, cross-language contracts and self-contained publication checks. Dioxus, its Rust management services, Native E2E and bundle workflow have been retired. Windows delivery still follows the [stage gates](/SteamWrapper/project/design/windows-v2/#8-实施顺序与停止条件).
+SteamWrapper verifies the Rust core and independent Runner across Windows/Linux, and the WinUI Manager through C# service tests, cross-language contracts, self-contained publication checks and a local interactive native UI regression slice. Dioxus, its Rust management services, Native E2E and bundle workflow have been retired. Windows delivery still follows the [stage gates](/SteamWrapper/project/design/windows-v2/#8-实施顺序与停止条件).
 
 The [measured Manager comparison](/SteamWrapper/project/decisions/manager-comparison/) is archived evidence for the stack decision. Its [comparison script](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/scripts/windows/Measure-ManagerComparison.ps1) and Dioxus source belong to commit `ca6a09e`; they are not current development prerequisites.
 
@@ -24,13 +24,13 @@ Read the affected code and tests first, then choose checks that demonstrate the 
 | Documentation / AGENTS / skills | Review diff, links and instruction conflicts; run `pnpm docs:check` and `pnpm docs:build` for documentation/site changes |
 | Rust core behavior | Add a test that reproduces the missing behavior and observe the expected failure before implementation; run affected crate tests; expand to workspace checks/tests when shared contracts or other crates are affected |
 | Runner launch / waiting | Real process regressions on the affected platform; expand to the workspace for CLI / TOML / shared-module changes |
-| WinUI / C# services | `Invoke-WinUI.ps1 -Action Test`; add `Test-WinUIContracts.ps1` for profile-contract or Runner-distribution changes; use `Invoke-WinUI.ps1 -Action Publish` and isolated native interaction for UI changes (full commands below) |
+| WinUI / C# services | `Invoke-WinUI.ps1 -Action Test`; add `Test-WinUIContracts.ps1` for profile-contract or Runner-distribution changes; publish the changed UI and run `Test-WinUINativeUi.ps1` on an unlocked interactive Windows desktop, with scoped manual checks for remaining UI gates |
 | Purely visual changes | Build and inspect affected screens in an isolated Desktop preview; select existing tests according to impact, without using fixed CSS strings as visual acceptance |
 | Publication / toolchain or shared builds | Relevant Rust/WinUI gates, current Windows Runner staging, complete publish-directory checks and `Test-WinUIPublish.ps1`; installer acceptance remains separate |
 
 CI workflows continue to run their full gates. This table limits routine local work, not CI coverage. Repeat successful checks only when new changes, failures or unresolved questions justify it. Record missing tools as blockers; never label an unrun check as passed.
 
-Behavioral regressions should verify externally observable results. Service or source-declaration tests do not prove native windows, accessibility, layout or file-picker behavior. Automated WinUI native UI coverage is not implemented yet; track it in the [roadmap](/SteamWrapper/project/roadmap/) and record isolated manual native acceptance separately.
+Behavioral regressions should verify externally observable results. Service or source-declaration tests do not prove native windows, accessibility, layout or file-picker behavior. A developer-only native UI regression harness now operates the actual WinUI application through Windows UI Automation; its first slice does not complete the [native acceptance roadmap](/SteamWrapper/project/roadmap/). Record the executed cases and scoped manual checks separately.
 
 <a id="winui-迁移的新增验收"></a>
 
@@ -44,6 +44,7 @@ Verify the existing file contract between C# configuration services and Rust Run
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
 pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
+pwsh -NoProfile -File scripts/windows/Test-WinUINativeUi.ps1
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox
 ```
 
@@ -95,9 +96,19 @@ The 68 official files, three restored files and other non-save files remained un
 | Windows image decoder | `Invoke-WinUI.ps1 -Action Test` | Exact production decoder with Windows codecs; valid/malformed images, resource limits and pre-cancellation, without a WinUI window |
 | C# / Rust contract | `Test-WinUIContracts.ps1` | Complete unedited semantics plus real controlled Runner argv/cwd, waiting, exit and error behavior |
 | Windows publication | `Test-WinUIPublish.ps1` | Self-contained Manager/Runner resources and publish-directory replacement/recovery |
-| WinUI interaction | `Invoke-WinUI.ps1 -Action Sandbox` plus recorded native interaction | Disposable data and actual windows/pickers; an automated native UI gate remains planned |
+| WinUI interaction | `Test-WinUINativeUi.ps1` after publication; `Invoke-WinUI.ps1 -Action Sandbox` for additional manual checks | UIA regressions against actual windows with disposable data; remaining picker, input, layout and player gates are scoped separately |
 
 <a id="本地命令"></a>
+
+## Native UI regression
+
+After a complete publication, run `pwsh -NoProfile -File scripts/windows/Test-WinUINativeUi.ps1`, or optional `mise run winui:native-test`. The wrapper validates the existing portable layout, performs locked restore/build of `SteamWrapper.NativeUi.Tests`, then opens the actual Manager in new disposable Steam/user-data fixtures. It does not republish Manager, build an installer or use the real library. `-PublishDirectory` selects a specific complete portable layout; installed version directories are rejected.
+
+Execution needs an **unlocked interactive Windows desktop**; keep that desktop available while the suite operates its fixture windows. CI only compiles this developer-only console UIA harness. Its WPF reference supplies Windows automation APIs; it is not another Manager implementation and is not shipped in application packages. A hosted service-session build is not a native test pass.
+
+The first slice checks English startup, existing AppID immutability, Unicode edits across language changes, cancellation of unsaved navigation/window close, external-save conflicts, Chinese preference/unknown-setting persistence across restart, and unknown Runner failure without replacing its bytes. It also exercises native target-picker cancellation, selecting/filtering local games with missing/corrupt art while CDN is off, and a successful save preserving unknown TOML and generating stable Runner Launch Options. These selection checks do not prove every rendered cover or zero network traffic. Generated evidence and window snapshots remain under `target/winui/native-ui/`. The harness closes only its own fixture Manager normally; unresolved fixture windows and diagnostic files are retained. IME composition, display scaling, accessibility/layout, clipboard, actual download/network behavior and broader player acceptance still need separate evidence.
+
+**Local 2026-10-03 record:** the wrapper executed all **10 native cases successfully** against the genuinely compiled `0.2.2` portable publication. Three disposable fixtures covered the normal editor/restart, picker/cover/successful-save flow and unknown Runner failure. Evidence records the actual publication EXE/DLL/Runner/manifest hashes and `cleanVm=false`; successful save also preserved TOML comments, unknown fields and backup bytes. This is actual interactive-window evidence for that slice, not CI execution, IME/scaling/clipboard, zero-HTTP or live Steam acceptance. W1 remains open.
 
 ## Installer and signing commands
 
@@ -105,7 +116,9 @@ The 68 official files, three restored files and other non-save files remained un
 
 After full publication, `Test-WinUIProductMetadata.ps1` inspects all seven own EXE/DLL products, including Chinese resources, and the actual x64/GUI NativeAOT Host. The release workflow requires this gate; it does not execute those files or establish their publisher signature.
 
-After a complete publish and verified Inno toolchain installation, `Test-WinUIInstaller.ps1` runs real setup/uninstall processes with isolated program/data roots. Use the [installer guide](/SteamWrapper/guides/installer-preview/) for prerequisites and evidence limits. Manual preview workflows run this gate and separately build setup; ordinary branch CI does not package setup. A clean Windows 11 client, native wizard/Explorer behavior and registry/shortcut/power-loss failure acceptance remain independent gates.
+After a complete publish and verified Inno toolchain installation, `Test-WinUIInstaller.ps1` runs real setup/uninstall and compatible maintenance-rollback processes with isolated program/data roots. Its default next-version input is a synthetic metadata fixture. Use a frozen old complete layout and `-UpgradePublishDirectory` pointing to a genuinely compiled new numeric version for real-version acceptance; see the [installer guide](/SteamWrapper/guides/installer-preview/) for commands and evidence limits. Manual preview workflows run the isolated gate and separately build setup; ordinary branch CI does not package setup. Local real-version success still does not establish clean Windows 11, native wizard/Explorer or registry/shortcut/power-loss acceptance.
+
+**Local 2026-10-03 real-version record:** a hash-verified frozen `0.2.1` layout and genuinely compiled `0.2.2` payload completed **13 real process steps with their expected outcomes**, including English installation, Chinese repair/upgrade, actual maintenance rollback `0.2.2 → 0.2.1`, Inno re-upgrade, busy/unknown-file/late-owned-lock refusals and removal/reinstall. `numericUpgradeUsesSyntheticMetadataFixture=false`; rollback preserved hashes for 928 owned version files plus maintenance/uninstaller/fixture shortcuts, and all six data fixtures remained unchanged. Both setups and their project-owned PE products matched their real numeric versions; current C#/Rust contracts passed separately. Logs and `evidence.json` remain under `target/winui/installer acceptance 中文 ' <id>/`. Evidence explicitly records `unsigned=true` and `cleanVm=false`. No clean VM was available; this does not complete W2, whole interruption/registry/shortcut recovery, pruning or authenticated delivery.
 
 ## Local commands
 
@@ -147,17 +160,17 @@ Runner process tests cover Linux `process_group`, Windows Job Object and `proces
 
 ## CI
 
-`v2-ci.yml` defines the Windows / Ubuntu Rust core/Runner format/check/test gates and platform process tests. `winui-windows.yml` runs C# Application and Windows decoder tests, C# / Rust contracts, and actual WinUI compilation on pull requests and `main`. Daily CI also runs publication-replacement and release-package safety tests plus mock GitHub/CNB publisher tests using disposable file/API fixtures; these do not write to external releases. It uploads test evidence, not an application package.
+`v2-ci.yml` defines the Windows / Ubuntu Rust core/Runner format/check/test gates and platform process tests. `winui-windows.yml` runs C# Application and Windows decoder tests, C# / Rust contracts, actual WinUI compilation and a compile-only native UI harness gate on pull requests and `main`. It does not run UIA in the hosted service session. Daily CI also runs publication-replacement and release-package safety tests plus mock GitHub/CNB publisher tests using disposable file/API fixtures; these do not write to external releases. It uploads test evidence, not an application package.
 
 `winui-release.yml` runs the complete gates again for version tags or an explicit manual preview, then publishes the self-contained application, executes all publication/recovery regressions and inspects the complete layout. Version-tag runs validate the source/tag/version and bilingual notes before packaging a portable ZIP, checksums and metadata. Tag runs can publish an unsigned GitHub prerelease; manual runs only upload preview artifacts. See [release preparation](/SteamWrapper/development/distribution/) for the release boundary and optional CNB mirror.
 
-The former Dioxus Native E2E, AppImage job and NSIS release chain are removed. Workflow declarations do not prove that the latest run passed; inspect actual results separately. Manual release-workflow previews now run real isolated installer processes. Automated WinUI native UI, clean-client delivery and enabled updater acceptance remain roadmap work.
+The former Dioxus Native E2E, AppImage job and NSIS release chain are removed. Workflow declarations do not prove that the latest run passed; inspect actual results separately. Manual release-workflow previews run real isolated installer processes; local native UI automation now has a first regression slice. Complete native acceptance, clean-client delivery and enabled updater acceptance remain roadmap work.
 
 <a id="限制"></a>
 
 ## Limitations
 
-- C# service/contract and publish checks do not establish native UI behavior, accessibility or a clean Windows installation. The automated WinUI native UI gate is still planned.
+- C# service/contract and publish checks do not establish native UI behavior, accessibility or a clean Windows installation. The native UI harness proves only its executed fixture cases on an interactive desktop, not the complete W1 gate.
 - Routine automation does not operate real Steam. Live acceptance needs authorization, recorded original options, save protection, integrity checks and restoration. One-click Launch Options apply/restore remains a future feature.
 - Runner process fixtures prove only their tested platform and lifecycle scenario; they do not establish real Proton, breakaway, Unix daemonize/new-session or Steam Deck compatibility.
 - The preview includes a complete self-contained Windows directory and a separate unsigned installer. Isolated installation/removal tests do not establish clean Windows VM, native wizard or authenticated update acceptance.

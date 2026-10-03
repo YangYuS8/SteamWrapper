@@ -75,6 +75,13 @@ foreach ($entry in $manifest.files) {
     if ($entry.path.Contains('\') -or $entry.bytes -ne (Get-Item -LiteralPath $file).Length -or $entry.sha256 -ne (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()) { throw 'A manifest path, size or actual digest is incorrect.' }
 }
 $beforeHash = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash
+$rejected = $false
+try {
+    # Supplying an upgrade directory must not turn text/metadata fixtures into
+    # genuine next-version evidence. Reject products before touching the compiler.
+    $null = & (Join-Path $PSScriptRoot 'Test-WinUIInstaller.ps1') -PublishDirectory $payload -UpgradePublishDirectory $payload -Tag 'v0.2.1-preview.1' -UpgradeTag 'v0.2.2-preview.1' -Compiler (Join-Path $outside 'missing-compiler.exe')
+} catch { $rejected = $_.Exception.Message -match 'Own PE product/version mismatch' }
+if (-not $rejected) { throw 'Real-version installer acceptance did not reject synthetic products before compiler/installer execution.' }
 $repeatOutput = Join-Path $root 'repeated-output'
 [IO.Directory]::CreateDirectory($repeatOutput) | Out-Null
 $oldSetup = Join-Path $repeatOutput 'SteamWrapper-v0.2.1-preview.1-win-x64-setup.exe'

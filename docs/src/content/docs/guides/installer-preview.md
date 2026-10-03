@@ -16,10 +16,10 @@ With the documented Windows development tools installed, run from the repository
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
-pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.1-preview.1
+pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.2-preview.1
 ```
 
-The last command produces `target/winui/installers/v0.2.1-preview.1/SteamWrapper-v0.2.1-preview.1-win-x64-setup.exe` and inspection metadata. The tag must match the numeric source version. It labels a local artifact; the command does not create a Git tag or publish a Release. Do not reuse a public version for changed bytes.
+The last command produces `target/winui/installers/v0.2.2-preview.1/SteamWrapper-v0.2.2-preview.1-win-x64-setup.exe` and inspection metadata for the current `0.2.2` source. The tag must match the numeric source version. It labels a local artifact; the command does not create a Git tag or publish a Release. Do not reuse a public version for changed bytes. The dated `0.2.1` artifacts and verification records remain historical evidence.
 
 Changing only the prerelease suffix does not provide an upgrade path: the deployment manifest changes while the numeric version remains the same, and installation rejects different content at the same base. New installable payloads need a new coordinated three-part source/product version; retry an existing build with its exact immutable files. See [release version rules](/SteamWrapper/development/distribution/#prepare-and-trigger-a-release).
 
@@ -32,7 +32,20 @@ pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerScripts.ps1
 pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1
 ```
 
-The latter runs real setup and uninstall processes under a fresh repository `target` root, with a distinct test AppId and shortcuts redirected to a disposable fixture directory. Its synthetic next-version bundle tests the deployment transaction only; it is not a real next-version build or signing evidence. It never uses the real game library. The script reports the isolated directory containing its logs and `evidence.json`; its path includes Chinese text, spaces and an apostrophe to test path handling.
+The latter runs real setup, compatible maintenance rollback and uninstall processes under a fresh repository `target` root, with a distinct test AppId and shortcuts redirected to a disposable fixture directory. Its default synthetic next-version bundle tests the deployment transaction only; it is not a real next-version build or signing evidence. It never uses the real game library. The script reports the isolated directory containing its logs and `evidence.json`; its path includes Chinese text, spaces and an apostrophe to test path handling.
+
+For genuine numeric-version upgrade acceptance, freeze the complete old portable publication before replacing it, reject reparse/private inputs, and record source/copy hashes. Build the new coordinated source/product version normally; changing the old Runner manifest or PE metadata does not create a new-version binary. With a verified frozen `0.2.1` directory and genuinely compiled `0.2.2` publication, replace `REPLACE_WITH_ID` with the recorded baseline directory name:
+
+```powershell
+$baseline = 'target/winui/upgrade-baselines/REPLACE_WITH_ID/v0.2.1'
+pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1 `
+  -PublishDirectory $baseline `
+  -UpgradePublishDirectory target/winui/publish `
+  -Tag v0.2.1-installertest.1 `
+  -UpgradeTag v0.2.2-installertest.1
+```
+
+When an upgrade publication is supplied, the script checks all seven own PE product/version fields in both layouts before invoking the compiler or installer. The expected successful evidence includes `numericUpgradeUsesSyntheticMetadataFixture=false` and a compatible rollback executed by the actual maintenance process, followed by reactivation through the real upgraded installer. Inspect the recorded tags, versions, owned-file preservation and user-data hashes. This command uses the isolated test root, not the production installation. Local success still does not establish clean Windows, native wizard/Explorer, multi-user or every interruption/registry/shortcut failure gate. No clean VM was available for the local 2026-10-03 preparation.
 
 ## Installation and daily use
 
