@@ -4,18 +4,18 @@
 
 日常拉取请求与 `main` 运行测试、契约和实际 WinUI 编译，不公开发布，也不上传应用包。`.github/workflows/winui-release.yml` 在版本标签或明确的手动预览中构建完整 Windows x64 应用。GitHub Pages 文档部署独立保留。
 
-版本标签运行在完整门禁和包核验通过后公开**未签名 WinUI 预发布**。手动 **Run workflow** 可选择分支／ref，执行完整门禁并上传 `SteamWrapper-WinUI-preview-windows-x64`，不会创建公开发布。安装器、发布者签名、干净系统／更新／卸载验收及可选更新器仍待完成。
+版本标签运行在完整门禁和包核验通过后公开**未签名 WinUI 便携预发布**。手动 **Run workflow** 可选择分支／ref，执行完整门禁并上传 `SteamWrapper-WinUI-preview-windows-x64` 和通过测试的未签名 `SteamWrapper-WinUI-installer-preview-windows-x64`，不会创建公开发布。安装器及本地真实版本升级／回滚切片已实现，干净客户端／更广恢复验收、公开安装器发行、发布者签名及可选更新器仍待完成。
 
 ## 准备版本
 
 1. 选择尚未使用的新标签，采用严格的 `vMAJOR.MINOR.PATCH[-prerelease]` 格式。数字部分不要带前导零，不使用 build metadata，也不要移动已有标签。保留历史发布。
-2. 将 `apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj`、`crates/core/Cargo.toml` 和 `crates/runner/Cargo.toml` 设置为同一个三位基础版本。更新 `Cargo.lock` 中受影响的 workspace 包版本，审阅依赖改动是否符合预期。
+2. 将 `apps/manager-winui` 下生产项目 `SteamWrapper.Manager.csproj`、`SteamWrapper.Application.csproj`，`apps/deployment-windows` 下 `SteamWrapper.Deployment.csproj`、`SteamWrapper.Host.csproj`，以及 `crates/core/Cargo.toml`／`crates/runner/Cargo.toml` 设置为同一个三位基础版本。更新 `Cargo.lock` 中两个受影响的 workspace 包版本，审阅依赖改动是否符合预期。新的可安装载荷／清单需使用尚未使用的新数字基础版本，不能仅改预发布后缀；同基础版本的不同内容升级会被拒绝。
 3. 将 [TEMPLATE.en.md](TEMPLATE.en.md) 和 [TEMPLATE.zh-CN.md](TEMPLATE.zh-CN.md) 复制为本目录的 `<tag>.en.md` 与 `<tag>.zh-CN.md`。用完整且相互对应的内容替换所有占位。每份文件须非空、不超过 256 KiB，包含带准确标签的 Markdown 标题，标签后为留白或行尾，并有非空正文。
 4. 如实说明变更、支持的 Windows／平台、已知限制、未签名预览状态及安装／更新／恢复步骤。英语为项目默认语言，同时提供完整简体中文。不包含凭据、用户设置、诊断、存档或游戏文件。
 5. 将经过审阅的版本／说明改动合入 `main`，确认所选提交已通过 CI。标签提交必须在 `main` 的历史中。
 6. 对该准确提交创建并推送附注标签。推送后先执行完整 Windows/Linux Runner 门禁、C# 测试／契约、实际 WinUI 编译、自包含发布及全部发布／恢复检查，再进行打包。
 
-当前源码版本为 `0.2.0`。未来的**示例** `v0.2.1-preview.1` 需要将源码版本改为 `0.2.1`，并提供 `v0.2.1-preview.1.en.md` / `v0.2.1-preview.1.zh-CN.md`。示例与模板本身不会创建或发布版本。
+当前源码版本为 `0.2.2`，用于对冻结的 `0.2.1` 字节执行本地真实升级验收。新的可安装发行载荷，例如未来的**示例** `v0.2.3-preview.1`，需要协调源码／产品版本为 `0.2.3`，并提供 `v0.2.3-preview.1.en.md`／`v0.2.3-preview.1.zh-CN.md`。既有 `v0.2.1-preview.1` 说明保留为历史准备；文件存在不证明标签或 Release 已公开。示例与模板本身不会创建或发布版本。重试已有产物时保留完全相同的不可变字节。
 
 ## 附件与重试
 

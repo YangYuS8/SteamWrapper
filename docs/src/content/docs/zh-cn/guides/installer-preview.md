@@ -16,10 +16,10 @@ Inno Setup 安装器和 C# 部署组件已实现，面向 **Windows 11 24H2 或�
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
-pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.1-preview.1
+pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.2-preview.1
 ```
 
-最后一条命令生成 `target/winui/installers/v0.2.1-preview.1/SteamWrapper-v0.2.1-preview.1-win-x64-setup.exe` 和检查元数据。标签必须匹配源码的三段版本号，仅用于标识本地产物；命令不会创建 Git 标签或发布 Release。已公开版本不能复用于不同字节。
+最后一条命令根据当前 `0.2.2` 源码生成 `target/winui/installers/v0.2.2-preview.1/SteamWrapper-v0.2.2-preview.1-win-x64-setup.exe` 和检查元数据。标签必须匹配源码的三段版本号，仅用于标识本地产物；命令不会创建 Git 标签或发布 Release。已公开版本不能复用于不同字节。有日期的 `0.2.1` 产物和验证记录保留为历史证据。
 
 仅改变预发布后缀不能形成升级路径：部署清单改变、数字版本不变，安装会拒绝同基础版本的不同内容。新的可安装载荷需使用新的协调三段源码／产品版本；重试已有构建时复用完全相同的不可变文件。见[发布版本规则](/SteamWrapper/zh-cn/development/distribution/#准备并触发发布)。
 
@@ -32,7 +32,20 @@ pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerScripts.ps1
 pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1
 ```
 
-后者在仓库 `target` 下新建目录，使用独立测试 AppId 和真实安装、卸载进程，快捷方式重定向到一次性夹具目录。其中人工构造的下一版本文件只验证部署事务，不代表真实下一版本构建或签名证据。测试不使用真实游戏库；脚本会报告包含日志和 `evidence.json` 的隔离目录，其路径包含中文、空格和单引号，用于验证路径处理。
+后者在仓库 `target` 下新建目录，使用独立测试 AppId 和真实安装、兼容 maintenance 回滚及卸载进程，快捷方式重定向到一次性夹具目录。默认人工构造的下一版本文件只验证部署事务，不代表真实下一版本构建或签名证据。测试不使用真实游戏库；脚本会报告包含日志和 `evidence.json` 的隔离目录，其路径包含中文、空格和单引号，用于验证路径处理。
+
+真实数字版本升级验收应在替换发布目录前冻结完整的旧便携目录，拒绝重解析／私有输入，并记录源文件与副本的哈希。正常编译新的协调源码／产品版本；仅修改旧 Runner 清单或 PE 元数据不构成新版本二进制。已有经验证的冻结 `0.2.1` 目录和真正编译的 `0.2.2` 发布目录后，将 `REPLACE_WITH_ID` 替换为证据中记录的基线目录名：
+
+```powershell
+$baseline = 'target/winui/upgrade-baselines/REPLACE_WITH_ID/v0.2.1'
+pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1 `
+  -PublishDirectory $baseline `
+  -UpgradePublishDirectory target/winui/publish `
+  -Tag v0.2.1-installertest.1 `
+  -UpgradeTag v0.2.2-installertest.1
+```
+
+提供升级发布目录时，脚本会在调用编译器或安装器前检查两份完整布局中七个自有 PE 的产品和版本字段。成功证据应包含 `numericUpgradeUsesSyntheticMetadataFixture=false`，以及实际 maintenance 进程执行的兼容回滚，随后由真实新版安装器重新激活。检查记录的标签、版本、自有文件保留与用户数据哈希。命令使用隔离测试根目录，不操作生产安装。本地通过仍不等于干净 Windows、原生向导／Explorer、多用户或全部中断／注册表／快捷方式故障门槛通过。2026-10-03 本地准备期间没有可用的干净 VM。
 
 ## 安装与日常使用
 

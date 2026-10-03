@@ -16,6 +16,14 @@ if (-not $PublishDirectory) { $PublishDirectory = Join-Path $repoRoot 'target/wi
 if (-not $Tag) { $runnerVersion = (Get-Content -LiteralPath (Join-Path $PublishDirectory 'Runner/runner-manifest.json') -Raw | ConvertFrom-Json).version; $Tag = "v$runnerVersion-installertest.1" }
 if (-not $UpgradeTag) { $currentVersion = [Version](Assert-WinUIInstallerTag $Tag); $UpgradeTag = "v$($currentVersion.Major).$($currentVersion.Minor).$($currentVersion.Build + 1)-installertest.1" }
 $null = Assert-WinUIInstallerTag $UpgradeTag
+if ($UpgradePublishDirectory) {
+    # An explicitly supplied directory is genuine-version evidence only after
+    # inspecting the actual products. JSON-only version edits are insufficient.
+    $initialPublish = Assert-WinUIInstallerPath $PublishDirectory
+    $upgradePublish = Assert-WinUIInstallerPath $UpgradePublishDirectory
+    $null = & (Join-Path $PSScriptRoot 'Test-WinUIProductMetadata.ps1') -PublishDirectory $initialPublish -ExpectedVersion (Assert-WinUIInstallerTag $Tag)
+    $null = & (Join-Path $PSScriptRoot 'Test-WinUIProductMetadata.ps1') -PublishDirectory $upgradePublish -ExpectedVersion (Assert-WinUIInstallerTag $UpgradeTag)
+}
 $root = Assert-WinUIInstallerPath (Join-Path $repoRoot ("target/winui/installer acceptance 中文 ' " + [Guid]::NewGuid().ToString('N'))) -Output
 $program = Join-Path $root 'program'
 $data = Join-Path $root 'data/SteamWrapper'
@@ -45,6 +53,31 @@ function Invoke-IsolatedInstaller {
     if ($ExpectFailure) {
         if ($process.ExitCode -eq 0) { throw "Isolated installer $Name unexpectedly succeeded." }
     } elseif ($process.ExitCode -ne 0) { throw "Isolated installer $Name failed with exit code $($process.ExitCode); see $log." }
+}
+
+function Invoke-IsolatedRollback {
+    param([string]$Executable, [string]$Name)
+    $log = Join-Path $root "$Name.log"
+    $start = [Diagnostics.ProcessStartInfo]::new($Executable)
+    $start.UseShellExecute = $false
+    $start.CreateNoWindow = $true
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    $start.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
+    $start.StandardErrorEncoding = [Text.UTF8Encoding]::new($false)
+    foreach ($argument in @('--rollback', '--root', $program, '--test-root', '--language', 'en')) { $start.ArgumentList.Add($argument) }
+    $process = [Diagnostics.Process]::new()
+    $process.StartInfo = $start
+    try {
+        if (-not $process.Start()) { throw "Isolated maintenance $Name did not start." }
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit(120000)) { throw "Isolated maintenance $Name did not exit within its acceptance timeout. Its process was not killed." }
+        $diagnostics = "stdout:`n" + $stdout.GetAwaiter().GetResult() + "`nstderr:`n" + $stderr.GetAwaiter().GetResult()
+        [IO.File]::WriteAllText($log, $diagnostics, [Text.UTF8Encoding]::new($false))
+        $events.Add([pscustomobject]@{ name = $Name; kind = 'maintenance'; operation = 'rollback'; exitCode = $process.ExitCode; log = $log })
+        if ($process.ExitCode -ne 0) { throw "Isolated maintenance $Name failed with exit code $($process.ExitCode); see $log." }
+    } finally { $process.Dispose() }
 }
 
 function Assert-PreservedData {
@@ -88,6 +121,8 @@ try {
     [IO.File]::Delete((Join-Path $program 'SteamWrapper.exe'))
     Invoke-IsolatedInstaller -Executable $setup -Arguments @('/LANG=chinesesimplified') -Name repair-chinese
     if ((Read-Installation).current.tag -ne $Tag) { throw 'Repair changed the active version.' }
+    $initialState = Read-Installation
+    $initialLauncherHash = (Get-FileHash -LiteralPath (Join-Path $program 'SteamWrapper.exe') -Algorithm SHA256).Hash
     Assert-PreservedData
 
     $syntheticUpgrade = -not $UpgradePublishDirectory
@@ -109,6 +144,36 @@ try {
     Invoke-IsolatedInstaller -Executable $upgrade -Arguments @('/LANG=chinesesimplified', '/NOICONS', '/TASKS=""') -Name upgrade-chinese
     $state = Read-Installation
     if ($state.current.tag -ne $UpgradeTag -or $state.previous.tag -ne $Tag) { throw 'Upgrade did not retain and identify the previous complete version.' }
+    Assert-PreservedData
+
+    # Exercise the actual compatible rollback CLI after a real Inno upgrade,
+    # keeping both complete payloads and all independently owned Inno files.
+    $upgradeState = $state
+    $rollbackOwnedHashes = @{}
+    $versionFiles = @(Get-ChildItem -LiteralPath (Join-Path $program 'versions') -Recurse -File)
+    $maintenance = Join-Path $program 'maintenance/SteamWrapper.Deployment.exe'
+    $innoFiles = @(Get-ChildItem -LiteralPath $program -Filter 'unins*' -File)
+    foreach ($file in $versionFiles + $innoFiles) { $rollbackOwnedHashes[$file.FullName] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash }
+    foreach ($path in @($maintenance, $desktopShortcut, $startShortcut)) { $rollbackOwnedHashes[$path] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
+    if ($rollbackOwnedHashes[$maintenance] -ne $upgradeState.launcherSha256) { throw 'The rollback maintenance executable is not the verified upgraded payload Host.' }
+    Invoke-IsolatedRollback -Executable $maintenance -Name rollback-to-previous
+    $rollbackState = Read-Installation
+    foreach ($field in @('tag', 'version', 'manifestSha256')) {
+        if ($rollbackState.current.$field -ne $initialState.current.$field -or $rollbackState.previous.$field -ne $upgradeState.current.$field) { throw 'Compatible rollback did not swap the verified current and previous version identities.' }
+    }
+    $restoredLauncherHash = (Get-FileHash -LiteralPath (Join-Path $program 'SteamWrapper.exe') -Algorithm SHA256).Hash
+    if ($restoredLauncherHash -ne $initialLauncherHash -or $restoredLauncherHash -ne $rollbackState.launcherSha256) { throw 'Compatible rollback did not restore the verified previous launcher bytes.' }
+    if ($rollbackState.transaction -eq $upgradeState.transaction -or $rollbackState.healthy -or (Test-Path -LiteralPath (Join-Path $program 'installation-journal.json'))) { throw 'Compatible rollback retained an old health acknowledgment or an incomplete deployment transaction.' }
+    if (@(Get-ChildItem -LiteralPath (Join-Path $program 'versions') -Recurse -File).Count -ne $versionFiles.Count) { throw 'Compatible rollback changed the complete owned version file set.' }
+    foreach ($entry in $rollbackOwnedHashes.GetEnumerator()) {
+        if (-not (Test-Path -LiteralPath $entry.Key -PathType Leaf) -or $entry.Value -ne (Get-FileHash -LiteralPath $entry.Key -Algorithm SHA256).Hash) { throw 'Compatible rollback changed a complete owned version, maintenance Host, uninstaller or fixture shortcut.' }
+    }
+    Assert-PreservedData
+    # Restore the same verified upgrade via Inno before the existing uninstall
+    # rejection/removal checks. Rollback is never implemented as a downgrade setup.
+    Invoke-IsolatedInstaller -Executable $upgrade -Arguments @('/LANG=chinesesimplified', '/NOICONS', '/TASKS=""') -Name upgrade-after-rollback
+    $state = Read-Installation
+    if ($state.current.tag -ne $UpgradeTag -or $state.current.version -ne $upgradeState.current.version -or $state.current.manifestSha256 -ne $upgradeState.current.manifestSha256 -or $state.previous.tag -ne $Tag) { throw 'The real installer did not reactivate the exact upgraded payload after compatible rollback.' }
     Assert-PreservedData
 
     $uninstallers = @(Get-ChildItem -LiteralPath $program -Filter 'unins*.exe' -File)
@@ -144,9 +209,10 @@ try {
     Invoke-IsolatedInstaller -Executable (Join-Path $program 'unins000.exe') -Arguments @() -Name uninstall-reinstalled
     if (Test-Path -LiteralPath (Join-Path $program 'SteamWrapper.exe')) { throw 'The reinstalled Manager could not be removed cleanly.' }
     Assert-PreservedData
-    $evidence = [ordered]@{ schemaVersion = 1; isolatedRoot = $root; programRoot = $program; installationRootExplicitlyIsolated = $true; tests = $events.ToArray(); preservedDataFiles = $preserved.Count; actualFixtureShortcutsRemoved = $true; runPhaseLeaseAcquiredByIndependentProcess = $true; lockedOwnedFilesUninstallRejected = $true; reinstalledAfterOwnedUninstallReceipt = $true; unsigned = $true; cleanVm = $false; numericUpgradeUsesSyntheticMetadataFixture = $syntheticUpgrade }
+    $rollbackEvidence = [ordered]@{ executedByActualMaintenanceProcess = $true; fromTag = $upgradeState.current.tag; fromVersion = $upgradeState.current.version; toTag = $rollbackState.current.tag; toVersion = $rollbackState.current.version; restoredLauncherSha256 = $restoredLauncherHash.ToLowerInvariant(); preservedOwnedVersionFiles = $versionFiles.Count; preservedMaintenanceUninstallerAndShortcuts = $true; reupgradedWithActualInstaller = $true }
+    $evidence = [ordered]@{ schemaVersion = 1; isolatedRoot = $root; programRoot = $program; installationRootExplicitlyIsolated = $true; tests = $events.ToArray(); preservedDataFiles = $preserved.Count; actualFixtureShortcutsRemoved = $true; runPhaseLeaseAcquiredByIndependentProcess = $true; lockedOwnedFilesUninstallRejected = $true; reinstalledAfterOwnedUninstallReceipt = $true; unsigned = $true; cleanVm = $false; numericUpgradeUsesSyntheticMetadataFixture = $syntheticUpgrade; compatibleRollback = $rollbackEvidence }
     [IO.File]::WriteAllText((Join-Path $root 'evidence.json'), ($evidence | ConvertTo-Json -Depth 6), [Text.UTF8Encoding]::new($false))
-    Write-Host "Passed isolated actual Inno install, bilingual repair, upgrade and uninstall: $root"
+    Write-Host "Passed isolated actual Inno install, bilingual repair, upgrade, compatible maintenance rollback and uninstall: $root"
     return (Join-Path $root 'evidence.json')
 } finally {
     $env:STEAMWRAPPER_DEPLOYMENT_TEST = $oldTest

@@ -74,10 +74,13 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test     # Profil
 pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1          # C# / Rust round trips and controlled real Runner parent/child processes
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build    # Release XAML compilation; stage the current Rust Runner
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish  # Self-contained target/winui/publish directory, including native resource indexes
+pwsh -NoProfile -File scripts/windows/Test-WinUINativeUi.ps1           # Actual-window UIA regressions; use an unlocked interactive desktop after publication
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox  # Publish and open the native preview with disposable Steam/user directories
 ```
 
 Each project's `packages.lock.json` pins NuGet dependencies, and daily commands use locked restore. Application and deployment projects explicitly list win-x64 to prevent lockfile drift between tests and publication. Host pins NativeAOT dependencies; publication loads the documented native SDK before producing its independent GUI-subsystem executable. Use `--force-evaluate` only for deliberate dependency/target changes and review lockfiles.
+
+`Test-WinUINativeUi.ps1` validates an existing complete portable layout and builds/runs the developer-only console UIA harness with new disposable Steam/user-data fixtures. It does not republish Manager or operate the real library. Use `-PublishDirectory` for a specific portable layout; installed version directories are rejected. Execution requires an unlocked interactive Windows desktop, while CI only compiles the harness. Optional mise alias: `winui:native-test`. Fixture evidence stays under `target/winui/native-ui/`; see [testing](/SteamWrapper/development/testing/) for coverage and remaining native gates.
 
 `-Action Test` includes deployment regressions; `-Action Build` compiles Host without publishing an application package. `-Action Publish` also bundles `SteamWrapper.Deployment.dll` and `Deployment/SteamWrapper.exe`. For the verified Inno compiler, isolated real setup tests and local setup build, use the direct commands in the [installer preview guide](/SteamWrapper/guides/installer-preview/). Optional mise aliases are `winui:installer-tools`, `winui:installer-test` and `winui:signing-test`.
 
@@ -148,7 +151,7 @@ Daily development continues to use the direct scripts and sandbox commands above
 
 Microsoft's CLI template can create a WinUI/XAML project through .NET. Version 0.0.6-alpha unconditionally updates three NuGet packages in its post-creation actions; `UseLatestWindowsAppSDK=false` does not constrain those actions. After generation, the script pins actual package references and the minimum OS version with XML before publishing. Template arguments alone do not prove that dependency versions are pinned. [Official WinUI quickstart](https://learn.microsoft.com/en-us/windows/apps/get-started/start-here)
 
-An automated WinUI native UI gate is not implemented yet; it remains on the [roadmap](/SteamWrapper/project/roadmap/). C# service tests, contracts and publication checks cannot substitute for isolated native window/picker, keyboard, language and scaling acceptance.
+The native UI harness provides a first repeatable WinUI regression slice, with broader acceptance still on the [roadmap](/SteamWrapper/project/roadmap/). Its Windows automation/WPF API references are developer tooling, not a shipped UI implementation. C# service tests, contracts, publication and harness compilation cannot substitute for an actual interactive run or the remaining picker, keyboard/IME, language, scaling and player checks. Local isolated execution does not establish a clean Windows installation.
 
 The smoke uses `net10.0-windows10.0.26100.0`, x64, unpackaged deployment, and self-contained .NET/Windows App SDK, without trimming. It verifies XAML compilation and the publication directory. It does not install or launch MSIX, enable Developer Mode, launch games, or establish clean-system runtime or native-interaction acceptance. The actual Manager has its own project, package locks, services and cross-language tests.
 

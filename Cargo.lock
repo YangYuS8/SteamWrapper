@@ -321,7 +321,7 @@ checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 
 [[package]]
 name = "steamwrapper-core"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "serde",
  "thiserror",
@@ -330,7 +330,7 @@ dependencies = [
 
 [[package]]
 name = "steamwrapper-runner"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "clap",

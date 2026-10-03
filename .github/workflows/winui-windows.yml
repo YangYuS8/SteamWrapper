@@ -67,6 +67,16 @@ jobs:
       - name: Compile the actual WinUI Manager and Runner resources
         run: mise.exe run winui:build
 
+      # Hosted service sessions cannot establish native-window acceptance.
+      # Compile the developer-only UIA client without opening it or publishing Setup.
+      - name: Compile the developer native UI acceptance harness
+        run: |
+          $project = 'apps/manager-winui/SteamWrapper.NativeUi.Tests/SteamWrapper.NativeUi.Tests.csproj'
+          mise.exe exec -- dotnet restore $project --locked-mode
+          if ($LASTEXITCODE -ne 0) { throw 'Native UI harness locked restore failed.' }
+          mise.exe exec -- dotnet build $project --no-restore --configuration Release
+          if ($LASTEXITCODE -ne 0) { throw 'Native UI harness compilation failed.' }
+
       - name: Test publication replacement using disposable files
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
 
