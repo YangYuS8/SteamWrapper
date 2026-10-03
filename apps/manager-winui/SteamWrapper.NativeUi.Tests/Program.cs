@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Windows.Automation;
 
 namespace SteamWrapper.NativeUi.Tests;
@@ -66,6 +68,7 @@ internal static class Program
         }
         try
         {
+            SystemLanguageDefaults(args[0], args[1]);
             using (var process = Start(fixture))
             {
                 var window = new NativeWindow(process);
@@ -145,12 +148,38 @@ internal static class Program
         {
             File.WriteAllText(Path.Combine(evidenceRoot, "evidence.json"), JsonSerializer.Serialize(new
             {
-                schemaVersion = 1, nativeWindows = true, cleanVm = false, languages = new[] { "en-US", "zh-CN" },
+                schemaVersion = 1, nativeWindows = true, cleanVm = false, languages = new[] { "en-US", "zh-CN" }, systemUiCulture = CultureInfo.CurrentUICulture.Name,
                 publication, publicationSha256 = publicationHashes,
                 fixtureRoot = evidenceRoot, fixtureRoots = FixtureRoots, cases = Results, limits = new[] { "No real Steam/game operation", "IME and display-scaling acceptance not automated", "CDN-off UI state alone is not zero-network evidence", "Clipboard is not modified" }
             }, new JsonSerializerOptions { WriteIndented = true }));
         }
         return Results.Any(result => JsonSerializer.SerializeToElement(result).GetProperty("passed").GetBoolean() == false) ? 1 : 0;
+    }
+
+    private static void SystemLanguageDefaults(string repoRoot, string publish)
+    {
+        var fixture = NativeUiFixture.Create(repoRoot, publish);
+        FixtureRoots.Add(fixture.Root);
+        var settings = JsonNode.Parse(File.ReadAllBytes(fixture.SettingsPath))!.AsObject();
+        settings.Remove("language");
+        File.WriteAllText(fixture.SettingsPath, settings.ToJsonString());
+        var before = File.ReadAllBytes(fixture.SettingsPath);
+        var simplified = CultureInfo.CurrentUICulture.Name is "zh-CN" or "zh-SG" or "zh-Hans"
+            || CultureInfo.CurrentUICulture.Name.StartsWith("zh-Hans-", StringComparison.OrdinalIgnoreCase);
+        Case("first-run language follows the actual supported system UI culture without saving a preference", () =>
+        {
+            using var process = Start(fixture);
+            var window = new NativeWindow(process);
+            try
+            {
+                NativeWindow.Wait(() => window.ById("AddGame").Current.IsEnabled, "system-language startup");
+                Equal(simplified ? "＋ 添加游戏" : "＋ Add game", window.ById("AddGame").Current.Name);
+                BytesEqual(before, File.ReadAllBytes(fixture.SettingsPath), "First startup froze a system-derived language preference.");
+                window.SelectName("Native fixture 中文");
+                Equal("Native fixture 中文", window.Value("ProfileName"));
+            }
+            finally { Capture(window, fixture); window.CloseFixtureNormally(); }
+        });
     }
 
     private static void UnknownRunner(string repoRoot, string publish)

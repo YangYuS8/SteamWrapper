@@ -7,7 +7,7 @@ description: "已实现的签名准备与待提交的 SignPath Foundation 申请
 
 **SignPath Foundation 申请：尚未提交。尚未获得服务订阅、项目证书或生产签名批准。**维护者选择免费 OSS 路线，并接受 Foundation 作为未来证书发布者。当前未签名预览不能宣称签名服务已经可用。
 
-仓库现已提供 Windows 签名验证、签后 Runner 清单生成及 MSVC Runner PE 版本资源。尚未接入签名服务，不导出私钥，不向 SignPath 提交文件，也未建立认证应用更新渠道。更广的实施与验收阶段见[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)。
+仓库已提供 Windows 签名验证、签后 Runner 清单生成、MSVC Runner PE 资源、精确的产物配置草案、依赖／许可清单工具及生产前置校验器。这些是准备工具，尚未接入签名服务，不导出私钥、不向 SignPath 提交文件，也未建立认证应用更新渠道。剩余外部与交付门槛见[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)与[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)。
 
 ## 人类责任
 
@@ -60,9 +60,9 @@ pwsh -NoProfile -File scripts/windows/Test-WindowsSigning.ps1
 
 ## 申请材料与剩余门槛
 
-准备以下材料，不自动发送：
+维护者已要求协助完成签名。准备[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)，提交前核实以下事实；个人身份、验证码及个人资料处理同意须由维护者提供：
 
-1. 安装／恢复验收后的公开当前形式安装器预览、源码标签及已验证托管构建。
+1. 公开当前形式的技术安装器预览，包含准确源码标签、已验证托管构建、本机安装／恢复证据及仍未完成的干净客户端限制。预览不豁免稳定交付门槛。
 2. 许可证／依赖清单，以及自有文件与重新分发运行时的精确划分。
 3. 已确认的人类作者、审核者、批准者及 MFA；两种文档语言的隐私和卸载行为。
 4. 服务方产物配置，覆盖协调一致的 PE 元数据、生成卸载器、不可变载荷及最终 Setup。
@@ -71,8 +71,12 @@ pwsh -NoProfile -File scripts/windows/Test-WindowsSigning.ps1
 
 申请身份、批准、令牌配置及证书政策仍需服务方／维护者接入。要求签名的发行在缺少这些条件或验证失败时必须停止，不悄悄发布未签名替代物。
 
+`packaging/windows/signpath/` 包含载荷、生成卸载器和 Setup 的独立 XML 草案，精确自有文件目标与元数据限制已按审阅的官方 schema 核验，但服务批准仍待完成。`Test-SignPathConfiguration.ps1` 拒绝未批准／缺失前置条件及扩大的签名范围，不读取令牌或发送请求。本地 `providerApproved` 声明不是接纳、角色、MFA 或证书信任的独立证据。运行时和依赖条款单独清点，微软重新分发组件的 System Libraries 例外分类仍需 Foundation 确认。
+
 ## 隐私与用户信任
 
-默认操作使用本地游戏配置与 Steam 元数据，不上传它们。可选官方 Steam CDN 封面请求需要启用偏好，并发送本地已发现的 AppID；可选更新检查需要同意，联系文档说明的分发端点。签名只提交发行构建产物和来源信息，绝不提交玩家配置、凭据、存档或游戏库内容。应用请求与操作系统证书检查分开看待。
+默认操作使用本地游戏配置与 Steam 元数据，不上传它们。可选官方 Steam CDN 封面请求需要启用偏好，并发送本地已发现的 AppID。未来应用更新检查将需要同意，并联系文档说明的分发端点；该功能尚未实现。签名只提交发行构建产物和来源信息，绝不提交玩家配置、凭据、存档或游戏库内容。应用请求与操作系统证书检查分开看待。
+
+外部服务请求会暴露请求 IP 地址等常规连接信息。相关服务政策见 [Valve 隐私政策](https://store.steampowered.com/privacy_agreement/)、[GitHub 隐私声明](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)及 [SignPath 隐私政策](https://signpath.io/privacy-policy)。SignPath 处理维护者申请和签名服务相关信息，不参与玩家日常游戏启动。
 
 有效签名按信任策略证明来源与完整性，不保证 Defender、SmartScreen 或 Smart App Control 接受每个新发行。下载／启动验收保持防护开启。[微软 SmartScreen 指引](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation)。

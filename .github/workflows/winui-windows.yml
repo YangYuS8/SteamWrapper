@@ -81,7 +81,11 @@ jobs:
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
 
       - name: Test version validation and release packaging safeguards
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIReleaseScripts.ps1
+        run: |
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIReleaseScripts.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Legacy portable release regressions failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIInstallableReleaseScripts.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Installable release regressions failed.' }
 
       - name: Test deployment packaging and signing safeguards without producing an installer
         run: |
@@ -91,13 +95,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Signing policy regressions failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-RunnerSigningMetadata.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Runner product metadata is invalid.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-SignPathConfiguration.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'SignPath configuration safeguards failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIThirdPartyNotices.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Third-party notice publication safeguards failed.' }
 
       - name: Test GitHub and CNB publishers without network writes
         run: |
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1
           if ($LASTEXITCODE -ne 0) { throw 'GitHub publisher regressions failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1 -Installable
+          if ($LASTEXITCODE -ne 0) { throw 'Installable GitHub publisher regressions failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1
           if ($LASTEXITCODE -ne 0) { throw 'CNB publisher regressions failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1 -Installable
+          if ($LASTEXITCODE -ne 0) { throw 'Installable CNB publisher regressions failed.' }
 
       - name: Upload isolated contract evidence
         if: always()

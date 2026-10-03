@@ -283,7 +283,14 @@ public sealed partial class DeploymentEngine
             if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Windows deployment removal requires Windows file sharing semantics.");
             // OPEN_EXISTING + OPEN_REPARSE_POINT, no disposition mutation until every handle is
             // acquired and verified. DELETE access makes concurrent non-sharing readers fail.
-            var native = CreateFileW(path, 0x80000000u | 0x00010000u, 1u | 4u, IntPtr.Zero, 3u, 0x00200000u, IntPtr.Zero);
+            // The sealed tree has already passed SafePaths checks. Its removal directory
+            // adds a transaction nonce, which can take an ordinary owned path over
+            // MAX_PATH. Use the Unicode extended form without changing system settings.
+            var fullPath = Path.GetFullPath(path);
+            var nativePath = fullPath.StartsWith(@"\\?\", StringComparison.Ordinal)
+                ? fullPath : fullPath.StartsWith(@"\\", StringComparison.Ordinal)
+                    ? @"\\?\UNC\" + fullPath[2..] : @"\\?\" + fullPath;
+            var native = CreateFileW(nativePath, 0x80000000u | 0x00010000u, 1u | 4u, IntPtr.Zero, 3u, 0x00200000u, IntPtr.Zero);
             if (native.IsInvalid) { var error = Marshal.GetLastWin32Error(); native.Dispose(); ThrowNative(error); }
             var stream = new FileStream(native, FileAccess.Read);
             try

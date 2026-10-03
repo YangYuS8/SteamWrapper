@@ -17,7 +17,7 @@ Keep the official Steam installation and a complete third-party translation in s
 
 Extract the entire preview and double-click **`SteamWrapper.Manager.exe` in File Explorer**. Do not copy the EXE out of its directory or run it inside the downloaded ZIP.
 
-With no saved language preference, the interface starts in English. Choose **简体中文** from the sidebar's **Language** selector if preferred. A successful language change is saved for the next launch.
+With no saved language preference, the interface follows the supported system UI language. Simplified Chinese systems use Chinese; unsupported languages use English. The sidebar's **Language** selector offers **English / 简体中文**. A successful manual selection is saved and takes priority on later launches.
 
 ## 2. Add your Steam game
 

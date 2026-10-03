@@ -101,10 +101,11 @@ jobs:
       - name: Publish and run all five publication regressions
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
       - name: Inspect coordinated product versions and the actual NativeAOT launcher
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIProductMetadata.ps1
-      - name: Inspect and package the tagged preview release
-        if: needs.preflight.outputs.publish == 'true'
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIRelease.ps1 -Tag $env:RELEASE_TAG -Commit $env:RELEASE_COMMIT
+        run: |
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIProductMetadata.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Published product metadata is invalid.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIHostLanguage.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'NativeAOT Host language acceptance failed.' }
       - name: Upload a manual preview without publishing a Release
         if: needs.preflight.outputs.publish != 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -112,17 +113,25 @@ jobs:
           name: SteamWrapper-WinUI-preview-windows-x64
           path: target/winui/publish/
           if-no-files-found: error
-      - name: Build and test an isolated installer for a manual preview
-        if: needs.preflight.outputs.publish != 'true'
+      - name: Test an isolated installer and build the unsigned preview Setup
         run: |
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Installer compiler verification failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Isolated installer acceptance failed.' }
-          $sourceVersion = ([xml](Get-Content apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ }
-          $tag = "v$sourceVersion-preview.$env:GITHUB_RUN_NUMBER"
+          if ([string]::IsNullOrWhiteSpace($env:RELEASE_TAG)) {
+            $sourceVersion = ([xml](Get-Content apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ }
+            $tag = "v$sourceVersion-preview.$env:GITHUB_RUN_NUMBER"
+          } else { $tag = $env:RELEASE_TAG }
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag $tag
           if ($LASTEXITCODE -ne 0) { throw 'Installer preview packaging failed.' }
+      - name: Inspect and package the explicit schema-2 installable prerelease
+        if: needs.preflight.outputs.publish == 'true'
+        run: |
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIInstallableRelease.ps1 -Tag $env:RELEASE_TAG -Commit $env:RELEASE_COMMIT -InstallerDirectory "target/winui/installers/$env:RELEASE_TAG" -OutputDirectory "target/winui/releases/$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'Installable release packaging failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIReleasePackage.ps1 -PackageDirectory "target/winui/releases/$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'Final installable release validation failed.' }
       - name: Upload the unsigned installer preview without publishing a Release
         if: needs.preflight.outputs.publish != 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

@@ -114,7 +114,7 @@ Keep `%command%` in its final position after `--`. Current Runner receives and l
 
 Use the sidebar's **Language** selector for **English** or **简体中文**. A successful change updates application-owned controls, validation and status messages immediately while retaining unsaved names, paths and arguments.
 
-The preference is saved separately in `%LOCALAPPDATA%\SteamWrapper\ui-settings.json`. Manager uses `en-US` or `zh-CN`; missing or unknown values default to English. `en` and `zh-Hans` are accepted aliases. The language preference never enters `profiles.toml` or changes the Runner CLI.
+The preference is saved separately in `%LOCALAPPDATA%\SteamWrapper\ui-settings.json`. Without a `language` key, Manager follows the system UI language: `zh-CN`, `zh-SG` and explicitly simplified `zh-Hans` cultures use Simplified Chinese; unsupported languages, including Traditional Chinese, use English. A saved choice takes priority. Canonical values are `en-US` and `zh-CN`; `en`, `zh-SG` and `zh-Hans` are accepted aliases. Invalid explicit values and unreadable settings safely fall back to English. Merely opening Manager or saving cover preferences does not freeze the detected language. The preference never enters `profiles.toml` or changes the Runner CLI.
 
 If saving the preference fails, the current language remains selected and an error is shown. A malformed settings file is preserved. OS-owned picker text and original diagnostic/log content may remain in their own language.
 

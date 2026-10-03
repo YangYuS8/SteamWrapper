@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DRAFT: provider must approve Inno-generated uninstaller provenance and metadata.
+     uninstallerFile is the exact generated basename, not a wildcard or a binary
+     imported from another build. GitHub upload wraps that one file in an artifact ZIP.
+     Verify downloaded bytes and recompile with the same source/toolchain/parameters. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+    <parameter name="uninstallerFile" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="${uninstallerFile}" product-name="SteamWrapper" product-version="${version}">
+      <authenticode-sign hash-algorithm="sha256" />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

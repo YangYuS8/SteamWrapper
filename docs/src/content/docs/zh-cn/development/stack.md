@@ -11,7 +11,7 @@ description: "WinUI/C# Manager、独立 Rust Runner 与 Windows 优先的开发�
 
 | 部分 | 当前选择 | 边界 |
 | --- | --- | --- |
-| Manager UI | WinUI 3、C#、XAML | Windows 原生控件、选择器、可访问性；默认英语和完整简体中文 |
+| Manager UI | WinUI 3、C#、XAML | Windows 原生控件、选择器、可访问性；默认跟随已支持的系统语言，回退英语，提供完整简体中文 |
 | Manager 服务 | C# Application | 配置、本地 Steam 发现、Runner 安装、日志；无 Rust FFI 或 helper |
 | 日常运行 | 独立 Rust Runner | 既有 CLI 与进程生命周期；游玩时关闭 Manager |
 | 配置 | `profiles.toml` v2 | C# 编辑保留未知／未编辑数据，测试实际 Rust 消费 |

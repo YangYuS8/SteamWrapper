@@ -10,6 +10,7 @@ Set-StrictMode -Version Latest
 if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { throw 'Invalid GitHub repository.' }
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $package = [IO.Path]::GetFullPath($PackageDirectory)
+. (Join-Path $repoRoot 'scripts/windows/WinUIInstallableRelease.ps1')
 $metadata = & (Join-Path $repoRoot 'scripts/windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $package
 $tag = $metadata.tag
 
@@ -33,7 +34,7 @@ function Get-ReleaseState {
 $remoteCommit = Invoke-ReleaseGh -Arguments @('api', "repos/$Repository/commits/$tag", '--jq', '.sha')
 if ($remoteCommit -ne $metadata.commit) { throw 'The remote GitHub tag no longer matches the built commit.' }
 $release = Get-ReleaseState
-$assetNames = @($metadata.archive.fileName, "$tag.en.md", "$tag.zh-CN.md", 'release.json', 'SHA256SUMS')
+$assetNames = @(Get-WinUIReleaseAssetNames $metadata)
 $verifyRoot = Join-Path $repoRoot ('target/github-release-verification/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $verifyRoot -Force | Out-Null
 
@@ -93,4 +94,4 @@ if ($remoteCommit -ne $metadata.commit) { throw 'The remote GitHub tag no longer
 $null = Invoke-ReleaseGh -Arguments @('release', 'edit', $tag, '--repo', $Repository, '--draft=false', '--prerelease', '--latest=false')
 $release = Get-ReleaseState
 if ($null -eq $release -or $release.tagName -cne $tag -or $release.isDraft -or -not $release.isPrerelease) { throw 'GitHub prerelease publication could not be confirmed.' }
-Write-Output "GitHub prerelease $tag published with five download-verified assets."
+Write-Output "GitHub prerelease $tag published with $($assetNames.Count) download-verified assets."

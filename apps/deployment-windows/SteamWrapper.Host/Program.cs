@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using SteamWrapper.Deployment;
 
-var selectedLanguage = DeploymentMessages.ReadPreferredLanguage();
+var selectedLanguage = "en";
 var launchRequested = args.Length == 0;
 try
 {
@@ -30,6 +30,7 @@ try
     { if (language is not ("en" or "zh-CN")) throw new InvalidDataException("Unsupported language."); selectedLanguage = language; }
     var root = options.GetValueOrDefault("--root") ?? (switches.Count == 0 ? AppContext.BaseDirectory : DeploymentEngine.DefaultRoot);
     var engine = new DeploymentEngine(root, test);
+    if (!options.ContainsKey("--language")) selectedLanguage = DeploymentMessages.ReadPreferredLanguage(IsolatedPreferencePath(engine.Root, test));
     if (switches.Count > 1) throw new InvalidDataException("Select one deployment operation.");
     launchRequested = switches.Count == 0;
     Action operation = switches.FirstOrDefault() switch
@@ -44,7 +45,7 @@ try
     if (options.TryGetValue("--lease-session", out var session))
     {
         if (switches.Count != 1) throw new InvalidDataException("A lease session is for a mutation operation only.");
-        var seconds = options.TryGetValue("--session-timeout-seconds", out var timeout) ? int.Parse(timeout) : 300;
+        var seconds = options.TryGetValue("--session-timeout-seconds", out var timeout) ? int.Parse(timeout, System.Globalization.CultureInfo.InvariantCulture) : 300;
         return DeploymentHostSession.Run(engine.Root, session, options.GetValueOrDefault("--session-token") ?? "", seconds, operation);
     }
     if (options.ContainsKey("--session-token") || options.ContainsKey("--session-timeout-seconds")) throw new InvalidDataException("Session options require a lease session.");
@@ -58,6 +59,21 @@ catch (Exception error) when (error is IOException or InvalidDataException or Un
     Console.Error.WriteLine(message);
     if (launchRequested && OperatingSystem.IsWindows()) NativeDialog.Show(message, selectedLanguage);
     return error is DeploymentException { Code: "Busy" } ? 10 : 11;
+}
+
+static string? IsolatedPreferencePath(string programRoot, bool test)
+{
+    if (!test) return null;
+    var sandbox = Environment.GetEnvironmentVariable("STEAMWRAPPER_E2E_ROOT");
+    if (string.IsNullOrWhiteSpace(sandbox)) return null;
+    var local = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+    if (!Path.IsPathFullyQualified(sandbox) || string.IsNullOrWhiteSpace(local) || !Path.IsPathFullyQualified(local))
+        throw new InvalidDataException("An isolated Host needs explicit sandbox data paths.");
+    var prefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(sandbox)) + Path.DirectorySeparatorChar;
+    var dataRoot = Path.GetFullPath(local);
+    if (!programRoot.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || !dataRoot.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        throw new InvalidDataException("Isolated Host program and preference paths must stay in their sandbox.");
+    return Path.Combine(dataRoot, "SteamWrapper", "ui-settings.json");
 }
 
 static void Launch(DeploymentEngine engine, string language)

@@ -6,3 +6,8 @@
 *.jpg binary
 *.jpeg binary
 *.webp binary
+
+# Preserve the exact upstream legal bytes recorded in the reviewed catalog.
+/packaging/windows/third-party-licenses/** -text whitespace=-blank-at-eol,-blank-at-eof,cr-at-eol
+/packaging/windows/third-party-notices/NOTICE.md -text
+/packaging/windows/third-party-notices/manifest.v1.json -text whitespace=cr-at-eol

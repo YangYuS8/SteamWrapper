@@ -132,7 +132,7 @@ SteamWrapper 不会自动备份游戏存档、在版本之间迁移存档、修�
 %LOCALAPPDATA%\SteamWrapper\ui-settings.json
 ```
 
-语言值缺失或未知时默认英语。Manager 使用 `en-US` 与 `zh-CN`。修改偏好不会改变 profiles、用户填写的文字或日志内容。
+没有已保存的 `language` 键时，Manager 跟随已支持的系统界面语言，不支持时使用英语。已保存的手动选择优先，明确的未知值或无法读取的设置回退英语。Manager 使用 `en-US` 与 `zh-CN`；修改偏好不会改变 profiles、用户填写的文字或日志内容。
 
 如果文件损坏、含重复键、超过支持的大小/深度，或无法安全写入，Manager 会报告问题并保留原文件。写入失败时保留之前的界面语言。手工修复设置文件前先留一份副本，不要为了重置语言而删除 `profiles.toml`。
 

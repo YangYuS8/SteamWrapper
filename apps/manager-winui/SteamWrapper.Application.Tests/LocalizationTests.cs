@@ -98,17 +98,17 @@ public sealed class LocalizationTests
     }
 
     [TestMethod]
-    public async Task PreferencesDefaultToEnglishAndNormalizeOnlySupportedLanguages()
+    public async Task PreferencesUseEnglishForUnsupportedSystemLanguageAndNormalizeExplicitChoices()
     {
         using var fixture = new ServiceFixture();
         var paths = new DataPaths(fixture.Directory("data"));
-        var settings = new UiSettingsStore(paths.UiSettingsPath);
+        var settings = new UiSettingsStore(paths.UiSettingsPath, () => CultureInfo.GetCultureInfo("fr-FR"));
         Assert.AreEqual("en-US", (await settings.LoadAsync()).Language);
         Assert.IsFalse(File.Exists(paths.UiSettingsPath));
         foreach (var (source, expected) in new (string?, string)[]
         {
             (null, "en-US"), ("en", "en-US"), ("EN-us", "en-US"), (" zh-CN ", "zh-CN"),
-            ("ZH-hans", "zh-CN"), ("zh-TW", "en-US"), ("fr-FR", "en-US"), ("", "en-US")
+            ("ZH-hans", "zh-CN"), ("zh-SG", "zh-CN"), ("zh-TW", "en-US"), ("fr-FR", "en-US"), ("", "en-US")
         })
         {
             await settings.SaveLanguageAsync(source);

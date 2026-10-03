@@ -40,7 +40,7 @@ export default defineConfig({
         {
           label: 'Project', translations: { 'zh-CN': '项目资料' }, collapsed: true,
           items: [
-            'project/roadmap', 'project/design/windows-v2', 'project/design/windows-delivery', 'project/design/code-signing',
+            'project/roadmap', 'project/design/windows-v2', 'project/design/windows-delivery', 'project/design/code-signing', 'project/design/signing-application',
             {
               label: 'Decisions', translations: { 'zh-CN': '技术决策' }, collapsed: true,
               items: ['project/decisions/winui3', 'project/decisions/manager-comparison', 'project/decisions/astra-instructions'],

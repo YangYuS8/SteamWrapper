@@ -398,7 +398,7 @@ public sealed class DeploymentTests
         File.WriteAllText(settings, new string(' ', 65537));
         Assert.AreEqual("en", DeploymentMessages.ReadPreferredLanguage(settings));
         File.Delete(settings);
-        Assert.AreEqual("en", DeploymentMessages.ReadPreferredLanguage(settings));
+        Assert.AreEqual("en", DeploymentMessages.ReadPreferredLanguage(settings, () => System.Globalization.CultureInfo.GetCultureInfo("fr-FR")));
     }
 
     [TestMethod]

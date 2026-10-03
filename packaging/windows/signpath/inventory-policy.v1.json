@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "status": "draft-provider-review-required",
+  "project": "SteamWrapper",
+  "license": "Apache-2.0",
+  "providerSchemaUrl": "https://app.signpath.io/Web/artifact-configuration/v1.xsd",
+  "ownedPePaths": [
+    "SteamWrapper.Manager.exe",
+    "SteamWrapper.Manager.dll",
+    "SteamWrapper.Application.dll",
+    "SteamWrapper.Deployment.dll",
+    "zh-CN/SteamWrapper.Application.resources.dll",
+    "Deployment/SteamWrapper.exe",
+    "Runner/SteamWrapperRunner.exe"
+  ],
+  "nugetProjects": [
+    "apps/manager-winui/SteamWrapper.Manager",
+    "apps/manager-winui/SteamWrapper.Application",
+    "apps/deployment-windows/SteamWrapper.Deployment",
+    "apps/deployment-windows/SteamWrapper.Host"
+  ],
+  "cargoTarget": "x86_64-pc-windows-msvc",
+  "cargoRoot": "steamwrapper-runner",
+  "microsoftLicenseReview": "NuGet redistribution terms may differ from an upstream source repository license. Record original package license text and hashes. Foundation must accept any required System Libraries exception; inclusion does not authorize re-signing upstream files.",
+  "toolsExcludedFromInstalledPayload": ["Microsoft.Windows.SDK.BuildTools", "Microsoft.Windows.SDK.BuildTools.MSIX", "Microsoft.NET.ILLink.Tasks", "Microsoft.DotNet.ILCompiler", "runtime.win-x64.Microsoft.DotNet.ILCompiler"],
+  "runtimeLicenseSources": {
+    "runtimepack.Microsoft.NETCore.App.Runtime.win-x64": "https://github.com/dotnet/runtime/blob/main/LICENSE.TXT",
+    "runtimepack.Microsoft.Windows.SDK.NET.Ref": "https://aka.ms/WinSDKLicenseURL",
+    "Microsoft.Web.WebView2.Core.Projection": "Microsoft.Web.WebView2 package LICENSE.txt"
+  },
+  "limitations": [
+    "The inventory is preparation, not a legal opinion or Foundation admission.",
+    "Verify the exact coordinated publish and final signed bytes for each release.",
+    "Rust dependencies are compiled into owned artifacts; separate upstream PE files are never re-signed.",
+    "The Inno compiler/uninstaller redistribution and signing chain require provider review."
+  ]
+}

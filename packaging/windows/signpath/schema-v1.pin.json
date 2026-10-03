@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "namespace": "http://signpath.io/artifact-configuration/v1",
+  "url": "https://app.signpath.io/Web/artifact-configuration/v1.xsd",
+  "verifiedDate": "2026-10-03",
+  "bytes": 79607,
+  "sha256": "65409f9d776f3cd2ca60f3d8f5c2100029426d96a891108af7aefe68eb959aa4",
+  "status": "schema-validation-only-not-provider-approval"
+}

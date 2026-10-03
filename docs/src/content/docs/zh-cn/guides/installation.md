@@ -32,7 +32,7 @@ WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览�
 
 保留旁边的 DLL、原生 `.pri` 资源、`Assets`、`Runner` 与 `zh-CN` 资源。不要在 ZIP 内运行 EXE，不要把它与支持文件分开，也不要把契约测试驱动当成 Manager。
 
-界面默认使用英语，可通过 **English / 简体中文** 选择器切换。随后按照[开始使用](/SteamWrapper/zh-cn/guides/getting-started/)添加游戏。
+没有已保存的偏好时，界面跟随已支持的系统界面语言，不支持时回退英语。**English / 简体中文** 选择器可保存手动选择。随后按照[开始使用](/SteamWrapper/zh-cn/guides/getting-started/)添加游戏。
 
 如果 Windows 报告下载或安全问题，先确认产物的来源和完整性。SteamWrapper 不要求全局关闭 Windows 防护。摘要校验只能确认文件与某个产物一致，不能代替发布者签名，也不是第三方游戏安全性的结论。
 

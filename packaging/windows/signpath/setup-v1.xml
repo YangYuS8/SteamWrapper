@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DRAFT: this signs only the final Setup PE envelope. It does not deep-sign
+     Inno contents. Provider must accept the preceding payload/uninstaller chain.
+     Use the exact reviewed release tag. Recompute all digests after final signing. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+    <parameter name="tag" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="SteamWrapper-${tag}-win-x64-setup.exe" product-name="SteamWrapper" product-version="${version}">
+      <authenticode-sign hash-algorithm="sha256" />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

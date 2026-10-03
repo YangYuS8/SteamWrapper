@@ -4,7 +4,7 @@ using SteamWrapper.Application.Profiles;
 
 namespace SteamWrapper.Application.Localization;
 
-/// <summary>Explicit UI language: independent of the OS locale and of protocol/user data.</summary>
+/// <summary>Selected UI language, separate from protocol/user data and invariant service diagnostics.</summary>
 public sealed class Localizer(string? language = null)
 {
     internal static readonly ResourceManager Resources = new("SteamWrapper.Application.Localization.Strings", typeof(Localizer).Assembly);
@@ -12,7 +12,15 @@ public sealed class Localizer(string? language = null)
     public const string Chinese = "zh-CN";
     public string Language { get; private set; } = NormalizeLanguage(language);
     public void SetLanguage(string? language) => Language = NormalizeLanguage(language);
-    public static string NormalizeLanguage(string? language) => language?.Trim().ToLowerInvariant() is "zh-cn" or "zh-hans" ? Chinese : English;
+    public static string NormalizeLanguage(string? language) => language?.Trim().ToLowerInvariant() is "zh-cn" or "zh-sg" or "zh-hans" ? Chinese : English;
+    public static string SystemLanguage(CultureInfo culture)
+    {
+        // Explicit script parents also cover locales such as zh-Hans-SG.
+        // A neutral or traditional Chinese locale must not select a different script.
+        for (var current = culture; !string.IsNullOrEmpty(current.Name); current = current.Parent)
+            if (NormalizeLanguage(current.Name) == Chinese) return Chinese;
+        return English;
+    }
     public string this[string key] => Resources.GetString(key, CultureInfo.GetCultureInfo(Language))
         ?? throw new MissingManifestResourceException($"Missing UI resource: {key}");
     public string Format(LocalMessage message) => string.Format(CultureInfo.GetCultureInfo(Language), this[message.Key],

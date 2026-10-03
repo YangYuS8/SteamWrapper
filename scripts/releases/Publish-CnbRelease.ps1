@@ -20,15 +20,16 @@ function Invoke-CnbRelease {
     $directory = (Resolve-Path -LiteralPath $PackageDirectory).Path
     if ((Get-Item -LiteralPath $directory).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Release package directory must not be a link.' }
     $metadataPath = Join-Path $directory 'release.json'
-    if ((Get-Item -LiteralPath $metadataPath).Length -gt 1MB) { throw 'Release metadata is too large.' }
+    if ((Get-Item -LiteralPath $metadataPath).Length -gt 2MB) { throw 'Release metadata is too large.' }
     # Validate the exact downloaded bundle, including compressed file inventory,
     # Runner contract/hash and included runtime, before any authenticated request.
     $metadata = & (Join-Path $PSScriptRoot '../windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $directory
-    if ($metadata.schemaVersion -ne 1 -or $metadata.tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$' -or $metadata.commit -notmatch '^[a-f0-9]{40}$' -or $metadata.platform -ne 'win-x64' -or $metadata.releaseChannel -ne 'preview' -or $metadata.githubPrerelease -ne $true -or $metadata.signed -ne $false -or $metadata.installer -ne $false) { throw 'Unsupported release metadata or preview flags.' }
+    . (Join-Path $PSScriptRoot '../windows/WinUIInstallableRelease.ps1')
+    if ($metadata.schemaVersion -notin @(1, 2) -or $metadata.tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$' -or $metadata.commit -notmatch '^[a-f0-9]{40}$' -or $metadata.platform -ne 'win-x64' -or $metadata.releaseChannel -ne 'preview' -or $metadata.githubPrerelease -ne $true -or $metadata.signed -ne $false -or $metadata.installer -ne ($metadata.schemaVersion -eq 2)) { throw 'Unsupported release metadata or preview flags.' }
     $tag = $metadata.tag
     $archiveName = "SteamWrapper-$tag-win-x64.zip"
     if ($metadata.archive.fileName -cne $archiveName) { throw 'Unexpected release archive name.' }
-    $assetNames = @($archiveName, "$tag.en.md", "$tag.zh-CN.md", 'release.json', 'SHA256SUMS')
+    $assetNames = @(Get-WinUIReleaseAssetNames $metadata)
     $assets = @{}
     foreach ($name in $assetNames) {
         $path = Join-Path $directory $name
@@ -42,8 +43,8 @@ function Invoke-CnbRelease {
         if ($line -notmatch '^([a-f0-9]{64})  ([A-Za-z0-9_.-]+)$' -or $checksums.ContainsKey($Matches[2])) { throw 'Invalid release checksum file.' }
         $checksums[$Matches[2]] = $Matches[1]
     }
-    if ($checksums.Count -ne 4) { throw 'Release checksum file must list exactly four assets.' }
-    foreach ($name in $assetNames[0..3]) {
+    if ($checksums.Count -ne $assetNames.Count - 1) { throw 'Release checksum file must list every payload/metadata asset exactly once.' }
+    foreach ($name in $assetNames | Where-Object { $_ -cne 'SHA256SUMS' }) {
         if (-not $checksums.ContainsKey($name) -or $checksums[$name] -cne $assets[$name].Hash) { throw 'Release checksum mismatch.' }
     }
     if ($metadata.archive.sha256 -cne $assets[$archiveName].Hash -or $metadata.archive.bytes -ne $assets[$archiveName].Bytes) { throw 'Release archive checksum or size mismatch.' }

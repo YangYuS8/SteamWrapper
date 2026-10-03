@@ -100,7 +100,7 @@ wait_mode = "job"
 
 ## 界面语言设置
 
-WinUI 使用与 `profiles.toml` 同级的 `ui-settings.json`。`language` 为 `en-US` 或 `zh-CN`，接受去除两端空白、不区分大小写的 `en`、`zh-Hans` 别名，缺失或未知值默认英语。保存保留未知 JSON 字段，拒绝覆盖不合法的设置。
+WinUI 使用与 `profiles.toml` 同级的 `ui-settings.json`。没有 `language` 键时跟随已支持的系统界面文化；`zh-CN`、`zh-SG` 与明确的 `zh-Hans` 文化显示简体中文，其余显示英语。已保存的明确选择优先，无效明确值或无法读取的设置回退英语。规范值为 `en-US` 与 `zh-CN`，兼容去除两端空白、不区分大小写的 `en`、`zh-SG`、`zh-Hans` 别名。读取或仅保存封面偏好不会保存识别出的语言。保存保留未知 JSON 字段，拒绝覆盖不合法的设置。服务诊断仍固定使用英语。
 
 同一文件中的 `steamCdnCovers` 是独立布尔值，缺失时默认 `false`。两种偏好的写入互相保留，并保留未知字段；只有成功持久化的变更才会开启下载。写入失败时保留此前偏好。
 

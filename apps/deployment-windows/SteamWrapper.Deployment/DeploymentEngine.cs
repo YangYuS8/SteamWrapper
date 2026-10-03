@@ -11,8 +11,12 @@ public sealed partial class DeploymentEngine
     private string JournalPath => Path.Combine(Root, "installation-journal.json");
     private string Versions => Path.Combine(Root, "versions");
     private readonly Action<string>? checkpoint;
+    private readonly Func<string, long> availableDiskBytes;
 
     public DeploymentEngine(string root, bool allowTestRoot = false, Action<string>? checkpoint = null)
+        : this(root, allowTestRoot, checkpoint, path => new DriveInfo(Path.GetPathRoot(path)!).AvailableFreeSpace) { }
+
+    internal DeploymentEngine(string root, bool allowTestRoot, Action<string>? checkpoint, Func<string, long> availableDiskBytes)
     {
         Root = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
         if (!allowTestRoot && !Root.Equals(Path.GetFullPath(DefaultRoot), StringComparison.OrdinalIgnoreCase))
@@ -22,6 +26,7 @@ public sealed partial class DeploymentEngine
             throw new InvalidDataException("The data tree is not an application installation root.");
         SafePaths.CheckAncestors(Root);
         this.checkpoint = checkpoint;
+        this.availableDiskBytes = availableDiskBytes ?? throw new ArgumentNullException(nameof(availableDiskBytes));
     }
 
     public InstallationState Install(string payloadDirectory)
@@ -56,12 +61,22 @@ public sealed partial class DeploymentEngine
                 return before;
             }
         }
-        if (new DriveInfo(Path.GetPathRoot(Root)!).AvailableFreeSpace < manifest.Files.Sum(file => file.Bytes) + 16L * 1024 * 1024)
+        // Staging includes the manifest as well as the declared files. Activation also
+        // needs a second launcher copy and bounded atomic journal/state replacements.
+        // This admission check does not reserve space against unrelated disk writers;
+        // an interrupted copy still follows the existing journal/quarantine recovery.
+        var launcher = manifest.Files.Single(file => file.Path.Equals("Deployment/SteamWrapper.exe", StringComparison.OrdinalIgnoreCase));
+        var requiredBytes = checked(manifest.Files.Sum(file => file.Bytes) +
+            new FileInfo(Path.Combine(payloadDirectory, DeploymentManifest.FileName)).Length + launcher.Bytes +
+            2L * 65536 + 16L * 1024 * 1024);
+        var availableBytes = availableDiskBytes(Root);
+        if (availableBytes < 0) throw new IOException("Available Manager installation disk space could not be established.");
+        if (availableBytes < requiredBytes)
             throw new DeploymentException("Space", "Not enough space for a complete staged Manager version.");
         var transaction = Guid.NewGuid().ToString("N");
         var stageName = ".staging-" + transaction;
         var stage = Path.Combine(Root, stageName);
-        var launcherHash = manifest.Files.Single(file => file.Path.Equals("Deployment/SteamWrapper.exe", StringComparison.OrdinalIgnoreCase)).Sha256;
+        var launcherHash = launcher.Sha256;
         var after = new InstallationState(1, "SteamWrapper", new(manifest.Tag, manifest.Version, hash), before?.Current,
             launcherHash, transaction, false);
         var journal = new DeploymentJournal(1, "Staging", before, after, stageName);
