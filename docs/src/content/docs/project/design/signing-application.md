@@ -3,7 +3,7 @@ title: "SignPath application dossier"
 description: "Current software facts and the human/provider prerequisites for the Foundation application."
 ---
 
-This dossier prepares the software part of the [official Foundation application](https://signpath.org/apply.html). **It does not mean that an application was submitted or approved.** The [Code signing policy](/SteamWrapper/project/design/code-signing/) records the current trust and approval status.
+This dossier records the software part of the [official Foundation application](https://signpath.org/apply.html), **submitted on 2026-10-04 and awaiting provider review**. The official form confirmed submission; no subscription, project certificate or production signing approval has been obtained. The [Code signing policy](/SteamWrapper/project/design/code-signing/) records the current trust and approval status.
 
 ## Software fields
 
@@ -14,7 +14,7 @@ This dossier prepares the software part of the [official Foundation application]
 | Homepage | [SteamWrapper documentation](https://yangyus8.top/SteamWrapper/) |
 | Tagline | Configure a game once, then launch it normally from Steam. |
 | Build system | GitHub Actions, with GitHub-hosted runners and locked .NET/Rust dependencies |
-| Download page | [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases); the current-form [v0.2.3-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1) was publicly published and download-verified on 2026-10-03; later WinUI previews use their own immutable tags |
+| Download page | The submitted application uses the publicly published and download-verified [v0.2.4-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.4-preview.1); later WinUI previews use their own immutable tags |
 | License | Apache-2.0 for current source; redistributed dependency/runtime terms are inventoried separately |
 | Privacy policy | [Privacy and user trust](/SteamWrapper/project/design/code-signing/#privacy-and-user-trust) |
 | Reputation | Small, publicly maintained project with source, issues, bilingual documentation and dated local validation. No independent audit, broad adoption or clean-client approval is claimed. |
@@ -24,6 +24,8 @@ Prepared description:
 > SteamWrapper is a Windows game-launch configuration tool. Its native WinUI 3/C# Manager lets the player choose an existing Steam AppID and a separate game executable or launcher. Steam invokes an independent, headless Rust Runner using generated Launch Options; Manager is not part of daily game launch. The tool does not inject DLLs, patch Steam or game binaries, bypass DRM, install a hidden service or upload player files. Profiles and local Steam covers work offline. Optional official Steam CDN cover requests are disabled by default and require an explicit preference. A per-user installer manages only Manager, preserves user data and the stable Runner, and supplies uninstallation. Current delivery is a technical preview, with remaining clean-client and native-interaction limits documented.
 
 Keep contact name and email out of committed software materials unless the maintainer deliberately chooses to publish them. The form requires the real contact's first name, last name, email and discovery channel, includes reCAPTCHA, and requires consent to processing personal details. A maintainer must supply these facts and complete those personal steps. Do not invent a company, external endorsements or a Wikipedia entry.
+
+The submitted download page, `v0.2.4-preview.1`, comes from commit `1175d84cb51c3ed24c6af7b84ae7886ec9b78b2a` and successful [hosted release run 37123341068](https://github.com/YangYuS8/SteamWrapper/actions/runs/37123341068). Its public assets were independently downloaded and verified; it remains an unsigned technical preview.
 
 The first current-form public preview comes from commit `c457f16b8ea8167c9ef4b8bd67b38a5030455bce` and successful [hosted release run 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907). All seven public assets were downloaded independently and verified against the schema-2 contract and GitHub digests/lengths. The downloaded seven own PE products matched `0.2.3`, Setup was correctly unsigned, and five actual NativeAOT recovery-language processes passed on the maintainer's Chinese Windows system. These are public-delivery and scoped local results, not clean-client or signing approval. The unconfigured CNB binary mirror was skipped; GitHub is the verified download channel.
 
@@ -49,4 +51,4 @@ These are technical precedents for the proposed stack, not approval of SteamWrap
 
 All human maintainers need GitHub and SignPath MFA. Name actual authors, reviewers and signing approvers; each release needs human approval. The agent and a CI submitter cannot supply that approval. After admission, record the provider's accepted configuration, genuine public certificate DER SHA-256 pins and protected submission identity. A checksum or unsigned preview is not a substitute for signed trust. [Foundation conditions](https://signpath.org/terms.html).
 
-The current-form public preview, contact/MFA confirmation, CAPTCHA/consent, Foundation admission and the accepted artifact chain remain separate facts to verify. Never change a pending status merely because local fixture validation passed. Missing provider configuration stops a required-signed release rather than publishing an unsigned fallback.
+Application submission is confirmed separately from Foundation admission, SignPath human-account MFA/roles and acceptance of the artifact chain; those onboarding gates remain open. Never change an approval status merely because local fixture validation passed. Missing provider configuration stops a required-signed release rather than publishing an unsigned fallback.

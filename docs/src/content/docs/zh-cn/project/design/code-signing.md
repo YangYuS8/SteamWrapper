@@ -1,11 +1,11 @@
 ---
 title: "代码签名政策"
-description: "已实现的签名准备与待提交的 SignPath Foundation 申请，包含人工批准和发行边界。"
+description: "已实现的签名准备与已提交、等待审核的 SignPath Foundation 申请，包含人工批准和发行边界。"
 ---
 
 ## 当前状态
 
-**SignPath Foundation 申请：尚未提交。尚未获得服务订阅、项目证书或生产签名批准。**维护者选择免费 OSS 路线，并接受 Foundation 作为未来证书发布者。当前未签名预览不能宣称签名服务已经可用。
+**SignPath Foundation 申请：已于 2026-10-04 提交，等待服务方审核。尚未获得服务订阅、项目证书或生产签名批准。**官方表单已确认提交成功。维护者选择免费 OSS 路线，并接受 Foundation 作为未来证书发布者。当前未签名预览不能宣称签名服务已经可用。
 
 仓库已提供 Windows 签名验证、签后 Runner 清单生成、MSVC Runner PE 资源、精确的产物配置草案、依赖／许可清单工具及生产前置校验器。这些是准备工具，尚未接入签名服务，不导出私钥、不向 SignPath 提交文件，也未建立认证应用更新渠道。剩余外部与交付门槛见[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)与[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)。
 
@@ -32,7 +32,7 @@ AI 编码代理可以准备变更与证据，不是 Foundation 批准的人类�
 
 Foundation 接纳取决于外部审核，发行签名要求人工批准。[Foundation 条件](https://signpath.org/terms.html)、[GitHub 来源验证](https://docs.signpath.io/trusted-build-systems/github)。
 
-实际获批后，再将待提交状态改为已验证细节，并使用此致谢：“Free code signing provided by SignPath.io, certificate by SignPath Foundation.” 目前它描述申请中的未来服务，不代表已经获得证书。
+实际获批后，再将等待审核状态改为已验证细节，并使用此致谢：“Free code signing provided by SignPath.io, certificate by SignPath Foundation.” 目前它描述申请中的未来服务，不代表已经获得证书。
 
 ## 当前可用验证
 
@@ -60,7 +60,7 @@ pwsh -NoProfile -File scripts/windows/Test-WindowsSigning.ps1
 
 ## 申请材料与剩余门槛
 
-维护者已要求协助完成签名。准备[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)，提交前核实以下事实；个人身份、验证码及个人资料处理同意须由维护者提供：
+[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)记录本次已提交申请的软件事实。服务方审核期间持续维护以下证据与接入要求；本文不公开个人申请资料：
 
 1. 公开当前形式的技术安装器预览，包含准确源码标签、已验证托管构建、本机安装／恢复证据及仍未完成的干净客户端限制。预览不豁免稳定交付门槛。
 2. 许可证／依赖清单，以及自有文件与重新分发运行时的精确划分。

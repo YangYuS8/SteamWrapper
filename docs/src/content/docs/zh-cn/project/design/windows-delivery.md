@@ -5,7 +5,7 @@ description: "每用户安装器、SignPath 签名及可选 Manager 更新的拟
 
 ## 状态与范围
 
-**已批准方案及实施阶段，调研日期为 2026-10-03。** 维护者优先选择免费开源签名，并接受以 **SignPath Foundation** 作为证书发布者。未签名 Inno 安装器、C# NativeAOT 启动器／部署日志、Manager 生命周期锁和签名政策测试现已实现，标签打包已采用明确的第 2 版 Setup／便携技术预览契约。[安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)记录命令、修复边界与暂存残留。干净客户端／原生交互、更广恢复和版本保留验收仍待完成。Foundation 申请尚未提交或批准，生产签名和已启用更新源／客户端仍待完成。以下要求不表示所有阶段均已通过。
+**已批准方案及实施阶段，调研日期为 2026-10-03。** 维护者优先选择免费开源签名，并接受以 **SignPath Foundation** 作为证书发布者。未签名 Inno 安装器、C# NativeAOT 启动器／部署日志、Manager 生命周期锁和签名政策测试现已实现，标签打包已采用明确的第 2 版 Setup／便携技术预览契约。[安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)记录命令、修复边界与暂存残留。干净客户端／原生交互、更广恢复和版本保留验收仍待完成。Foundation 申请已于 2026-10-04 提交，等待服务方审核，生产签名和已启用更新源／客户端仍待完成。以下要求不表示所有阶段均已通过。
 
 当前产品是面向 Windows 11 24H2 x64 的非打包、自包含 WinUI 3/C# Manager，以及独立 Rust Runner。日常 CI、版本标签发行及手动便携包构建已经实现。已有行为见[当前分发方式](/SteamWrapper/zh-cn/development/distribution/)；本文细化[路线图](/SteamWrapper/zh-cn/project/roadmap/)的 P1–P3，不代表其复选框已经完成。
 
