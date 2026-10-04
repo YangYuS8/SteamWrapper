@@ -18,13 +18,7 @@ public sealed partial class DeploymentEngine
 
     internal DeploymentEngine(string root, bool allowTestRoot, Action<string>? checkpoint, Func<string, long> availableDiskBytes)
     {
-        Root = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
-        if (!allowTestRoot && !Root.Equals(Path.GetFullPath(DefaultRoot), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Only the fixed per-user Manager installation root is supported.");
-        if (Root.Equals(Path.GetPathRoot(Root), StringComparison.OrdinalIgnoreCase) ||
-            Root.Equals(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SteamWrapper"), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("The data tree is not an application installation root.");
-        SafePaths.CheckAncestors(Root);
+        Root = InstallationRootPolicy.Normalize(root, allowTestRoot);
         this.checkpoint = checkpoint;
         this.availableDiskBytes = availableDiskBytes ?? throw new ArgumentNullException(nameof(availableDiskBytes));
     }
@@ -36,6 +30,10 @@ public sealed partial class DeploymentEngine
         using var lease = DeploymentLease.AcquireExclusive(Root);
         return InstallUnderLease(payloadDirectory, manifest);
     }
+
+    // The installer Host checks a user-selected directory before taking a lease,
+    // so rejecting an unrelated directory does not leave even a lock file there.
+    internal void ValidateLocation() => CheckRoot();
 
     internal InstallationState InstallUnderLease(string payloadDirectory, PayloadManifest? manifest = null)
     {

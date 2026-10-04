@@ -1,13 +1,15 @@
 ---
 title: "Code signing policy"
-description: "Implemented signing preparation and the submitted SignPath Foundation application awaiting review, with human approval and release boundaries."
+description: "Optional Windows code signing, project-signed application updates, and the retained SignPath preparation tools."
 ---
 
 ## Current status
 
-**SignPath Foundation application: submitted on 2026-10-04; awaiting provider review. No subscription, project certificate or production signing approval has been obtained.** The official form confirmed submission. The maintainer has selected the free OSS route and accepts Foundation as the future certificate publisher. Current unsigned previews must not claim that signing is available.
+**The maintainer reported on 2026-10-05 that the SignPath Foundation application was rejected.** It was submitted on 2026-10-04. No rejection reason is recorded here, and no subscription, project certificate or production signing approval has been obtained. Authenticode signing is now an optional distribution improvement, not a prerequisite for stable delivery or application updates. Unsigned releases remain explicitly identified as such.
 
-The repository provides Windows signing verification, post-sign Runner manifest generation, MSVC Runner PE resources, precise draft artifact configurations, dependency/license inventory tooling and a production-prerequisite validator. These are preparation tools, not a signing-provider connection. They do not export a private key, submit files to SignPath or establish an authenticated application update channel. See the [application dossier](/SteamWrapper/project/design/signing-application/) and [delivery plan](/SteamWrapper/project/design/windows-delivery/) for the remaining external and delivery gates.
+Application updates use a separate project-controlled key: the release workflow signs the update manifest, and Manager verifies its signature and the installer's exact length and SHA-256 before offering installation. The real public key is embedded and the corresponding GitHub release secret is configured. Publication and end-to-end acceptance remain separate gates; CNB has no published binary mirror or configured release credential yet. This trust does not establish a Windows publisher identity or remove Windows download warnings. See the [delivery plan](/SteamWrapper/project/design/windows-delivery/).
+
+The repository retains Windows signing verification, post-sign Runner manifest generation, MSVC Runner PE resources, artifact configuration drafts, dependency/license inventory tooling and a provider-prerequisite validator for possible future Authenticode signing. They are not a SignPath connection and do not submit files to that provider. The [application dossier](/SteamWrapper/project/design/signing-application/) preserves the submitted software facts. The sections below describe this optional provider route; they do not gate project-signed updates.
 
 ## Human responsibility
 
@@ -32,7 +34,7 @@ The payload/uninstaller and final Setup signing stages must be accepted by the p
 
 Foundation admission is an external review, and release signing requires human approval. [Foundation conditions](https://signpath.org/terms.html), [GitHub origin verification](https://docs.signpath.io/trusted-build-systems/github).
 
-After actual approval, replace the pending status with verified details and use this acknowledgment: “Free code signing provided by SignPath.io, certificate by SignPath Foundation.” Until then it describes a requested future service, not a provided certificate.
+Only if a future application receives actual approval may the project record the verified provider details and use this acknowledgment: “Free code signing provided by SignPath.io, certificate by SignPath Foundation.” It is not a current project acknowledgment.
 
 ## Verification available now
 
@@ -60,7 +62,7 @@ These inspect real PE resources, reject an actual unsigned Runner and a modified
 
 ## Application dossier and remaining gates
 
-The [application dossier](/SteamWrapper/project/design/signing-application/) records the software facts for the submitted application. Keep the following evidence and onboarding requirements current during provider review; personal application details are not published here:
+The [application dossier](/SteamWrapper/project/design/signing-application/) records the software facts for the rejected application. If the optional provider route is revisited, refresh the following evidence and onboarding requirements; personal application details are not published here:
 
 1. A public current-form technical installer preview with its exact source tag, verified hosted build, local installation/recovery evidence and remaining clean-client limits. A preview does not waive stable-delivery gates.
 2. License/dependency inventory and a precise list of own files versus redistributed runtimes.
@@ -71,11 +73,11 @@ The [application dossier](/SteamWrapper/project/design/signing-application/) rec
 
 Application identity, approval, token provisioning and certificate policy remain provider/maintainer setup. A required-signed release must stop when these are missing or verification fails; it must not quietly publish an unsigned replacement.
 
-`packaging/windows/signpath/` contains separate payload, generated-uninstaller and Setup XML drafts. The exact own-file targets and metadata restrictions were checked against the reviewed official schema; provider approval is still pending. `Test-SignPathConfiguration.ps1` rejects unapproved/missing prerequisites and broadened targets without reading a token or sending a request. The local `providerApproved` declaration is not independent evidence of admission, roles, MFA or certificate trust. Runtime and dependency terms are inventoried separately; Foundation must confirm treatment of Microsoft's redistributed components under its System Libraries exception.
+`packaging/windows/signpath/` contains separate payload, generated-uninstaller and Setup XML drafts. The exact own-file targets and metadata restrictions were checked against the reviewed official schema; none has provider approval. `Test-SignPathConfiguration.ps1` still rejects unapproved/missing prerequisites and broadened targets without reading a token or sending a request. The local `providerApproved` declaration is not independent evidence of admission, roles, MFA or certificate trust. Runtime and dependency terms are inventoried separately; a future provider would need to confirm treatment of Microsoft's redistributed components under its System Libraries exception.
 
 ## Privacy and user trust
 
-Default operation uses local game profiles and Steam metadata without uploading them. Optional official Steam CDN cover requests require a preference and send a locally discovered AppID. Future application update checks will require consent and contact documented distribution endpoints; they are not implemented yet. Signing submits release build artifacts and provenance, never player profiles, credentials, saves or library contents. Application requests and operating-system certificate checks are separate.
+Default operation uses local game profiles and Steam metadata without uploading them. Optional official Steam CDN cover requests require a preference and send a locally discovered AppID. Application updates contact GitHub or a configured CNB mirror on a manual check or when the player enables checking at Manager startup; automatic checking defaults off. No game profiles, credentials, saves or library contents are uploaded. Downloading and installation require user action. Future provider signing would submit release build artifacts and provenance only. Application requests and operating-system certificate checks are separate.
 
 Requests to external services expose normal connection information such as the requesting IP address. Review the applicable [Valve privacy policy](https://store.steampowered.com/privacy_agreement/), [GitHub privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement) and [SignPath privacy policy](https://signpath.io/privacy-policy). SignPath processes the maintainer's application and signing-service information; it is not part of the player's daily game launch.
 

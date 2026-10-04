@@ -1,9 +1,9 @@
 ---
 title: "SignPath 申请材料"
-description: "Foundation 申请的软件事实与真实人员／服务方前置条件。"
+description: "被拒 Foundation 申请的软件事实存档与未来可选服务方接入条件。"
 ---
 
-本材料记录[官方 Foundation 申请表](https://signpath.org/apply.html)中的软件部分，**申请已于 2026-10-04 提交，等待服务方审核**。官方表单已确认提交成功；尚未获得服务订阅、项目证书或生产签名批准。[代码签名政策（Code signing policy）](/SteamWrapper/zh-cn/project/design/code-signing/)记录当前信任与批准状态。
+本材料保留于 2026-10-04 提交的[官方 Foundation 申请表](https://signpath.org/apply.html)中的软件部分。**维护者于 2026-10-05 报告申请被拒，本文不记录或推测原因。**未获得服务订阅、项目证书或生产签名批准。Authenticode 改为未来可选改进；项目密钥验证的应用更新和稳定交付不要求 Foundation 批准。[代码签名政策（Code signing policy）](/SteamWrapper/zh-cn/project/design/code-signing/)记录当前信任政策。以下材料保留供参考，不表示正在接入服务。
 
 ## 软件字段
 
@@ -47,8 +47,8 @@ barcodrod.io 是更接近本项目的未打包先例：[v2.1 构建脚本](https
 
 这些先例说明所选技术路线已有实际应用，不代表 SteamWrapper 获批，也不能证明本项目微软依赖的具体版本和许可分类、System Libraries 例外或 Inno 多阶段签名链已被接受。应将这些细节交由服务方独立审核，不能照搬其他项目的身份、政策或证书指纹。
 
-## 必须完成的外部接入
+## 未来可选服务方配置
 
 所有人类维护者需要启用 GitHub 和 SignPath MFA，明确实际作者、审核者及签名批准者，每次发行需人工批准。代理和 CI 提交者不能代替此批准。接纳后记录服务方接受的配置、真实公开证书 DER SHA-256 指纹及受保护的提交身份。校验和或未签名预览不能代替已签名信任。[Foundation 条件](https://signpath.org/terms.html)。
 
-申请提交成功与 Foundation 接纳、SignPath 人类账号 MFA／角色以及产物链获批分开核实；这些接入门槛仍待完成，不能因为本地夹具验证通过就改变批准状态。缺少服务配置时停止要求签名的发行，不退回未签名发布。
+申请已被拒，当前不接入该服务方。如果未来重新考虑，Foundation 接纳、SignPath 人类账号 MFA／角色及产物链获批必须独立核实，不能因为本地夹具验证通过就改变批准状态。明确要求 Authenticode 的发行仍应在缺少服务配置时停止；普通项目签名更新不使用这条服务方路线。

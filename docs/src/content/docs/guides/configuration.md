@@ -132,4 +132,14 @@ Select **Clear downloaded covers** to remove only images downloaded by SteamWrap
 
 Requests have time, size and concurrency limits. Connection failures, unavailable images and invalid responses leave placeholders rather than blocking configuration. See [missing-cover troubleshooting](/SteamWrapper/guides/troubleshooting/#missing-covers) for practical checks and [architecture](/SteamWrapper/development/architecture/#covers-and-safety-boundaries) for exact limits.
 
+## Update SteamWrapper
+
+Open **Updates** in the sidebar to check for a newer version. **Check when SteamWrapper opens** is off by default; enabling it only checks for updates while Manager opens. Downloads and installation still need your confirmation. Updates follow your installed version's stable or preview channel.
+
+For an installed copy, select **Download update**. You can cancel the download or close the dialog. Once the download is verified, **Install update** asks for confirmation before closing Manager and opening the installer. Finish or discard any unsaved edits first. SteamWrapper reopens after a successful installation; your game configurations remain available. Games are not forcibly closed.
+
+A portable copy offers the release page instead: download the new ZIP and extract it into a new folder. The updater does not overwrite the folder containing your portable copy.
+
+The default download source is **Automatic**, which tries GitHub first. **Download source** also lets you choose GitHub or CNB when a connection fails. CNB fallback requires the release and update information to have been published there; it may be unavailable for early releases. Connection or verification failures leave the current installation in place. A build without in-app update support says so and still offers the official release page. The existing `v0.2.4-preview.1` release predates this update interface.
+
 The implementation boundaries are in the [profile store](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-winui/SteamWrapper.Application/Profiles/ProfileStore.cs) and [Runner profile model](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/profile.rs).

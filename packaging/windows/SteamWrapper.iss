@@ -52,10 +52,11 @@ AppPublisherURL=https://github.com/YangYuS8/SteamWrapper
 AppSupportURL=https://github.com/YangYuS8/SteamWrapper/issues
 AppUpdatesURL=https://github.com/YangYuS8/SteamWrapper/releases
 DefaultDirName={code:InstallRoot}
-DisableDirPage=yes
-UsePreviousAppDir=no
+DisableDirPage=auto
+UsePreviousAppDir=yes
 DefaultGroupName=SteamWrapper
 DisableProgramGroupPage=yes
+UsePreviousTasks=yes
 PrivilegesRequired=lowest
 SetupArchitecture=x64
 ArchitecturesAllowed=x64os
@@ -83,10 +84,14 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
 [CustomMessages]
+english.StartMenuIcon=Create a Start menu shortcut
+chinesesimplified.StartMenuIcon=创建开始菜单快捷方式
 english.DesktopIcon=Create a desktop shortcut
 chinesesimplified.DesktopIcon=创建桌面快捷方式
-english.RetainedData=SteamWrapper installs only Manager. Your profiles, stable Runner, logs, backups and caches are kept when Manager is removed. Steam game files and Launch Options are not changed.
-chinesesimplified.RetainedData=SteamWrapper 仅安装管理器。卸载管理器时会保留配置、稳定路径中的 Runner、日志、备份和缓存。安装器不会修改 Steam 游戏文件或启动选项。
+english.RetainedData=Choose a folder and shortcuts for Manager. Game profiles and Runner stay in your Windows user data folder, so Steam launch commands keep working. Updates use the same installation folder. Uninstall keeps your data unless you select specific items to remove.
+chinesesimplified.RetainedData=您可以选择管理器的安装目录与快捷方式。游戏配置和 Runner 仍保存在当前用户的数据目录中，Steam 启动命令不会因安装位置改变而失效。更新沿用原安装目录；卸载默认保留数据，您可以选择要清理的部分。
+english.ExistingRoot=SteamWrapper is already installed in another folder. Update it in its current folder. To change folders, uninstall Manager first while keeping your data, then install again.
+chinesesimplified.ExistingRoot=SteamWrapper 已安装在其他目录。请在原目录更新；如需更换位置，请先卸载管理器并保留数据，再重新安装。
 english.FixedRoot=This installer uses its fixed per-user program directory. A different directory cannot be selected.
 chinesesimplified.FixedRoot=此安装器使用当前用户的固定程序目录，不能选择其他目录。
 english.DeploymentFailure=Manager installation could not complete. Close all Manager instances, preserve your data, and run this installer again. Deployment exit code: %1.
@@ -103,8 +108,39 @@ english.ClientWindowsRequired=This preview requires Windows 11 24H2 or later on 
 chinesesimplified.ClientWindowsRequired=此预览需要原生 x64 电脑上的 Windows 11 24H2 或更高版本。Windows Server 不属于支持的玩家安装目标。
 english.LeaseReleaseFailure=The deployment component did not confirm that it released Manager's installation lock. Manager was not opened. Run this installer again after the deployment component exits.
 chinesesimplified.LeaseReleaseFailure=部署组件未确认已释放管理器安装锁，因此没有打开管理器。请在部署组件退出后重新运行此安装器。
+english.UninstallChoices=Choose what to remove
+chinesesimplified.UninstallChoices=选择要卸载和清理的内容
+english.UninstallDescription=Manager, its shortcuts and installation registration will be removed. Everything below is optional and kept by default. Game files and saves are never removed.
+chinesesimplified.UninstallDescription=将卸载管理器，并移除它的快捷方式和安装记录。下列内容均可单独选择，默认保留。不会删除游戏文件或存档。
+english.RestoreSteam=Restore normal game launches from Steam
+chinesesimplified.RestoreSteam=恢复从 Steam 正常启动游戏
+english.RemoveProfiles=Delete saved game configurations
+chinesesimplified.RemoveProfiles=删除保存的游戏配置
+english.RemoveBackups=Delete game configuration backups
+chinesesimplified.RemoveBackups=删除游戏配置备份
+english.RemoveRunner=Remove Runner (used when launching games from Steam)
+chinesesimplified.RemoveRunner=删除 Runner（从 Steam 启动游戏时使用）
+english.RemoveSettings=Reset Manager settings, including language preferences
+chinesesimplified.RemoveSettings=清除管理器设置（包括语言偏好）
+english.RemoveCache=Delete downloaded covers and update installers
+chinesesimplified.RemoveCache=删除下载的封面和更新安装包
+english.RemoveLogs=Delete diagnostic logs
+chinesesimplified.RemoveLogs=删除诊断日志
+english.RestoreDescription=To remove game configurations or Runner, first exit Steam normally. Standard SteamWrapper commands can be removed after a backup; customized commands must be restored in Steam. Earlier manually overwritten options cannot be reconstructed. Restoration backups and unknown files are kept.
+chinesesimplified.RestoreDescription=删除游戏配置或 Runner 前，请先正常退出 Steam。可在备份后移除标准接管命令；自定义命令需在 Steam 中恢复。无法重建早先手动覆盖且未保存的参数。恢复备份和未知文件会保留。
+english.UninstallSelected=Uninstall selected items
+chinesesimplified.UninstallSelected=卸载并清理所选内容
+english.CancelUninstall=Cancel
+chinesesimplified.CancelUninstall=取消
+english.SteamBusy=Please exit Steam normally before restoring launch options or deleting game configurations and Runner. No program was closed. Your files were kept.
+chinesesimplified.SteamBusy=请正常退出 Steam，再恢复启动选项或删除游戏配置和 Runner。没有关闭任何程序，您的文件已保留。
+english.SteamRestore=Some Steam launch options could not be safely restored. Keep game configurations and Runner, or restore customized launch options in Steam and retry. Any restoration backups have been kept.
+chinesesimplified.SteamRestore=部分 Steam 启动选项无法安全恢复。请保留游戏配置和 Runner，或在 Steam 中恢复自定义启动选项后重试；已生成的恢复备份会保留。
+english.CleanupRetained=Manager was removed. Some selected files were in use, unrecognized, or still needed and were kept. Restoration backups and update verification history are also kept. You can review the remaining SteamWrapper data folder without changing any game files.
+chinesesimplified.CleanupRetained=管理器已卸载。部分所选文件因正在使用、无法识别或仍被依赖而保留；恢复备份和更新验证记录也会保留。您可以检查剩余的 SteamWrapper 数据目录，游戏文件未受影响。
 
 [Tasks]
+Name: "startmenuicon"; Description: "{cm:StartMenuIcon}"
 Name: "desktopicon"; Description: "{cm:DesktopIcon}"; Flags: unchecked
 
 [Files]
@@ -114,7 +150,7 @@ Source: "{#PayloadDir}\*"; DestDir: "{tmp}\payload"; Flags: dontcopy recursesubd
 Source: "{#PayloadDir}\Deployment\SteamWrapper.exe"; DestDir: "{app}\maintenance"; DestName: "SteamWrapper.Deployment.exe"; Flags: ignoreversion
 
 [Icons]
-Name: "{code:StartMenuShortcutRoot}\SteamWrapper"; Filename: "{app}\SteamWrapper.exe"; AppUserModelID: "SteamWrapper.Manager"; Check: CreateStartMenuShortcut
+Name: "{code:StartMenuShortcutRoot}\SteamWrapper"; Filename: "{app}\SteamWrapper.exe"; AppUserModelID: "SteamWrapper.Manager"; Tasks: startmenuicon; Check: CreateStartMenuShortcut
 Name: "{code:DesktopShortcutRoot}\SteamWrapper"; Filename: "{app}\SteamWrapper.exe"; AppUserModelID: "SteamWrapper.Manager"; Tasks: desktopicon
 
 [Run]
@@ -128,6 +164,18 @@ Filename: "{app}\SteamWrapper.exe"; Description: "{cm:LaunchManager}"; Flags: no
 var
   SessionDir, SessionToken, MaintenanceHost: String;
   Prepared, SessionReleased, SetupReleaseFailed: Boolean;
+  RestoreSteam, RemoveProfiles, RemoveBackups, RemoveRunner: Boolean;
+  RemoveSettings, RemoveCache, RemoveLogs, CleanupRetained: Boolean;
+
+function RegisteredInstallRoot: String;
+begin
+  Result := '';
+#if Isolated
+  RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\SteamWrapper-Installer-Test-{#IsolatedId}_is1', 'InstallLocation', Result);
+#else
+  RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{B7DBEC23-E563-4BFB-BE9C-F68D73E4D5BB}_is1', 'InstallLocation', Result);
+#endif
+end;
 
 function NotIsolated: Boolean;
 begin
@@ -196,8 +244,9 @@ begin
   Result := Operation + ' --language ';
   if ActiveLanguage = 'chinesesimplified' then Result := Result + 'zh-CN'
   else Result := Result + 'en';
+  Result := Result + ' --root ' + AddQuotes(ExpandConstant('{app}'));
 #if Isolated
-  Result := Result + ' --root ' + AddQuotes(InstallRoot('')) + ' --test-root';
+  Result := Result + ' --test-root';
 #endif
   Result := Result + ' --lease-session ' + AddQuotes(SessionDir) +
     ' --session-token ' + SessionToken + ' --session-timeout-seconds 300';
@@ -272,6 +321,8 @@ begin
     if LoadStringFromFile(SessionDir + '\error.txt', Receipt) then
     begin
       if String(Receipt) = 'Busy' then Result := FmtMessage(CustomMessage('DeploymentFailure'), ['10'])
+      else if String(Receipt) = 'SteamBusy' then Result := CustomMessage('SteamBusy')
+      else if String(Receipt) = 'SteamRestore' then Result := CustomMessage('SteamRestore')
       else Result := FmtMessage(CustomMessage('DeploymentFailure'), ['11']);
       Exit;
     end;
@@ -288,16 +339,22 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;
-  Host: String;
+  Host, Existing: String;
 begin
   Result := '';
   if Prepared then Exit;
+  Existing := RegisteredInstallRoot;
+  if (Existing <> '') and not PathSame(RemoveBackslashUnlessRoot(ExpandConstant('{app}')), RemoveBackslashUnlessRoot(Existing)) then
+  begin
+    Result := CustomMessage('ExistingRoot');
+    Exit;
+  end;
+#if Isolated
   if not PathSame(ExpandConstant('{app}'), InstallRoot('')) then
   begin
     Result := CustomMessage('FixedRoot');
     Exit;
   end;
-#if Isolated
   if GetEnv('STEAMWRAPPER_DEPLOYMENT_TEST') <> '1' then
   begin
     Result := CustomMessage('FixedRoot');
@@ -350,34 +407,135 @@ begin
   if SetupReleaseFailed then Result := 11 else Result := 0;
 end;
 
+function AddUninstallChoice(Form: TSetupForm; MessageName: String; Y: Integer): TNewCheckBox;
+begin
+  Result := TNewCheckBox.Create(Form);
+  Result.Parent := Form;
+  Result.SetBounds(ScaleX(20), ScaleY(Y), ScaleX(510), ScaleY(24));
+  Result.Caption := CustomMessage(MessageName);
+  Result.Checked := False;
+end;
+
+function ChooseUninstallOptions: Boolean;
+var
+  Form: TSetupForm;
+  Description, Help: TNewStaticText;
+  SteamChoice, ProfilesChoice, BackupsChoice, RunnerChoice: TNewCheckBox;
+  SettingsChoice, CacheChoice, LogsChoice: TNewCheckBox;
+  RemoveButton, CancelButton: TNewButton;
+  Choices: String;
+begin
+  Result := True;
+  if UninstallSilent then
+  begin
+    { No switch means no data deletion. CLI options are explicit, never inherited. }
+    Choices := ',' + ExpandConstant('{param:SWCLEANUP|}') + ',';
+    RemoveProfiles := Pos(',profiles,', Choices) > 0;
+    RemoveBackups := Pos(',profile-backups,', Choices) > 0;
+    RemoveRunner := Pos(',runner,', Choices) > 0;
+    RemoveSettings := Pos(',settings,', Choices) > 0;
+    RemoveCache := Pos(',cache,', Choices) > 0;
+    RemoveLogs := Pos(',logs,', Choices) > 0;
+    RestoreSteam := ExpandConstant('{param:SWRESTORESTEAM|0}') = '1';
+    Exit;
+  end;
+  Form := CreateCustomForm(ScaleX(550), ScaleY(450), False, False);
+  try
+    Form.Caption := CustomMessage('UninstallChoices');
+    Description := TNewStaticText.Create(Form);
+    Description.Parent := Form;
+    Description.SetBounds(ScaleX(20), ScaleY(16), ScaleX(510), ScaleY(58));
+    Description.AutoSize := False;
+    Description.WordWrap := True;
+    Description.Caption := CustomMessage('UninstallDescription');
+    SteamChoice := AddUninstallChoice(Form, 'RestoreSteam', 82);
+    ProfilesChoice := AddUninstallChoice(Form, 'RemoveProfiles', 110);
+    BackupsChoice := AddUninstallChoice(Form, 'RemoveBackups', 138);
+    RunnerChoice := AddUninstallChoice(Form, 'RemoveRunner', 166);
+    SettingsChoice := AddUninstallChoice(Form, 'RemoveSettings', 194);
+    CacheChoice := AddUninstallChoice(Form, 'RemoveCache', 222);
+    LogsChoice := AddUninstallChoice(Form, 'RemoveLogs', 250);
+    Help := TNewStaticText.Create(Form);
+    Help.Parent := Form;
+    Help.SetBounds(ScaleX(20), ScaleY(290), ScaleX(510), ScaleY(94));
+    Help.AutoSize := False;
+    Help.WordWrap := True;
+    Help.Caption := CustomMessage('RestoreDescription');
+    RemoveButton := TNewButton.Create(Form);
+    RemoveButton.Parent := Form;
+    RemoveButton.SetBounds(ScaleX(225), ScaleY(404), ScaleX(195), ScaleY(30));
+    RemoveButton.Caption := CustomMessage('UninstallSelected');
+    RemoveButton.ModalResult := mrOk;
+    RemoveButton.Default := True;
+    CancelButton := TNewButton.Create(Form);
+    CancelButton.Parent := Form;
+    CancelButton.SetBounds(ScaleX(430), ScaleY(404), ScaleX(100), ScaleY(30));
+    CancelButton.Caption := CustomMessage('CancelUninstall');
+    CancelButton.ModalResult := mrCancel;
+    CancelButton.Cancel := True;
+    Form.ActiveControl := CancelButton;
+    Result := Form.ShowModal = mrOk;
+    if Result then
+    begin
+      RestoreSteam := SteamChoice.Checked;
+      RemoveProfiles := ProfilesChoice.Checked;
+      RemoveBackups := BackupsChoice.Checked;
+      RemoveRunner := RunnerChoice.Checked;
+      RemoveSettings := SettingsChoice.Checked;
+      RemoveCache := CacheChoice.Checked;
+      RemoveLogs := LogsChoice.Checked;
+    end;
+  finally
+    Form.Free;
+  end;
+end;
+
 function InitializeUninstall: Boolean;
 begin
   MaintenanceHost := ExpandConstant('{app}\maintenance\SteamWrapper.Deployment.exe');
-  Result := PathSame(ExpandConstant('{app}'), InstallRoot('')) and FileExists(MaintenanceHost);
+  Result := FileExists(MaintenanceHost);
   if Result then Result := GetSHA256OfFile(MaintenanceHost) = '{#HostSha256}';
 #if Isolated
-  Result := Result and (GetEnv('STEAMWRAPPER_DEPLOYMENT_TEST') = '1');
+  Result := Result and PathSame(ExpandConstant('{app}'), InstallRoot('')) and (GetEnv('STEAMWRAPPER_DEPLOYMENT_TEST') = '1');
 #endif
   if not Result and not UninstallSilent then MsgBox(CustomMessage('HostInvalid'), mbError, MB_OK);
+  if Result then Result := ChooseUninstallOptions;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
-  Host, Failure: String;
+  Host, Failure, Operation, Choices: String;
+  Receipt: AnsiString;
   ResultCode: Integer;
 begin
+  if CurUninstallStep = usDone then
+  begin
+    if CleanupRetained and not UninstallSilent then MsgBox(CustomMessage('CleanupRetained'), mbInformation, MB_OK);
+    Exit;
+  end;
   if CurUninstallStep <> usUninstall then Exit;
   Host := ExpandConstant('{tmp}\SteamWrapper.UninstallHost.exe');
   if not FileCopy(MaintenanceHost, Host, False) or (GetSHA256OfFile(Host) <> '{#HostSha256}') or not BeginSession then
     RaiseException(CustomMessage('UninstallFailure'));
-  if not Exec(Host, HostArguments('--uninstall'), ExpandConstant('{tmp}'), SW_HIDE, ewNoWait, ResultCode) then
+  Operation := '--uninstall';
+  if RestoreSteam then Operation := Operation + ' --restore-steam';
+  Choices := '';
+  if RemoveProfiles then Choices := Choices + 'profiles,';
+  if RemoveBackups then Choices := Choices + 'profile-backups,';
+  if RemoveRunner then Choices := Choices + 'runner,';
+  if RemoveSettings then Choices := Choices + 'settings,';
+  if RemoveCache then Choices := Choices + 'cache,';
+  if RemoveLogs then Choices := Choices + 'logs,';
+  if Choices <> '' then Operation := Operation + ' --cleanup ' + AddQuotes(Choices);
+  if not Exec(Host, HostArguments(Operation), ExpandConstant('{tmp}'), SW_HIDE, ewNoWait, ResultCode) then
     RaiseException(CustomMessage('UninstallFailure'));
   Failure := WaitForDeployment;
   if Failure <> '' then
   begin
     ReleaseSession;
-    RaiseException(CustomMessage('UninstallFailure'));
+    RaiseException(Failure);
   end;
+  if LoadStringFromFile(SessionDir + '\cleanup-result.txt', Receipt) then CleanupRetained := String(Receipt) = 'retained';
 end;
 
 procedure DeinitializeUninstall;

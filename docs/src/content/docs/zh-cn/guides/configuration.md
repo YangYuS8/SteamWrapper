@@ -132,4 +132,14 @@ Manager 先验证路径和 AppID、保存配置，再准备稳定 Runner。保�
 
 请求受时间、大小和并发限制。连接失败、图片不可获取或响应无效时保留占位，不阻塞配置。实用检查见[缺失封面排查](/SteamWrapper/zh-cn/guides/troubleshooting/#missing-covers)，具体限制见[架构](/SteamWrapper/zh-cn/development/architecture/#封面与安全边界)。
 
+## 更新 SteamWrapper
+
+打开侧栏的**更新**即可检查新版本。**打开 SteamWrapper 时检查更新**默认关闭；开启后仅在打开 Manager 时检查，下载和安装仍需要你确认。更新会沿用当前版本所属的稳定版或预览版通道。
+
+安装版可以选择**下载更新**，下载过程中随时可以取消或关闭对话框。下载通过验证后，点击**安装更新**，确认后会关闭 Manager 并打开安装程序。请先完成或放弃尚未保存的编辑。安装成功后会重新打开 SteamWrapper，游戏配置会保留，也不会强制关闭游戏。
+
+便携版会提供发布页入口：下载新版 ZIP 并解压到新文件夹。更新功能不会覆盖当前便携版所在的文件夹。
+
+默认的下载来源为**自动**，优先连接 GitHub。连接失败时，也可以展开**下载来源**，选择 GitHub 或 CNB。只有该版本及更新信息已同步到 CNB 时，CNB 才可作为备用来源；早期版本可能尚不可用。连接或验证失败会保留当前安装。不支持应用内更新的构建会明确提示，并提供官方发布页入口。已有的 `v0.2.4-preview.1` 尚未包含此更新界面。
+
 实现边界见[配置保存服务](https://github.com/YangYuS8/SteamWrapper/blob/main/apps/manager-winui/SteamWrapper.Application/Profiles/ProfileStore.cs)和 [Runner 配置模型](https://github.com/YangYuS8/SteamWrapper/blob/main/crates/core/src/profile.rs)。

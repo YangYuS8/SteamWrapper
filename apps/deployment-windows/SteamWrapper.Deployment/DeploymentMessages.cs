@@ -46,6 +46,12 @@ public static class DeploymentMessages
         var code = error is DeploymentException deployment ? deployment.Code : error is InvalidDataException or System.Text.Json.JsonException ? "Invalid" : "Io";
         return (code, chinese) switch
         {
+            ("SteamBusy", false) => "Close Steam normally before restoring launch options or removing game profiles and Runner. No application was closed and your files were kept.",
+            ("SteamBusy", true) => "请正常退出 Steam，再恢复启动选项或删除游戏配置和 Runner。没有关闭任何应用，您的文件已保留。",
+            ("SteamRestore", false) => "Steam launch options could not be safely restored. Keep game profiles and Runner, restore customized launch options in Steam, then retry. Any restoration backups have been kept.",
+            ("SteamRestore", true) => "无法安全恢复 Steam 启动选项。请保留游戏配置和 Runner，在 Steam 中恢复自定义启动选项后重试；已生成的恢复备份会保留。",
+            ("UpdateInstall", false) => "The update did not finish. Close other SteamWrapper Manager windows and try again. Your game settings have been kept. If Manager cannot open, run the downloaded installer to repair it.",
+            ("UpdateInstall", true) => "更新未完成。请关闭其他 SteamWrapper 管理器窗口后重试；您的游戏配置已保留。如果管理器无法打开，请运行已下载的安装包进行修复。",
             ("Busy", false) => "SteamWrapper Manager is still running or another installation is active. Close Manager normally and retry. Games will not be closed.",
             ("Busy", true) => "SteamWrapper 管理器仍在运行，或另一个安装正在进行。请正常关闭管理器后重试；游戏不会被关闭。",
             ("Downgrade", false) => "This installer is older than the installed Manager. Use the explicit rollback command for a verified compatible previous version.",

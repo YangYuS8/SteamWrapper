@@ -91,6 +91,7 @@ jobs:
       MISE_TASK_RUN_AUTO_INSTALL: 'false'
       RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
       RELEASE_COMMIT: ${{ needs.preflight.outputs.commit }}
+      STEAMWRAPPER_RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
@@ -98,6 +99,12 @@ jobs:
           version: '2026.9.1'
           install_args: 'dotnet rust powershell'
           cache: false
+      - name: Set the exact release identity for manual previews
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:STEAMWRAPPER_RELEASE_TAG)) {
+            $version = ([xml](Get-Content apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ }
+            "STEAMWRAPPER_RELEASE_TAG=v$version-preview.$env:GITHUB_RUN_NUMBER" >> $env:GITHUB_ENV
+          }
       - name: Publish and run all five publication regressions
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
       - name: Inspect coordinated product versions and the actual NativeAOT launcher
@@ -176,6 +183,8 @@ jobs:
     needs: [preflight, build_windows, publish_github]
     if: needs.preflight.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.cnb.outputs.configured }}
     env:
       CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN }}
       CNB_GIT_TOKEN: ${{ secrets.CNB_GIT_TOKEN }}
@@ -213,3 +222,33 @@ jobs:
         if: steps.cnb.outputs.configured == 'true'
         shell: pwsh
         run: ./scripts/releases/Publish-CnbRelease.ps1 -PackageDirectory "target/winui/releases/$env:RELEASE_TAG" -Repository Nesoriel/SteamWrapper
+
+  publish_update:
+    name: Publish project-signed update metadata
+    needs: [preflight, build_windows, publish_github, mirror_cnb]
+    if: ${{ !cancelled() && needs.preflight.outputs.publish == 'true' && needs.publish_github.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Shared with the weekly refresh: an old refresh must never overwrite a new release.
+    concurrency:
+      group: steamwrapper-update-feeds
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: SteamWrapper-WinUI-release-assets
+          path: target/winui/releases/${{ needs.preflight.outputs.tag }}/
+      - name: Sign the verified release and advance the update feed
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STEAMWRAPPER_UPDATE_PRIVATE_KEY: ${{ secrets.STEAMWRAPPER_UPDATE_PRIVATE_KEY }}
+          CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+          CNB_MIRROR_VERIFIED: ${{ needs.mirror_cnb.result == 'success' && needs.mirror_cnb.outputs.configured == 'true' }}
+        run: |
+          ./scripts/releases/Publish-UpdateMetadata.ps1 -PackageDirectory "target/winui/releases/$env:RELEASE_TAG" -IncludeCnbMirror:($env:CNB_MIRROR_VERIFIED -eq 'true')

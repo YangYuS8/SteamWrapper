@@ -40,6 +40,7 @@ public sealed partial class MainWindow
             AddGameButton.Content = localizer["AddGame"];
             LocalizedConfiguredGames.Text = localizer["ConfiguredGames"];
             ReloadButton.Content = localizer["Reload"];
+            UpdatesButton.Content = localizer["Updates"];
             LocalizedPreview.Text = localizer["Preview"];
             LocalizedWelcomeTitle.Text = localizer["WelcomeTitle"];
             LocalizedWelcomeDescription.Text = localizer["WelcomeDescription"];

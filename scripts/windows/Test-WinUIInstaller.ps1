@@ -102,7 +102,7 @@ try {
     if (Test-Path -LiteralPath (Join-Path $root 'wrong-root/installation.json')) { throw 'A command-line directory override mutated another installation root.' }
     if ((Get-Content -LiteralPath (Join-Path $root 'wrong-root.log') -Raw) -notmatch '不能选择其他目录') { throw 'The compiled Chinese installer did not report its localized fixed-root safeguard.' }
 
-    Invoke-IsolatedInstaller -Executable $setup -Arguments @('/LANG=english', '/TASKS=desktopicon') -Name install-english
+    Invoke-IsolatedInstaller -Executable $setup -Arguments @('/LANG=english', '/TASKS=startmenuicon,desktopicon') -Name install-english
     $state = Read-Installation
     if ($state.current.tag -ne $Tag) { throw 'The initial setup activated the wrong release.' }
     $desktopShortcut = Join-Path $root 'shell-fixture/Desktop/SteamWrapper.lnk'

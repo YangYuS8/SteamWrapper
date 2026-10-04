@@ -5,11 +5,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-    <Version>0.2.4</Version>
+    <Version>0.2.5</Version>
     <Product>SteamWrapper</Product>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Tomlyn" Version="2.10.1" />
+    <EmbeddedResource Include="../../../packaging/windows/update-trust.json" LogicalName="SteamWrapper.UpdateTrust.json" />
   </ItemGroup>
 </Project>

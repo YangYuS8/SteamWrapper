@@ -6,7 +6,8 @@ using SteamWrapper.Application.Localization;
 
 namespace SteamWrapper.Application.Services;
 
-public sealed record UiSettings(string Language, Exception? ReadError = null, bool SteamCdnCovers = false);
+public sealed record UiSettings(string Language, Exception? ReadError = null, bool SteamCdnCovers = false,
+    bool AutomaticUpdateChecks = false, string UpdateSource = "auto");
 
 /// <summary>Shared Manager preference contract, separate from profiles.toml and Runner.</summary>
 public sealed class UiSettingsStore(string path, Func<CultureInfo>? systemUiCulture = null)
@@ -25,7 +26,10 @@ public sealed class UiSettingsStore(string path, Func<CultureInfo>? systemUiCult
                 ? Localizer.NormalizeLanguage(preference is JsonValue value && value.TryGetValue<string>(out var text) ? text : null)
                 : Localizer.SystemLanguage(systemUiCulture());
             var covers = document["steamCdnCovers"] is JsonValue coverValue && coverValue.TryGetValue<bool>(out var enabled) && enabled;
-            return new(language, SteamCdnCovers: covers);
+            var checks = document["automaticUpdateChecks"] is JsonValue checkValue && checkValue.TryGetValue<bool>(out var checkEnabled) && checkEnabled;
+            var source = document["updateSource"] is JsonValue sourceValue && sourceValue.TryGetValue<string>(out var sourceText)
+                ? NormalizeUpdateSource(sourceText) : "auto";
+            return new(language, SteamCdnCovers: covers, AutomaticUpdateChecks: checks, UpdateSource: source);
         }
         catch (Exception error) when (IsSettingsError(error)) { return new(Localizer.English, error); }
     }
@@ -35,6 +39,14 @@ public sealed class UiSettingsStore(string path, Func<CultureInfo>? systemUiCult
 
     public Task SaveSteamCdnCoversAsync(bool enabled, CancellationToken cancellationToken = default) =>
         SaveAsync(document => document["steamCdnCovers"] = enabled, cancellationToken);
+
+    public Task SaveAutomaticUpdateChecksAsync(bool enabled, CancellationToken cancellationToken = default) =>
+        SaveAsync(document => document["automaticUpdateChecks"] = enabled, cancellationToken);
+
+    public Task SaveUpdateSourceAsync(string source, CancellationToken cancellationToken = default) =>
+        SaveAsync(document => document["updateSource"] = NormalizeUpdateSource(source), cancellationToken);
+
+    private static string NormalizeUpdateSource(string? source) => source is "github" or "cnb" ? source : "auto";
 
     private async Task SaveAsync(Action<JsonObject> update, CancellationToken cancellationToken)
     {

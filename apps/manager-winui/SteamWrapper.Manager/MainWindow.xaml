@@ -22,6 +22,7 @@
           <ComboBoxItem Content="简体中文" Tag="zh-CN"/>
         </ComboBox>
         <Button x:Name="ReloadButton" Click="Reload_Click" HorizontalAlignment="Stretch"/>
+        <Button x:Name="UpdatesButton" Click="Updates_Click" HorizontalAlignment="Stretch" AutomationProperties.AutomationId="Updates"/>
         <TextBlock x:Name="LocalizedPreview" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
       </StackPanel>
     </Grid>

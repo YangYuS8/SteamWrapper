@@ -12,10 +12,10 @@ public sealed class HostCliLanguageTests
     {
         using var fixture = new Fixture();
         Assert.IsFalse(Directory.Exists(fixture.Root));
-        // Deliberately omit --test-root: even the fixture's test environment must
-        // not admit this non-fixed root, and --language must precede that rejection.
+        // A custom directory is supported, but a drive root must still be
+        // rejected before a lease or journal is created. Language applies first.
         using var process = fixture.Start("SteamWrapper.Host", "SteamWrapper",
-            "--repair", "--root", fixture.Root, "--language", language);
+            "--repair", "--root", Path.GetPathRoot(fixture.Root)!, "--language", language);
 
         Assert.IsTrue(process.WaitForExit(10000), "Rejected maintenance options must exit without a UI dialog.");
         Assert.AreEqual(11, process.ExitCode);

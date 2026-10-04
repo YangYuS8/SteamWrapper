@@ -25,7 +25,7 @@ internal sealed class UpdateCheckService : IDisposable
             AutomaticDecompression = DecompressionMethods.None }) { Timeout = Timeout.InfiniteTimeSpan };
     }
 
-    private static void RequireSafeTransport(HttpMessageHandler handler)
+    internal static void RequireSafeTransport(HttpMessageHandler handler)
     {
         var visited = new HashSet<HttpMessageHandler>(ReferenceEqualityComparer.Instance);
         for (var depth = 0; ; depth++)
