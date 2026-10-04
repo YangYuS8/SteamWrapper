@@ -7,9 +7,9 @@ description: "构建、试用、修复和卸载未签名的按用户安装器，
 
 Inno Setup 安装器和 C# 部署组件已实现，面向 **Windows 11 24H2 或更新版本、x64**，目前是**没有 Windows Authenticode 签名的技术预览**。包含完整的自包含 WinUI 文件、两种语言和独立 Runner。普通分支 CI 只测试和编译，不生成安装包；明确的手动运行只构建预览产物。版本标签交付通过明确的第 2 版契约同时打包 Setup 与便携 ZIP，并保留原有便携验证器。Authenticode 是可选能力；[执行队列](/SteamWrapper/zh-cn/project/roadmap/#执行队列2026-10-03)中的稳定交付门槛仍待完成。
 
-这不是已签名或稳定发布。开发机或托管 Windows Server 的隔离进程测试不等于干净 Windows 11 验收。干净客户端、正常防护下的下载、多用户、缩放以及真实 Steam 交付门槛仍在[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)中记录。不要为了运行预览关闭 Windows 防护。
+当前没有 Authenticode 签名，也不是稳定版。开发机或托管 Windows Server 的隔离进程测试不等于干净 Windows 11 验收。干净客户端、正常防护下的下载、多用户、缩放以及真实 Steam 交付门槛仍在[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)中记录。不要为了运行预览关闭 Windows 防护。
 
-当前源码为 `0.2.5`，已具备 `v0.2.5-preview.1` 双语说明。请从 [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases) 下载实际已发布的 Setup 或便携 ZIP；源码更新不代表公开版本已经存在。只有 CNB 的二进制上传与下载核验成功后，才会将其列为可用镜像。
+[v0.2.5-preview.1 已公开发布](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1)，仍为 GitHub 预发布，时间为北京时间 2026-10-05 04:57:52（UTC 2026-10-04 20:57:52）。七个附件包含安装包（49,901,116 字节）、便携 ZIP（73,765,434 字节）和双语说明。[发布工作流](https://github.com/YangYuS8/SteamWrapper/actions/runs/37232987692)已通过最终安装器／选项门禁；普通玩家请使用[优先 Setup 的安装指南](/SteamWrapper/zh-cn/guides/installation/)。只有 CNB 的二进制上传与下载核验成功后，才会将其列为可用镜像。
 
 ## 构建预览
 
@@ -123,4 +123,4 @@ Manager 初始化完成后才写入绑定本次事务的健康确认。未确认
 
 [代码签名政策](/SteamWrapper/zh-cn/project/design/code-signing/)在 Foundation 申请被拒后，将 Windows Authenticode 改为可选改进，不宣称已有 Windows 发布者证书。应用更新使用独立的项目签名密钥，单独的校验和与 PE 产品元数据不等于签名。每次改变可安装载荷都使用新的协调数字版本，并保留第三方许可证／notices 及上游签名。
 
-`0.2.5` 源码已包含手动检查、可选启动检查、验证下载和确认后安装。真实项目密钥已配置，公开更新源是否可用以及下载至安装验收仍取决于成功发布和核验。当前发布契约见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。日常游戏启动继续独立于 Manager 和联网。
+`0.2.5` 已包含手动检查、可选启动检查、验证下载和确认后安装。其公开 GitHub 预览更新源及实际安装包下载已通过服务级签名、大小和摘要验证，该检查没有执行公开下载的安装器。元数据续期也已通过，没有重建软件或改变版本附件。真实隔离安装接力是单独证据，干净客户端／公开下载至安装整体验收仍待完成。没有更新界面的旧版需先手动安装一次。范围见[测试](/SteamWrapper/zh-cn/development/testing/#项目更新检查与安装)，发布契约见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。日常游戏启动继续独立于 Manager 和联网。
