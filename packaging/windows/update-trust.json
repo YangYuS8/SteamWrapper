@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "keys": [
+    {
+      "keyId": "project-20261004",
+      "subjectPublicKeyInfo": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE7r8JuGUg+FTVzidp/ltlQ6YYvzUPWyLCbatR7WJfazsg4Nrk8Xy4LLM4yytXcggQj2pMXYK04CxiXK/kFCFG7g=="
+    }
+  ],
+  "githubRepository": "YangYuS8/SteamWrapper",
+  "cnbRepository": "Nesoriel/SteamWrapper"
+}

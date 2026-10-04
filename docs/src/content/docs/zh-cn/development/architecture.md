@@ -33,7 +33,7 @@ Steam 状态、时长、成就与云行为分别需要限定范围的验收。
 → 生成/复制启动项，由用户手动应用
 ```
 
-自动应用或恢复 Steam 启动项尚未实现。
+Manager 仍生成启动项，由用户手动应用。`0.2.5` 的卸载改动增加独立、明确选择的功能：移除严格识别的 SteamWrapper 命令；它不能恢复未知的历史参数，也不是通用自动应用能力。专门验收仍在进行中。
 
 ## Launch Options 合约
 
@@ -63,9 +63,13 @@ crates/core                                 # 共享配置/路径契约
 
 ### Manager 部署
 
-`apps/deployment-windows` 包含不依赖 GUI 的 C# 部署库和 NativeAOT `SteamWrapper.exe` 启动器／辅助程序。Manager 初始化前取得共享安装锁，保持到进程退出，健康确认绑定当前事务。Inno 和显式修复／回退／卸载共用独占锁及清单／日志引擎。该组件只启动 Manager，不接触游戏、Steam 启动项或稳定 Runner／数据目录。详见[安装器所有权与恢复](/SteamWrapper/zh-cn/guides/installer-preview/)。
+`apps/deployment-windows` 包含不依赖 GUI 的 C# 部署库和 NativeAOT `SteamWrapper.exe` 启动器／辅助程序。Manager 初始化前取得共享安装锁，保持到进程退出，健康确认绑定当前事务。Inno 和显式修复／回退／卸载共用独占锁及清单／日志引擎。首次安装可选择本地固定磁盘上经过验证的空目录；升级和修复使用已登记的程序位置，稳定数据目录仍独立存放。
 
-应用更新认证是注入信任的内部服务，没有启用生产源或更新界面。SignPath 签名和 D1b 干净客户端交付仍需外部批准／独立验收。
+辅助程序启动 Manager 或经确认的 SteamWrapper 安装器，不启动游戏。卸载有一项严格限定的例外：按用户明确选择移除可识别的 SteamWrapper 启动选项和选定的自有数据。Steam 必须退出，受影响账号文件先备份并保留其他字节。删除配置／Runner 还需确认没有残留 Runner 引用，且 Runner 字节匹配受支持元数据。默认卸载保留数据，所有路径都保留游戏、存档、Steam 恢复备份、更新信任状态及未知文件。这些新选项正在整合，需专门验收。详见[安装器所有权与恢复](/SteamWrapper/zh-cn/guides/installer-preview/)。
+
+`OfficialUpdateService` 使用内嵌公钥验证项目签名的发行元数据，检查有效期和防回退状态，再将受大小限制、通过摘要验证的安装包下载到 SteamWrapper 更新缓存。WinUI 提供手动检查、明确启用的启动检查、进度／取消和安装确认；便携版提供发布页下载入口。现有 NativeAOT 辅助程序等待 Manager 正常退出，复核下载文件后启动同一个 Inno 安装器，成功后重新打开 Manager，不终止游戏，也不替换稳定 Runner。
+
+当前 `0.2.5` 源码已实现此流程，并配置真实项目公钥及 GitHub 签名 secret；标签更新源发布和端到端交付验收仍待完成。GitHub 为主源，CNB 只有在镜像凭据就绪并发布相同发行附件后才能作为备用源。SignPath／Authenticode 是独立于更新真实性验证的可选能力，干净客户端交付仍需验收。
 
 ### `crates/core`
 
@@ -120,7 +124,7 @@ WinUI 使用与 `profiles.toml` 同级的 `ui-settings.json`。没有 `language`
 
 ## 分发与稳定安装
 
-当前 Windows 使用完整自包含预览布局，可本地生成，也可通过版本标签／手动发布工作流构建。日常 CI 只测试和编译，不打包应用。完整解压后从普通资源管理器打开 Manager。每用户安装器、应用更新器及自动 Steam 写入仍未实现；标签包为未签名预发布，交付验收仍待完成。准确触发方式见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
+当前 Windows 提供完整自包含预览布局、每用户 Inno 安装器及便携 ZIP，可本地生成，也可通过版本标签／手动发布工作流构建。日常 CI 只测试和编译，不打包应用。请从普通资源管理器或已安装快捷方式打开 Manager。应用更新器已实现，公开更新源及完整交付验收仍待完成；自动 Steam 写入尚未实现。标签包继续作为未使用 Authenticode 签名的预发布，适用的交付门槛通过后才进入稳定版。准确触发方式见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\

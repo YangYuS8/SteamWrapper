@@ -102,6 +102,8 @@ jobs:
 
       - name: Test GitHub and CNB publishers without network writes
         run: |
+          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-ProjectUpdates.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Project update signing and publishing regressions failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1
           if ($LASTEXITCODE -ne 0) { throw 'GitHub publisher regressions failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1 -Installable

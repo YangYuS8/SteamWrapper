@@ -1,9 +1,9 @@
 ---
 title: "SignPath application dossier"
-description: "Current software facts and the human/provider prerequisites for the Foundation application."
+description: "Archived software facts for the rejected Foundation application and optional future provider setup."
 ---
 
-This dossier records the software part of the [official Foundation application](https://signpath.org/apply.html), **submitted on 2026-10-04 and awaiting provider review**. The official form confirmed submission; no subscription, project certificate or production signing approval has been obtained. The [Code signing policy](/SteamWrapper/project/design/code-signing/) records the current trust and approval status.
+This dossier preserves the software part of the [official Foundation application](https://signpath.org/apply.html), submitted on 2026-10-04. **The maintainer reported rejection on 2026-10-05; no reason is recorded or inferred.** No subscription, project certificate or production signing approval was obtained. Authenticode is an optional future improvement; project-key-verified application updates and stable delivery do not require Foundation approval. The [Code signing policy](/SteamWrapper/project/design/code-signing/) records the current trust policy. The material below is retained for reference, not an active onboarding request.
 
 ## Software fields
 
@@ -47,8 +47,8 @@ barcodrod.io provides a closer unpackaged example: its [v2.1 build script](https
 
 These are technical precedents for the proposed stack, not approval of SteamWrapper. They do not establish acceptance of our Microsoft dependency versions or license classifications, the System Libraries exception, or the Inno multi-stage signing chain. Submit those details for this project's own provider review; do not copy another project's identity, policies or certificate pins.
 
-## Required external setup
+## Optional future provider setup
 
 All human maintainers need GitHub and SignPath MFA. Name actual authors, reviewers and signing approvers; each release needs human approval. The agent and a CI submitter cannot supply that approval. After admission, record the provider's accepted configuration, genuine public certificate DER SHA-256 pins and protected submission identity. A checksum or unsigned preview is not a substitute for signed trust. [Foundation conditions](https://signpath.org/terms.html).
 
-Application submission is confirmed separately from Foundation admission, SignPath human-account MFA/roles and acceptance of the artifact chain; those onboarding gates remain open. Never change an approval status merely because local fixture validation passed. Missing provider configuration stops a required-signed release rather than publishing an unsigned fallback.
+The application was rejected and the provider path is not active. If revisited, Foundation admission, SignPath human-account MFA/roles and acceptance of the artifact chain must be verified independently. Never change an approval status merely because local fixture validation passed. An explicitly required-Authenticode release must still stop if its provider configuration is missing; ordinary project-signed updates do not use this provider route.

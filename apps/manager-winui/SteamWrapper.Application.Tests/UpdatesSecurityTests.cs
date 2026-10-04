@@ -14,6 +14,19 @@ namespace SteamWrapper.Application.Tests;
 public sealed class UpdatesSecurityTests
 {
     [TestMethod]
+    public void ProjectSignedSchemaDoesNotRequireAnAuthenticodeCertificate()
+    {
+        using var fixture = new UpdateFixture();
+        var payload = fixture.Payload();
+        payload["schemaVersion"] = 2;
+        var artifact = payload["release"]!["artifact"]!.AsObject();
+        artifact.Remove("authenticodeRequired");
+        artifact["trust"] = "project-signature";
+        artifact["mirrorUrl"] = null;
+        Assert.IsTrue(fixture.Verify(fixture.Envelope(Encoding.UTF8.GetBytes(payload.ToJsonString()))).IsUpgrade);
+    }
+
+    [TestMethod]
     public void SignedDuplicatePayloadPropertiesAreRejected()
     {
         using var fixture = new UpdateFixture();
@@ -55,7 +68,7 @@ public sealed class UpdatesSecurityTests
     }
 
     [TestMethod]
-    public void WrongProductContractsVersionsAndUnsignedInstallerCannotProduceAPlan()
+    public void WrongProductContractsVersionsAndUnknownTrustCannotProduceAPlan()
     {
         using var fixture = new UpdateFixture();
         foreach (var change in new Action<JsonObject>[]
@@ -71,7 +84,8 @@ public sealed class UpdatesSecurityTests
             root => root["release"]!["tag"] = "v00.3.0-preview.1",
             root => root["release"]!["commit"] = "main",
             root => root["release"]!["artifact"]!["type"] = "portable",
-            root => root["release"]!["artifact"]!["authenticodeRequired"] = false,
+            root => root["release"]!["artifact"]!["trust"] = "none",
+            root => root["schemaVersion"] = 1,
             root => root["release"]!["artifact"]!["bytes"] = UpdateTrustPolicy.MaximumArtifactBytes + 1,
             root => root["release"]!["artifact"]!["sha256"] = "not-a-hash"
         })
@@ -168,13 +182,13 @@ internal sealed class UpdateFixture : IDisposable
     internal static string Stamp(DateTimeOffset value) => value.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
     internal JsonObject Payload(long sequence = 1) => new()
     {
-        ["schemaVersion"] = 1, ["appId"] = "SteamWrapper", ["platform"] = "win-x64", ["channel"] = "preview",
+        ["schemaVersion"] = 2, ["appId"] = "SteamWrapper", ["platform"] = "win-x64", ["channel"] = "preview",
         ["sequence"] = sequence, ["issuedAt"] = Stamp(Now.AddMinutes(-1)), ["expiresAt"] = Stamp(Now.AddHours(1)),
         ["release"] = new JsonObject
         {
             ["tag"] = "v0.3.0-preview.1", ["version"] = "0.3.0", ["commit"] = new string('a', 40), ["minimumWindowsVersion"] = "10.0.26100.0",
             ["profileContract"] = 2, ["runnerContract"] = 2, ["deploymentProtocol"] = 1,
-            ["artifact"] = new JsonObject { ["type"] = "installer", ["url"] = "https://downloads.example.invalid/SteamWrapper.exe", ["sha256"] = new string('b', 64), ["bytes"] = 12345, ["authenticodeRequired"] = true }
+            ["artifact"] = new JsonObject { ["type"] = "installer", ["url"] = "https://downloads.example.invalid/SteamWrapper.exe", ["mirrorUrl"] = null, ["sha256"] = new string('b', 64), ["bytes"] = 12345, ["trust"] = "project-signature" }
         }
     };
     internal byte[] PublicKey() => key.ExportSubjectPublicKeyInfo();

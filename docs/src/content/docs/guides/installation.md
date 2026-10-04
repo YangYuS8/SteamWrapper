@@ -5,7 +5,7 @@ description: Get the complete WinUI preview, understand its data locations, and 
 
 The WinUI Manager is currently a **self-contained directory preview for Windows 11 24H2 x64**. It bundles .NET and Windows App SDK files alongside the application. Keep the complete directory together.
 
-An unsigned [per-user setup preview](/SteamWrapper/guides/installer-preview/) is implemented separately. Clean-system/update/uninstall acceptance is not complete; there is no single-file WinUI executable. WinUI is the only Manager, with executable `SteamWrapper.Manager.exe`. Current version-tag releases are unsigned portable prereleases; Dioxus releases are historical and do not contain the current WinUI Manager.
+A [per-user setup preview](/SteamWrapper/guides/installer-preview/) is also available without Windows Authenticode signing. Version-tag releases package both Setup and the portable ZIP. Clean-client and broader recovery acceptance remain open; there is no single-file WinUI executable. WinUI is the only Manager, with executable `SteamWrapper.Manager.exe`. Dioxus releases are historical and do not contain the current WinUI Manager. This page describes the portable ZIP; use the installer guide for installation-location, shortcut and uninstall choices.
 
 ## Get a versioned preview
 
@@ -24,7 +24,7 @@ Ordinary pull requests and merges into `main` run CI without uploading an applic
 
 From a successful manual run, download **`SteamWrapper-WinUI-preview-windows-x64`** and extract every file. Do not use the separate test-evidence artifact as the application. Workflow artifact downloads may require GitHub sign-in and expire with the retention period. Maintainers should provide the selected source revision with the preview.
 
-The separate **`SteamWrapper-WinUI-installer-preview-windows-x64`** artifact contains an unsigned setup preview and inspection metadata. Read the [installer guide](/SteamWrapper/guides/installer-preview/) before using it; it has not passed the clean-client/signing gates.
+The separate **`SteamWrapper-WinUI-installer-preview-windows-x64`** artifact contains a setup preview without Windows Authenticode signing and its inspection metadata. Read the [installer guide](/SteamWrapper/guides/installer-preview/) before using it; clean-client acceptance remains open.
 
 ## Open the complete application
 
@@ -104,7 +104,7 @@ Steam Launch Options must continue to reference the stable `bin\SteamWrapperRunn
 
 ## Remove a preview
 
-The WinUI directory preview has no tested new uninstaller. Removing its application directory does not remove the separate stable Runner and configuration.
+For the portable ZIP, removing its extracted application directory does not remove the separate stable Runner and configuration. If you used Setup, use Windows installed-app settings or its uninstaller. Default uninstall keeps user data; its seven optional restoration/cleanup choices are described in the [installer guide](/SteamWrapper/guides/installer-preview/), with scoped local results and remaining gates recorded separately.
 
 Before removing stable Runner or its data, restore every Steam Launch Options value that still references it and retain any configuration backups you need. Leaving Steam pointing to a deleted Runner prevents those entries from launching correctly.
 

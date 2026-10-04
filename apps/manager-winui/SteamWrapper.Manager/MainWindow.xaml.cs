@@ -39,6 +39,7 @@ public sealed partial class MainWindow : Window
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1160, 900));
         store = new ProfileStore(paths.ProfilesPath);
         runner = new RunnerInstaller(paths, Path.Combine(AppContext.BaseDirectory, "Runner"));
+        Closed += (_, _) => CloseUpdates();
         AppWindow.Closing += async (_, e) =>
         {
             RefreshDirtyState();
@@ -59,6 +60,7 @@ public sealed partial class MainWindow : Window
         if (preference.ReadError is not null)
             ShowStatus(Messages.Text("SettingsRead", preference.ReadError), InfoBarSeverity.Warning);
         InitializationCompleted?.Invoke(this, EventArgs.Empty);
+        await CheckUpdatesOnOpenAsync(preference);
     }
 
     private async Task ReloadAsync()
@@ -356,6 +358,7 @@ public sealed partial class MainWindow : Window
         busy = value;
         AddGameButton.IsEnabled = !value && snapshot is not null;
         ReloadButton.IsEnabled = !value;
+        UpdatesButton.IsEnabled = !value;
         ProfilesList.IsEnabled = !value;
         EditorPanel.IsEnabled = !value;
         LanguageInput.IsEnabled = !value;

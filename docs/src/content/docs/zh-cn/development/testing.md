@@ -104,6 +104,28 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 ## 安装器与签名命令
 
+### 项目更新检查与安装
+
+完整 Publish 后，运行 `pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerOptions.ps1` 验证隔离静默安装／快捷方式选择；增加 `-BaselineDirectory <冻结旧版目录> -BaselineTag <旧标签>` 可验证真实版本升级与修复时的选择继承。在交互式 Windows 桌面运行 `pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerOptionsUi.ps1`，验证英语和简体中文原生安装／卸载选择。两者均支持 `-PublishDirectory <完整目录> -Tag <匹配标签>`。界面脚本检查取消、七个默认关闭的卸载选项，以及明确选择缓存清理时保留其他夹具数据；不会选择真实 Steam 游戏库或真实应用数据目录。脚本存在不等于测试通过，实际结果单独记录。
+
+`Invoke-WinUI.ps1 -Action Test` 包含签名／时效／重放、官方源重定向、有界下载、取消及安装接力回归。`pwsh -NoProfile -File scripts/releases/Test-ProjectUpdates.ps1` 使用临时测试密钥和网络替身测试项目签名及 GitHub／CNB 发布／续期，不实际写入公开 Release。普通 CI 包含此门禁，但不构建安装包。
+
+设置 `STEAMWRAPPER_RELEASE_TAG` 为准确匹配标签并发布完整目录后，`Test-WinUINativeUi.ps1 -Cases updates` 操作真实更新对话框，检查默认值及取消不改变测试设置。使用 `Test-WinUIUpdateHandoff.ps1 -BaselineDirectory <冻结旧版目录> -PublishDirectory <新版目录> -BaselineTag <旧标签> -Tag <新标签>`，通过复制后的 NativeAOT 更新 Host 完成真实隔离 Inno 升级。脚本检查发起进程正常退出、新 Manager 启动、旧版本保留，以及配置／设置／稳定 Runner 字节不变，再正常关闭并卸载仅属于该测试的安装。证据保留在 `target/winui/update-handoff-*`。
+
+该本机测试使用真实的新旧产品版本与隔离安装包，不执行公开生产安装器，不证明干净 Windows 环境或公开更新源／下载可用；这些事实需单独记录。失败时保留诊断，不强制结束进程。旧客户端没有更新界面，首次切换到新客户端仍需手动安装。
+
+**2026-10-05 隔离接力结果：**`target/winui/update-handoff-0cda5e9d953e4070bdb9268a3cbbb8a5/evidence.json` 记录真实 `v0.2.4-preview.1` → `v0.2.5-preview.1` 升级通过，由 NativeAOT 辅助程序交接实际 Inno 安装器。发起进程正常退出，新 Manager 重新启动并确认安装健康，随后正常关闭；旧 `0.2.4` 版本保留。SHA-256 检查确认 `profiles.toml`、`ui-settings.json` 和稳定 Runner 测试文件在升级及成功卸载隔离测试安装后均未改变。证据明确记录 `actualInstaller=true`、`cleanVm=false` 和 `signedFeedNetwork=false`：该结果验证本机安装接力，不代表干净客户端或完整公开更新源／下载路径通过。
+
+**2026-10-05 安装选项后续结果：**完整服务测试中的 **173 + 9 + 149 项**全部通过。随后跨卷还原修正通过 **15 项 Steam 还原／卸载选项聚焦用例**，其中设置 `STEAMWRAPPER_TEST_SECOND_VOLUME=G:\`，在 C: 与 G: 上使用一次性夹具执行 `SteamAndUserDataCanResideOnDifferentVolumes`。未设置该环境变量时不执行跨卷用例，因此普通 CI 不证明双卷行为。还原在已验证副本写入数据备份目录前，将原子替换备份保留在 `localconfig.vdf` 旁；未解决的相邻备份阻止删除配置／Runner。处理方法见[恢复指导](/SteamWrapper/zh-cn/guides/installer-preview/#卸载)。
+
+修正注册 `InstallLocation` 的尾部分隔符后，新的真实 `0.2.4` → `0.2.5` 接力通过，证据为 `target/winui/update-handoff-a7435f5b11e64f18ab5c78387d0a078a/evidence.json`。记录确认 Manager 健康重启、保留旧版、配置／偏好／稳定 Runner 未变、进程正常退出及隔离安装卸载。这次运行验证修正后的位置处理，替代之前接力结果的对应部分，仍为 `cleanVm=false` 和 `signedFeedNetwork=false`。它不证明各项新清理选择、原生安装器／更新界面或公开更新源／下载验收通过，这些仍待完成。
+
+**2026-10-05 安装选项进程与原生窗口结果：**`target/winui/installer-options-ee70315ca4d445459894dc0b04d7f3c2` 记录 **14 个实际静默进程步骤均以 0 退出**，覆盖真实 `0.2.4` → `0.2.5` 升级／修复继承、默认／仅桌面／双快捷方式／无快捷方式，以及正常卸载。随后测试脚本在 `finally` 中尝试重启仍在自删除的卸载器而失败；夹具现已等待删除结束。这些成功步骤不代表原先整次脚本运行通过，发布工作流将重跑修正后的矩阵。
+
+原生证据 `target/winui/installer-options-ui-63f76dbce89a40689978dfe2e0126e17` 记录**六个成功动作**：每种语言各执行安装导航／取消、卸载取消、明确选择仅清理缓存的卸载。英文 `setup-english.json`、`cancel-english.json`、`cache-english.json` 通过；夹具补充处理测试目录已存在的确认后，中文续跑的 `evidence-chinesesimplified.json` 及动作／数据记录通过。这是英文成功后修正夹具再续跑中文，并非一次不中断的完整套件通过。七个卸载选项默认关闭；取消保持哈希；仅缓存卸载删除下载缓存和 Manager，六个未选夹具文件哈希不变，保留了双语截图。最终尺寸／对齐微调另做视觉检查。这不证明所有删除选项、更广 DPI／键盘行为、干净虚拟机或公开更新源／下载通过。
+
+随后最终英／中仅布局套件通过，证据为 `target/winui/installer-options-ui-9f9ff0ee0edf401bbd33f3d62c16d74b/evidence-english-chinesesimplified.json`（`passed=true`、`layoutOnly=true`、`cleanVm=false`）。两个原生窗口均有七个未勾选选项，文字完整、按钮位于右下；取消保持全部夹具数据与安装清单哈希，随后正常默认卸载保留全部夹具数据。前述仅缓存检查后只改变尺寸／对齐，因此最终聚焦运行未重复缓存清理。这单独验证最终布局和默认保留路径，不扩大前述功能范围。
+
 `Invoke-WinUI.ps1 -Action Test` 也运行部署库的进程／清单／日志回归。`Test-WinUIInstallerScripts.ps1` 不生成应用安装包，仅测试打包保护；`Test-WindowsSigning.ps1` 使用政策夹具和真实 Windows 信任失败，不申请签名。`Test-RunnerSigningMetadata.ps1` 检查已构建 Runner 的 PE，不执行它。这些检查进入日常 Windows CI。
 
 完整发布后，`Test-WinUIProductMetadata.ps1` 检查全部七个自有 EXE／DLL 产品（含中文资源）及实际 x64／GUI NativeAOT Host。发布工作流要求此门禁，它不执行文件，也不证明发布者签名。

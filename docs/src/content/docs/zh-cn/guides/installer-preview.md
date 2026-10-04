@@ -5,11 +5,11 @@ description: "构建、试用、修复和卸载未签名的按用户安装器，
 
 ## 当前边界
 
-Inno Setup 安装器和 C# 部署组件已实现，面向 **Windows 11 24H2 或更新版本、x64**，目前是**未签名技术预览**。包含完整的自包含 WinUI 文件、两种语言和独立 Runner。普通分支 CI 只测试和编译，不生成安装包；明确的手动运行只构建预览产物。版本标签交付通过明确的第 2 版契约同时打包 Setup 与便携 ZIP，并保留原有便携验证器。当前产品形式的技术预览用于 Foundation 审核，不豁免[执行队列](/SteamWrapper/zh-cn/project/roadmap/#执行队列2026-10-03)中的稳定交付门槛。
+Inno Setup 安装器和 C# 部署组件已实现，面向 **Windows 11 24H2 或更新版本、x64**，目前是**没有 Windows Authenticode 签名的技术预览**。包含完整的自包含 WinUI 文件、两种语言和独立 Runner。普通分支 CI 只测试和编译，不生成安装包；明确的手动运行只构建预览产物。版本标签交付通过明确的第 2 版契约同时打包 Setup 与便携 ZIP，并保留原有便携验证器。Authenticode 是可选能力；[执行队列](/SteamWrapper/zh-cn/project/roadmap/#执行队列2026-10-03)中的稳定交付门槛仍待完成。
 
 这不是已签名或稳定发布。开发机或托管 Windows Server 的隔离进程测试不等于干净 Windows 11 验收。干净客户端、正常防护下的下载、多用户、缩放以及真实 Steam 交付门槛仍在[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)中记录。不要为了运行预览关闭 Windows 防护。
 
-已公开的 [v0.2.3-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1) 包含 Setup 与便携 ZIP。七个 GitHub 附件均已通过公开下载完整性核验；Setup 仍未签名。CNB 发布凭据未配置，二进制发布实际跳过。当前源码为 `0.2.4`，已具备 `v0.2.4-preview.1` 双语说明；公开可用性以实际 Releases 与标签工作流结果为准。
+当前源码为 `0.2.5`，已具备 `v0.2.5-preview.1` 双语说明。请从 [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases) 下载实际已发布的 Setup 或便携 ZIP；源码更新不代表公开版本已经存在。只有 CNB 的二进制上传与下载核验成功后，才会将其列为可用镜像。
 
 ## 构建预览
 
@@ -18,10 +18,10 @@ Inno Setup 安装器和 C# 部署组件已实现，面向 **Windows 11 24H2 或�
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
-pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.4-preview.1
+pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.5-preview.1
 ```
 
-最后一条命令根据当前 `0.2.4` 源码生成 `target/winui/installers/v0.2.4-preview.1/SteamWrapper-v0.2.4-preview.1-win-x64-setup.exe` 和检查元数据。标签必须匹配源码的三段版本号，仅用于标识本地产物；命令不会创建 Git 标签或发布 Release。已公开版本不能复用于不同字节。此前产物和真实数字版本升级／回滚结果仍作为有日期的历史证据保留。
+最后一条命令根据当前 `0.2.5` 源码生成 `target/winui/installers/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe` 和检查元数据。标签必须匹配源码的三段版本号，仅用于标识本地产物；命令不会创建 Git 标签或发布 Release。已公开版本不能复用于不同字节。此前产物和真实数字版本升级／回滚结果仍作为有日期的历史证据保留。
 
 仅改变预发布后缀不能形成升级路径：部署清单改变、数字版本不变，安装会拒绝同基础版本的不同内容。新的可安装载荷需使用新的协调三段源码／产品版本；重试已有构建时复用完全相同的不可变文件。见[发布版本规则](/SteamWrapper/zh-cn/development/distribution/#准备并触发发布)。
 
@@ -39,7 +39,7 @@ Host 语言命令在新建的 `target/winui/host-language-acceptance/<id>` 夹�
 
 后者在仓库 `target` 下新建目录，使用独立测试 AppId 和真实安装、兼容 maintenance 回滚及卸载进程，快捷方式重定向到一次性夹具目录。默认人工构造的下一版本文件只验证部署事务，不代表真实下一版本构建或签名证据。测试不使用真实游戏库；脚本会报告包含日志和 `evidence.json` 的隔离目录，其路径包含中文、空格和单引号，用于验证路径处理。
 
-真实数字版本升级验收应在替换发布目录前冻结完整的旧便携目录，拒绝重解析／私有输入，并记录源文件与副本的哈希。正常编译新的协调源码／产品版本；仅修改旧 Runner 清单或 PE 元数据不构成新版本二进制。已有经验证的冻结 `0.2.3` 目录和真正编译的当前 `0.2.4` 发布目录后，将 `REPLACE_WITH_ID` 替换为证据中记录的基线目录名：
+真实数字版本升级验收应在替换发布目录前冻结完整的旧便携目录，拒绝重解析／私有输入，并记录源文件与副本的哈希。正常编译新的协调源码／产品版本；仅修改旧 Runner 清单或 PE 元数据不构成新版本二进制。下面的历史 `0.2.3` → `0.2.4` 示例需要对应的冻结发布目录；将 `REPLACE_WITH_ID` 替换为证据中记录的基线目录名，新验收应选用实际协调版本：
 
 ```powershell
 $baseline = 'target/winui/upgrade-baselines/REPLACE_WITH_ID/v0.2.3'
@@ -58,7 +58,9 @@ pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1 `
 
 ## 安装与日常使用
 
-安装时选择 English 或简体中文。按当前用户安装，通常无需提权，程序目录固定为：
+`0.2.5` 已实现以下安装和卸载选项。服务、原生窗口和安装器的验证结果分别记录在[测试说明](/SteamWrapper/zh-cn/development/testing/)中；此前有日期的安装器运行不能证明这些新选项已经通过。
+
+安装时选择 English 或简体中文。按当前用户安装，通常无需提权。首次安装可以选择本地固定磁盘上的空目录，默认布局为：
 
 ```text
 %LOCALAPPDATA%\Programs\SteamWrapper\
@@ -68,15 +70,17 @@ pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1 `
   maintenance\SteamWrapper.Deployment.exe
 ```
 
-安装器创建开始菜单快捷方式，桌面快捷方式可选；两者都指向稳定的 `SteamWrapper.exe` 启动器。启动器只打开 Manager。Steam 仍调用 `%LOCALAPPDATA%\SteamWrapper\bin\SteamWrapperRunner.exe`，不要把 Manager、部署辅助程序或版本目录路径填入 Steam 启动选项。
+开始菜单快捷方式默认勾选，桌面快捷方式默认不勾选；安装完成时也可选择打开 Manager。快捷方式指向稳定的 `SteamWrapper.exe` 启动器，启动器只打开 Manager。Steam 仍调用 `%LOCALAPPDATA%\SteamWrapper\bin\SteamWrapperRunner.exe`，不要把 Manager、部署辅助程序或版本目录路径填入 Steam 启动选项。
 
-安装 Manager 不修改 Steam 启动选项、游戏或稳定 Runner。Manager 原有的 Runner 安装／修复操作仍单独负责 Runner。配置、界面偏好、备份、日志和缓存仍在 `%LOCALAPPDATA%\SteamWrapper\`。便携版用户可以直接安装 Manager 并保留已有数据，无需复制游戏。
+升级和修复使用已登记的安装目录。如果要更换位置，请先卸载 Manager 并保留数据，再安装到新的空目录；安装器不会迁移已有安装或数据目录。
+
+安装 Manager 不修改 Steam 启动选项、游戏或稳定 Runner。Manager 原有的 Runner 安装／修复操作仍单独负责 Runner。配置、界面偏好、配置备份、日志和缓存仍在 `%LOCALAPPDATA%\SteamWrapper\`。卸载还原也可能在 Steam 账号文件旁保留恢复备份，详见下文。便携版用户可以直接安装 Manager 并保留已有数据，无需复制游戏。
 
 安装、修复、回退或卸载前，请正常关闭所有 Manager 窗口。部署锁阻止 Manager 运行时替换文件，并在激活期间阻止新的 Manager 启动。占用时显示重试提示，不终止 Manager、Runner 或游戏，也不安排重启后强制替换被占用的启动器。
 
 ## 修复与回退
 
-重新运行匹配且验证过的安装包可以恢复缺失的稳定 Manager 启动器。也可以关闭 Manager 后运行维护程序：
+重新运行匹配且验证过的安装包，可以在原有登记位置恢复缺失的稳定 Manager 启动器。也可以关闭 Manager 后运行维护程序。下列命令使用默认目录；自定义安装时请替换成自己选择的程序目录：
 
 ```powershell
 & "$env:LOCALAPPDATA\Programs\SteamWrapper\maintenance\SteamWrapper.Deployment.exe" --repair --language en
@@ -99,10 +103,24 @@ Manager 初始化完成后才写入绑定本次事务的健康确认。未确认
 
 移除中断时使用独立卸载日志和隔离的 `.removal-<transaction>` 目录，已停用或部分删除的文件不会被视作可启动版本。报告的占用解除后，重复卸载或使用相同已验证安装包（或更新的基础版本）恢复；未知字节仍保留。这些文件恢复测试不能证明所有 Windows 注册表或快捷方式故障都能恢复。
 
-卸载保留**配置、界面设置、稳定 Runner、备份、日志、下载封面和未来的更新信任状态**。Steam 启动选项可能仍引用 Runner。目前没有“删除全部数据”选项，也未实现自动恢复 Steam 启动选项；仍存在引用时不要人工删除 Runner。
+默认卸载保留独立存放的所有玩家数据。另提供七个相互独立、默认不勾选的选项：
+
+- 移除可识别的 SteamWrapper 启动选项。
+- 删除下载的封面和更新缓存。
+- 删除 SteamWrapper 日志。
+- 重置 Manager 偏好设置。
+- 删除游戏配置。
+- 删除可识别的配置备份。
+- 删除经过验证的稳定 Runner 及匹配元数据。
+
+移除启动选项前需正常退出 Steam，并先备份每个受影响的账号文件。只清空严格匹配本数据目录稳定 Runner 和对应 AppID 的标准生成命令，自定义命令及文件中其他内容保持不变。手动复制命令时没有记录先前参数，因此不能恢复未知的历史值。只有 Steam 已退出，且全部本地账号扫描确认没有残留 Runner 引用，才能删除配置或 Runner；无法识别的引用需人工处理。
+
+还原先将原子替换操作实际替换的文件保存在 Steam 账号文件旁，名称为 `localconfig.vdf.steamwrapper-backup-<guid>`，再校验并复制到 SteamWrapper 数据备份目录，因此兼容 Steam 与 AppData 位于不同磁盘。仅在成功后删除相邻备份；并发编辑或中断会保留它，并阻止删除配置／Runner。请保持 Steam 关闭，同时保留当前文件与备份，检查后再重试，不要直接覆盖当前文件或盲目删除相邻备份。
+
+清理只选择已知文件，保留占用中或无法识别的文件，以及无法验证的 Runner 字节。清理配置备份不会删除 Steam 恢复备份，更新信任状态也始终保留。任何选项都不删除游戏或存档，不跟随文件系统链接，也不递归清空文件夹。“部分文件保留”表示这些文件还需要人工检查。
 
 ## 签名与更新
 
-[代码签名政策](/SteamWrapper/zh-cn/project/design/code-signing/)准备 SignPath Foundation 审核，并验证时间戳、发布者、明确证书指纹及最终 Runner 字节。Foundation 批准和生产签名尚未接入，校验和、PE 产品元数据不等于发布者签名。首次新签名载荷需使用尚未使用的协调基础版本，例如未签名 `0.2.4` 之后使用 `0.2.5`，保留第三方适用许可证／notices 及上游签名，不重新签名随包运行时。
+[代码签名政策](/SteamWrapper/zh-cn/project/design/code-signing/)在 Foundation 申请被拒后，将 Windows Authenticode 改为可选改进，不宣称已有 Windows 发布者证书。应用更新使用独立的项目签名密钥，单独的校验和与 PE 产品元数据不等于签名。每次改变可安装载荷都使用新的协调数字版本，并保留第三方许可证／notices 及上游签名。
 
-更新认证底层使用隔离夹具独立开发。目前没有启用生产更新地址、密钥、后台检查、自动下载或确认后调用安装器的流程。日常游戏启动继续独立于 Manager 和联网。
+`0.2.5` 源码已包含手动检查、可选启动检查、验证下载和确认后安装。真实项目密钥已配置，公开更新源是否可用以及下载至安装验收仍取决于成功发布和核验。当前发布契约见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。日常游戏启动继续独立于 Manager 和联网。

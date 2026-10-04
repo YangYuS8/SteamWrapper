@@ -37,7 +37,7 @@ Open WinUI Manager
 → generate/copy Launch Options for manual application
 ```
 
-Automatic Steam Launch Options application and restoration are not implemented.
+Manager still generates Launch Options for manual application. The `0.2.5` uninstall work adds a separate, explicitly selected removal of exact recognized SteamWrapper commands; it does not recover unknown earlier arguments or provide general automatic application. Its dedicated acceptance remains in progress.
 
 <a id="launch-options-合约"></a>
 
@@ -71,9 +71,13 @@ crates/core                                 # shared configuration/path contract
 
 ### Manager deployment
 
-`apps/deployment-windows` contains a GUI-independent C# deployment library and NativeAOT `SteamWrapper.exe` launcher/helper. Manager acquires a shared installation lease before initialization and keeps it until process exit; its health acknowledgment binds the current transaction. Inno and explicit repair/rollback/uninstall use the same exclusive lease and manifest/journal engine. This component launches Manager only and never touches games, Steam options or the stable Runner/data tree. See [installer ownership and recovery](/SteamWrapper/guides/installer-preview/).
+`apps/deployment-windows` contains a GUI-independent C# deployment library and NativeAOT `SteamWrapper.exe` launcher/helper. Manager acquires a shared installation lease before initialization and keeps it until process exit; its health acknowledgment binds the current transaction. Inno and explicit repair/rollback/uninstall use the same exclusive lease and manifest/journal engine. First installation may choose a validated empty directory on a fixed local drive; updates and repairs use the registered root. The stable data directory stays separate.
 
-Application update validation is an internal, injected-trust service; no production feed or update UI is enabled. SignPath signing and D1b clean-client delivery remain external/acceptance prerequisites.
+The helper launches Manager or a confirmed SteamWrapper installer and never launches games. The narrow uninstall exception permits explicitly selected removal of recognized SteamWrapper Launch Options and selected owned data. Steam must be stopped; affected account files are backed up and unrelated bytes preserved. Profiles/Runner removal also requires no remaining Runner references, and Runner bytes must match supported metadata. Default uninstall preserves data, and every path preserves games, saves, Steam restoration backups, update trust state and unknown files. These new choices are being integrated and require dedicated acceptance. See [installer ownership and recovery](/SteamWrapper/guides/installer-preview/).
+
+`OfficialUpdateService` verifies project-signed release metadata with an embedded public key, checks freshness and rollback state, then downloads a bounded, digest-verified installer into SteamWrapper's update cache. WinUI supplies manual checking, opt-in startup checks, progress/cancellation and installation confirmation; a portable copy links to release downloads. The existing NativeAOT helper waits for Manager to exit normally, rechecks the downloaded file and opens the same Inno installer, then reopens Manager after success. It does not terminate games or replace the stable Runner.
+
+The current `0.2.5` source implements this flow and has a real project public key plus a configured GitHub signing secret. Tagged feed publication and end-to-end delivery acceptance remain pending. GitHub is the primary source; CNB fallback only becomes usable after mirror credentials and matching release assets are published. SignPath/Authenticode is optional and separate from update authenticity; clean-client delivery remains an acceptance gate.
 
 ### `crates/core`
 
@@ -136,7 +140,7 @@ Missing legacy `wait_mode` always parses as `root`. No Linux Manager currently c
 
 ## Distribution and stable installation
 
-Windows uses a complete self-contained preview layout through local builds and the version-tag/manual release workflow. Daily CI tests and compiles without packaging the application. Extract the complete package and open Manager from ordinary File Explorer. A per-user installer, application updater, and automatic Steam writes remain unimplemented; tagged packages are unsigned prereleases pending delivery acceptance. See [distribution](/SteamWrapper/development/distribution/) for the exact triggers.
+Windows uses a complete self-contained preview layout, a per-user Inno installer and a portable ZIP through local builds and the version-tag/manual release workflow. Daily CI tests and compiles without packaging the application. Open Manager from ordinary File Explorer or its installed shortcut. The application updater is implemented but still needs public-feed and full delivery acceptance; automatic Steam writes remain unimplemented. Tagged packages remain Authenticode-unsigned prereleases until the applicable delivery gates pass. See [distribution](/SteamWrapper/development/distribution/) for the exact triggers.
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\

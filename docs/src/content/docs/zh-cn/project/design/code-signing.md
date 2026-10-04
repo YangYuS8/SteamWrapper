@@ -1,13 +1,15 @@
 ---
 title: "代码签名政策"
-description: "已实现的签名准备与已提交、等待审核的 SignPath Foundation 申请，包含人工批准和发行边界。"
+description: "可选 Windows 代码签名、项目签名更新与保留的 SignPath 准备工具。"
 ---
 
 ## 当前状态
 
-**SignPath Foundation 申请：已于 2026-10-04 提交，等待服务方审核。尚未获得服务订阅、项目证书或生产签名批准。**官方表单已确认提交成功。维护者选择免费 OSS 路线，并接受 Foundation 作为未来证书发布者。当前未签名预览不能宣称签名服务已经可用。
+**维护者于 2026-10-05 报告 SignPath Foundation 申请被拒绝。**申请于 2026-10-04 提交，本文不记录或猜测拒绝原因；尚未获得服务订阅、项目证书或生产签名批准。Authenticode 签名改为可选交付改进，不再作为稳定发布或应用更新的前置条件。未签名发行仍需如实标识。
 
-仓库已提供 Windows 签名验证、签后 Runner 清单生成、MSVC Runner PE 资源、精确的产物配置草案、依赖／许可清单工具及生产前置校验器。这些是准备工具，尚未接入签名服务，不导出私钥、不向 SignPath 提交文件，也未建立认证应用更新渠道。剩余外部与交付门槛见[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)与[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)。
+应用更新使用独立的项目密钥：发行工作流签署更新清单，Manager 验证签名及安装包的准确长度和 SHA-256 后才提供安装入口。真实公钥已嵌入，对应 GitHub 发行 secret 已配置；公开发布和端到端验收仍是独立门槛。CNB 尚无公开二进制镜像，也未配置发行凭据。这种验证不提供 Windows 发布者身份，也不会消除 Windows 下载警告。详见[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)。
+
+仓库保留 Windows 签名验证、签后 Runner 清单生成、MSVC Runner PE 资源、产物配置草案、依赖／许可清单工具及服务方前置校验器，供未来可能的 Authenticode 签名使用。它们未接入 SignPath，也不向其提交文件。[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)保留此前提交的软件事实。以下章节描述可选服务方路线，不作为项目签名更新的门槛。
 
 ## 人类责任
 
@@ -32,7 +34,7 @@ AI 编码代理可以准备变更与证据，不是 Foundation 批准的人类�
 
 Foundation 接纳取决于外部审核，发行签名要求人工批准。[Foundation 条件](https://signpath.org/terms.html)、[GitHub 来源验证](https://docs.signpath.io/trusted-build-systems/github)。
 
-实际获批后，再将等待审核状态改为已验证细节，并使用此致谢：“Free code signing provided by SignPath.io, certificate by SignPath Foundation.” 目前它描述申请中的未来服务，不代表已经获得证书。
+只有未来重新申请并实际获批后，才能记录已验证的服务方细节并使用此致谢：“Free code signing provided by SignPath.io, certificate by SignPath Foundation.” 目前不能将其作为项目已获服务的致谢。
 
 ## 当前可用验证
 
@@ -60,7 +62,7 @@ pwsh -NoProfile -File scripts/windows/Test-WindowsSigning.ps1
 
 ## 申请材料与剩余门槛
 
-[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)记录本次已提交申请的软件事实。服务方审核期间持续维护以下证据与接入要求；本文不公开个人申请资料：
+[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)记录此次被拒申请的软件事实。如果未来重新考虑可选服务方路线，再更新以下证据与接入要求；本文不公开个人申请资料：
 
 1. 公开当前形式的技术安装器预览，包含准确源码标签、已验证托管构建、本机安装／恢复证据及仍未完成的干净客户端限制。预览不豁免稳定交付门槛。
 2. 许可证／依赖清单，以及自有文件与重新分发运行时的精确划分。
@@ -71,11 +73,11 @@ pwsh -NoProfile -File scripts/windows/Test-WindowsSigning.ps1
 
 申请身份、批准、令牌配置及证书政策仍需服务方／维护者接入。要求签名的发行在缺少这些条件或验证失败时必须停止，不悄悄发布未签名替代物。
 
-`packaging/windows/signpath/` 包含载荷、生成卸载器和 Setup 的独立 XML 草案，精确自有文件目标与元数据限制已按审阅的官方 schema 核验，但服务批准仍待完成。`Test-SignPathConfiguration.ps1` 拒绝未批准／缺失前置条件及扩大的签名范围，不读取令牌或发送请求。本地 `providerApproved` 声明不是接纳、角色、MFA 或证书信任的独立证据。运行时和依赖条款单独清点，微软重新分发组件的 System Libraries 例外分类仍需 Foundation 确认。
+`packaging/windows/signpath/` 包含载荷、生成卸载器和 Setup 的独立 XML 草案，精确自有文件目标与元数据限制已按审阅的官方 schema 核验，均未获服务方批准。`Test-SignPathConfiguration.ps1` 继续拒绝未批准／缺失前置条件及扩大的签名范围，不读取令牌或发送请求。本地 `providerApproved` 声明不是接纳、角色、MFA 或证书信任的独立证据。运行时和依赖条款单独清点，未来服务方仍需确认微软重新分发组件的 System Libraries 例外分类。
 
 ## 隐私与用户信任
 
-默认操作使用本地游戏配置与 Steam 元数据，不上传它们。可选官方 Steam CDN 封面请求需要启用偏好，并发送本地已发现的 AppID。未来应用更新检查将需要同意，并联系文档说明的分发端点；该功能尚未实现。签名只提交发行构建产物和来源信息，绝不提交玩家配置、凭据、存档或游戏库内容。应用请求与操作系统证书检查分开看待。
+默认操作使用本地游戏配置与 Steam 元数据，不上传它们。可选官方 Steam CDN 封面请求需要启用偏好，并发送本地已发现的 AppID。应用更新在手动检查或玩家开启 Manager 启动检查时联系 GitHub 或已配置的 CNB 镜像，自动检查默认关闭；不上传游戏配置、凭据、存档或游戏库内容。下载和安装需要用户操作。未来服务方签名也只会提交发行构建产物及来源信息。应用请求与操作系统证书检查分开看待。
 
 外部服务请求会暴露请求 IP 地址等常规连接信息。相关服务政策见 [Valve 隐私政策](https://store.steampowered.com/privacy_agreement/)、[GitHub 隐私声明](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)及 [SignPath 隐私政策](https://signpath.io/privacy-policy)。SignPath 处理维护者申请和签名服务相关信息，不参与玩家日常游戏启动。
 

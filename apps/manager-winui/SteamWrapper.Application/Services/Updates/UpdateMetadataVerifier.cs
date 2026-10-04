@@ -6,17 +6,18 @@ using System.Text.RegularExpressions;
 
 namespace SteamWrapper.Application.Services.Updates;
 
-internal enum UpdateFailure
+public enum UpdateFailure
 {
     InvalidEnvelope, UnknownKey, InvalidSignature, InvalidMetadata, IncompatibleProduct,
-    UnsafeUrl, StaleMetadata, ClockRollback, Replay, StateCorrupt, UnsafeStatePath
+    UnsafeUrl, StaleMetadata, ClockRollback, Replay, StateCorrupt, UnsafeStatePath,
+    NotConfigured, ArtifactMismatch, UnsafeCachePath, CacheFull
 }
 
 /// <summary>Internal reasons; a future UI must map them to localized messages.</summary>
-internal sealed class UpdateValidationException(UpdateFailure failure, string message, Exception? inner = null)
+public sealed class UpdateValidationException(UpdateFailure failure, string message, Exception? inner = null)
     : Exception(message, inner)
 {
-    internal UpdateFailure Failure { get; } = failure;
+    public UpdateFailure Failure { get; } = failure;
 }
 
 /// <summary>Explicit configuration only. No production feed or trust key is fabricated.</summary>
@@ -79,9 +80,9 @@ internal sealed class UpdateTrustPolicy
 internal sealed record UpdateInstallationContext(string ReleaseTag, string Platform, Version WindowsVersion,
     int ProfileContract = 2, int RunnerContract = 2, int DeploymentProtocol = 1);
 
-internal sealed record VerifiedUpdateMetadata(string Channel, long Sequence, string PayloadSha256,
+public sealed record VerifiedUpdateMetadata(string Channel, long Sequence, string PayloadSha256,
     DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt, string ReleaseTag, string Version, string SourceCommit,
-    Uri ArtifactUri, string ArtifactSha256, long ArtifactBytes, bool IsUpgrade);
+    Uri ArtifactUri, string ArtifactSha256, long ArtifactBytes, bool IsUpgrade, Uri? MirrorUri = null);
 
 internal sealed class UpdateMetadataVerifier(UpdateTrustPolicy policy)
 {
@@ -102,7 +103,7 @@ internal sealed class UpdateMetadataVerifier(UpdateTrustPolicy policy)
         using var document = UpdateJson.Parse(payload, UpdateFailure.InvalidMetadata);
         var root = document.RootElement;
         UpdateJson.RequireProperties(root, "schemaVersion", "appId", "platform", "channel", "sequence", "issuedAt", "expiresAt", "release");
-        if (UpdateJson.Number(root, "schemaVersion") != 1) throw Invalid(UpdateFailure.InvalidMetadata, "Unsupported signed update schema.");
+        if (UpdateJson.Number(root, "schemaVersion") != 2) throw Invalid(UpdateFailure.InvalidMetadata, "Unsupported signed update schema.");
         if (UpdateJson.Text(root, "appId", 64) != "SteamWrapper" || UpdateJson.Text(root, "platform", 32) != "win-x64" || installed.Platform != "win-x64" ||
             UpdateJson.Text(root, "channel", 16) != policy.Channel) throw Invalid(UpdateFailure.IncompatibleProduct, "Update application/platform/channel differs from the selected installation.");
         var sequence = UpdateJson.Number(root, "sequence");
@@ -131,17 +132,24 @@ internal sealed class UpdateMetadataVerifier(UpdateTrustPolicy policy)
         if (comparison > 0 && selected.Numeric == current.Numeric) throw Invalid(UpdateFailure.IncompatibleProduct, "An upgrade cannot replace Runner bytes under the same coordinated numeric version.");
 
         var artifact = release.GetProperty("artifact");
-        UpdateJson.RequireProperties(artifact, "type", "url", "sha256", "bytes", "authenticodeRequired");
-        if (UpdateJson.Text(artifact, "type", 16) != "installer" || artifact.GetProperty("authenticodeRequired").ValueKind != JsonValueKind.True)
-            throw Invalid(UpdateFailure.InvalidMetadata, "An update plan requires a separately verified signed installer.");
+        UpdateJson.RequireProperties(artifact, "type", "url", "mirrorUrl", "sha256", "bytes", "trust");
+        if (UpdateJson.Text(artifact, "type", 16) != "installer" || UpdateJson.Text(artifact, "trust", 32) != "project-signature")
+            throw Invalid(UpdateFailure.InvalidMetadata, "An update plan requires an installer authenticated by the project signature.");
         if (!Uri.TryCreate(UpdateJson.Text(artifact, "url", 4096), UriKind.Absolute, out var uri)) throw Invalid(UpdateFailure.UnsafeUrl, "Artifact URL is invalid.");
         policy.RequireArtifactUrl(uri);
+        Uri? mirror = null;
+        if (artifact.GetProperty("mirrorUrl").ValueKind != JsonValueKind.Null)
+        {
+            if (!Uri.TryCreate(UpdateJson.Text(artifact, "mirrorUrl", 4096), UriKind.Absolute, out mirror))
+                throw Invalid(UpdateFailure.UnsafeUrl, "Mirror URL is invalid.");
+            policy.RequireArtifactUrl(mirror);
+        }
         var bytes = UpdateJson.Number(artifact, "bytes");
         var hash = UpdateJson.Text(artifact, "sha256", 64);
         if (bytes is < 1 or > UpdateTrustPolicy.MaximumArtifactBytes || !Regex.IsMatch(hash, "^[0-9a-f]{64}$", RegexOptions.CultureInvariant))
             throw Invalid(UpdateFailure.InvalidMetadata, "Artifact length or SHA-256 exceeds the signed-package policy.");
         return new(policy.Channel, sequence, Convert.ToHexStringLower(SHA256.HashData(payload)), issued, expires,
-            tag, version, commit, uri, hash, bytes, comparison > 0);
+            tag, version, commit, uri, hash, bytes, comparison > 0, mirror);
     }
 
     internal static void RequireFreshness(DateTimeOffset issued, DateTimeOffset expires, DateTimeOffset now, TimeSpan maximumLifetime)

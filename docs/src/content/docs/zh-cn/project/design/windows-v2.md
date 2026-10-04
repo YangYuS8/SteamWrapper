@@ -133,15 +133,15 @@ Windows 预览支持手动复制启动项。**一键应用／恢复仍是 P4 待
 
 ## 7. 安装、更新、卸载
 
-P1 交付目标是共享同一应用布局的 **unpackaged 自包含每用户安装器与 portable ZIP**，同时携带 .NET 和 Windows App SDK 依赖。普通玩家无需安装开发工具或运行时；Runner 仍是独立 Rust EXE，不承诺单文件 EXE。本地发布已可使用，但安装器和干净系统交付门槛尚未完成。[官方自包含部署](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps)
+**当前实现，2026-10-05：**P1 已提供共享同一应用布局的 **unpackaged 自包含每用户 Inno 安装器与 portable ZIP**，同时携带 .NET 和 Windows App SDK 依赖。普通玩家无需安装开发工具或手动准备运行时；Runner 仍是独立 Rust EXE，不承诺单文件 EXE。安装器已存在，隔离安装／升级测试已通过，干净客户端和更广泛恢复验收仍待完成。这更新了上文九月的实现状态。[官方自包含部署](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps)
 
-应用文件建议安装至 `%LOCALAPPDATA%\Programs\SteamWrapper\`，随包 Runner 经校验安装至稳定 `bin`。首次配置时确保安装成功；普通 UI 打开不应因安装失败而完全不可用。Runner 被占用时保留原文件、配置和有效启动项，游戏结束后可重试。更新不得让旧 Manager 随意把已安装 Runner 降级，需在发布版本元数据与兼容策略中明确处理；摘要不同本身不是可升级的证明。
+首次安装默认使用 `%LOCALAPPDATA%\Programs\SteamWrapper\`，也可选择经过验证的固定本地盘空目录。升级和修复保留已注册位置；更换位置需先只卸载 Manager 并保留数据，再安装到新位置。开始菜单快捷方式默认开启、桌面快捷方式默认关闭，安装完成后可选择打开 Manager。Manager 单独校验并准备 `%LOCALAPPDATA%\SteamWrapper\bin` 中的稳定 Runner。Runner 占用时保留原二进制、配置和有效启动项，游戏结束后可重试；版本／兼容检查防止随意降级，摘要不同本身不是可升级的证明。
 
-卸载 Manager 默认保留 profile、日志、备份和稳定 Runner，使仍指向它的启动项继续有效。完整移除 Runner 必须先处理已接管的 Steam 启动项；手动粘贴或无法枚举的引用无法证明已解除时，保留 Runner 并提供清理说明。不能把“保留配置”误当成删除 Runner 也安全。
+默认卸载只删除 Manager、快捷方式和注册信息。七个独立可选项可移除已识别 Steam 启动选项、下载缓存、日志、偏好、配置、配置备份或经过验证的 Runner 文件。Steam 关闭后，严格标准命令先备份再清空；不推测自定义命令或未知历史值。删除配置／Runner 必须完整扫描账号，确认没有残留 Runner 引用或未解决的还原备份。未知／占用文件、游戏／存档、更新信任状态和 Steam 恢复备份始终保留。限定英／中取消及仅缓存检查已通过，最终布局／默认保留检查另行记录，更广选项组合仍需验收；边界和恢复方法见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)。
 
-每个候选安装器和 portable 包必须在无开发环境的 Windows 11 x64 VM 中验证安装、配置、关闭 Manager 后启动、覆盖更新、移动，以及适用的卸载／保留行为。记录包体、冷启动和空闲内存后再优化；MSIX、ARM64 和 Windows 10 单独评估。
+每个候选安装器和 portable 包仍须在无开发环境的 Windows 11 x64 VM 中验证安装、配置、关闭 Manager 后启动、原地更新、受支持的换位置方式，以及适用的卸载／保留行为。本机夹具通过不完成该门槛。记录包体、冷启动和空闲内存后再优化；MSIX、ARM64 和 Windows 10 单独评估。
 
-P2 现已有未签名 portable 预发布的版本标签自动化，包含校验和、完整英语／简体中文说明及可选 CNB 二进制镜像。实际标签下载核验、签名与稳定交付验收仍未完成，详见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。P3 仅在替换／恢复及发布信任门槛通过后增加可选应用更新。更新不能进入 Runner 的日常启动路径，并须保留用户数据和可用的稳定 Runner。
+P2 已自动化版本标签的 Setup／便携 ZIP 交付、校验和及完整英语／简体中文说明；只有相同附件发布并核验后，CNB 才可作为二进制镜像。P3 已在 `0.2.5` 实现手动检查、可选启动检查、项目签名元数据、有界验证下载，以及确认后交给现有安装器的流程。Windows Authenticode 是可选能力，与必须验证的项目更新签名独立。真实隔离 `0.2.4` → `0.2.5` 安装接力已通过，限定安装器原生流程也已通过，公开更新源／下载、更广原生交互、干净客户端和恢复验收仍独立保留。详见[分发说明](/SteamWrapper/zh-cn/development/distribution/)及[测试](/SteamWrapper/zh-cn/development/testing/)。更新不进入 Runner 日常启动路径，并保留用户数据和可用稳定 Runner。
 
 ## 8. 实施顺序与停止条件
 

@@ -15,7 +15,7 @@ internal static class Program
     private static Dictionary<string, string> publicationHashes = [];
     private static string publication = "";
     private static string evidenceRoot = "";
-    private static readonly string[] FocusedCases = ["add-local", "manual-appid", "dirty-add", "keyboard"];
+    private static readonly string[] FocusedCases = ["add-local", "manual-appid", "dirty-add", "keyboard", "updates"];
     private static readonly string[] SupportedCases = [.. FocusedCases, "existing-editor", "saved-editor"];
     private static readonly List<object> FixtureProcesses = [];
     private static readonly List<object> KeyboardObservations = [];
@@ -24,12 +24,13 @@ internal static class Program
     private static int Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
+        if (args.Length > 0 && args[0] == "--installer-options-ui") return InstallerOptionsUi.Run(args[1..]);
         HashSet<string> selectedCases;
         try { selectedCases = ParseCases(args); }
         catch (ArgumentException error)
         {
             Console.Error.WriteLine(error.Message);
-            Console.Error.WriteLine("Usage: SteamWrapper.NativeUi.Tests <repo-root> <publish-directory> [--inspect | --case <add-local|manual-appid|dirty-add|keyboard|existing-editor|saved-editor> ...]");
+            Console.Error.WriteLine("Usage: SteamWrapper.NativeUi.Tests <repo-root> <publish-directory> [--inspect | --case <add-local|manual-appid|dirty-add|keyboard|updates|existing-editor|saved-editor> ...]");
             return 2;
         }
         if (!Environment.UserInteractive || Process.GetCurrentProcess().SessionId == 0)
@@ -57,7 +58,7 @@ internal static class Program
 
     private static HashSet<string> ParseCases(string[] args)
     {
-        if (args.Length < 2 || args.Length > 14) throw new ArgumentException("Expected repository/publication paths and bounded native case selection.");
+        if (args.Length < 2 || args.Length > 16) throw new ArgumentException("Expected repository/publication paths and bounded native case selection.");
         var selected = new HashSet<string>(StringComparer.Ordinal);
         if (args.Length == 3 && args[2] == "--inspect") return selected;
         for (var index = 2; index < args.Length; index += 2)
@@ -208,6 +209,7 @@ internal static class Program
                     case "manual-appid": ManualAppId(window, fixture, profiles); break;
                     case "dirty-add": DirtyAdd(window, fixture, profiles); break;
                     case "keyboard": KeyboardFlow(window, fixture, profiles); break;
+                    case "updates": UpdatesFlow(window, fixture); break;
                 }
             });
             if (name is "add-local" or "manual-appid")
@@ -236,6 +238,27 @@ internal static class Program
             foreach (var (path, hash) in protectedFiles) Equal(hash, DeploymentHash(Path.Combine(fixture.Root, path)));
             File.WriteAllText(Path.Combine(fixture.Root, "preserved-inputs.json"), JsonSerializer.Serialize(new { protectedFiles, settingsSha256 = DeploymentHash(fixture.SettingsPath), originalProfilesSha256 = DeploymentHash(Path.Combine(fixture.Root, "original-profiles.toml")) }, new JsonSerializerOptions { WriteIndented = true }));
         });
+    }
+
+    private static void UpdatesFlow(NativeWindow window, NativeUiFixture fixture)
+    {
+        var before = File.ReadAllBytes(fixture.SettingsPath);
+        window.Invoke("Updates");
+        NativeWindow.Wait(() => window.ById("AutomaticUpdateChecks").Current.IsEnabled, "update preferences loaded");
+        Assert(window.ById("InstalledUpdateVersion").Current.Name.StartsWith("Installed version: ", StringComparison.Ordinal), "Update dialog did not identify the installed version.");
+        Assert(((TogglePattern)window.ById("AutomaticUpdateChecks").GetCurrentPattern(TogglePattern.Pattern)).Current.ToggleState == ToggleState.Off,
+            "Opening Updates enabled automatic checks without consent.");
+        ((ExpandCollapsePattern)window.ById("UpdateSourceOptions").GetCurrentPattern(ExpandCollapsePattern.Pattern)).Expand();
+        Equal("Automatic", window.SelectedName("UpdateSource"));
+        if (window.HasId("CancelUpdate"))
+        {
+            window.Invoke("CancelUpdate");
+            NativeWindow.Wait(() => !window.HasId("CancelUpdate"), "foreground update check canceled");
+        }
+        File.WriteAllText(Path.Combine(fixture.Root, "updates-window.txt"), window.Snapshot());
+        window.InvokeName("Close");
+        Assert(!window.HasId("AutomaticUpdateChecks"), "Closing Updates left its dialog open.");
+        BytesEqual(before, File.ReadAllBytes(fixture.SettingsPath), "Opening or canceling Updates wrote preferences.");
     }
 
     private static string DeploymentHash(string path)

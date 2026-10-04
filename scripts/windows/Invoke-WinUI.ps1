@@ -62,7 +62,13 @@ $candidate = Join-Path $publishRoot ('publish-staging-' + [Guid]::NewGuid().ToSt
 Assert-WinUIBuildPath $candidate
 New-Item -ItemType Directory -Path $candidate | Out-Null
 try {
-    Invoke-Checked dotnet @('publish', $project, '--no-restore', '--configuration', 'Release', '--runtime', 'win-x64', '--self-contained', 'true', '-p:Platform=x64', '--output', $candidate)
+    $publishArguments = @('publish', $project, '--no-restore', '--configuration', 'Release', '--runtime', 'win-x64', '--self-contained', 'true', '-p:Platform=x64', '--output', $candidate)
+    if ($env:STEAMWRAPPER_RELEASE_TAG) {
+        if ($env:STEAMWRAPPER_RELEASE_TAG -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$' -or
+            $env:STEAMWRAPPER_RELEASE_TAG.Split('-')[0] -cne "v$($versionMatch[0].Matches[0].Groups[1].Value)") { throw 'The update version must match the coordinated product version.' }
+        $publishArguments += "-p:SteamWrapperReleaseTag=$env:STEAMWRAPPER_RELEASE_TAG"
+    }
+    Invoke-Checked dotnet $publishArguments
     # One independent NativeAOT executable is both the stable Manager launcher
     # and the on-demand installation/repair helper. It never launches games.
     Invoke-Checked dotnet @('restore', $deploymentHost, '--locked-mode', '-r', 'win-x64')

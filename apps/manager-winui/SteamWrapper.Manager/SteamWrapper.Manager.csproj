@@ -21,10 +21,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-    <Version>0.2.4</Version>
+    <Version>0.2.5</Version>
     <Product>SteamWrapper</Product>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
+  <ItemGroup Condition="'$(SteamWrapperReleaseTag)' != ''">
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SteamWrapperReleaseTag</_Parameter1>
+      <_Parameter2>$(SteamWrapperReleaseTag)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.6" />
     <!-- Keep the InteractiveExperiences patch shipped by the 2.4.0 component set. -->

@@ -1,0 +1,41 @@
+name: Refresh signed update metadata
+
+on:
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Existing update channel to refresh without rebuilding software
+        type: choice
+        options: [preview, stable]
+        default: preview
+
+permissions:
+  contents: write
+
+concurrency:
+  group: steamwrapper-update-feeds
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Renew previously authorized metadata for another 28 days
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STEAMWRAPPER_UPDATE_PRIVATE_KEY: ${{ secrets.STEAMWRAPPER_UPDATE_PRIVATE_KEY }}
+          CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN }}
+          UPDATE_CHANNEL: ${{ inputs.channel }}
+        run: |
+          $scheduled = $env:GITHUB_EVENT_NAME -eq 'schedule'
+          $channels = if ($scheduled) { @('preview', 'stable') } else { @($env:UPDATE_CHANNEL) }
+          foreach ($channel in $channels) {
+            ./scripts/releases/Publish-UpdateMetadata.ps1 -Refresh -Channel $channel -SkipMissingFeed:$scheduled
+          }

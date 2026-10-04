@@ -5,7 +5,7 @@ description: 获取完整 WinUI 预览版，了解数据位置，并在不破坏
 
 WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览版**。应用目录中包含 .NET 与 Windows App SDK 文件，请始终保留完整目录。
 
-另已实现未签名的[每用户安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)。干净系统、更新与卸载验收仍未完成，WinUI 没有单文件 EXE。WinUI 是唯一的 Manager，程序名为 `SteamWrapper.Manager.exe`。当前版本标签仍发布未签名便携预览；Dioxus 发布属于历史产物，不包含当前 WinUI Manager。
+另已提供没有 Windows Authenticode 签名的[每用户安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)。版本标签同时打包 Setup 与便携 ZIP，干净客户端和更广泛恢复验收仍待完成，WinUI 没有单文件 EXE。WinUI 是唯一的 Manager，程序名为 `SteamWrapper.Manager.exe`。Dioxus 发布属于历史产物，不包含当前 WinUI Manager。本页说明便携 ZIP；安装位置、快捷方式与卸载选择请阅读安装器指南。
 
 ## 获取带版本的预览包
 
@@ -24,7 +24,7 @@ WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览�
 
 从成功的手动运行下载 **`SteamWrapper-WinUI-preview-windows-x64`**，解压全部文件。不要把单独的测试证据产物当成应用。工作流产物下载可能要求登录 GitHub，且会随保留期限到期；维护者提供预览时应同时标明所选源码提交。
 
-独立的 **`SteamWrapper-WinUI-installer-preview-windows-x64`** 产物包含未签名安装器预览与检查元数据。使用前阅读[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)，干净客户端和签名门槛尚未通过。
+独立的 **`SteamWrapper-WinUI-installer-preview-windows-x64`** 产物包含没有 Windows Authenticode 签名的安装器预览与检查元数据。使用前阅读[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)，干净客户端验收尚未通过。
 
 ## 打开完整应用
 
@@ -104,7 +104,7 @@ Steam 启动项应始终引用稳定的 `bin\SteamWrapperRunner.exe`，而不是
 
 ## 移除预览版
 
-WinUI 目录预览版尚无经过验收的新卸载器。删除它的应用目录，不会删除另行存放的稳定 Runner 和配置。
+对于便携 ZIP，删除解压的应用目录不会删除另行存放的稳定 Runner 和配置。如果使用了 Setup，请通过 Windows 已安装应用设置或它的卸载器卸载。默认卸载保留用户数据；[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)介绍七个可选的恢复／清理选项，限定本机结果及剩余验收单独记录。
 
 移除稳定 Runner 或其数据前，应恢复所有仍然引用它的 Steam 启动选项，并保留所需配置备份。如果 Steam 仍指向已经删除的 Runner，相应游戏条目就无法正确启动。
 
