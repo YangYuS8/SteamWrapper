@@ -127,10 +127,10 @@ GitHub is the primary source. CNB needs both the existing tag-sync credential an
 
 | Stage | Current implementation | Remaining acceptance |
 | --- | --- | --- |
-| D1a/D1b installer and recovery | Inno, registered validated per-user root, installation lease, manifest/journal, manual repair/rollback; scoped local option/native acceptance | Corrected full release matrix, broader cleanup combinations/DPI/keyboard, clean Windows client, registry/shortcut/interruption and retention cases |
+| D1a/D1b installer and recovery | Inno, registered validated per-user root, installation lease, manifest/journal, manual repair/rollback; scoped local option/native acceptance | Broader cleanup combinations/DPI/keyboard, clean Windows client, registry/shortcut/interruption and retention cases |
 | D2 version delivery | Full tag gates, unsigned Setup/ZIP, seven verified assets and optional CNB mirror | Actual publication/download evidence per release |
 | D3 Windows code signing | Optional preparation tools retained; Foundation application declined | Future provider setup only if selected; no longer blocks D4/D5 |
-| D4 update checks | Bilingual UI, opt-in checks, official sources, project signature and replay/freshness checks | Public feed and native/offline/cancel acceptance for shipped bytes |
+| D4 update checks | Bilingual UI, opt-in checks, official sources, project signature and replay/freshness checks | Remaining native/offline/cancel acceptance; public preview-feed and exact download verified |
 | D5 confirmed installation | Verified download, existing Host/Inno handoff, normal Manager exit and restart | Actual end-to-end upgrades/failures, clean-client acceptance; portable remains manual |
 | Stable qualification | Requires player and Windows delivery quality | Open native/clean-client/recovery gates are not completed by signing or CI |
 

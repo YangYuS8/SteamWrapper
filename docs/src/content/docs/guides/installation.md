@@ -3,20 +3,26 @@ title: Install the Windows preview
 description: Get the complete WinUI preview, understand its data locations, and update it without breaking Steam launch options.
 ---
 
-The WinUI Manager is currently a **self-contained directory preview for Windows 11 24H2 x64**. It bundles .NET and Windows App SDK files alongside the application. Keep the complete directory together.
+For **Windows 11 24H2 x64**, use the **Setup installer**. It installs the WinUI Manager and its required .NET and Windows App SDK files; you do not need development tools or a separate runtime download.
 
-A [per-user setup preview](/SteamWrapper/guides/installer-preview/) is also available without Windows Authenticode signing. Version-tag releases package both Setup and the portable ZIP. Clean-client and broader recovery acceptance remain open; there is no single-file WinUI executable. WinUI is the only Manager, with executable `SteamWrapper.Manager.exe`. Dioxus releases are historical and do not contain the current WinUI Manager. This page describes the portable ZIP; use the installer guide for installation-location, shortcut and uninstall choices.
+**[Download Setup — v0.2.5-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe)** · [Release notes and other downloads](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1)
+
+This is a technical preview without Windows Authenticode signing. Clean-client and broader recovery acceptance remain open. A portable ZIP is available as an alternative. See the [installer guide](/SteamWrapper/guides/installer-preview/) for repair and uninstall details; historical Dioxus packages do not contain the current WinUI Manager.
 
 ## Get a versioned preview
 
-1. Open [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases) and choose a release whose notes identify the **WinUI Windows x64 portable preview**.
-2. Read its known limits and English or Simplified Chinese notes. A historical Dioxus setup package is not the current application.
-3. Download **`SteamWrapper-<tag>-win-x64.zip`** and **`SHA256SUMS`** from that release. The ZIP's tag must match the release you selected.
-4. Compare the ZIP's SHA-256 with the matching line in `SHA256SUMS`, then extract the entire ZIP into a directory you intend to keep.
+1. Open the project's official [v0.2.5-preview.1 release](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1) and read its known limits. Other versions are listed in [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases).
+2. Download **`SteamWrapper-<tag>-win-x64-setup.exe`** from that release. Match the version in the filename to the release you selected, then open it in File Explorer.
+3. Choose English or 简体中文, an installation directory and shortcuts. The default location is suitable for most players; a different location must be an empty directory on a fixed local drive. The Start menu shortcut is on by default and the desktop shortcut is off.
+4. Finish installation and open Manager. Its language follows the supported system language, falling back to English. Continue with [getting started](/SteamWrapper/guides/getting-started/) to configure your game once, then launch it normally from Steam.
 
-For example, PowerShell's `Get-FileHash -Algorithm SHA256 -LiteralPath '.\SteamWrapper-v0.2.1-preview.1-win-x64.zip'` displays the digest to compare. This is an example filename, not a claim that this version has been released. Release assets also include `release.json` and separate English/Simplified Chinese notes.
+Updates and repairs stay at the registered installation directory. To change location later, uninstall Manager while keeping its data, then install at the new location. Setup does not move your games or game saves.
 
 If no WinUI release is available, use a manual workflow preview or the local build below. The release workflow publishes only after its gates and package checks pass; a successful run does not prove compatibility with every Windows installation or game.
+
+## Portable ZIP alternative
+
+If you prefer not to install Manager, download **`SteamWrapper-<tag>-win-x64.zip`** from the same official release and extract the entire archive into a directory you intend to keep. Open `SteamWrapper.Manager.exe` from that directory in File Explorer. Keep all supporting files together; there is no single-file portable WinUI EXE. Portable updates use a new complete ZIP rather than the installer's in-app update path.
 
 ## Get an on-demand workflow preview
 
@@ -28,13 +34,17 @@ The separate **`SteamWrapper-WinUI-installer-preview-windows-x64`** artifact con
 
 ## Open the complete application
 
-In ordinary Windows File Explorer, open the extracted directory and double-click **`SteamWrapper.Manager.exe`**.
+For an installed copy, use its Start menu or desktop shortcut. For the portable ZIP, open the extracted directory in ordinary File Explorer and double-click **`SteamWrapper.Manager.exe`**.
 
 Retain its supporting DLLs, native `.pri` resources, `Assets`, `Runner` and `zh-CN` resources. Do not run the EXE from inside the ZIP, move it away from its supporting files, or use a contract-test driver as Manager.
 
 With no saved preference, the interface follows the supported system UI language and falls back to English. The **English / 简体中文** selector saves a manual override. Continue with [getting started](/SteamWrapper/guides/getting-started/) to add a game.
 
 If Windows reports a download or security problem, stop and confirm the package's source and completeness. SteamWrapper does not require globally disabling Windows protection. A checksum confirms consistency with a particular artifact; it is not a publisher signature or a safety verdict for a third-party game.
+
+## Optional manual download check
+
+For a manual integrity check, download `SHA256SUMS` from the same release and compare the downloaded Setup or ZIP with its matching line. PowerShell's `Get-FileHash -Algorithm SHA256 -LiteralPath '.\SteamWrapper-<tag>-win-x64-setup.exe'` displays the digest; replace `<tag>` with your downloaded version. Releases also include `release.json` and English/Simplified Chinese notes. A matching checksum checks the file against that release's recorded bytes; it does not provide a Windows publisher certificate.
 
 ## Build the preview locally
 

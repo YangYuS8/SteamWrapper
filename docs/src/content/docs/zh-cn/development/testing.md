@@ -106,6 +106,12 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 ### 项目更新检查与安装
 
+**公开预览版，2026-10-05：**[v0.2.5-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1) 已作为 GitHub 预发布公开，包含七个附件，构建源码为 `19d04b8`。[发布运行 37232987692](https://github.com/YangYuS8/SteamWrapper/actions/runs/37232987692)通过成品打包、隔离安装／恢复和修正后的最终安装选项矩阵。安装包为 49,901,116 字节，便携 ZIP 为 73,765,434 字节。这完成公开发布及该托管运行器矩阵，不代表干净 Windows 客户端，也不替代下文各自限定范围的原生／接力证据。
+
+实际 `0.2.5` 的 `OfficialUpdateService` 使用内嵌项目公钥及隔离数据目录，验证了公开 GitHub `update-preview` 更新源。传入已安装标签 `v0.2.4-preview.1` 时，选中 `v0.2.5-preview.1` 并下载 49,901,116 字节安装包，SHA-256 为 `0cd78a00070d4e40eeb1f376a98b94f0b3febb82a3357be3b6b0b35555ae57da`；传入 `v0.2.5-preview.1` 时正确返回无更新。证据为 `target/winui/public-update-probe/run-20261004T205845Z-0c539c056f89474d808503ab38c9ac0d/evidence.json`。**没有执行下载的公开安装器**。这是服务级公网验签／下载验证，与下文真实隔离 Inno 接力分开，不是公开下载至安装完整流程或干净虚拟机通过。旧 `0.2.4` 应用没有更新界面，仍须手动安装一次。
+
+随后[元数据续期运行 37234226421](https://github.com/YangYuS8/SteamWrapper/actions/runs/37234226421)通过，新签名验证成功，序号从 `1791147499592` 增至 `1791147575660`；标签／提交、签名中的软件身份和七个发行附件的 ID／摘要／大小／更新时间均未改变。同目录 `refresh-evidence.json` 记录本次核验：没有重建软件、再次下载安装包或执行安装器。
+
 完整 Publish 后，运行 `pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerOptions.ps1` 验证隔离静默安装／快捷方式选择；增加 `-BaselineDirectory <冻结旧版目录> -BaselineTag <旧标签>` 可验证真实版本升级与修复时的选择继承。在交互式 Windows 桌面运行 `pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerOptionsUi.ps1`，验证英语和简体中文原生安装／卸载选择。两者均支持 `-PublishDirectory <完整目录> -Tag <匹配标签>`。界面脚本检查取消、七个默认关闭的卸载选项，以及明确选择缓存清理时保留其他夹具数据；不会选择真实 Steam 游戏库或真实应用数据目录。脚本存在不等于测试通过，实际结果单独记录。
 
 `Invoke-WinUI.ps1 -Action Test` 包含签名／时效／重放、官方源重定向、有界下载、取消及安装接力回归。`pwsh -NoProfile -File scripts/releases/Test-ProjectUpdates.ps1` 使用临时测试密钥和网络替身测试项目签名及 GitHub／CNB 发布／续期，不实际写入公开 Release。普通 CI 包含此门禁，但不构建安装包。

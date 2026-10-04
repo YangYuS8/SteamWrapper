@@ -3,20 +3,26 @@ title: 安装 Windows 预览版
 description: 获取完整 WinUI 预览版，了解数据位置，并在不破坏 Steam 启动项的前提下更新。
 ---
 
-WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览版**。应用目录中包含 .NET 与 Windows App SDK 文件，请始终保留完整目录。
+**Windows 11 24H2 x64** 用户建议使用 **Setup 安装包**。它会安装 WinUI Manager 及所需的 .NET、Windows App SDK 文件，无需开发工具或单独下载运行时。
 
-另已提供没有 Windows Authenticode 签名的[每用户安装器预览](/SteamWrapper/zh-cn/guides/installer-preview/)。版本标签同时打包 Setup 与便携 ZIP，干净客户端和更广泛恢复验收仍待完成，WinUI 没有单文件 EXE。WinUI 是唯一的 Manager，程序名为 `SteamWrapper.Manager.exe`。Dioxus 发布属于历史产物，不包含当前 WinUI Manager。本页说明便携 ZIP；安装位置、快捷方式与卸载选择请阅读安装器指南。
+**[下载安装包 — v0.2.5-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe)** · [发布说明与其他下载](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1)
+
+当前仍是没有 Windows Authenticode 签名的技术预览，干净客户端和更广泛恢复验收尚未完成。便携 ZIP 是备选方式。修复与卸载详情见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)；历史 Dioxus 安装包不包含当前 WinUI Manager。
 
 ## 获取带版本的预览包
 
-1. 打开 [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases)，选择说明中明确标识 **WinUI Windows x64 portable 预览**的发布。
-2. 阅读已知限制及英语或简体中文说明。历史 Dioxus 安装包不是当前应用。
-3. 下载该发布的 **`SteamWrapper-<tag>-win-x64.zip`** 与 **`SHA256SUMS`**，ZIP 中的标签应与所选发布一致。
-4. 对照 `SHA256SUMS` 中对应一行验证 ZIP 的 SHA-256，再将整个 ZIP 解压到准备保留的目录中。
+1. 打开项目官方 [v0.2.5-preview.1 发布页](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1)，阅读已知限制；其他版本见 [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases)。
+2. 下载该发布的 **`SteamWrapper-<tag>-win-x64-setup.exe`**，确认文件名版本与所选发布一致，然后在文件资源管理器中打开。
+3. 选择 English 或简体中文、安装目录和快捷方式。大多数玩家保留默认目录即可；更换目录时需选择固定本地磁盘上的空目录。开始菜单快捷方式默认开启，桌面快捷方式默认关闭。
+4. 完成安装并打开 Manager。界面跟随已支持的系统语言，否则使用英语。按照[开始使用](/SteamWrapper/zh-cn/guides/getting-started/)配置一次游戏，之后照常从 Steam 启动。
 
-例如，PowerShell 命令 `Get-FileHash -Algorithm SHA256 -LiteralPath '.\SteamWrapper-v0.2.1-preview.1-win-x64.zip'` 会显示待对照的摘要。这只是文件名示例，不表示该版本已经发布。发布附件还包含 `release.json` 和独立的英语／简体中文说明。
+升级和修复留在已注册的安装目录。以后若要更换位置，请先只卸载 Manager 并保留数据，再安装到新位置。安装器不会移动游戏或存档。
 
 如果没有可用 WinUI 发布，可以使用下面的手动工作流预览或本地构建。发布工作流仅在门禁和包检查通过后公开产物；运行成功不代表所有 Windows 安装环境或游戏都已兼容。
+
+## 备选：便携 ZIP
+
+如果不想安装 Manager，可从同一个官方发布下载 **`SteamWrapper-<tag>-win-x64.zip`**，完整解压到准备保留的目录，再在文件资源管理器中打开其中的 `SteamWrapper.Manager.exe`。请保留所有配套文件；WinUI 便携版不是单文件 EXE。便携版更新需下载新的完整 ZIP，不使用安装版的应用内安装流程。
 
 ## 获取按需工作流预览
 
@@ -28,13 +34,17 @@ WinUI Manager 当前提供**面向 Windows 11 24H2 x64 的自包含目录预览�
 
 ## 打开完整应用
 
-通过普通 Windows 文件资源管理器进入解压目录，双击 **`SteamWrapper.Manager.exe`**。
+安装版可通过开始菜单或桌面快捷方式打开。便携 ZIP 则通过普通 Windows 文件资源管理器进入解压目录，双击 **`SteamWrapper.Manager.exe`**。
 
 保留旁边的 DLL、原生 `.pri` 资源、`Assets`、`Runner` 与 `zh-CN` 资源。不要在 ZIP 内运行 EXE，不要把它与支持文件分开，也不要把契约测试驱动当成 Manager。
 
 没有已保存的偏好时，界面跟随已支持的系统界面语言，不支持时回退英语。**English / 简体中文** 选择器可保存手动选择。随后按照[开始使用](/SteamWrapper/zh-cn/guides/getting-started/)添加游戏。
 
 如果 Windows 报告下载或安全问题，先确认产物的来源和完整性。SteamWrapper 不要求全局关闭 Windows 防护。摘要校验只能确认文件与某个产物一致，不能代替发布者签名，也不是第三方游戏安全性的结论。
+
+## 可选：手动校验下载
+
+如需手动检查完整性，从同一发布下载 `SHA256SUMS`，将安装包或 ZIP 的摘要与对应一行比较。PowerShell 命令 `Get-FileHash -Algorithm SHA256 -LiteralPath '.\SteamWrapper-<tag>-win-x64-setup.exe'` 会显示摘要，请把 `<tag>` 换成实际下载版本。附件还包含 `release.json` 和英／中说明。摘要一致表示文件与该发布记录的字节一致，不代表它拥有 Windows 发布者证书。
 
 ## 在本机构建预览版
 
