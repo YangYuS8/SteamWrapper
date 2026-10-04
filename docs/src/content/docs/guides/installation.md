@@ -104,7 +104,7 @@ Steam Launch Options must continue to reference the stable `bin\SteamWrapperRunn
 
 ## Remove a preview
 
-For the portable ZIP, removing its extracted application directory does not remove the separate stable Runner and configuration. If you used Setup, use Windows installed-app settings or its uninstaller. Default uninstall keeps user data; its seven optional restoration/cleanup choices are described in the [installer guide](/SteamWrapper/guides/installer-preview/), with dedicated acceptance still pending.
+For the portable ZIP, removing its extracted application directory does not remove the separate stable Runner and configuration. If you used Setup, use Windows installed-app settings or its uninstaller. Default uninstall keeps user data; its seven optional restoration/cleanup choices are described in the [installer guide](/SteamWrapper/guides/installer-preview/), with scoped local results and remaining gates recorded separately.
 
 Before removing stable Runner or its data, restore every Steam Launch Options value that still references it and retain any configuration backups you need. Leaving Steam pointing to a deleted Runner prevents those entries from launching correctly.
 

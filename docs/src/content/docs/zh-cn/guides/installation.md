@@ -104,7 +104,7 @@ Steam 启动项应始终引用稳定的 `bin\SteamWrapperRunner.exe`，而不是
 
 ## 移除预览版
 
-对于便携 ZIP，删除解压的应用目录不会删除另行存放的稳定 Runner 和配置。如果使用了 Setup，请通过 Windows 已安装应用设置或它的卸载器卸载。默认卸载保留用户数据；[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)介绍七个可选的恢复／清理选项，其专门验收仍待完成。
+对于便携 ZIP，删除解压的应用目录不会删除另行存放的稳定 Runner 和配置。如果使用了 Setup，请通过 Windows 已安装应用设置或它的卸载器卸载。默认卸载保留用户数据；[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)介绍七个可选的恢复／清理选项，限定本机结果及剩余验收单独记录。
 
 移除稳定 Runner 或其数据前，应恢复所有仍然引用它的 Steam 启动选项，并保留所需配置备份。如果 Steam 仍指向已经删除的 Runner，相应游戏条目就无法正确启动。
 

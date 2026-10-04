@@ -71,6 +71,11 @@ function Remove-OptionsInstallation([string]$Name) {
     if (Test-Path -LiteralPath $uninstaller) {
         Invoke-OptionsProcess $uninstaller $Name
         Assert-OptionsShortcuts $false $false
+        # Inno's temporary cleanup process removes the original executable after
+        # the uninstall process exits. Do not launch that retiring image again.
+        $deadline = [DateTime]::UtcNow.AddSeconds(15)
+        while ((Test-Path -LiteralPath $uninstaller) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 150 }
+        if (Test-Path -LiteralPath $uninstaller) { throw 'The successful isolated uninstaller did not finish removing itself.' }
     }
 }
 function Assert-RecordedTasks([string]$Path, [string]$Expected) {

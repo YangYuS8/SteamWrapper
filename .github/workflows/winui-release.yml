@@ -130,6 +130,8 @@ jobs:
             $sourceVersion = ([xml](Get-Content apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ }
             $tag = "v$sourceVersion-preview.$env:GITHUB_RUN_NUMBER"
           } else { $tag = $env:RELEASE_TAG }
+          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerOptions.ps1 -PublishDirectory target/winui/publish -Tag $tag
+          if ($LASTEXITCODE -ne 0) { throw 'Isolated installer option acceptance failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag $tag
           if ($LASTEXITCODE -ne 0) { throw 'Installer preview packaging failed.' }
       - name: Inspect and package the explicit schema-2 installable prerelease

@@ -411,7 +411,7 @@ function AddUninstallChoice(Form: TSetupForm; MessageName: String; Y: Integer): 
 begin
   Result := TNewCheckBox.Create(Form);
   Result.Parent := Form;
-  Result.SetBounds(ScaleX(20), ScaleY(Y), ScaleX(510), ScaleY(24));
+  Result.SetBounds(ScaleX(20), ScaleY(Y), Form.ClientWidth - ScaleX(40), ScaleY(24));
   Result.Caption := CustomMessage(MessageName);
   Result.Checked := False;
 end;
@@ -439,12 +439,12 @@ begin
     RestoreSteam := ExpandConstant('{param:SWRESTORESTEAM|0}') = '1';
     Exit;
   end;
-  Form := CreateCustomForm(ScaleX(550), ScaleY(450), False, False);
+  Form := CreateCustomForm(ScaleX(550), ScaleY(450), True, True);
   try
     Form.Caption := CustomMessage('UninstallChoices');
     Description := TNewStaticText.Create(Form);
     Description.Parent := Form;
-    Description.SetBounds(ScaleX(20), ScaleY(16), ScaleX(510), ScaleY(58));
+    Description.SetBounds(ScaleX(20), ScaleY(16), Form.ClientWidth - ScaleX(40), ScaleY(58));
     Description.AutoSize := False;
     Description.WordWrap := True;
     Description.Caption := CustomMessage('UninstallDescription');
@@ -457,19 +457,19 @@ begin
     LogsChoice := AddUninstallChoice(Form, 'RemoveLogs', 250);
     Help := TNewStaticText.Create(Form);
     Help.Parent := Form;
-    Help.SetBounds(ScaleX(20), ScaleY(290), ScaleX(510), ScaleY(94));
+    Help.SetBounds(ScaleX(20), ScaleY(290), Form.ClientWidth - ScaleX(40), ScaleY(94));
     Help.AutoSize := False;
     Help.WordWrap := True;
     Help.Caption := CustomMessage('RestoreDescription');
     RemoveButton := TNewButton.Create(Form);
     RemoveButton.Parent := Form;
-    RemoveButton.SetBounds(ScaleX(225), ScaleY(404), ScaleX(195), ScaleY(30));
+    RemoveButton.SetBounds(Form.ClientWidth - ScaleX(325), Form.ClientHeight - ScaleY(46), ScaleX(195), ScaleY(30));
     RemoveButton.Caption := CustomMessage('UninstallSelected');
     RemoveButton.ModalResult := mrOk;
     RemoveButton.Default := True;
     CancelButton := TNewButton.Create(Form);
     CancelButton.Parent := Form;
-    CancelButton.SetBounds(ScaleX(430), ScaleY(404), ScaleX(100), ScaleY(30));
+    CancelButton.SetBounds(Form.ClientWidth - ScaleX(120), Form.ClientHeight - ScaleY(46), ScaleX(100), ScaleY(30));
     CancelButton.Caption := CustomMessage('CancelUninstall');
     CancelButton.ModalResult := mrCancel;
     CancelButton.Cancel := True;

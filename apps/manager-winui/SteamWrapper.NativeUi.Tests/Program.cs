@@ -24,6 +24,7 @@ internal static class Program
     private static int Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
+        if (args.Length > 0 && args[0] == "--installer-options-ui") return InstallerOptionsUi.Run(args[1..]);
         HashSet<string> selectedCases;
         try { selectedCases = ParseCases(args); }
         catch (ArgumentException error)
