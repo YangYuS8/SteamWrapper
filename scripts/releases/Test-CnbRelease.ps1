@@ -19,10 +19,12 @@ public sealed class CnbReleaseFixtureHandler : HttpMessageHandler {
     public readonly List<string> Requests = new();
     public readonly List<bool> Authenticated = new();
     public readonly List<string> Bodies = new();
+    public readonly List<string> Queries = new();
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellation) {
         Requests.Add(request.Method + " " + request.RequestUri.Host + request.RequestUri.AbsolutePath);
         Authenticated.Add(request.Headers.Authorization != null);
         Bodies.Add(request.Content == null ? "" : request.Content.ReadAsStringAsync(cancellation).GetAwaiter().GetResult());
+        Queries.Add(request.RequestUri.Query);
         if (Replies.Count == 0) throw new Exception("Unexpected fixture HTTP request.");
         return Task.FromResult(Replies.Dequeue());
     }
@@ -74,7 +76,7 @@ function Add-DownloadReply($Handler, [string]$Name) {
 }
 function Add-UploadReplies($Handler, [string[]]$Names = $names) {
     foreach ($name in $Names) {
-        $Handler.Reply(201, (@{ upload_url = 'https://uploads.example.test/' + $name + '?signature=fixture'; verify_url = 'https://api.cnb.cool/Nesoriel/SteamWrapper/-/releases/release-1/asset-upload-confirmation/fixture/' + $name } | ConvertTo-Json -Compress))
+        $Handler.Reply(201, (@{ upload_url = 'https://uploads.example.test/' + $name + '?signature=fixture'; verify_url = 'https://api.cnb.cool/Nesoriel/SteamWrapper/-/releases/release-1/asset-upload-confirmation/fixture%2Btoken%3D%3D/fixtures%2Freleases%2F' + $name + '?ttl=0' } | ConvertTo-Json -Compress))
         $Handler.Reply(200, '')
         $Handler.Reply(200, '{}')
         Add-DownloadReply $Handler $name
@@ -90,6 +92,43 @@ function Assert-Rejected([string]$Label, [scriptblock]$Run, [string]$Pattern) {
     if (-not $rejected) { throw "$Label unexpectedly succeeded." }
     Write-Output "PASS: $Label"
 }
+$confirmationPrefix = 'https://api.cnb.cool/Nesoriel/SteamWrapper/-/releases/release-1/asset-upload-confirmation/'
+foreach ($query in @('', '?ttl=0')) {
+    $verifiedUri = Get-CnbUploadConfirmationUri -VerifyUrl ($confirmationPrefix + 'base64%2B%2Ftoken%3D/storage%2Frelease%2Fasset.zip' + $query) -ExpectedPrefix $confirmationPrefix
+    if ($verifiedUri.Query -cne '?ttl=0' -or $verifiedUri.AbsolutePath -notmatch 'base64%2B%2Ftoken%3D/storage%2Frelease%2Fasset\.zip$') { throw 'Confirmation parameters were decoded into route separators or TTL was duplicated.' }
+}
+Write-Output 'PASS: empty or API-supplied TTL queries preserve the two escaped path parameters.'
+$unsafeConfirmations = @(
+    'https://untrusted.example/confirmation',
+    'https://fixture-sensitive@api.cnb.cool/Nesoriel/SteamWrapper/-/releases/release-1/asset-upload-confirmation/a/b',
+    ($confirmationPrefix.Replace('Nesoriel/SteamWrapper', 'Other/Repository') + 'a/b'),
+    ($confirmationPrefix.Replace('release-1', 'release-2') + 'a/b'),
+    ($confirmationPrefix + 'a/b#fixture-sensitive'),
+    ($confirmationPrefix + 'a/b?ttl=1'),
+    ($confirmationPrefix + 'a/b?ttl=0&ttl=0'),
+    ($confirmationPrefix + 'a/b?token=fixture-sensitive'),
+    ($confirmationPrefix + 'a/storage/asset.zip'),
+    ($confirmationPrefix + 'a/./asset.zip'),
+    ($confirmationPrefix + 'a/../a/asset.zip'),
+    ($confirmationPrefix + 'a/storage%2F..%2Fasset.zip'),
+    ($confirmationPrefix + 'a%2F..%2Ftoken/asset.zip'),
+    ($confirmationPrefix + 'a/storage%252Fasset.zip'),
+    ($confirmationPrefix + 'a/storage%5Casset.zip'),
+    ($confirmationPrefix + 'a/asset%00.zip'),
+    ($confirmationPrefix + 'a/asset%20.zip'),
+    ($confirmationPrefix + 'a/asset%zz.zip'),
+    ($confirmationPrefix + 'a/' + ('x' * 8192))
+)
+foreach ($candidate in $unsafeConfirmations) {
+    $rejected = $false
+    try { $null = Get-CnbUploadConfirmationUri -VerifyUrl $candidate -ExpectedPrefix $confirmationPrefix }
+    catch {
+        if ($_.Exception.Message -cne 'Unsafe CNB upload confirmation URL; upload refused.') { throw 'Confirmation rejection must omit all supplied URL/path/query values.' }
+        $rejected = $true
+    }
+    if (-not $rejected) { throw 'An unsafe confirmation URL was accepted.' }
+}
+Write-Output 'PASS: origin/repository/release changes, traversal, unsafe queries, backslashes, controls, double encoding and oversized URLs are rejected without leaking values.'
 $previousToken = $env:CNB_RELEASE_TOKEN
 $env:CNB_RELEASE_TOKEN = 'fixture-token-never-a-real-credential'
 try {
@@ -118,8 +157,9 @@ try {
         if (-not $creation.draft -or -not $creation.prerelease -or $creation.make_latest -ne 'false' -or $publication.draft -or -not $publication.prerelease) { throw 'Preview release flags were lost.' }
         for ($index = 0; $index -lt $fixture.Handler.Requests.Count; $index++) {
             if ($fixture.Handler.Requests[$index] -match '(uploads|downloads)\.example\.test' -and $fixture.Handler.Authenticated[$index]) { throw 'A CNB credential was forwarded to storage.' }
+            if ($fixture.Handler.Requests[$index] -match '^POST api\.cnb\.cool .*/asset-upload-confirmation/' -and $fixture.Handler.Queries[$index] -cne '?ttl=0') { throw 'CNB confirmation duplicated or changed the permanent TTL query.' }
         }
-        Write-Output 'PASS: verified draft publication keeps preview flags and does not forward credentials to storage.'
+        Write-Output 'PASS: verified draft publication supports encoded asset paths/base64 tokens with one permanent TTL query and no storage credentials.'
     } finally { $fixture.Client.Dispose() }
     foreach ($scenario in @('wrong-release-commit', 'unexpected', 'duplicate', 'incomplete-published')) {
         $fixture = New-FixtureClient

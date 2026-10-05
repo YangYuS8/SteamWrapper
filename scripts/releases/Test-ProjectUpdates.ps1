@@ -157,9 +157,11 @@ public sealed class ProjectUpdateFixtureHandler : HttpMessageHandler {
     public readonly Queue<HttpResponseMessage> Replies = new();
     public readonly List<bool> Authenticated = new();
     public readonly List<string> Requests = new();
+    public readonly List<string> Queries = new();
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) {
         Authenticated.Add(request.Headers.Authorization != null);
         Requests.Add(request.Method + " " + request.RequestUri.Host + request.RequestUri.AbsolutePath);
+        Queries.Add(request.RequestUri.Query);
         if (Replies.Count == 0) throw new Exception("Unexpected fixture request.");
         return Task.FromResult(Replies.Dequeue());
     }
@@ -186,12 +188,12 @@ public sealed class ProjectUpdateFixtureHandler : HttpMessageHandler {
                 $handler.Reply(201, '{}')
                 $handler.Reply(404, '{}')
                 $handler.Reply(201, '{"id":"fixture-release","tag_name":"update-preview","prerelease":true,"draft":true,"assets":[]}')
-                $confirmation = if ($unsafe) { 'https://untrusted.example/upload' } else { 'https://api.cnb.cool/Nesoriel/SteamWrapper/-/releases/fixture-release/asset-upload-confirmation/a/b' }
+                $confirmation = if ($unsafe) { 'https://untrusted.example/upload' } else { 'https://api.cnb.cool/Nesoriel/SteamWrapper/-/releases/fixture-release/asset-upload-confirmation/fixture%2Btoken%3D%3D/fixtures%2FSteamWrapper-update.json?ttl=0' }
                 $handler.Reply(200, (@{ upload_url = 'https://storage.example/fixture'; verify_url = $confirmation } | ConvertTo-Json -Compress))
                 if ($unsafe) {
                     $rejected = $false
                     try { Publish-CnbUpdateFeed -ManifestPath $cnbManifest -Payload $cnbPayload -TrustPath $trustPath -Client $client }
-                    catch { if ($_.Exception.Message -notlike '*Unsafe CNB update upload confirmation*') { throw }; $rejected = $true }
+                    catch { if ($_.Exception.Message -notlike '*confirmation URL*') { throw }; $rejected = $true }
                     if (-not $rejected -or $handler.Requests.Count -ne 5) { throw 'An unsafe CNB confirmation allowed an upload.' }
                     Write-Output 'PASS: CNB rejects an unsafe upload confirmation before sending file bytes.'
                 } else {
@@ -202,6 +204,7 @@ public sealed class ProjectUpdateFixtureHandler : HttpMessageHandler {
                     $handler.Reply(200, '{}')
                     Publish-CnbUpdateFeed -ManifestPath $cnbManifest -Payload $cnbPayload -TrustPath $trustPath -Client $client
                     if ($handler.Requests.Count -ne 10 -or $handler.Authenticated[5] -or $handler.Authenticated[7] -or $handler.Authenticated[8] -or -not $handler.Authenticated[9]) { throw 'CNB upload/download authorization or publication sequence differs.' }
+                    if ($handler.Queries[6] -cne '?ttl=0') { throw 'The update feed duplicated or changed the permanent TTL query.' }
                     Write-Output 'PASS: the CNB feed publishes exactly the same signed bytes after download verification, with no storage credentials.'
                 }
             } finally { $client.Dispose() }
