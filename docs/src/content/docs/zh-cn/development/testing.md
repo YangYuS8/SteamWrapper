@@ -188,6 +188,8 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 ## 干净 Windows Sandbox 验收
 
+Runner 依赖检查器按四个数值文件版本字段选择官方 MSVC 工具。托管工具的显示字符串可能附带 `built by: cloudtest`，首次 CI 因把显示文本当版本号解析而失败。`pwsh -NoProfile -File scripts/windows/Test-RunnerDependenciesScripts.ps1` 的四项聚焦选择回归通过，现已加入正常 CI，在编译前执行。此工具修正不改变已验收候选载荷的字节。
+
 Windows Sandbox 提供全新的 Windows 客户端，不带宿主机已安装的开发工具。以管理员身份启用 `Containers-DisposableClientVM` Windows 功能，并完成系统要求的重启。这是维护者可选的验收环境，不是贡献者的前置要求。分别记录实际客体与宿主构建：2026-10-06 运行中客体为 **26100**，宿主为 **26300**。这个由 Sandbox 管理的客体使用管理员账户，并非独立 ISO 安装的虚拟机，不代表标准用户或其他构建兼容性通过。
 
 ```powershell

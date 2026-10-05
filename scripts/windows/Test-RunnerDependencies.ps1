@@ -3,6 +3,12 @@ param([string]$RunnerPath = (Join-Path $PSScriptRoot '../../target/release/steam
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+function Get-RunnerDependencyToolVersion($VersionInfo) {
+    # FileVersion is display text and official hosted tools may append build
+    # attribution. These numeric PE fields are independent of that text.
+    return [Version]::new($VersionInfo.FileMajorPart, $VersionInfo.FileMinorPart,
+        $VersionInfo.FileBuildPart, $VersionInfo.FilePrivatePart)
+}
 if (-not $IsWindows) { throw 'Actual Runner PE imports must be inspected on Windows.' }
 $runner = (Resolve-Path -LiteralPath $RunnerPath).Path
 $bytes = [IO.File]::ReadAllBytes($runner)
@@ -23,7 +29,7 @@ $candidates = @(& $vswhere -latest -products '*' -requires Microsoft.VisualStudi
     -find 'VC\Tools\MSVC\**\bin\Hostx64\x64\dumpbin.exe')
 if ($LASTEXITCODE -ne 0 -or $candidates.Count -eq 0) { throw 'The official MSVC dumpbin.exe import inspector is missing.' }
 $dumpbin = @($candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
-    Sort-Object { [Version]([Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion) } -Descending |
+    Sort-Object { Get-RunnerDependencyToolVersion ([Diagnostics.FileVersionInfo]::GetVersionInfo($_)) } -Descending |
     Select-Object -First 1)
 if ($dumpbin.Count -ne 1) { throw 'The official MSVC dumpbin.exe import inspector is missing.' }
 

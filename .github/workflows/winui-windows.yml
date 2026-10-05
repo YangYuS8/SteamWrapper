@@ -64,6 +64,9 @@ jobs:
       - name: Verify Rust interoperability and real Runner consumption
         run: mise.exe run winui:contracts
 
+      - name: Test Runner dependency inspection tool versions
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-RunnerDependenciesScripts.ps1
+
       - name: Compile the actual WinUI Manager and Runner resources
         run: mise.exe run winui:build
 

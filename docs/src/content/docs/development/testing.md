@@ -200,6 +200,8 @@ The coordinated source/product version is now `0.2.6`; no `v0.2.6` tag or stable
 
 ## Clean Windows Sandbox acceptance
 
+The Runner import inspector selects official MSVC tools using their four numeric file-version fields. Hosted tools can append `built by: cloudtest` to the display string; parsing that text as a version caused the first CI failure. `pwsh -NoProfile -File scripts/windows/Test-RunnerDependenciesScripts.ps1` passed four focused selection regressions and now runs before compilation in normal CI. This tooling fix does not change the tested candidate payload bytes.
+
 Windows Sandbox provides a fresh Windows client without the host's installed development tools. Enable the `Containers-DisposableClientVM` Windows feature as administrator and complete any required restart. This is an optional maintainer acceptance environment, not a contributor prerequisite. Record the actual guest and host OS builds separately: the 2026-10-06 run reported guest build **26100** and host build **26300**. This managed Sandbox guest uses an administrator account; it is not an independently installed ISO VM and does not establish standard-user or other-build compatibility.
 
 ```powershell
