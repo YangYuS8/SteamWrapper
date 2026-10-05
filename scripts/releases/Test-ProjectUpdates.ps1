@@ -180,14 +180,27 @@ public sealed class ProjectUpdateFixtureHandler : HttpMessageHandler {
     $previousCnbToken = $env:CNB_RELEASE_TOKEN
     try {
         $env:CNB_RELEASE_TOKEN = 'fixture-only-not-a-real-credential'
-        foreach ($unsafe in @($false, $true)) {
+        foreach ($scenario in @('empty-assets', 'null-assets', 'scalar-assets', 'null-array-entry', 'unsafe-confirmation')) {
+            $unsafe = $scenario -eq 'unsafe-confirmation'
             $handler = [ProjectUpdateFixtureHandler]::new()
             $client = [Net.Http.HttpClient]::new($handler)
             try {
                 $handler.Reply(404, '{}')
                 $handler.Reply(201, '{}')
                 $handler.Reply(404, '{}')
-                $handler.Reply(201, '{"id":"fixture-release","tag_name":"update-preview","prerelease":true,"draft":true,"assets":[]}')
+                $initialAssets = @()
+                if ($scenario -eq 'null-assets') { $initialAssets = $null }
+                if ($scenario -eq 'scalar-assets') { $initialAssets = @{ name = 'SteamWrapper-update.json' } }
+                if ($scenario -eq 'null-array-entry') { $initialAssets = @($null) }
+                $handler.Reply(201, (@{ id = 'fixture-release'; tag_name = 'update-preview'; prerelease = $true; draft = $true; assets = $initialAssets } | ConvertTo-Json -Depth 4 -Compress))
+                if ($scenario -in @('scalar-assets', 'null-array-entry')) {
+                    $rejected = $false
+                    try { Publish-CnbUpdateFeed -ManifestPath $cnbManifest -Payload $cnbPayload -TrustPath $trustPath -Client $client }
+                    catch { if ($_.Exception.Message -notlike '*Unexpected CNB update release assets*') { throw }; $rejected = $true }
+                    if (-not $rejected -or $handler.Requests.Count -ne 4) { throw 'An invalid initial asset list allowed an upload request.' }
+                    Write-Output "PASS: initial $scenario are rejected without requesting an upload URL."
+                    continue
+                }
                 $confirmation = if ($unsafe) { 'https://untrusted.example/upload' } else { 'https://api.cnb.cool/Nesoriel/SteamWrapper/-/releases/fixture-release/asset-upload-confirmation/fixture%2Btoken%3D%3D/fixtures%2FSteamWrapper-update.json?ttl=0' }
                 $handler.Reply(200, (@{ upload_url = 'https://storage.example/fixture'; verify_url = $confirmation } | ConvertTo-Json -Compress))
                 if ($unsafe) {
@@ -205,7 +218,7 @@ public sealed class ProjectUpdateFixtureHandler : HttpMessageHandler {
                     Publish-CnbUpdateFeed -ManifestPath $cnbManifest -Payload $cnbPayload -TrustPath $trustPath -Client $client
                     if ($handler.Requests.Count -ne 10 -or $handler.Authenticated[5] -or $handler.Authenticated[7] -or $handler.Authenticated[8] -or -not $handler.Authenticated[9]) { throw 'CNB upload/download authorization or publication sequence differs.' }
                     if ($handler.Queries[6] -cne '?ttl=0') { throw 'The update feed duplicated or changed the permanent TTL query.' }
-                    Write-Output 'PASS: the CNB feed publishes exactly the same signed bytes after download verification, with no storage credentials.'
+                    Write-Output "PASS: the CNB feed supports initial $scenario and publishes identical signed bytes after download verification, with no storage credentials."
                 }
             } finally { $client.Dispose() }
         }
