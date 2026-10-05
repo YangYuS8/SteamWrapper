@@ -156,6 +156,20 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 **2026-10-03 公开下载记录：**[版本 `v0.2.3-preview.1`](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1)已由成功的[运行 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907)发布。从官方公开 URL 下载全部七个附件，核对 GitHub API 长度／摘要与第 2 版元数据；七个自有 PE 产品版本均匹配 `0.2.3`，Setup 正确识别为未签名。下载的 NativeAOT Host 在本机 `zh-CN` Windows 上五项实际语言用例通过。证据为 `target/winui/public-download/2d644b9cc4b344a78e2fc4a0d8c10e45/evidence.json`，标记 `signed=false`、`cleanVm=false`、`installedPublicSetup=false`：此次只检查下载的公开 Setup，没有安装它。CNB 发布凭据未配置，二进制发布实际跳过，因此不公告 CNB 二进制下载。这是下载完整性和限定范围的本机 Host 证据，不代表发布者签名或干净客户端验收。
 
+## 本机验收
+
+常规 Windows 验收可以直接在维护者的电脑上执行。安装器脚本编译独立的测试安装身份，把程序、数据和快捷方式限制在可丢弃目录中；原生 UI 测试也使用模拟 Steam 游戏库。Windows Sandbox 是可选工具。不要给生产 Setup 传入测试目录覆盖参数，应使用现成的隔离安装器脚本。
+
+**2026-10-05 本机记录（Windows 11，系统构建 26300）：**实际 `0.2.4` 基线与当前 `0.2.5` 发布通过全部 **13 个符合预期的 Inno／maintenance 步骤**，包括安装、中文修复、真实升级、兼容回滚、再升级、占用／锁定／未知文件拒绝、卸载和重装。回滚保留 1,204 个受管版本文件及维护程序／卸载器／快捷方式哈希，六个独立数据夹具始终未变。证据为 `target/winui/installer acceptance 中文 ' 07f33d24318b4ed1b087cb19eeb1561d/evidence.json`，记录 `numericUpgradeUsesSyntheticMetadataFixture=false`、`cleanVm=false`。
+
+当前 `0.2.5` 原生 Manager 在 `target/winui/native-ui/中文 空格 ' 095cf2308c774c6e8a17ff368726e516/evidence.json` 中通过 **16/16 用例**，包含实际系统语言默认值、英中切换、Unicode 编辑及未知 TOML／设置保留、取消导航／关闭、外部保存冲突、缺失封面占位、稳定 Runner 就绪、本地／手动添加游戏、夹具窗口键盘导航，以及更新对话框默认值／取消。
+
+完整英中安装器 UI 也在**一次连续命令中通过六个动作**，证据为 `target/winui/installer-options-ui-6026e35ccd6c40f6a24b8ed294e34a22/evidence-english-chinesesimplified.json`，标记 `layoutOnly=false`：每种语言分别执行安装取消、卸载取消、只清理缓存的卸载。七项默认不选；取消保留数据与安装哈希，选择缓存清理时保留全部未选中的夹具文件。两条命令均以 0 退出。本次结果补充此前局部／分段记录，不改写那些记录。
+
+实际打包的 `0.2.5` Runner 另行通过**五项检查**，证据为 `target/winui/packaged-runner-smoke-98f6ef9ca2674cfebf45b45fda7694d2/evidence.json`，命令以 0 退出。稳定副本与清单哈希一致；中文／空格／引号／尾反斜杠／空参数及工作目录均准确。`job` 等待受控子进程，`root` 只等父进程；保留正常退出码 7、缺失目标退出码 1 及错误日志。三个 Runner 和四个目标进程均正常退出。在启动前、轮询期间及结束后未观察到新的 Manager，这种限定观察不保证每个瞬间的窗口状态。较早的 WMI 订阅尝试在任何 Runner 启动前失败，作为单独的测试工具诊断保留。
+
+这些是当前电脑上的实际原生窗口及隔离安装器测试，不代表无 SDK 的干净客户端、生产目录选择器、其他 Windows 版本、物理键盘／输入法／DPI、全部清理组合或真实 Steam／游戏验收通过。
+
 ## 干净 Windows Sandbox 验收
 
 Windows Sandbox 提供全新的 Windows 客户端，不带宿主机已安装的开发工具。以管理员身份启用 `Containers-DisposableClientVM` Windows 功能，并完成系统要求的重启。这是维护者可选的验收环境，不是贡献者的前置要求。Sandbox 继承宿主系统版本，且使用管理员账户，不能据此证明稳定版系统或标准用户兼容性。
@@ -173,7 +187,7 @@ pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptance.ps1 -Action Re
 
 客体执行正常当前用户首次安装、原生 Manager 保存配置并安装稳定 Runner、无害程序的独立 Runner 启动、修复、真实升级、默认卸载保留数据，以及自定义中文目录重装；核对快捷方式、注册、受管版本目录及保留配置／Runner 哈希。安装器使用生产静默选项，因此不能据此证明向导交互或真实 Steam 验收。日志、截图及 `evidence.json` 保存在专用结果目录。准备或启动沙盒不代表通过，必须读取对应运行的完整客体验收结果；超时保留进程，不强制关闭。
 
-2026-10-05 已通过脚本解析、内置 UIA／辅助检查及拒绝宿主执行检查，公开安装输入完成核验。Windows 功能已启用，但返回 `RestartNeeded=true`；真实客体验收仍为**等待重启、尚未运行**，干净客户端门槛保持未完成。
+2026-10-05 已通过脚本解析、内置 UIA／辅助检查及拒绝宿主执行检查，公开安装输入完成核验，随后宿主已完成重启。Sandbox 0.8.107.0 使用完整验收配置时反复丢失远程连接，没有生成客体证据；最小配置和仅映射配置可以进入桌面。关闭虚拟 GPU、简化命令和临时客体启动快捷方式均未取得验收结果。因此放下 Sandbox，改为上述本机测试。不推断故障根因，干净客户端门槛仍保持未完成，后续可用普通 Windows 虚拟机或独立测试电脑完成。
 
 ## 本地命令
 
