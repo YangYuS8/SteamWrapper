@@ -168,6 +168,25 @@ The first genuine `0.2.2 → 0.2.3` installer run exposed a long-path uninstall 
 
 **Public-download record on 2026-10-03:** [release `v0.2.3-preview.1`](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1) was published by successful [run 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907). All seven assets were downloaded from official public URLs and checked against GitHub API lengths/digests and schema-2 metadata. All seven own PE product versions matched `0.2.3`; Setup was correctly identified as unsigned. Five actual downloaded NativeAOT Host language cases passed on this `zh-CN` Windows desktop. Evidence is `target/winui/public-download/2d644b9cc4b344a78e2fc4a0d8c10e45/evidence.json`, with `signed=false`, `cleanVm=false` and `installedPublicSetup=false`: the downloaded public Setup was inspected, not installed in this check. CNB binary publication was skipped because release credentials were not configured; no CNB binary download is advertised. This is download integrity and scoped local Host evidence, not publisher signing or clean-client acceptance.
 
+## Clean Windows Sandbox acceptance
+
+Windows Sandbox provides a fresh Windows client without the host's installed development tools. Enable the `Containers-DisposableClientVM` Windows feature as administrator and complete any required restart. This is an optional maintainer acceptance environment, not a contributor prerequisite. The Sandbox inherits the host Windows build and uses an administrator account; it does not establish stable-build or standard-user compatibility.
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptance.ps1 -Action Prepare
+# Use the prepared directory printed by Prepare:
+pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptance.ps1 -Action Launch -PreparedRoot "<prepared-directory>"
+pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptance.ps1 -Action ReadEvidence -PreparedRoot "<prepared-directory>"
+```
+
+Preparation verifies the two public Setup installers and descriptors against GitHub asset digests, sizes and exact tag commits. Optional `-BaselineInstallerPath` and `-InstallerPath` reuse downloaded public Setup files only after those same checks; they do not accept rebuilt test installers. Defaults exercise the genuine `v0.2.4-preview.1 → v0.2.5-preview.1` upgrade. Full portable ZIP inspection remains the separate release gate.
+
+Only a dedicated read-only input folder and writable evidence folder are shared. Networking, clipboard, microphone, camera and printer sharing are disabled. Real Steam, games, saves, user data and the repository are not mapped. The inbox PowerShell 5.1 guest script refuses a development host, pre-existing product installation, redirected data or test environment overrides before executing production Setup. It records the initial runtime inventory and installs no extra SDK or runtime.
+
+The guest exercises normal per-user first installation, native Manager profile saving and stable Runner installation, harmless independent Runner launches, repair, genuine upgrade, default uninstall preserving data, and reinstallation in a custom Chinese folder. It checks shortcuts, registration, owned version directories and retained profile/Runner hashes. Installer processes use production silent options; this does not prove wizard interactions or real Steam acceptance. Logs, screenshots and `evidence.json` persist in the dedicated output folder. A prepared or launched Sandbox is not a pass: inspect the completed matching guest evidence. A timeout preserves processes rather than force-closing them.
+
+On 2026-10-05, the scripts passed parsing, inbox UIA/helper checks and host refusal checks, and the public installer inputs were verified. The Windows feature was enabled with `RestartNeeded=true`; actual guest acceptance remained **not run pending reboot**, so the clean-client gate stays open.
+
 ## Local commands
 
 Install Windows tools by your preferred method; mise is optional. See [Windows development](/SteamWrapper/development/windows/) for SDK requirements and the PowerShell wrappers. The Rust workspace contains only core and Runner. On Linux it no longer needs GTK/WebKit, Dioxus CLI, Xvfb or a desktop session.
