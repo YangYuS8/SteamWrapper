@@ -91,10 +91,25 @@ function Publish-CnbUpdateFeed {
     }
     $id = $state.id
     $upload = Invoke-FeedApi POST "releases/$id/asset-upload-url" @{ asset_name = $name; size = (Get-Item -LiteralPath $ManifestPath).Length; overwrite = $true; ttl = 0 }
-    $confirmation = [Uri]$upload.verify_url
+    $confirmation = $null
     $prefix = $base + "releases/$id/asset-upload-confirmation/"
-    if (-not $confirmation.AbsoluteUri.StartsWith($prefix, [StringComparison]::Ordinal) -or $confirmation.Query -ne '' -or $confirmation.Fragment -ne '' -or
-        $confirmation.AbsolutePath -match '(?i)%2e|%2f|%5c' -or $confirmation.AbsoluteUri.Substring($prefix.Length).Split('/').Count -ne 2) { throw 'Unsafe CNB update upload confirmation.' }
+    if (-not [Uri]::TryCreate($upload.verify_url, [UriKind]::Absolute, [ref]$confirmation) -or -not $confirmation.AbsoluteUri.StartsWith($prefix, [StringComparison]::Ordinal) -or $confirmation.Query -ne '' -or $confirmation.Fragment -ne '' -or
+        $confirmation.AbsolutePath -match '(?i)%2e|%2f|%5c' -or $confirmation.AbsoluteUri.Substring($prefix.Length).Split('/').Count -ne 2) {
+        # Diagnostic output contains only booleans/counts, never signed URL data.
+        $prefixMatches = $null -ne $confirmation -and $confirmation.AbsoluteUri.StartsWith($prefix, [StringComparison]::Ordinal)
+        $prefixMatchesIgnoreCase = $null -ne $confirmation -and $confirmation.AbsoluteUri.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)
+        $structure = [ordered]@{
+            apiOrigin = $null -ne $confirmation -and $confirmation.Scheme -ceq 'https' -and $confirmation.Host -ceq 'api.cnb.cool' -and $confirmation.Port -eq 443 -and $confirmation.UserInfo -eq ''
+            expectedPrefix = $prefixMatches
+            expectedPrefixIgnoreCase = $prefixMatchesIgnoreCase
+            repositoryPrefixIgnoreCase = $null -ne $confirmation -and $confirmation.AbsoluteUri.StartsWith($base, [StringComparison]::OrdinalIgnoreCase)
+            suffixSegmentCount = if ($prefixMatchesIgnoreCase) { $confirmation.AbsolutePath.Substring(([Uri]$prefix).AbsolutePath.Length).Split('/').Count } else { 0 }
+            queryEmpty = $null -ne $confirmation -and $confirmation.Query -eq ''
+            queryTtlZeroOnly = $null -ne $confirmation -and $confirmation.Query -ceq '?ttl=0'
+            unsafeEncoding = $null -ne $confirmation -and $confirmation.AbsolutePath -match '(?i)%2e|%2f|%5c'
+        }
+        throw ('Unsafe CNB update upload confirmation. Safe structure: ' + ($structure | ConvertTo-Json -Compress))
+    }
     $reply = Invoke-CnbUpdateHttp -Method PUT -Uri $upload.upload_url -File $ManifestPath -Client $Client
     if ($reply.Status -lt 200 -or $reply.Status -ge 300) { throw 'CNB update metadata upload failed.' }
     $confirmPath = $confirmation.AbsoluteUri.Substring($base.Length) + '?ttl=0'
