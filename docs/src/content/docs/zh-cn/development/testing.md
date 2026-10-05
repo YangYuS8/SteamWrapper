@@ -156,6 +156,25 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 **2026-10-03 公开下载记录：**[版本 `v0.2.3-preview.1`](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1)已由成功的[运行 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907)发布。从官方公开 URL 下载全部七个附件，核对 GitHub API 长度／摘要与第 2 版元数据；七个自有 PE 产品版本均匹配 `0.2.3`，Setup 正确识别为未签名。下载的 NativeAOT Host 在本机 `zh-CN` Windows 上五项实际语言用例通过。证据为 `target/winui/public-download/2d644b9cc4b344a78e2fc4a0d8c10e45/evidence.json`，标记 `signed=false`、`cleanVm=false`、`installedPublicSetup=false`：此次只检查下载的公开 Setup，没有安装它。CNB 发布凭据未配置，二进制发布实际跳过，因此不公告 CNB 二进制下载。这是下载完整性和限定范围的本机 Host 证据，不代表发布者签名或干净客户端验收。
 
+## 干净 Windows Sandbox 验收
+
+Windows Sandbox 提供全新的 Windows 客户端，不带宿主机已安装的开发工具。以管理员身份启用 `Containers-DisposableClientVM` Windows 功能，并完成系统要求的重启。这是维护者可选的验收环境，不是贡献者的前置要求。Sandbox 继承宿主系统版本，且使用管理员账户，不能据此证明稳定版系统或标准用户兼容性。
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptance.ps1 -Action Prepare
+# 使用 Prepare 输出的准备目录：
+pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptance.ps1 -Action Launch -PreparedRoot "<prepared-directory>"
+pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptance.ps1 -Action ReadEvidence -PreparedRoot "<prepared-directory>"
+```
+
+准备阶段对照 GitHub 附件的哈希、大小及精确标签提交，核验两个公开 Setup 安装包及其描述文件。可选的 `-BaselineInstallerPath`、`-InstallerPath` 允许复用已下载的公开 Setup，但仍需通过相同核验，不能使用重新构建的测试安装包。默认执行真实的 `v0.2.4-preview.1 → v0.2.5-preview.1` 升级；完整便携 ZIP 检查仍由独立发布门槛负责。
+
+沙盒仅共享专用只读输入目录与可写结果目录，并关闭联网、剪贴板、麦克风、摄像头和打印机共享。真实 Steam、游戏、存档、用户数据及仓库均不映射。内置 PowerShell 5.1 客体脚本在执行生产 Setup 之前，会拒绝开发宿主机、已有产品安装、数据重定向和测试环境覆盖；它记录初始运行库状态，不安装额外 SDK 或运行库。
+
+客体执行正常当前用户首次安装、原生 Manager 保存配置并安装稳定 Runner、无害程序的独立 Runner 启动、修复、真实升级、默认卸载保留数据，以及自定义中文目录重装；核对快捷方式、注册、受管版本目录及保留配置／Runner 哈希。安装器使用生产静默选项，因此不能据此证明向导交互或真实 Steam 验收。日志、截图及 `evidence.json` 保存在专用结果目录。准备或启动沙盒不代表通过，必须读取对应运行的完整客体验收结果；超时保留进程，不强制关闭。
+
+2026-10-05 已通过脚本解析、内置 UIA／辅助检查及拒绝宿主执行检查，公开安装输入完成核验。Windows 功能已启用，但返回 `RestartNeeded=true`；真实客体验收仍为**等待重启、尚未运行**，干净客户端门槛保持未完成。
+
 ## 本地命令
 
 按自己的方式安装 Windows 工具；mise 是可选项。SDK 要求及 PowerShell 入口见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。Rust workspace 只包含 core 与 Runner，Linux 不再需要 GTK/WebKit、Dioxus CLI、Xvfb 或桌面会话。
