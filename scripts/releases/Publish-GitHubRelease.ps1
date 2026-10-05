@@ -13,6 +13,9 @@ $package = [IO.Path]::GetFullPath($PackageDirectory)
 . (Join-Path $repoRoot 'scripts/windows/WinUIInstallableRelease.ps1')
 $metadata = & (Join-Path $repoRoot 'scripts/windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $package
 $tag = $metadata.tag
+$prereleaseFlag = '--prerelease=' + $metadata.githubPrerelease.ToString().ToLowerInvariant()
+$latestFlag = '--latest=' + (-not $metadata.githubPrerelease).ToString().ToLowerInvariant()
+$releaseLabel = if ($metadata.githubPrerelease) { 'Windows preview' } else { 'Windows' }
 
 function Invoke-ReleaseGh([string[]]$Arguments, [switch]$AllowMissing) {
     $global:LASTEXITCODE = 0
@@ -52,7 +55,7 @@ function Assert-RemoteAsset($Asset) {
 }
 
 if ($null -ne $release) {
-    if ($release.tagName -ne $tag -or -not $release.isPrerelease) { throw 'Existing release is not the expected WinUI prerelease.' }
+    if ($release.tagName -cne $tag -or $release.isPrerelease -isnot [bool] -or $release.isPrerelease -ne $metadata.githubPrerelease) { throw 'Existing release is not the expected WinUI release channel.' }
     if ($release.isDraft -and $release.targetCommitish -ne $metadata.commit) { throw 'Existing draft targets a different source revision.' }
     $seenAssets = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     foreach ($asset in $release.assets) {
@@ -62,16 +65,16 @@ if ($null -ne $release) {
     }
     if (-not $release.isDraft) {
         if (@($release.assets).Count -ne $assetNames.Count) { throw 'Published release is incomplete; it will not be modified automatically.' }
-        Write-Output "Published GitHub prerelease $tag already matches every package asset."
+        Write-Output "Published GitHub $($metadata.releaseChannel) release $tag already matches every package asset."
         return
     }
 } else {
     $notesPath = Join-Path $verifyRoot 'release-notes.md'
     $notes = [IO.File]::ReadAllText((Join-Path $package "$tag.en.md")) + "`n`n---`n`n" + [IO.File]::ReadAllText((Join-Path $package "$tag.zh-CN.md"))
     [IO.File]::WriteAllText($notesPath, $notes, [Text.UTF8Encoding]::new($false))
-    $null = Invoke-ReleaseGh -Arguments @('release', 'create', $tag, '--repo', $Repository, '--verify-tag', '--target', $metadata.commit, '--draft', '--prerelease', '--latest=false', '--title', "SteamWrapper $tag (Windows preview)", '--notes-file', $notesPath)
+    $null = Invoke-ReleaseGh -Arguments @('release', 'create', $tag, '--repo', $Repository, '--verify-tag', '--target', $metadata.commit, '--draft', $prereleaseFlag, '--latest=false', '--title', "SteamWrapper $tag ($releaseLabel)", '--notes-file', $notesPath)
     $release = Get-ReleaseState
-    if ($null -eq $release -or $release.tagName -cne $tag -or -not $release.isDraft -or -not $release.isPrerelease -or $release.targetCommitish -ne $metadata.commit) { throw 'GitHub did not create the expected draft prerelease.' }
+    if ($null -eq $release -or $release.tagName -cne $tag -or -not $release.isDraft -or $release.isPrerelease -isnot [bool] -or $release.isPrerelease -ne $metadata.githubPrerelease -or $release.targetCommitish -ne $metadata.commit) { throw 'GitHub did not create the expected draft release.' }
 }
 
 # Never clobber an existing attachment. A failed upload can resume using the
@@ -82,7 +85,7 @@ foreach ($name in $assetNames) {
     }
 }
 $release = Get-ReleaseState
-if ($null -eq $release -or $release.tagName -cne $tag -or $release.targetCommitish -ne $metadata.commit -or -not $release.isDraft -or -not $release.isPrerelease -or @($release.assets).Count -ne $assetNames.Count) { throw 'Draft identity or asset upload is incomplete; the release remains unpublished.' }
+if ($null -eq $release -or $release.tagName -cne $tag -or $release.targetCommitish -ne $metadata.commit -or -not $release.isDraft -or $release.isPrerelease -isnot [bool] -or $release.isPrerelease -ne $metadata.githubPrerelease -or @($release.assets).Count -ne $assetNames.Count) { throw 'Draft identity or asset upload is incomplete; the release remains unpublished.' }
 $seenAssets = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($asset in $release.assets) {
     if (-not $seenAssets.Add($asset.name)) { throw 'Duplicate draft asset; the release remains unpublished.' }
@@ -91,7 +94,7 @@ foreach ($asset in $release.assets) {
 }
 $remoteCommit = Invoke-ReleaseGh -Arguments @('api', "repos/$Repository/commits/$tag", '--jq', '.sha')
 if ($remoteCommit -ne $metadata.commit) { throw 'The remote GitHub tag no longer matches the built commit; the release remains unpublished.' }
-$null = Invoke-ReleaseGh -Arguments @('release', 'edit', $tag, '--repo', $Repository, '--draft=false', '--prerelease', '--latest=false')
+$null = Invoke-ReleaseGh -Arguments @('release', 'edit', $tag, '--repo', $Repository, '--draft=false', $prereleaseFlag, $latestFlag)
 $release = Get-ReleaseState
-if ($null -eq $release -or $release.tagName -cne $tag -or $release.isDraft -or -not $release.isPrerelease) { throw 'GitHub prerelease publication could not be confirmed.' }
-Write-Output "GitHub prerelease $tag published with $($assetNames.Count) download-verified assets."
+if ($null -eq $release -or $release.tagName -cne $tag -or $release.isDraft -or $release.isPrerelease -isnot [bool] -or $release.isPrerelease -ne $metadata.githubPrerelease) { throw 'GitHub release publication could not be confirmed.' }
+Write-Output "GitHub $($metadata.releaseChannel) release $tag published with $($assetNames.Count) download-verified assets."

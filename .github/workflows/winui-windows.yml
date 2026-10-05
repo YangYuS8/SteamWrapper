@@ -80,6 +80,9 @@ jobs:
       - name: Test publication replacement using disposable files
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
 
+      - name: Test clean-client acceptance guards without launching Sandbox
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptanceScripts.ps1
+
       - name: Test version validation and release packaging safeguards
         run: |
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIReleaseScripts.ps1
@@ -108,10 +111,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'GitHub publisher regressions failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1 -Installable
           if ($LASTEXITCODE -ne 0) { throw 'Installable GitHub publisher regressions failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1 -Installable -Preview
+          if ($LASTEXITCODE -ne 0) { throw 'Preview GitHub publisher regressions failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1
           if ($LASTEXITCODE -ne 0) { throw 'CNB publisher regressions failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1 -Installable
           if ($LASTEXITCODE -ne 0) { throw 'Installable CNB publisher regressions failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1 -Installable -Preview
+          if ($LASTEXITCODE -ne 0) { throw 'Preview CNB publisher regressions failed.' }
 
       - name: Upload isolated contract evidence
         if: always()

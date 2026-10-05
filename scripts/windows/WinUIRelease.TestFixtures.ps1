@@ -16,7 +16,7 @@ function New-WinUIReleaseTestFixture {
     [IO.File]::WriteAllText((Join-Path $source 'apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj'), '<Project><PropertyGroup><Version>0.2.0</Version></PropertyGroup></Project>')
     foreach ($crate in @('core', 'runner')) { [IO.File]::WriteAllText((Join-Path $source "crates/$crate/Cargo.toml"), "[package]`nversion = `"0.2.0`"`n") }
     [IO.File]::WriteAllText((Join-Path $source 'LICENSE'), 'Fixture license text.')
-    foreach ($language in @('en', 'zh-CN')) { [IO.File]::WriteAllText((Join-Path $source "releases/$Tag.$language.md"), "# $Tag`n`nUnsigned Windows preview / 未签名 Windows 预览。`n") }
+    foreach ($language in @('en', 'zh-CN')) { [IO.File]::WriteAllText((Join-Path $source "releases/$Tag.$language.md"), "# $Tag`n`nUnsigned Windows release byte fixture / 未签名 Windows 发布字节样本。`n") }
     foreach ($relative in @(Get-WinUIReleaseRequiredFiles) + @('extra-runtime-dependency.dll')) {
         $path = Join-Path $publish $relative
         New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($path)) -Force | Out-Null

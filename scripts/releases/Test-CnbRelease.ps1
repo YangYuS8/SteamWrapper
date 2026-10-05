@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$Installable)
+param([switch]$Installable, [switch]$Preview)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $publisher = Join-Path $PSScriptRoot 'Publish-CnbRelease.ps1'
@@ -44,13 +44,14 @@ public sealed class CnbReleaseFixtureHandler : HttpMessageHandler {
 }
 $root = Join-Path ((Resolve-Path (Join-Path $PSScriptRoot '../..')).Path) ('target/cnb-release-tests/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root -Force | Out-Null
+$tag = if ($Preview) { 'v0.2.0-rc.1' } else { 'v0.2.0' }
 if ($Installable) {
     . (Join-Path $PSScriptRoot '../windows/WinUIInstallableRelease.TestFixtures.ps1')
-    $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package')
+    $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package') -Tag $tag
     $package = New-WinUIInstallableReleaseTestPackage $fixture
 } else {
     . (Join-Path $PSScriptRoot '../windows/WinUIRelease.TestFixtures.ps1')
-    $fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package')
+    $fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package') -Tag $tag
     $package = New-WinUIReleasePackage -Tag $fixture.Tag -Commit $fixture.Commit -RepositoryRoot $fixture.RepositoryRoot -PublishDirectory $fixture.PublishDirectory -OutputDirectory $fixture.OutputDirectory
 }
 $root = $package.Directory
@@ -66,7 +67,7 @@ function New-FixtureClient {
     @{ Handler = $handler; Client = [Net.Http.HttpClient]::new($handler) }
 }
 function Add-TagReply($Handler, [string]$Sha = $commit) { $Handler.Reply(200, (@{ name = $tag; commit = @{ sha = $Sha } } | ConvertTo-Json -Compress)) }
-function Get-FixtureRelease([bool]$Draft, [string[]]$Names = @(), [bool]$Prerelease = $true, [string]$Sha = "refs/tags/$tag") {
+function Get-FixtureRelease([bool]$Draft, [string[]]$Names = @(), [bool]$Prerelease = $metadata.githubPrerelease, [string]$Sha = "refs/tags/$tag") {
     $records = foreach ($name in $Names) { @{ name = $name; size = (Get-Item -LiteralPath (Join-Path $root $name)).Length } }
     return @{ id = 'release-1'; tag_name = $tag; tag_commitish = $Sha; draft = $Draft; prerelease = $Prerelease; assets = @($records) } | ConvertTo-Json -Depth 5 -Compress
 }
@@ -135,9 +136,9 @@ try {
     $fixture = New-FixtureClient
     try {
         Add-TagReply $fixture.Handler
-        $fixture.Handler.Reply(200, (Get-FixtureRelease $false $names $false))
+        $fixture.Handler.Reply(200, (Get-FixtureRelease $false $names (-not $metadata.githubPrerelease)))
         foreach ($name in $names) { Add-DownloadReply $fixture.Handler $name }
-        Assert-Rejected 'an existing published stable release cannot be relabeled as preview' { Invoke-CnbRelease -PackageDirectory $root -Client $fixture.Client } '*preview*'
+        Assert-Rejected 'an existing published release cannot be relabeled to the opposite channel' { Invoke-CnbRelease -PackageDirectory $root -Client $fixture.Client } '*release channel*'
         if (@($fixture.Handler.Requests | Where-Object { $_ -match '^(POST|PATCH|PUT) ' }).Count -ne 0) { throw 'A stable release was changed.' }
     } finally { $fixture.Client.Dispose() }
     $fixture = New-FixtureClient
@@ -154,7 +155,7 @@ try {
         if ($fixture.Handler.Replies.Count -ne 0) { throw 'The release was not completely verified and published.' }
         $creation = $fixture.Handler.Bodies[2] | ConvertFrom-Json
         $publication = $fixture.Handler.Bodies[-2] | ConvertFrom-Json
-        if (-not $creation.draft -or -not $creation.prerelease -or $creation.make_latest -ne 'false' -or $publication.draft -or -not $publication.prerelease) { throw 'Preview release flags were lost.' }
+        if (-not $creation.draft -or $creation.prerelease -ne $metadata.githubPrerelease -or $creation.make_latest -cne 'false' -or $publication.draft -or $publication.prerelease -ne $metadata.githubPrerelease -or $publication.make_latest -cne (-not $metadata.githubPrerelease).ToString().ToLowerInvariant()) { throw 'Release channel or latest flags were lost.' }
         for ($index = 0; $index -lt $fixture.Handler.Requests.Count; $index++) {
             if ($fixture.Handler.Requests[$index] -match '(uploads|downloads)\.example\.test' -and $fixture.Handler.Authenticated[$index]) { throw 'A CNB credential was forwarded to storage.' }
             if ($fixture.Handler.Requests[$index] -match '^POST api\.cnb\.cool .*/asset-upload-confirmation/' -and $fixture.Handler.Queries[$index] -cne '?ttl=0') { throw 'CNB confirmation duplicated or changed the permanent TTL query.' }
@@ -190,7 +191,7 @@ try {
         $fixture.Handler.Reply(200, (Get-FixtureRelease $false $names))
         $null = Invoke-CnbRelease -PackageDirectory $root -Client $fixture.Client
         $preparation = $fixture.Handler.Bodies[2] | ConvertFrom-Json
-        if ($fixture.Handler.Requests[2] -notmatch '^PATCH ' -or -not $preparation.draft -or -not $preparation.prerelease) { throw 'Notes-only migration uploaded assets before making the release a preview draft.' }
+        if ($fixture.Handler.Requests[2] -notmatch '^PATCH ' -or -not $preparation.draft -or $preparation.prerelease -ne $metadata.githubPrerelease) { throw 'Notes-only migration uploaded assets before making the release a draft in the expected channel.' }
         Write-Output 'PASS: a matching legacy notes-only release becomes a draft before attachments are uploaded.'
     } finally { $fixture.Client.Dispose() }
     foreach ($scenario in @('changed-draft-commit', 'missing-draft-asset', 'moved-tag', 'publication-not-confirmed')) {

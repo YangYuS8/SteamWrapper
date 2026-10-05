@@ -21,15 +21,20 @@ public sealed partial class DeploymentEngine
         ValidateVersion(before.Current);
         if (before.Previous is not null) ValidateVersion(before.Previous);
         ValidateLauncher(before);
-        var versions = Directory.GetDirectories(Versions).Select(directory =>
+        var versions = new List<RemovalVersion>();
+        long inventoryBytes = 0;
+        foreach (var directory in Directory.GetDirectories(Versions))
         {
             var manifest = DeploymentManifest.Validate(directory);
-            var bytes = DeploymentManifest.ReadJson(Path.Combine(directory, DeploymentManifest.FileName), 4 * 1024 * 1024);
-            return new RemovalVersion(new(manifest.Tag, manifest.Version, Convert.ToHexStringLower(SHA256.HashData(bytes))), Convert.ToBase64String(bytes));
-        }).ToArray();
+            var version = InventoryVersion(directory, manifest.Tag, manifest.Version);
+            inventoryBytes += version.ManifestBase64.Length;
+            if (versions.Count == 1024 || inventoryBytes > 32 * 1024 * 1024)
+                throw new InvalidDataException("Uninstall ownership inventory exceeds its bounded journal limit.");
+            versions.Add(version);
+        }
         var maintenance = Path.Combine(Root, "maintenance", "SteamWrapper.Deployment.exe");
         var journal = new RemovalJournal(1, "SteamWrapper", "Prepared", Guid.NewGuid().ToString("N"), before,
-            File.Exists(maintenance) ? DeploymentManifest.Hash(maintenance) : null, versions);
+            File.Exists(maintenance) ? DeploymentManifest.Hash(maintenance) : null, versions.ToArray());
         ValidateRemovalJournal(journal);
         var records = RemovalRecords(journal);
         CheckRemovalTree(Versions, records, requireComplete: true);
@@ -108,7 +113,7 @@ public sealed partial class DeploymentEngine
     private static void ValidateRemovalJournal(RemovalJournal journal)
     {
         if (journal.SchemaVersion != 1 || journal.AppId != "SteamWrapper" || journal.Phase is not ("Prepared" or "Deactivated" or "Removed") ||
-            !Regex.IsMatch(journal.Transaction ?? "", "^[a-f0-9]{32}$") || journal.Before is null || journal.Versions is null || journal.Versions.Length is < 1 or > 32 ||
+            !Regex.IsMatch(journal.Transaction ?? "", "^[a-f0-9]{32}$") || journal.Before is null || journal.Versions is null || journal.Versions.Length is < 1 or > 1024 ||
             (journal.MaintenanceSha256 is not null && !Regex.IsMatch(journal.MaintenanceSha256, "^[a-f0-9]{64}$")))
             throw new InvalidDataException("Unsupported uninstall journal.");
         ValidateState(journal.Before);
@@ -149,7 +154,7 @@ public sealed partial class DeploymentEngine
         return SafePaths.Child(SafePaths.Child(directory, relative[..separator]), relative[(separator + 1)..]);
     }
 
-    private static void CheckRemovalTree(string directory, Dictionary<string, PayloadFile> records, bool requireComplete)
+    private static void CheckRemovalTree(string directory, Dictionary<string, PayloadFile> records, bool requireComplete, bool singleVersion = false)
     {
         SafePaths.CheckTree(directory);
         var parents = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -164,24 +169,24 @@ public sealed partial class DeploymentEngine
         foreach (var path in SafePaths.Files(directory))
             if (!records.ContainsKey(Path.GetRelativePath(directory, path).Replace('\\', '/')))
                 throw new InvalidDataException("Unknown uninstall files are preserved.");
-        if (requireComplete && records.Keys.Any(relative => !File.Exists(RemovalChild(directory, relative))))
+        if (requireComplete && records.Keys.Any(relative => !File.Exists(singleVersion ? SafePaths.Child(directory, relative) : RemovalChild(directory, relative))))
             throw new InvalidDataException("Prepared uninstall inventory is incomplete.");
     }
 
-    private static DeleteHandles AcquireRemovalFiles(string directory, Dictionary<string, PayloadFile> records, bool requireComplete)
+    private static DeleteHandles AcquireRemovalFiles(string directory, Dictionary<string, PayloadFile> records, bool requireComplete, bool singleVersion = false)
     {
-        CheckRemovalTree(directory, records, requireComplete);
+        CheckRemovalTree(directory, records, requireComplete, singleVersion);
         var handles = new DeleteHandles();
         try
         {
             foreach (var record in records.Values)
             {
-                var path = RemovalChild(directory, record.Path);
+                var path = singleVersion ? SafePaths.Child(directory, record.Path) : RemovalChild(directory, record.Path);
                 if (File.Exists(path)) handles.Add(DeleteHandle.Open(path, record.Sha256, record.Bytes));
                 else if (requireComplete) throw new InvalidDataException("An uninstall file disappeared before isolation.");
             }
             // Unknown entries appearing during opening are never accepted for deletion.
-            CheckRemovalTree(directory, records, requireComplete);
+            CheckRemovalTree(directory, records, requireComplete, singleVersion);
             return handles;
         }
         catch { handles.Dispose(); throw; }

@@ -120,7 +120,7 @@ jobs:
           name: SteamWrapper-WinUI-preview-windows-x64
           path: target/winui/publish/
           if-no-files-found: error
-      - name: Test an isolated installer and build the unsigned preview Setup
+      - name: Test an isolated installer and build the unsigned Setup
         run: |
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Installer compiler verification failed.' }
@@ -133,8 +133,8 @@ jobs:
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerOptions.ps1 -PublishDirectory target/winui/publish -Tag $tag
           if ($LASTEXITCODE -ne 0) { throw 'Isolated installer option acceptance failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag $tag
-          if ($LASTEXITCODE -ne 0) { throw 'Installer preview packaging failed.' }
-      - name: Inspect and package the explicit schema-2 installable prerelease
+          if ($LASTEXITCODE -ne 0) { throw 'Installer packaging failed.' }
+      - name: Inspect and package the explicit schema-2 installable release
         if: needs.preflight.outputs.publish == 'true'
         run: |
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIInstallableRelease.ps1 -Tag $env:RELEASE_TAG -Commit $env:RELEASE_COMMIT -InstallerDirectory "target/winui/installers/$env:RELEASE_TAG" -OutputDirectory "target/winui/releases/$env:RELEASE_TAG"
@@ -157,7 +157,7 @@ jobs:
           if-no-files-found: error
 
   publish_github:
-    name: Publish a verified GitHub prerelease
+    name: Publish a verified GitHub version release
     needs: [preflight, build_windows]
     if: needs.preflight.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -174,7 +174,7 @@ jobs:
         with:
           name: SteamWrapper-WinUI-release-assets
           path: target/winui/releases/${{ needs.preflight.outputs.tag }}/
-      - name: Upload, download-verify and publish the prerelease
+      - name: Upload, download-verify and publish the version release
         shell: pwsh
         env:
           RELEASE_REPOSITORY: ${{ github.repository }}
@@ -244,7 +244,7 @@ jobs:
         with:
           name: SteamWrapper-WinUI-release-assets
           path: target/winui/releases/${{ needs.preflight.outputs.tag }}/
-      - name: Sign the verified release and advance the update feed
+      - name: Sign the verified release and advance its update channels
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -253,4 +253,11 @@ jobs:
           RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
           CNB_MIRROR_VERIFIED: ${{ needs.mirror_cnb.result == 'success' && needs.mirror_cnb.outputs.configured == 'true' }}
         run: |
-          ./scripts/releases/Publish-UpdateMetadata.ps1 -PackageDirectory "target/winui/releases/$env:RELEASE_TAG" -IncludeCnbMirror:($env:CNB_MIRROR_VERIFIED -eq 'true')
+          $package = "target/winui/releases/$env:RELEASE_TAG"
+          $metadata = & ./scripts/windows/Test-WinUIReleasePackage.ps1 -PackageDirectory $package
+          ./scripts/releases/Publish-UpdateMetadata.ps1 -PackageDirectory $package -IncludeCnbMirror:($env:CNB_MIRROR_VERIFIED -eq 'true')
+          if ($metadata.releaseChannel -ceq 'stable') {
+            # Preview installations can receive the same new stable version.
+            # Both feeds still reject a lower or replaced numeric version.
+            ./scripts/releases/Publish-UpdateMetadata.ps1 -PackageDirectory $package -Channel preview -IncludeCnbMirror:($env:CNB_MIRROR_VERIFIED -eq 'true')
+          }

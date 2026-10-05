@@ -13,4 +13,5 @@ $metadata = [Diagnostics.FileVersionInfo]::GetVersionInfo($runner)
 if ($metadata.ProductName -cne 'SteamWrapper') { throw 'Runner must have ProductName=SteamWrapper before release signing.' }
 if ($metadata.ProductVersion -cne $expected -or $metadata.FileVersion -cne $expected) { throw 'Runner PE product/file versions must match its coordinated Cargo version.' }
 if ($metadata.OriginalFilename -cne 'SteamWrapperRunner.exe' -or $metadata.InternalName -cne 'SteamWrapperRunner') { throw 'Runner PE identity metadata does not match its distributed filename.' }
+& (Join-Path $PSScriptRoot 'Test-RunnerDependencies.ps1') -RunnerPath $runner
 Write-Output "PASS: real Runner PE metadata is SteamWrapper $expected; the executable was inspected without running it."

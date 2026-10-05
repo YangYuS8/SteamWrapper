@@ -37,6 +37,7 @@ if ($LASTEXITCODE -ne 0 -or -not $installation) { throw 'Required MSVC/SDK compo
 & (Join-Path $installation 'Common7/Tools/Launch-VsDevShell.ps1') -Arch amd64 -HostArch amd64 -SkipAutomaticLocation | Out-Null
 
 Invoke-Checked cargo @('build', '--locked', '--release', '-p', 'steamwrapper-runner')
+Invoke-Checked pwsh @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'Test-RunnerSigningMetadata.ps1'))
 $stage = Join-Path $repoRoot 'target/winui/runner'
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 $runnerPath = Join-Path $stage 'SteamWrapperRunner.exe'

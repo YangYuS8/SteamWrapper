@@ -42,7 +42,8 @@ function Get-WinUIReleaseTag([string]$Tag) {
     if ($Tag.Length -gt 80 -or $Tag -cnotmatch "^v(?<base>$number\.$number\.$number)(?:-(?<pre>$identifier(?:\.$identifier)*))?$" ) {
         throw 'Release tag must be strict vMAJOR.MINOR.PATCH[-prerelease] SemVer without build metadata or leading numeric zeroes.'
     }
-    return [pscustomobject]@{ Version = $Matches['base']; Prerelease = $Matches.ContainsKey('pre') }
+    $prerelease = $Matches.ContainsKey('pre')
+    return [pscustomobject]@{ Version = $Matches['base']; Prerelease = $prerelease; Channel = $(if ($prerelease) { 'preview' } else { 'stable' }) }
 }
 
 function Get-WinUIReleasePlan {
@@ -91,8 +92,7 @@ function Get-WinUIReleasePlan {
     return [pscustomobject]@{
         Tag = $Tag; Version = $baseVersion; Commit = $Commit; TagPrerelease = $tagPrerelease
         RepositoryRoot = $root; Notes = $notes; LicensePath = $license
-        # The current WinUI delivery gates do not justify a stable product claim.
-        ReleaseChannel = 'preview'; GitHubPrerelease = $true; Signed = $false
+        ReleaseChannel = $tagVersion.Channel; GitHubPrerelease = $tagPrerelease; Signed = $false
     }
 }
 
@@ -249,11 +249,11 @@ function Test-WinUIReleasePackageDirectory {
     }
     $tagVersion = Get-WinUIReleaseTag $metadata.tag
     if ($metadata.schemaVersion -ne 1 -or $metadata.version -cne $tagVersion.Version -or $metadata.commit -cnotmatch '^[0-9a-f]{40}$' -or
-        $metadata.platform -cne 'win-x64' -or $metadata.minimumWindowsVersion -cne '10.0.26100.0' -or $metadata.releaseChannel -cne 'preview' -or
-        $metadata.githubPrerelease -isnot [bool] -or -not $metadata.githubPrerelease -or
+        $metadata.platform -cne 'win-x64' -or $metadata.minimumWindowsVersion -cne '10.0.26100.0' -or $metadata.releaseChannel -cne $tagVersion.Channel -or
+        $metadata.githubPrerelease -isnot [bool] -or $metadata.githubPrerelease -ne $tagVersion.Prerelease -or
         $metadata.tagPrerelease -isnot [bool] -or $metadata.tagPrerelease -ne $tagVersion.Prerelease -or
         $metadata.signed -isnot [bool] -or $metadata.signed -or $metadata.installer -isnot [bool] -or $metadata.installer -or
-        $metadata.portable -isnot [bool] -or -not $metadata.portable) { throw 'Release metadata is not an exact-version Windows x64 unsigned portable preview.' }
+        $metadata.portable -isnot [bool] -or -not $metadata.portable) { throw 'Release metadata is not an exact-version Windows x64 unsigned portable release.' }
     $stem = "SteamWrapper-$($metadata.tag)-win-x64"
     $expectedAssets = @("$stem.zip", "$($metadata.tag).en.md", "$($metadata.tag).zh-CN.md", 'release.json')
     foreach ($name in $expectedAssets) { if (-not $checksumFiles.Contains($name)) { throw "Release package is missing the expected asset: $name" } }

@@ -21,6 +21,26 @@ try {
     $mirror = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust $trust -Now $now -IncludeCnbMirror
     if ($mirror.release.artifact.mirrorUrl -cne 'https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe') { throw 'Mirror does not bind the same versioned installer.' }
     Write-Output 'PASS: the optional mirror names the same build and single signed hash/size.'
+    $stableMetadata = [pscustomobject]@{ schemaVersion = 2; tag = 'v0.2.6'; version = '0.2.6'; commit = ('c' * 40); minimumWindowsVersion = '10.0.26100.0'; releaseChannel = 'stable'; installerAsset = [pscustomobject]@{ fileName = 'SteamWrapper-v0.2.6-win-x64-setup.exe'; bytes = 128; sha256 = ('d' * 64) } }
+    foreach ($channel in @('stable', 'preview')) {
+        $stablePayload = New-ProjectUpdatePayload -ReleaseMetadata $stableMetadata -Trust $trust -Now $now -Channel $channel
+        Write-ProjectUpdateEnvelope -Payload $stablePayload -Key $key -KeyId 'fixture' -Path $path
+        $stableVerified = Read-ProjectUpdateEnvelope -Path $path -TrustPath $trustPath -Now $now
+        if ($stableVerified.channel -cne $channel -or $stableVerified.release.tag -cne 'v0.2.6' -or $stableVerified.release.artifact.sha256 -cne $stableMetadata.installerAsset.sha256) { throw 'A stable installer must be valid in stable and preview signed feeds without changing its bytes.' }
+    }
+    $rejected = $false
+    try { $null = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust $trust -Now $now -Channel stable }
+    catch { if ($_.Exception.Message -notlike '*versioned installable release*') { throw }; $rejected = $true }
+    if (-not $rejected) { throw 'A prerelease was promoted into the stable feed.' }
+    $wrongStable = ConvertFrom-ProjectUpdateJson ($payload | ConvertTo-Json -Depth 12 -Compress)
+    $wrongStable.channel = 'stable'
+    Write-ProjectUpdateEnvelope -Payload $wrongStable -Key $key -KeyId 'fixture' -Path $path
+    $rejected = $false
+    try { $null = Read-ProjectUpdateEnvelope -Path $path -TrustPath $trustPath -Now $now }
+    catch { if ($_.Exception.Message -notlike '*Invalid signed update release descriptor*') { throw }; $rejected = $true }
+    if (-not $rejected) { throw 'Even correctly signed stable metadata must reject a prerelease target.' }
+    Write-ProjectUpdateEnvelope -Payload $payload -Key $key -KeyId 'fixture' -Path $path
+    Write-Output 'PASS: a stable installer can reach both channels; stable creation and verification reject prerelease targets.'
     Assert-ProjectUpdateCurrentRelease -Payload $mirror -ExistingPayload $payload
     foreach ($field in @('missing', 'tag', 'commit', 'sha256', 'bytes', 'minimumWindowsVersion')) {
         $different = ConvertFrom-ProjectUpdateJson ($payload | ConvertTo-Json -Depth 12 -Compress)
@@ -56,7 +76,7 @@ try {
     Write-Output 'PASS: low-frequency releases can renew signed freshness without authorizing new software.'
 
     . (Join-Path $PSScriptRoot '../windows/WinUIInstallableRelease.TestFixtures.ps1')
-    $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package')
+    $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package') -Tag 'v0.2.0-rc.1'
     $package = New-WinUIInstallableReleaseTestPackage $fixture
     $packageMetadata = Get-Content -LiteralPath $package.Metadata -Raw | ConvertFrom-Json
     $mock = Join-Path $root 'gh-fixture.ps1'
@@ -72,18 +92,18 @@ switch ($a[1]) {
         if (-not $state.present) { $global:LASTEXITCODE = 1; 'release not found'; return }
         $assets = @()
         if (Test-Path -LiteralPath $state.manifest) { $assets += @{ name = 'SteamWrapper-update.json'; size = (Get-Item -LiteralPath $state.manifest).Length } }
-        @{ tagName = 'update-preview'; isDraft = $state.draft; isPrerelease = $true; assets = $assets } | ConvertTo-Json -Depth 5 -Compress
+        @{ tagName = ('update-' + $state.channel); isDraft = $state.draft; isPrerelease = $true; assets = $assets } | ConvertTo-Json -Depth 5 -Compress
     }
     'download' {
-        $source = if ($a[2] -eq 'update-preview') { $state.manifest } else { $state.installer }
+        $source = if ($a[2] -eq ('update-' + $state.channel)) { $state.manifest } else { $state.installer }
         Copy-Item -LiteralPath $source -Destination (Join-Path (Option '--dir') (Option '--pattern'))
     }
     'create' {
-        if ($a[2] -cne 'update-preview' -or $a -notcontains '--draft' -or $a -notcontains '--latest=false' -or (Option '--target') -cne 'main') { throw 'Metadata release must target the default branch to avoid workflow write permissions.' }
+        if ($a[2] -cne ('update-' + $state.channel) -or $a -notcontains '--draft' -or $a -notcontains '--latest=false' -or $a -notcontains '--prerelease' -or (Option '--target') -cne 'main') { throw 'Metadata release must target the default branch to avoid workflow write permissions.' }
         $state.present = $true; $state.draft = $true; $state.writes++; Save
     }
     'upload' {
-        if ($a[2] -cne 'update-preview' -or [IO.Path]::GetFileName($a[3]) -cne 'SteamWrapper-update.json' -or $a -notcontains '--clobber') { throw 'Attempted overwrite outside the dedicated metadata feed.' }
+        if ($a[2] -cne ('update-' + $state.channel) -or [IO.Path]::GetFileName($a[3]) -cne 'SteamWrapper-update.json' -or $a -notcontains '--clobber') { throw 'Attempted overwrite outside the dedicated metadata feed.' }
         Copy-Item -LiteralPath $a[3] -Destination $state.manifest -Force
         $state.writes++; Save
     }
@@ -96,7 +116,7 @@ switch ($a[1]) {
 '@)
     $statePath = Join-Path $root 'github-state.json'
     $remoteManifest = Join-Path $root 'remote-update.json'
-    @{ present = $false; draft = $false; writes = 0; commit = $packageMetadata.commit; manifest = $remoteManifest; installer = (Join-Path $package.Directory $packageMetadata.installerAsset.fileName) } | ConvertTo-Json | Set-Content -LiteralPath $statePath
+    @{ channel = 'preview'; present = $false; draft = $false; writes = 0; commit = $packageMetadata.commit; manifest = $remoteManifest; installer = (Join-Path $package.Directory $packageMetadata.installerAsset.fileName) } | ConvertTo-Json | Set-Content -LiteralPath $statePath
     $previousFixture = $env:STEAMWRAPPER_UPDATE_FIXTURE
     $previousKey = $env:STEAMWRAPPER_UPDATE_PRIVATE_KEY
     try {
@@ -136,6 +156,40 @@ switch ($a[1]) {
         catch { if ($_.Exception.Message -notlike '*signature*') { throw }; $rejected = $true }
         if (-not $rejected -or (Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json).writes -ne $writes) { throw 'Invalid old metadata was reauthorized or mutated.' }
         Write-Output 'PASS: the scheduled publisher rejects tampered existing metadata before any network writes.'
+        $stableFixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'stable-package')
+        $stablePackage = New-WinUIInstallableReleaseTestPackage $stableFixture
+        $stablePackageMetadata = Get-Content -LiteralPath $stablePackage.Metadata -Raw | ConvertFrom-Json
+        $assetHashes = @(Get-ChildItem -LiteralPath $stablePackage.Directory -File | Sort-Object Name | ForEach-Object { $_.Name + ':' + (Get-FileHash -LiteralPath $_.FullName).Hash })
+        foreach ($channel in @('stable', 'preview')) {
+            $remoteManifest = Join-Path $root ("remote-$channel.json")
+            @{ channel = $channel; present = $false; draft = $false; writes = 0; commit = $stablePackageMetadata.commit; manifest = $remoteManifest; installer = (Join-Path $stablePackage.Directory $stablePackageMetadata.installerAsset.fileName) } | ConvertTo-Json | Set-Content -LiteralPath $statePath
+            $parameters = @{ PackageDirectory = $stablePackage.Directory; TrustPath = $trustPath; GhExecutable = $mock }
+            if ($channel -ceq 'preview') { $parameters.Channel = 'preview' }
+            $null = & (Join-Path $PSScriptRoot 'Publish-UpdateMetadata.ps1') @parameters
+            $stablePublished = Read-ProjectUpdateEnvelope -Path $remoteManifest -TrustPath $trustPath
+            if ($stablePublished.channel -cne $channel -or $stablePublished.release.tag -cne $stablePackageMetadata.tag -or $stablePublished.release.artifact.sha256 -cne $stablePackageMetadata.installerAsset.sha256) { throw 'Stable publication did not select the requested feed and exact installer.' }
+            $null = & (Join-Path $PSScriptRoot 'Publish-UpdateMetadata.ps1') -Refresh -Channel $channel -TrustPath $trustPath -GhExecutable $mock
+            $stableRefreshed = Read-ProjectUpdateEnvelope -Path $remoteManifest -TrustPath $trustPath
+            if ($stableRefreshed.sequence -le $stablePublished.sequence -or ($stableRefreshed.release | ConvertTo-Json -Depth 8 -Compress) -cne ($stablePublished.release | ConvertTo-Json -Depth 8 -Compress)) { throw 'Stable/preview renewal changed the authorized stable software.' }
+            $writes = (Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json).writes
+            $replaced = ConvertFrom-ProjectUpdateJson ($stableRefreshed | ConvertTo-Json -Depth 12 -Compress)
+            $replaced.release.artifact.sha256 = 'f' * 64
+            Write-ProjectUpdateEnvelope -Payload $replaced -Key $key -KeyId 'fixture' -Path $remoteManifest
+            $rejected = $false
+            try { $null = & (Join-Path $PSScriptRoot 'Publish-UpdateMetadata.ps1') @parameters }
+            catch { if ($_.Exception.Message -notlike '*cannot roll back or replace bytes*') { throw }; $rejected = $true }
+            if (-not $rejected -or (Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json).writes -ne $writes) { throw 'A stable release replaced installer bytes under an existing numeric version.' }
+            Write-ProjectUpdateEnvelope -Payload $stableRefreshed -Key $key -KeyId 'fixture' -Path $remoteManifest
+            if ($channel -ceq 'preview') {
+                $rejected = $false
+                try { $null = & (Join-Path $PSScriptRoot 'Publish-UpdateMetadata.ps1') -PackageDirectory $package.Directory -TrustPath $trustPath -GhExecutable $mock }
+                catch { if ($_.Exception.Message -notlike '*cannot roll back or replace bytes*') { throw }; $rejected = $true }
+                if (-not $rejected -or (Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json).writes -ne $writes) { throw 'A prerelease replaced an already-authorized stable release at the same numeric version.' }
+            }
+        }
+        $afterHashes = @(Get-ChildItem -LiteralPath $stablePackage.Directory -File | Sort-Object Name | ForEach-Object { $_.Name + ':' + (Get-FileHash -LiteralPath $_.FullName).Hash })
+        if (@(Compare-Object $assetHashes $afterHashes).Count -ne 0) { throw 'Channel publication or renewal changed an immutable version asset.' }
+        Write-Output 'PASS: pure version tags default to stable; both feeds publish and renew the same stable installer while seven assets and same-version replacement guards stay unchanged.'
     } finally { $env:STEAMWRAPPER_UPDATE_FIXTURE = $previousFixture; $env:STEAMWRAPPER_UPDATE_PRIVATE_KEY = $previousKey }
 
     . (Join-Path $PSScriptRoot 'UpdateFeedTransport.ps1')

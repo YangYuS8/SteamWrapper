@@ -9,8 +9,13 @@ $root = Join-Path $repoRoot ('target/winui/installable-release-tests/' + [Guid]:
 $fixture = New-WinUIInstallableReleaseTestFixture -Root $root
 $package = New-WinUIInstallableReleaseTestPackage $fixture
 $metadata = & (Join-Path $PSScriptRoot 'Test-WinUIReleasePackage.ps1') -PackageDirectory $package.Directory
-if ($metadata.schemaVersion -ne 2 -or -not $metadata.installer -or $metadata.signed -or @(Get-ChildItem -LiteralPath $package.Directory).Count -ne 7) { throw 'An installable unsigned preview did not retain its exact seven-asset contract.' }
+if ($metadata.schemaVersion -ne 2 -or -not $metadata.installer -or $metadata.signed -or $metadata.releaseChannel -cne 'stable' -or $metadata.githubPrerelease -or @(Get-ChildItem -LiteralPath $package.Directory).Count -ne 7) { throw 'An installable unsigned stable release did not retain its exact seven-asset contract.' }
 Write-Output 'PASS: independent schema-2 fixture validates all seven assets and its portable/deployment inventories.'
+$previewFixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'preview') -Tag 'v0.2.0-rc.1'
+$previewPackage = New-WinUIInstallableReleaseTestPackage $previewFixture
+$previewMetadata = Test-WinUIReleaseArtifactDirectory $previewPackage.Directory
+if ($previewMetadata.releaseChannel -cne 'preview' -or -not $previewMetadata.githubPrerelease -or -not $previewMetadata.tagPrerelease -or @(Get-ChildItem -LiteralPath $previewPackage.Directory).Count -ne 7) { throw 'Prerelease schema-2 fixtures must retain preview identity and all seven assets.' }
+Write-Output 'PASS: preview and stable installable packages share the unchanged seven-asset contract.'
 
 function Assert-InstallableRejected([string]$Label, [scriptblock]$Action, [string]$Pattern) {
     $rejected = $false
@@ -40,15 +45,17 @@ function Write-InstallableMetadata([string]$Directory, $Metadata) {
     Update-WinUIInstallableFixtureChecksums $Directory
 }
 
-foreach ($scenario in @('signed', 'isolated', 'wrong-commit', 'wrong-version', 'duplicate-json', 'unknown-field')) {
+foreach ($scenario in @('signed', 'isolated', 'wrong-commit', 'wrong-version', 'wrong-channel', 'wrong-prerelease', 'duplicate-json', 'unknown-field')) {
     $directory = New-InstallableMutation $scenario
     $metadata = Get-Content -LiteralPath (Join-Path $directory 'release.json') -Raw | ConvertFrom-Json
-    $pattern = '*unsigned installable preview*'
+    $pattern = '*unsigned installable release*'
     switch ($scenario) {
         'signed' { $metadata.signed = $true }
         'isolated' { $metadata.installerBuild.isolated = $true; $pattern = '*non-isolated*' }
         'wrong-commit' { $metadata.commit = 'main' }
         'wrong-version' { $metadata.version = '0.3.0' }
+        'wrong-channel' { $metadata.releaseChannel = 'preview' }
+        'wrong-prerelease' { $metadata.githubPrerelease = $true }
         'unknown-field' { $metadata.installerBuild | Add-Member -NotePropertyName unsupported -NotePropertyValue 'fixture only'; $pattern = '*unsupported fields*' }
     }
     Write-InstallableMetadata $directory $metadata

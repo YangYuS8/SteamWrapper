@@ -4,10 +4,11 @@
 function New-WinUIInstallableReleaseTestFixture {
     param(
         [Parameter(Mandatory)][string]$Root,
+        [string]$Tag = 'v0.2.0',
         [ValidateSet('THIRD_PARTY_NOTICES.md', 'LICENSES/index.json')][string]$OmitThirdPartyFile,
         [ValidateSet('THIRD_PARTY_NOTICES.md', 'LICENSES/index.json')][string]$EmptyThirdPartyFile
     )
-    $fixture = New-WinUIReleaseTestFixture -Root $Root
+    $fixture = New-WinUIReleaseTestFixture -Root $Root -Tag $Tag
     foreach ($relative in @('SteamWrapper.Deployment.dll', 'Deployment/SteamWrapper.exe', 'THIRD_PARTY_NOTICES.md', 'LICENSES/index.json')) {
         if ($relative -ceq $OmitThirdPartyFile) { continue }
         $path = Join-Path $fixture.PublishDirectory $relative
@@ -55,8 +56,8 @@ function New-WinUIInstallableReleaseTestPackage($Fixture) {
     $installer = [ordered]@{ fileName = $build.installer.fileName; bytes = $build.installer.bytes; sha256 = $build.installer.sha256 }
     $metadata = [ordered]@{
         schemaVersion = 2; tag = $portable.tag; version = $portable.version; commit = $portable.commit; platform = $portable.platform
-        minimumWindowsVersion = $portable.minimumWindowsVersion; releaseChannel = 'preview'; tagPrerelease = $portable.tagPrerelease
-        githubPrerelease = $true; signed = $false; installer = $true; portable = $true; archive = $portable.archive
+        minimumWindowsVersion = $portable.minimumWindowsVersion; releaseChannel = $portable.releaseChannel; tagPrerelease = $portable.tagPrerelease
+        githubPrerelease = $portable.githubPrerelease; signed = $false; installer = $true; portable = $true; archive = $portable.archive
         portableMetadata = [ordered]@{ fileName = 'portable-release.json'; bytes = (Get-Item -LiteralPath $portablePath).Length; sha256 = (Get-FileHash -LiteralPath $portablePath).Hash.ToLowerInvariant() }
         installerAsset = $installer; installerBuild = $build
         deploymentManifest = [ordered]@{ bytes = (Get-Item -LiteralPath $manifestPath).Length; sha256 = (Get-FileHash -LiteralPath $manifestPath).Hash.ToLowerInvariant(); json = [IO.File]::ReadAllText($manifestPath) }

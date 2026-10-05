@@ -56,9 +56,12 @@ public sealed partial class DeploymentEngine
                 if (!File.Exists(Path.Combine(Root, "SteamWrapper.exe")))
                     AtomicCopy(Path.Combine(VersionPath(before.Current), "Deployment", "SteamWrapper.exe"), Path.Combine(Root, "SteamWrapper.exe"));
                 ValidateLauncher(before);
+                PruneVersionsUnderLease(before);
                 return before;
             }
         }
+        if (before is not null) PruneVersionsUnderLease(before);
+        CheckVersionAdmission(manifest, hash, payloadDirectory, before);
         // Staging includes the manifest as well as the declared files. Activation also
         // needs a second launcher copy and bounded atomic journal/state replacements.
         // This admission check does not reserve space against unrelated disk writers;
@@ -139,6 +142,7 @@ public sealed partial class DeploymentEngine
         if (!File.Exists(Path.Combine(Root, "SteamWrapper.exe")))
             AtomicCopy(Path.Combine(VersionPath(state.Current), "Deployment", "SteamWrapper.exe"), Path.Combine(Root, "SteamWrapper.exe"));
         ValidateLauncher(state);
+        PruneVersionsUnderLease(state);
         return state;
     }
 

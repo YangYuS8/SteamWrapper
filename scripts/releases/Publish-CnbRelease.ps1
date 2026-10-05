@@ -26,7 +26,8 @@ function Invoke-CnbRelease {
     # Runner contract/hash and included runtime, before any authenticated request.
     $metadata = & (Join-Path $PSScriptRoot '../windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $directory
     . (Join-Path $PSScriptRoot '../windows/WinUIInstallableRelease.ps1')
-    if ($metadata.schemaVersion -notin @(1, 2) -or $metadata.tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$' -or $metadata.commit -notmatch '^[a-f0-9]{40}$' -or $metadata.platform -ne 'win-x64' -or $metadata.releaseChannel -ne 'preview' -or $metadata.githubPrerelease -ne $true -or $metadata.signed -ne $false -or $metadata.installer -ne ($metadata.schemaVersion -eq 2)) { throw 'Unsupported release metadata or preview flags.' }
+    $tagIdentity = Get-WinUIReleaseTag $metadata.tag
+    if ($metadata.schemaVersion -notin @(1, 2) -or $metadata.commit -notmatch '^[a-f0-9]{40}$' -or $metadata.platform -ne 'win-x64' -or $metadata.releaseChannel -cne $tagIdentity.Channel -or $metadata.githubPrerelease -ne $tagIdentity.Prerelease -or $metadata.signed -ne $false -or $metadata.installer -ne ($metadata.schemaVersion -eq 2)) { throw 'Unsupported release metadata or channel flags.' }
     $tag = $metadata.tag
     $archiveName = "SteamWrapper-$tag-win-x64.zip"
     if ($metadata.archive.fileName -cne $archiveName) { throw 'Unexpected release archive name.' }
@@ -136,12 +137,12 @@ function Invoke-CnbRelease {
             } finally { $stream.Dispose(); $hasher.Dispose() }
         } finally { $response.Dispose() }
     }
-    function Get-CnbReleaseAssets($State, [bool]$Complete = $false, [string]$ExpectedId = '', $ExpectedDraft = $null, [switch]$RequirePreview) {
+    function Get-CnbReleaseAssets($State, [bool]$Complete = $false, [string]$ExpectedId = '', $ExpectedDraft = $null, [switch]$RequireChannel) {
         # CNB returns refs/tags/<tag> for published releases; commit.sha from
         # get-tag is the authoritative resolution of that ref, checked separately.
         if ($null -eq $State -or $State.tag_name -cne $tag -or $State.tag_commitish -cnotin @($metadata.commit, "refs/tags/$tag") -or $State.id -notmatch '^[A-Za-z0-9_-]+$' -or ($ExpectedId -and $State.id -cne $ExpectedId)) { throw 'CNB release identity does not match the tag and package commit.' }
         if ($State.draft -isnot [bool] -or $State.prerelease -isnot [bool] -or ($null -ne $ExpectedDraft -and $State.draft -ne $ExpectedDraft)) { throw 'CNB release draft state does not match the expected publication stage.' }
-        if ($RequirePreview -and -not $State.prerelease) { throw 'Existing CNB release is not the expected preview.' }
+        if ($RequireChannel -and $State.prerelease -ne $metadata.githubPrerelease) { throw 'Existing CNB release is not the expected release channel.' }
         $found = @{}
         foreach ($asset in $State.assets) {
             if ($asset.name -cnotin $assetNames) { throw 'CNB release contains an unexpected asset; modification refused.' }
@@ -161,23 +162,25 @@ function Invoke-CnbRelease {
         $release = Read-CnbJson 'GET' ($base + 'releases/tags/' + [Uri]::EscapeDataString($tag)) -AllowMissing
         $created = $null -eq $release
         $notes = [IO.File]::ReadAllText($assets["$tag.en.md"].Path) + [char]10 + [char]10 + [IO.File]::ReadAllText($assets["$tag.zh-CN.md"].Path)
-        $body = @{ tag_name = $tag; target_commitish = $metadata.commit; name = "SteamWrapper $tag (Windows preview)"; body = $notes; draft = $true; prerelease = $true; make_latest = 'false' }
+        $releaseLabel = if ($metadata.githubPrerelease) { 'Windows preview' } else { 'Windows' }
+        $latest = (-not $metadata.githubPrerelease).ToString().ToLowerInvariant()
+        $body = @{ tag_name = $tag; target_commitish = $metadata.commit; name = "SteamWrapper $tag ($releaseLabel)"; body = $notes; draft = $true; prerelease = $metadata.githubPrerelease; make_latest = 'false' }
         if ($created) { $release = Read-CnbJson 'POST' ($base + 'releases') $body }
         $existing = Get-CnbReleaseAssets $release
         $id = $release.id
-        if ($created) { $null = Get-CnbReleaseAssets $release -ExpectedDraft $true -RequirePreview }
+        if ($created) { $null = Get-CnbReleaseAssets $release -ExpectedDraft $true -RequireChannel }
         if (-not $release.draft) {
             if ($existing.Count -eq 0) {
                 # Migrate an old notes-only release at this exact source commit.
                 # Hide it while adding attachments; never alter a populated release.
-                $null = Read-CnbJson 'PATCH' ($base + "releases/$id") @{ draft = $true; prerelease = $true; make_latest = 'false' }
+                $null = Read-CnbJson 'PATCH' ($base + "releases/$id") @{ draft = $true; prerelease = $metadata.githubPrerelease; make_latest = 'false' }
             } else {
-                $null = Get-CnbReleaseAssets $release -Complete $true -RequirePreview
+                $null = Get-CnbReleaseAssets $release -Complete $true -RequireChannel
                 foreach ($name in $assetNames) { Assert-CnbDownload $name }
                 return "https://cnb.cool/$Repository/-/releases/tag/$tag"
             }
         } elseif ($existing.Count -gt 0) {
-            $null = Get-CnbReleaseAssets $release -RequirePreview
+            $null = Get-CnbReleaseAssets $release -RequireChannel
         }
         # Verify every existing expected asset before writing any new asset.
         foreach ($name in $assetNames) {
@@ -198,15 +201,16 @@ function Invoke-CnbRelease {
             Assert-CnbDownload $name
         }
         $release = Read-CnbJson 'GET' ($base + 'releases/tags/' + [Uri]::EscapeDataString($tag))
-        $null = Get-CnbReleaseAssets $release -Complete $true -ExpectedId $id -ExpectedDraft $true -RequirePreview
+        $null = Get-CnbReleaseAssets $release -Complete $true -ExpectedId $id -ExpectedDraft $true -RequireChannel
         $remoteTag = Read-CnbJson 'GET' ($base + 'git/tags/' + [Uri]::EscapeDataString($tag))
         if ($remoteTag.name -cne $tag -or $remoteTag.commit.sha -cne $metadata.commit) { throw 'CNB tag commit changed before publication; draft retained.' }
         $body.Remove('tag_name')
         $body.Remove('target_commitish')
         $body.draft = $false
+        $body.make_latest = $latest
         $null = Read-CnbJson 'PATCH' ($base + "releases/$id") $body
         $release = Read-CnbJson 'GET' ($base + 'releases/tags/' + [Uri]::EscapeDataString($tag))
-        $null = Get-CnbReleaseAssets $release -Complete $true -ExpectedId $id -ExpectedDraft $false -RequirePreview
+        $null = Get-CnbReleaseAssets $release -Complete $true -ExpectedId $id -ExpectedDraft $false -RequireChannel
         return "https://cnb.cool/$Repository/-/releases/tag/$tag"
     } finally { $deadline.Dispose(); if ($ownedClient) { $Client.Dispose() } }
 }
