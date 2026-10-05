@@ -121,7 +121,7 @@ Ordinary merges run CI; version tags build and publish application packages. Man
 
 After GitHub publication and any verified CNB mirroring, a separate job publishes project-signed metadata to the rolling update Release. A weekly workflow renews the previously verified index for 28 days without selecting new binaries or rebuilding software. Publication and renewal share a concurrency group; renewal preserves the exact release identity and installer digest and advances the sequence. Only this dedicated metadata asset is mutable. Versioned installers remain immutable.
 
-GitHub is the primary source. CNB needs both the existing tag-sync credential and a release-write credential; a source-only mirror is not a download source. Skipped or failed binary mirroring must not appear as a working mirror in the signed index. Secrets are never embedded in clients. Source changes, configured keys and successful local tests do not themselves establish that the public feed is available.
+GitHub is the primary source. CNB needs tag-sync and release-write permissions; release operations prefer CNB_RELEASE_TOKEN and otherwise reuse a sufficiently scoped CNB_GIT_TOKEN; a source-only mirror is not a download source. Skipped or failed binary mirroring must not appear as a working mirror in the signed index. Secrets are never embedded in clients. Source changes, configured keys and successful local tests do not themselves establish that the public feed is available.
 
 ## Implementation stages and completion gates
 

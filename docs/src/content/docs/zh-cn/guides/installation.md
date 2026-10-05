@@ -5,7 +5,9 @@ description: 获取完整 WinUI 预览版，了解数据位置，并在不破坏
 
 **Windows 11 24H2 x64** 用户建议使用 **Setup 安装包**。它会安装 WinUI Manager 及所需的 .NET、Windows App SDK 文件，无需开发工具或单独下载运行时。
 
-**[下载安装包 — v0.2.5-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe)** · [发布说明与其他下载](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1)
+**[下载安装包 — v0.2.5-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe)** · [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe) · [发布说明与其他下载](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1)
+
+两个来源提供相同且已核验的安装包。Manager 的下载来源选项也支持 CNB；自动模式先尝试 GitHub，网络失败时可使用已核验的 CNB 镜像。
 
 当前仍是没有 Windows Authenticode 签名的技术预览，干净客户端和更广泛恢复验收尚未完成。便携 ZIP 是备选方式。修复与卸载详情见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)；历史 Dioxus 安装包不包含当前 WinUI Manager。
 
