@@ -80,9 +80,17 @@ function Publish-CnbUpdateFeed {
     if ($null -eq $state) {
         $state = Invoke-FeedApi POST 'releases' @{ tag_name = $tag; target_commitish = $Payload.release.commit; name = "SteamWrapper $($Payload.channel) update feed"; body = 'Project-signed update metadata; application installers remain in versioned releases.'; draft = $true; prerelease = $true; make_latest = 'false' }
     }
-    if ($state.tag_name -cne $tag -or $state.id -notmatch '^[A-Za-z0-9_-]+$' -or -not $state.prerelease -or @($state.assets).Count -gt 1 -or
-        (@($state.assets).Count -eq 1 -and $state.assets[0].name -cne $name)) { throw 'Unexpected CNB update release identity or assets; overwrite refused.' }
-    if (@($state.assets).Count -eq 1) {
+    # A new CNB release can use JSON null for its nil asset slice. Treat that
+    # field as an empty list; do not accept scalars or null entries in a list.
+    $stateAssets = @()
+    if ($null -ne $state.assets) {
+        if ($state.assets -isnot [Array]) { throw 'Unexpected CNB update release assets; overwrite refused.' }
+        $stateAssets = @($state.assets)
+        foreach ($asset in $stateAssets) { if ($null -eq $asset) { throw 'Unexpected CNB update release assets; overwrite refused.' } }
+    }
+    if ($state.tag_name -cne $tag -or $state.id -notmatch '^[A-Za-z0-9_-]+$' -or -not $state.prerelease -or $stateAssets.Count -gt 1 -or
+        ($stateAssets.Count -eq 1 -and $stateAssets[0].name -cne $name)) { throw 'Unexpected CNB update release identity or assets; overwrite refused.' }
+    if ($stateAssets.Count -eq 1) {
         $oldBytes = Get-CnbUpdateDownload -Uri ($publicBase + "releases/download/$tag/$name") -MaximumBytes 512KB -Client $Client
         $oldPath = Join-Path ([IO.Path]::GetDirectoryName($ManifestPath)) 'cnb-previous.json'
         [IO.File]::WriteAllBytes($oldPath, $oldBytes)
