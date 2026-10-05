@@ -193,10 +193,13 @@ function Invoke-CnbRelease {
             if (-not [Uri]::TryCreate($upload.verify_url, [UriKind]::Absolute, [ref]$confirmation) -or $confirmation.Scheme -ne 'https' -or $confirmation.Host -ne 'api.cnb.cool' -or $confirmation.Port -ne 443 -or $confirmation.UserInfo -ne '' -or $confirmation.Query -ne '' -or $confirmation.Fragment -ne '' -or -not $confirmation.AbsoluteUri.StartsWith($expectedPrefix, [StringComparison]::Ordinal) -or $confirmation.AbsolutePath -match '(?i)%2e|%2f|%5c' -or $confirmation.AbsoluteUri.Substring($expectedPrefix.Length).Split('/').Count -ne 2) {
                 # Never print the signed URLs, opaque path tokens or query values.
                 $prefixMatches = $null -ne $confirmation -and $confirmation.AbsoluteUri.StartsWith($expectedPrefix, [StringComparison]::Ordinal)
+                $prefixMatchesIgnoreCase = $null -ne $confirmation -and $confirmation.AbsoluteUri.StartsWith($expectedPrefix, [StringComparison]::OrdinalIgnoreCase)
                 $structure = [ordered]@{
                     apiOrigin = $null -ne $confirmation -and $confirmation.Scheme -ceq 'https' -and $confirmation.Host -ceq 'api.cnb.cool' -and $confirmation.Port -eq 443 -and $confirmation.UserInfo -eq ''
                     expectedPrefix = $prefixMatches
-                    suffixSegmentCount = if ($prefixMatches) { $confirmation.AbsolutePath.Substring(([Uri]$expectedPrefix).AbsolutePath.Length).Split('/').Count } else { 0 }
+                    expectedPrefixIgnoreCase = $prefixMatchesIgnoreCase
+                    repositoryPrefixIgnoreCase = $null -ne $confirmation -and $confirmation.AbsoluteUri.StartsWith($base, [StringComparison]::OrdinalIgnoreCase)
+                    suffixSegmentCount = if ($prefixMatchesIgnoreCase) { $confirmation.AbsolutePath.Substring(([Uri]$expectedPrefix).AbsolutePath.Length).Split('/').Count } else { 0 }
                     queryEmpty = $null -ne $confirmation -and $confirmation.Query -eq ''
                     queryTtlZeroOnly = $null -ne $confirmation -and $confirmation.Query -ceq '?ttl=0'
                     unsafeEncoding = $null -ne $confirmation -and $confirmation.AbsolutePath -match '(?i)%2e|%2f|%5c'

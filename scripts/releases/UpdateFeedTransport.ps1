@@ -97,10 +97,13 @@ function Publish-CnbUpdateFeed {
         $confirmation.AbsolutePath -match '(?i)%2e|%2f|%5c' -or $confirmation.AbsoluteUri.Substring($prefix.Length).Split('/').Count -ne 2) {
         # Diagnostic output contains only booleans/counts, never signed URL data.
         $prefixMatches = $null -ne $confirmation -and $confirmation.AbsoluteUri.StartsWith($prefix, [StringComparison]::Ordinal)
+        $prefixMatchesIgnoreCase = $null -ne $confirmation -and $confirmation.AbsoluteUri.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)
         $structure = [ordered]@{
             apiOrigin = $null -ne $confirmation -and $confirmation.Scheme -ceq 'https' -and $confirmation.Host -ceq 'api.cnb.cool' -and $confirmation.Port -eq 443 -and $confirmation.UserInfo -eq ''
             expectedPrefix = $prefixMatches
-            suffixSegmentCount = if ($prefixMatches) { $confirmation.AbsolutePath.Substring(([Uri]$prefix).AbsolutePath.Length).Split('/').Count } else { 0 }
+            expectedPrefixIgnoreCase = $prefixMatchesIgnoreCase
+            repositoryPrefixIgnoreCase = $null -ne $confirmation -and $confirmation.AbsoluteUri.StartsWith($base, [StringComparison]::OrdinalIgnoreCase)
+            suffixSegmentCount = if ($prefixMatchesIgnoreCase) { $confirmation.AbsolutePath.Substring(([Uri]$prefix).AbsolutePath.Length).Split('/').Count } else { 0 }
             queryEmpty = $null -ne $confirmation -and $confirmation.Query -eq ''
             queryTtlZeroOnly = $null -ne $confirmation -and $confirmation.Query -ceq '?ttl=0'
             unsafeEncoding = $null -ne $confirmation -and $confirmation.AbsolutePath -match '(?i)%2e|%2f|%5c'
