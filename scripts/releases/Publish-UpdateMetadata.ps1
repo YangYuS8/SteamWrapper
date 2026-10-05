@@ -6,6 +6,7 @@ param(
     [ValidateSet('preview', 'stable')][string]$Channel = 'preview',
     [string]$TrustPath = (Join-Path $PSScriptRoot '../../packaging/windows/update-trust.json'),
     [switch]$IncludeCnbMirror,
+    [Parameter(ParameterSetName = 'Release')][switch]$RequireCurrentRelease,
     [string]$GhExecutable = 'gh'
 )
 $ErrorActionPreference = 'Stop'
@@ -58,6 +59,12 @@ if ($Refresh) {
     $metadata = & (Join-Path $PSScriptRoot '../windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $PackageDirectory
     if ($metadata.releaseChannel -cne $Channel) { throw 'Package and selected update channel differ.' }
     $payload = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust $trust -IncludeCnbMirror:$IncludeCnbMirror
+    # The manual mirror workflow must never promote its selected historical tag
+    # over a release published while it waited for the shared feed lock.
+    if ($RequireCurrentRelease) {
+        if (-not $IncludeCnbMirror) { throw 'Current-release maintenance must add a verified CNB mirror.' }
+        Assert-ProjectUpdateCurrentRelease -Payload $payload -ExistingPayload $old
+    }
     if ($null -ne $old) {
         $comparison = ([Version]$payload.release.version).CompareTo([Version]$old.release.version)
         if ($comparison -lt 0 -or ($comparison -eq 0 -and ($payload.release.tag -cne $old.release.tag -or

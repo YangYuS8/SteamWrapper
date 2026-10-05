@@ -134,7 +134,9 @@ git push origin v0.2.5-preview.1
 
 ## 发布渠道
 
-GitHub Releases 是版本标签二进制发布渠道。如果仓库配置了具有仓库 release 读／写权限的 `CNB_RELEASE_TOKEN`，以及已有的源码／标签同步密钥 `CNB_GIT_TOKEN`，工作流也能向 CNB 复制同一组附件，并对照生成的 SHA-256 验证上传后的下载副本。没有 release token 时跳过 CNB 二进制步骤；常规 `main` 源码同步独立保留。
+GitHub Releases 是版本标签二进制发布渠道。CNB 镜像使用 `CNB_GIT_TOKEN` 同步源码／标签，并优先使用 `CNB_RELEASE_TOKEN` 操作版本发布；未配置独立发布令牌时，复用 `CNB_GIT_TOKEN`，但该令牌还必须具有 `Nesoriel/SteamWrapper` 的 `repo-release` 读写权限。Git 同步成功不代表具有发布权限。发布器对照原始 SHA-256 验证上传后的下载副本；缺少可用凭据时跳过可选二进制步骤。
+
+要为当前已发布预览补充镜像而不重新构建，运行 `gh workflow run cnb-release-mirror.yml --ref main -f tag=v0.2.5-preview.1`。维护工作流核对 GitHub 公开的七个附件、已合入主线的精确源码标签及当前签名授权版本，再发布并核验同一组 CNB 附件。它与发布和续期共用锁，最后把已核验镜像写入更新索引；不能切换到其他历史版本，也不能覆盖版本附件。权限失败时，为现有令牌补充 `repo-release` 读写权限，或配置 `CNB_RELEASE_TOKEN`；不要把令牌写入仓库文件或聊天。
 
 `v0.2.3-preview.1` 的七个 GitHub 下载附件均已核验。CNB 发布凭据未配置，二进制镜像实际跳过，因此不公告 CNB 二进制下载。
 
@@ -150,7 +152,7 @@ Manager 更新流程使用项目元数据认证，不要求 Authenticode 证书�
 
 维护者使用已登录的 `gh` 执行一次 `pwsh -NoProfile -File scripts/releases/Initialize-UpdateSigning.ps1`。脚本生成 ECDSA P-256 密钥，将私钥直接写入 GitHub 的 `STEAMWRAPPER_UPDATE_PRIVATE_KEY` secret，只把公钥写入 `packaging/windows/update-trust.json`，不替换已有密钥。发布客户端前先提交公钥配置。PR/main CI 使用测试密钥，正式签名密钥仅用于发布／续期 job。玩家不需要生成密钥或安装证书。密钥丢失／轮换及下载验证详见[交付设计](/SteamWrapper/zh-cn/project/design/windows-delivery/)。
 
-配置 `CNB_RELEASE_TOKEN` 并上传核验对应二进制之前，CNB 保持可选且不可用；之后签名元数据为两种来源绑定相同 SHA-256／长度。CLI 登录本身不会配置长期 CI 凭据，公开客户端不含访问令牌。没有更新界面的旧版本需要先手动安装一次新版客户端。Windows 仍可能对未签名程序显示自己的信任提示或实施限制。
+发布凭据生效、对应二进制及公开签名索引完成核验之前，CNB 不能作为可用更新源；签名元数据为两种来源绑定相同 SHA-256／长度。CLI 登录本身不会配置长期 CI 凭据，公开客户端不含访问令牌。没有更新界面的旧版本需要先手动安装一次新版客户端。Windows 仍可能对未签名程序显示自己的信任提示或实施限制。
 
 ## 封面与网络边界
 

@@ -65,6 +65,18 @@ function Update-ProjectUpdateFreshness {
     return $copy
 }
 
+function Assert-ProjectUpdateCurrentRelease {
+    param($Payload, $ExistingPayload)
+    if ($null -eq $ExistingPayload) { throw 'Mirror maintenance requires the exact currently authorized release.' }
+    foreach ($field in @('tag', 'version', 'commit', 'minimumWindowsVersion', 'profileContract', 'runnerContract', 'deploymentProtocol')) {
+        if ($Payload.release.$field -cne $ExistingPayload.release.$field) { throw 'Mirror maintenance requires the exact currently authorized release.' }
+    }
+    foreach ($field in @('type', 'url', 'sha256', 'bytes', 'trust')) {
+        if ($Payload.release.artifact.$field -cne $ExistingPayload.release.artifact.$field) { throw 'Mirror maintenance requires the exact currently authorized release.' }
+    }
+    if ($Payload.channel -cne $ExistingPayload.channel) { throw 'Mirror maintenance requires the exact currently authorized release.' }
+}
+
 function Write-ProjectUpdateEnvelope {
     param($Payload, [Security.Cryptography.ECDsa]$Key, [string]$KeyId, [string]$Path)
     $bytes = [Text.UTF8Encoding]::new($false).GetBytes(($Payload | ConvertTo-Json -Depth 12 -Compress))
