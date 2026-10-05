@@ -1,4 +1,4 @@
-# Explicit schema-2 installable previews. The historical five-asset schema-1
+# Explicit schema-2 installable releases. The historical five-asset schema-1
 # contract is validated unchanged; these helpers never sign or publish files.
 . (Join-Path $PSScriptRoot 'WinUIRelease.ps1')
 
@@ -139,11 +139,11 @@ function Test-WinUIInstallableReleasePackageDirectory {
     $tagVersion = Get-WinUIReleaseTag $metadata.tag
     if (($metadata.schemaVersion -isnot [int] -and $metadata.schemaVersion -isnot [long]) -or $metadata.schemaVersion -ne 2 -or
         $metadata.version -cne $tagVersion.Version -or $metadata.commit -isnot [string] -or $metadata.commit -cnotmatch '^[0-9a-f]{40}$' -or
-        $metadata.platform -cne 'win-x64' -or $metadata.minimumWindowsVersion -cne '10.0.26100.0' -or $metadata.releaseChannel -cne 'preview' -or
+        $metadata.platform -cne 'win-x64' -or $metadata.minimumWindowsVersion -cne '10.0.26100.0' -or $metadata.releaseChannel -cne $tagVersion.Channel -or
         $metadata.tagPrerelease -isnot [bool] -or $metadata.tagPrerelease -ne $tagVersion.Prerelease -or
-        $metadata.githubPrerelease -isnot [bool] -or -not $metadata.githubPrerelease -or $metadata.signed -isnot [bool] -or $metadata.signed -or
+        $metadata.githubPrerelease -isnot [bool] -or $metadata.githubPrerelease -ne $tagVersion.Prerelease -or $metadata.signed -isnot [bool] -or $metadata.signed -or
         $metadata.installer -isnot [bool] -or -not $metadata.installer -or $metadata.portable -isnot [bool] -or -not $metadata.portable) {
-        throw 'Release metadata is not an exact-version Windows x64 unsigned installable preview.'
+        throw 'Release metadata is not an exact-version Windows x64 unsigned installable release.'
     }
     $expectedNames = @(Get-WinUIReleaseAssetNames $metadata)
     $expectedSetup = "SteamWrapper-$($metadata.tag)-win-x64-setup.exe"
@@ -252,8 +252,8 @@ function New-WinUIInstallableReleasePackage {
     [IO.File]::Move($legacy.Metadata, $portablePath)
     $metadata = [ordered]@{
         schemaVersion = 2; tag = $Tag; version = $plan.Version; commit = $Commit; platform = 'win-x64'
-        minimumWindowsVersion = '10.0.26100.0'; releaseChannel = 'preview'; tagPrerelease = $plan.TagPrerelease
-        githubPrerelease = $true; signed = $false; installer = $true; portable = $true; archive = $portable.archive
+        minimumWindowsVersion = '10.0.26100.0'; releaseChannel = $plan.ReleaseChannel; tagPrerelease = $plan.TagPrerelease
+        githubPrerelease = $plan.GitHubPrerelease; signed = $false; installer = $true; portable = $true; archive = $portable.archive
         portableMetadata = [ordered]@{ fileName = 'portable-release.json'; bytes = (Get-Item -LiteralPath $portablePath).Length; sha256 = (Get-FileHash -LiteralPath $portablePath).Hash.ToLowerInvariant() }
         installerAsset = [ordered]@{ fileName = $setupName; bytes = (Get-Item -LiteralPath $setupPath).Length; sha256 = (Get-FileHash -LiteralPath $setupPath).Hash.ToLowerInvariant() }
         installerBuild = $build

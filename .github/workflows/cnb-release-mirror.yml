@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Published preview tag currently authorized by the update feed
+        description: Published version tag currently authorized by its update feed
         type: string
         required: true
 
@@ -44,7 +44,8 @@ jobs:
             throw 'Configure CNB_GIT_TOKEN for tag pushes and repo-release read/write, or a separate CNB_RELEASE_TOKEN for releases.'
           }
           $tag = $env:RELEASE_TAG
-          if ($tag -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-preview\.[1-9][0-9]*$') { throw 'Select an existing versioned preview tag.' }
+          . ./scripts/windows/WinUIRelease.ps1
+          $tagIdentity = Get-WinUIReleaseTag $tag
           $commit = (& git rev-parse "refs/tags/$tag^{commit}").Trim()
           if ($LASTEXITCODE -ne 0 -or $commit -cnotmatch '^[a-f0-9]{40}$') { throw 'The selected source tag does not exist.' }
           & git merge-base --is-ancestor $commit origin/main
@@ -57,7 +58,7 @@ jobs:
           $json = & gh release view $tag --repo $repository --json tagName,isDraft,isPrerelease,assets
           if ($LASTEXITCODE -ne 0) { throw 'The selected GitHub release is unavailable.' }
           $release = ($json -join "`n") | ConvertFrom-Json
-          if ($release.tagName -cne $tag -or $release.isDraft -or -not $release.isPrerelease) { throw 'Only a published GitHub prerelease can be mirrored.' }
+          if ($release.tagName -cne $tag -or $release.isDraft -or $release.isPrerelease -ne $tagIdentity.Prerelease) { throw 'Only a published GitHub release in the tag-selected channel can be mirrored.' }
           $names = @("SteamWrapper-$tag-win-x64.zip", "SteamWrapper-$tag-win-x64-setup.exe", "$tag.en.md", "$tag.zh-CN.md", 'release.json', 'portable-release.json', 'SHA256SUMS')
           $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
           foreach ($asset in $release.assets) {
@@ -83,8 +84,8 @@ jobs:
           $trust = Read-ProjectUpdateTrust $trustPath
           $feedDirectory = 'target/cnb-release-mirror/current-feed'
           [IO.Directory]::CreateDirectory($feedDirectory) | Out-Null
-          & gh release download update-preview --repo $repository --pattern SteamWrapper-update.json --dir $feedDirectory
-          if ($LASTEXITCODE -ne 0) { throw 'A previously signed update-preview feed is required.' }
+          & gh release download ("update-" + $metadata.releaseChannel) --repo $repository --pattern SteamWrapper-update.json --dir $feedDirectory
+          if ($LASTEXITCODE -ne 0) { throw 'The previously signed channel feed is required.' }
           $current = Read-ProjectUpdateEnvelope -Path (Join-Path $feedDirectory 'SteamWrapper-update.json') -TrustPath $trustPath -AllowExpired
           $candidate = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust $trust -IncludeCnbMirror
           Assert-ProjectUpdateCurrentRelease -Payload $candidate -ExistingPayload $current
@@ -102,4 +103,26 @@ jobs:
         shell: pwsh
         env:
           STEAMWRAPPER_UPDATE_PRIVATE_KEY: ${{ secrets.STEAMWRAPPER_UPDATE_PRIVATE_KEY }}
-        run: ./scripts/releases/Publish-UpdateMetadata.ps1 -PackageDirectory "target/cnb-release-mirror/$env:RELEASE_TAG" -IncludeCnbMirror -RequireCurrentRelease
+        run: |
+          $package = "target/cnb-release-mirror/$env:RELEASE_TAG"
+          ./scripts/releases/Publish-UpdateMetadata.ps1 -PackageDirectory $package -IncludeCnbMirror -RequireCurrentRelease
+          $metadata = & ./scripts/windows/Test-WinUIReleasePackage.ps1 -PackageDirectory $package
+          if ($metadata.releaseChannel -ceq 'stable') {
+            . ./scripts/releases/ProjectUpdates.ps1
+            $directory = 'target/cnb-release-mirror/preview-feed'
+            [IO.Directory]::CreateDirectory($directory) | Out-Null
+            $reply = (& gh release download update-preview --repo YangYuS8/SteamWrapper --pattern SteamWrapper-update.json --dir $directory 2>&1 | Out-String)
+            if ($LASTEXITCODE -eq 0) {
+              $trustPath = 'packaging/windows/update-trust.json'
+              $current = Read-ProjectUpdateEnvelope -Path (Join-Path $directory 'SteamWrapper-update.json') -TrustPath $trustPath -AllowExpired
+              $candidate = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust (Read-ProjectUpdateTrust $trustPath) -Channel preview -IncludeCnbMirror
+              if ($current.release.tag -ceq $candidate.release.tag) {
+                Assert-ProjectUpdateCurrentRelease -Payload $candidate -ExistingPayload $current
+                ./scripts/releases/Publish-UpdateMetadata.ps1 -PackageDirectory $package -Channel preview -IncludeCnbMirror -RequireCurrentRelease
+              }
+            } else {
+              # An absent preview feed need not block maintenance of stable.
+              if ($reply -notmatch '(release not found|HTTP 404)') { throw 'Cannot inspect the signed preview feed for mirror maintenance.' }
+              $global:LASTEXITCODE = 0
+            }
+          }

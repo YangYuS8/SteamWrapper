@@ -84,6 +84,52 @@ public sealed class UpdatesOfficialServiceTests
     }
 
     [TestMethod]
+    [DataRow("v0.2.5", "stable", "github")]
+    [DataRow("v0.2.5", "stable", "cnb")]
+    [DataRow("v0.2.5-preview.1", "preview", "github")]
+    [DataRow("v0.2.5-preview.1", "preview", "cnb")]
+    public async Task StableInstallerDownloadsThroughBothInstalledChannelsAndOfficialSources(string installedTag, string channel, string source)
+    {
+        using var fixture = new Fixture();
+        var payload = fixture.Payload();
+        payload["channel"] = channel;
+        payload["release"]!["tag"] = "v0.3.0";
+        var artifact = payload["release"]!["artifact"]!;
+        artifact["url"] = "https://github.com/YangYuS8/SteamWrapper/releases/download/v0.3.0/SteamWrapper-Setup.exe";
+        artifact["mirrorUrl"] = "https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.3.0/SteamWrapper-Setup.exe";
+        var handler = new Handler((request, _) => Task.FromResult(Body(request.RequestUri!.AbsolutePath.EndsWith(".json", StringComparison.Ordinal)
+            ? fixture.Sign(payload) : fixture.Installer)));
+        using var service = fixture.Service(handler, source: source);
+        var metadata = await service.CheckAsync(installedTag);
+        Assert.IsNotNull(metadata);
+        Assert.IsTrue(metadata.IsUpgrade);
+        Assert.AreEqual(channel, metadata.Channel);
+        Assert.AreEqual("v0.3.0", metadata.ReleaseTag);
+        var download = await service.DownloadAsync(metadata);
+        CollectionAssert.AreEqual(fixture.Installer, await File.ReadAllBytesAsync(download.Path));
+        Assert.AreEqual("v0.3.0", download.ReleaseTag);
+        Assert.HasCount(2, handler.Requests);
+        Assert.AreEqual(OfficialUpdateService.Feed(source, channel), handler.Requests[0]);
+        Assert.AreEqual(new Uri(artifact[source == "github" ? "url" : "mirrorUrl"]!.GetValue<string>()), handler.Requests[1]);
+        Assert.IsFalse(File.Exists(fixture.Paths.ProfilesPath));
+        Assert.IsFalse(File.Exists(fixture.Paths.RunnerPath));
+    }
+
+    [TestMethod]
+    public async Task PreviewToStableRequiresANewCoordinatedNumericVersion()
+    {
+        using var fixture = new Fixture();
+        var payload = fixture.Payload();
+        payload["release"]!["tag"] = "v0.3.0";
+        var handler = new Handler((_, _) => Task.FromResult(Body(fixture.Sign(payload))));
+        using var service = fixture.Service(handler);
+        Assert.AreEqual(UpdateFailure.IncompatibleProduct,
+            (await Assert.ThrowsExactlyAsync<UpdateValidationException>(() => service.CheckAsync("v0.3.0-preview.1"))).Failure);
+        Assert.HasCount(1, handler.Requests);
+        Assert.IsFalse(Directory.Exists(Path.Combine(fixture.Paths.CacheDirectory, "updates")));
+    }
+
+    [TestMethod]
     public async Task RepeatedDownloadSafelyReplacesOwnedCacheFilesAndCurrentVersionReturnsNoUpdate()
     {
         using var fixture = new Fixture();
@@ -304,8 +350,8 @@ public sealed class UpdatesOfficialServiceTests
         }
         internal byte[] Envelope() => Sign(Payload());
         internal byte[] Sign(JsonObject payload) => Signed.Envelope(Encoding.UTF8.GetBytes(payload.ToJsonString()));
-        internal OfficialUpdateService Service(HttpMessageHandler handler, Func<FileStream, string>? finalPath = null) => new(Paths,
-            new() { ["fixture"] = Signed.PublicKey() }, handler: handler, clock: Clock, finalPath: finalPath ?? (file => file.Name), windowsVersion: Signed.Installed.WindowsVersion);
+        internal OfficialUpdateService Service(HttpMessageHandler handler, Func<FileStream, string>? finalPath = null, string source = "auto") => new(Paths,
+            new() { ["fixture"] = Signed.PublicKey() }, source: source, handler: handler, clock: Clock, finalPath: finalPath ?? (file => file.Name), windowsVersion: Signed.Installed.WindowsVersion);
         public void Dispose() { Signed.Dispose(); Files.Dispose(); }
     }
     private sealed class Clock(DateTimeOffset now) : TimeProvider

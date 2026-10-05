@@ -35,17 +35,21 @@ function Read-ProjectUpdateTrust([string]$Path) {
 }
 
 function New-ProjectUpdatePayload {
-    param($ReleaseMetadata, $Trust, [DateTimeOffset]$Now = [DateTimeOffset]::UtcNow, [switch]$IncludeCnbMirror)
+    param($ReleaseMetadata, $Trust, [DateTimeOffset]$Now = [DateTimeOffset]::UtcNow, [switch]$IncludeCnbMirror,
+        [ValidateSet('preview', 'stable')][string]$Channel)
     $metadata = $ReleaseMetadata
+    $tagIdentity = Get-WinUIReleaseTag $metadata.tag
+    if (-not $Channel) { $Channel = $metadata.releaseChannel }
     if ($metadata.schemaVersion -ne 2 -or $metadata.releaseChannel -notin @('preview', 'stable') -or
-        $metadata.tag -notmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$' -or
+        $metadata.releaseChannel -cne $tagIdentity.Channel -or $metadata.version -cne $tagIdentity.Version -or
+        ($Channel -cne $metadata.releaseChannel -and -not ($metadata.releaseChannel -ceq 'stable' -and $Channel -ceq 'preview')) -or
         $metadata.commit -notmatch '^[a-f0-9]{40}$') { throw 'Project updates require a versioned installable release.' }
     $tag = $metadata.tag
     $name = "SteamWrapper-$tag-win-x64-setup.exe"
     if ($metadata.installerAsset.fileName -cne $name -or $metadata.installerAsset.bytes -lt 1 -or $metadata.installerAsset.bytes -gt 512MB -or $metadata.installerAsset.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid update installer descriptor.' }
     $mirror = if ($IncludeCnbMirror) { "https://cnb.cool/$($Trust.cnbRepository)/-/releases/download/$tag/$name" } else { $null }
     return [pscustomobject][ordered]@{
-        schemaVersion = 2; appId = 'SteamWrapper'; platform = 'win-x64'; channel = $metadata.releaseChannel
+        schemaVersion = 2; appId = 'SteamWrapper'; platform = 'win-x64'; channel = $Channel
         sequence = $Now.ToUnixTimeMilliseconds(); issuedAt = $Now.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'")
         expiresAt = $Now.AddDays(28).UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'")
         release = [pscustomobject][ordered]@{
@@ -113,8 +117,9 @@ function Read-ProjectUpdateEnvelope {
     Assert-WinUIInstallableFields $release @('tag', 'version', 'commit', 'minimumWindowsVersion', 'profileContract', 'runnerContract', 'deploymentProtocol', 'artifact')
     $artifact = $release.artifact
     Assert-WinUIInstallableFields $artifact @('type', 'url', 'mirrorUrl', 'sha256', 'bytes', 'trust')
-    if ($release.tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$' -or $release.commit -notmatch '^[a-f0-9]{40}$' -or
-        $release.tag -notmatch ('^v' + [Regex]::Escape($release.version) + '(?:-|$)') -or
+    $tagIdentity = Get-WinUIReleaseTag $release.tag
+    if (($payload.channel -ceq 'stable' -and $tagIdentity.Prerelease) -or $release.commit -notmatch '^[a-f0-9]{40}$' -or
+        $release.version -cne $tagIdentity.Version -or
         $release.profileContract -ne 2 -or $release.runnerContract -ne 2 -or $release.deploymentProtocol -ne 1 -or
         $artifact.type -cne 'installer' -or $artifact.trust -cne 'project-signature' -or $artifact.bytes -lt 1 -or $artifact.bytes -gt 512MB -or $artifact.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid signed update release descriptor.' }
     $name = "SteamWrapper-$($release.tag)-win-x64-setup.exe"

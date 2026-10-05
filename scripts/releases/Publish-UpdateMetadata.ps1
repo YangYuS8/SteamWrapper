@@ -15,6 +15,11 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'UpdateFeedTransport.ps1')
 $trust = Read-ProjectUpdateTrust $TrustPath
 $repository = $trust.githubRepository
+if (-not $Refresh) {
+    $metadata = & (Join-Path $PSScriptRoot '../windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $PackageDirectory
+    if (-not $PSBoundParameters.ContainsKey('Channel')) { $Channel = $metadata.releaseChannel }
+    if ($metadata.releaseChannel -cne $Channel -and -not ($metadata.releaseChannel -ceq 'stable' -and $Channel -ceq 'preview')) { throw 'Package and selected update channel differ.' }
+}
 $feedTag = "update-$Channel"
 $name = 'SteamWrapper-update.json'
 $root = Join-Path ([IO.Path]::GetTempPath()) ('steamwrapper-update-publish-' + [Guid]::NewGuid().ToString('N'))
@@ -56,9 +61,7 @@ if ($Refresh) {
     $payload = Update-ProjectUpdateFreshness -Payload $old
     $IncludeCnbMirror = $null -ne $payload.release.artifact.mirrorUrl
 } else {
-    $metadata = & (Join-Path $PSScriptRoot '../windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $PackageDirectory
-    if ($metadata.releaseChannel -cne $Channel) { throw 'Package and selected update channel differ.' }
-    $payload = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust $trust -IncludeCnbMirror:$IncludeCnbMirror
+    $payload = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust $trust -Channel $Channel -IncludeCnbMirror:$IncludeCnbMirror
     # The manual mirror workflow must never promote its selected historical tag
     # over a release published while it waited for the shared feed lock.
     if ($RequireCurrentRelease) {

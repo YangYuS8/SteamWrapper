@@ -13,6 +13,27 @@ Set-StrictMode -Version Latest
 function Assert-Acceptance([bool]$Condition, [string]$Message) {
     if (-not $Condition) { throw $Message }
 }
+function Get-AcceptanceNumericVersion([string]$Tag) {
+    $number='(?:0|[1-9][0-9]*)'; $identifier='(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'
+    Assert-Acceptance ($Tag.Length -le 80 -and $Tag -cmatch ('^v(?<base>' + $number + '\.' + $number + '\.' + $number + ')(?:-' + $identifier + '(?:\.' + $identifier + ')*)?$')) 'Expected a strict acceptance version tag.'
+    return [Version]$Matches['base']
+}
+function Get-AcceptanceScenario($Manifest) {
+    $property=$Manifest.PSObject.Properties['scenario']
+    $scenario=if ($null -eq $property) {'PublicUpgrade'} else {[string]$property.Value}
+    Assert-Acceptance ($scenario -cin @('PublicUpgrade','CandidateFirstInstall')) 'Unexpected clean Windows acceptance scenario.'
+    $baseline=Get-AcceptanceNumericVersion $Manifest.baseline.tag
+    $target=Get-AcceptanceNumericVersion $Manifest.target.tag
+    if ($scenario -ceq 'PublicUpgrade') {
+        Assert-Acceptance ($target -gt $baseline) 'Public acceptance requires a genuine newer numeric product version.'
+        if ($null -ne $Manifest.PSObject.Properties['localCandidate']) { Assert-Acceptance ($Manifest.localCandidate -is [bool] -and -not $Manifest.localCandidate) 'Public upgrade cannot use a local candidate.' }
+    } else {
+        Assert-Acceptance ($Manifest.localCandidate -is [bool] -and $Manifest.localCandidate -and $Manifest.sourceHeadCommit -cmatch '^[a-f0-9]{40}$' -and
+            $Manifest.workingCopyDirty -is [bool] -and $Manifest.sourceHeadCommit -ceq $Manifest.target.commit) 'Candidate first install requires explicit local source provenance.'
+        foreach($key in @('tag','fileName','bytes','sha256','commit')) { Assert-Acceptance ($Manifest.baseline.$key -ceq $Manifest.target.$key) 'Candidate first install requires two identical candidate identities.' }
+    }
+    return $scenario
+}
 function Quote-AcceptanceArgument([string]$Value) {
     if ($Value.Contains('"') -or $Value.Contains("`r") -or $Value.Contains("`n")) { throw 'Unexpected command-line characters.' }
     return '"' + $Value.TrimEnd('\') + '"'
@@ -33,21 +54,146 @@ function Wait-Acceptance([scriptblock]$Condition, [string]$Description, [int]$Se
     } while ([DateTime]::UtcNow -lt $deadline)
     throw "Timed out waiting for $Description. No process was killed; windows and diagnostics remain."
 }
+function Test-AcceptanceInboxRuntimePackage($Package, [string]$SystemAppsRoot = 'C:\Windows\SystemApps') {
+    foreach ($name in @('Name','Publisher','SignatureKind','NonRemovable','InstallLocation','IsFramework')) {
+        if ($null -eq $Package.PSObject.Properties[$name]) { return $false }
+    }
+    if ($Package.Name -isnot [string] -or $Package.Name -cnotmatch '^Microsoft\.WindowsAppRuntime\.CBS(?:\.[1-9][0-9]*(?:\.[0-9]+)*)?$' -or
+        $Package.Publisher -cne 'CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US' -or
+        ($Package.SignatureKind -isnot [Enum] -and $Package.SignatureKind -isnot [int] -and $Package.SignatureKind -isnot [long]) -or
+        [int]$Package.SignatureKind -ne 4 -or $Package.NonRemovable -isnot [bool] -or -not $Package.NonRemovable -or
+        $Package.IsFramework -isnot [bool] -or -not $Package.IsFramework -or $Package.InstallLocation -isnot [string]) { return $false }
+    # CBS 1.x is named with a version but ships in the original CBS family;
+    # newer CBS families retain their major identity in SystemApps. System
+    # signatures and non-removability are required in addition to that path.
+    $family = if ($Package.Name -cmatch '^Microsoft\.WindowsAppRuntime\.CBS\.1\.[0-9]+$') { 'Microsoft.WindowsAppRuntime.CBS' } else { $Package.Name }
+    $expected = $SystemAppsRoot.TrimEnd('\') + '\' + $family + '_8wekyb3d8bbwe'
+    return $Package.InstallLocation.TrimEnd('\') -ieq $expected
+}
+function Get-AcceptancePayloadRuntimeModules($Modules, [string]$PayloadRoot) {
+    $paths = [ordered]@{}
+    foreach ($name in @('Microsoft.UI.Xaml.dll','coreclr.dll')) {
+        $matched = @($Modules | Where-Object { $_.ModuleName -ieq $name })
+        Assert-Acceptance ($matched.Count -eq 1 -and $matched[0].FileName -ieq (Join-Path $PayloadRoot $name)) ('Manager did not load its own version payload runtime: ' + $name)
+        $paths[$name] = $matched[0].FileName
+    }
+    return $paths
+}
+function Assert-AcceptanceManualAppIdAction($State, [int]$RootProcessId, [int]$ManagerProcessId) {
+    $chineseName = (-join @([char]0x624b,[char]0x52a8,[char]0x586b,[char]0x5199)) + ' AppID'
+    Assert-Acceptance ($ManagerProcessId -gt 0 -and $RootProcessId -eq $ManagerProcessId -and
+        ($State.processId -eq 0 -or $State.processId -eq $ManagerProcessId) -and $State.automationId -ceq 'SecondaryButton' -and
+        $State.name -cin @('Enter AppID manually', $chineseName) -and $State.enabled -is [bool] -and $State.enabled) ("The manual AppID action is not the expected Manager dialog. Actual Name='{0}', ProcessId={1}, root ProcessId={2}; expected Manager ProcessId={3}. See manualAppIdDialog evidence for exact UTF-16 text and provider state." -f $State.name, $State.processId, $RootProcessId, $ManagerProcessId)
+}
+function Retain-AcceptanceProcessHandle($Process) {
+    # Kept separate so the inbox Framework attachment behavior can be tested
+    # with a harmless child rather than a production Manager or UI operation.
+    # Temporary handles used by MainModule/WaitForExit do not retain an
+    # attached process's exit status once Windows releases its process ID.
+    $handle = $Process.Handle
+    Assert-Acceptance ($handle -ne [IntPtr]::Zero) 'Cannot retain the live acceptance process handle.'
+}
+function Get-AcceptanceExitDiagnostic($ExitCode) {
+    $observed = $ExitCode -is [int]
+    $unsigned = if ($observed) { if ($ExitCode -lt 0) { [long]$ExitCode + 4294967296L } else { [long]$ExitCode } } else { $null }
+    return [ordered]@{ observed=$observed; exitCode=$ExitCode; unsignedExitCode=$unsigned; hexExitCode=$(if ($observed) { '0x{0:X8}' -f $unsigned } else { $null }) }
+}
+function Read-AcceptanceBoundedDiagnosticFile([string]$Path, [int]$MaximumBytes = 16384) {
+    Assert-Acceptance ($MaximumBytes -gt 0 -and $MaximumBytes -le 16384) 'Unexpected diagnostic log read limit.'
+    $result = [ordered]@{fileName=[IO.Path]::GetFileName($Path);present=$false;bytes=$null;capturedBytes=0;truncated=$false;text=$null;readError=$null}
+    if (-not (Test-Path -LiteralPath $Path)) { return $result }
+    try {
+        $file = Get-Item -LiteralPath $Path -Force
+        $result.present=$true
+        Assert-Acceptance (-not $file.PSIsContainer -and -not ($file.Attributes -band [IO.FileAttributes]::ReparsePoint)) 'Diagnostic log is not a regular file.'
+        $ancestor=Get-Item -LiteralPath $file.DirectoryName -Force
+        while ($null -ne $ancestor) {
+            Assert-Acceptance (-not ($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint)) 'Diagnostic log has a linked ancestor.'
+            $ancestor=$ancestor.Parent
+        }
+        $stream=New-Object IO.FileStream($file.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+        try {
+            $result.bytes=$stream.Length
+            $buffer=New-Object byte[] $MaximumBytes
+            $count=0
+            while ($count -lt $MaximumBytes) {
+                $read=$stream.Read($buffer,$count,($MaximumBytes - $count))
+                if ($read -eq 0) { break }
+                $count+=$read
+            }
+            $result.capturedBytes=$count; $result.truncated=$stream.Length -gt $count
+            $result.text=[Text.Encoding]::UTF8.GetString($buffer,0,$count)
+        } finally { $stream.Dispose() }
+    } catch { $result.readError=$_.Exception.GetType().FullName }
+    return $result
+}
 
 # This mode is safe on a development host. It neither reads release input nor
 # runs an installer; it only exercises quoting and loads inbox UIA assemblies.
 if ($ValidateHelpers) {
+    $scenarioAsset=[pscustomobject]@{tag='v0.2.6';fileName='SteamWrapper-v0.2.6-win-x64-setup.exe';bytes=1;sha256=('a' * 64);commit=('b' * 40)}
+    $candidateScenario=[pscustomobject]@{scenario='CandidateFirstInstall';localCandidate=$true;sourceHeadCommit=('b' * 40);workingCopyDirty=$true;baseline=$scenarioAsset;target=$scenarioAsset}
+    Assert-Acceptance ((Get-AcceptanceScenario $candidateScenario) -ceq 'CandidateFirstInstall') 'Inbox candidate scenario validation failed.'
+    $publicScenario=[pscustomobject]@{baseline=[pscustomobject]@{tag='v0.2.4-preview.1'};target=[pscustomobject]@{tag='v0.2.6'}}
+    Assert-Acceptance ((Get-AcceptanceScenario $publicScenario) -ceq 'PublicUpgrade') 'Inbox public upgrade scenario validation failed.'
     $unicodePath = 'C:\fixture ' + [char]0x4e2d + [char]0x6587
     Assert-Acceptance ((Quote-AcceptanceArgument ($unicodePath + '\')) -ceq ('"' + $unicodePath + '"')) 'Unicode argument quoting failed.'
     $rejected = $false
     try { $null = Quote-AcceptanceArgument 'C:\unexpected"path' } catch { $rejected = $true }
     Assert-Acceptance $rejected 'An unsafe argument was accepted.'
+    $inbox = [pscustomobject]@{ Name='Microsoft.WindowsAppRuntime.CBS.2'; Publisher='CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US'; SignatureKind=4; NonRemovable=$true; IsFramework=$true; InstallLocation='C:\Windows\SystemApps\Microsoft.WindowsAppRuntime.CBS.2_8wekyb3d8bbwe' }
+    Assert-Acceptance (Test-AcceptanceInboxRuntimePackage $inbox) 'Inbox CBS runtime classification failed.'
+    $inbox.InstallLocation='C:\Program Files\WindowsApps\Microsoft.WindowsAppRuntime.CBS.2_8wekyb3d8bbwe'
+    Assert-Acceptance (-not (Test-AcceptanceInboxRuntimePackage $inbox)) 'An external CBS runtime was accepted.'
+    $runtimeRoot='C:\fixture\versions\v0.2.6'
+    $modules=@([pscustomobject]@{ModuleName='Microsoft.UI.Xaml.dll';FileName=(Join-Path $runtimeRoot 'Microsoft.UI.Xaml.dll')},[pscustomobject]@{ModuleName='coreclr.dll';FileName=(Join-Path $runtimeRoot 'coreclr.dll')})
+    $null = Get-AcceptancePayloadRuntimeModules $modules $runtimeRoot
+    $manual = [pscustomobject]@{name='Enter AppID manually';processId=0;automationId='SecondaryButton';enabled=$true}
+    Assert-AcceptanceManualAppIdAction $manual 1900 1900
+    $rejected=$false
+    try { Assert-AcceptanceManualAppIdAction $manual 1800 1900 } catch { $rejected=$true }
+    Assert-Acceptance $rejected 'An anonymous child was accepted beneath a foreign root.'
+    $helperRoot = Join-Path $env:TEMP ('SteamWrapperCleanHelpers-' + [guid]::NewGuid().ToString('N'))
+    [IO.Directory]::CreateDirectory($helperRoot) | Out-Null
+    $exitFixture = Join-Path $helperRoot 'ExitFixture.exe'
+    Add-Type -TypeDefinition @'
+public static class SteamWrapperExitObservationFixture {
+    public static int Main() { System.Threading.Thread.Sleep(800); return 7; }
+}
+'@ -OutputAssembly $exitFixture -OutputType ConsoleApplication
+    $exitObservations = [ordered]@{ expectedExitCode=7; unretainedExitCode=$null; retainedExitCode=$null; originalExitCode=$null }
+    foreach ($retain in @($false,$true)) {
+        $start = New-Object Diagnostics.ProcessStartInfo
+        $start.FileName=$exitFixture; $start.UseShellExecute=$false; $start.CreateNoWindow=$true
+        $original = [Diagnostics.Process]::Start($start)
+        $attached = [Diagnostics.Process]::GetProcessById($original.Id)
+        try {
+            if ($retain) { Retain-AcceptanceProcessHandle $attached }
+            $null = $attached.MainModule.FileName
+            $null = $attached.WorkingSet64
+            Assert-Acceptance ($attached.WaitForExit(5000)) 'Harmless exit fixture did not finish; it was not killed.'
+            $actual = $attached.ExitCode
+            if ($retain) {
+                $exitObservations.retainedExitCode=$actual
+                $exitObservations.originalExitCode=$original.ExitCode
+                Assert-Acceptance ($actual -is [int] -and $actual -eq 7 -and $original.ExitCode -eq 7) 'Retained inbox Framework attachment lost the harmless child actual exit code.'
+            } else { $exitObservations.unretainedExitCode=$actual }
+        } finally { $attached.Dispose(); $original.Dispose() }
+    }
+    $boundedLog=Join-Path $helperRoot 'bounded-diagnostic.log'
+    [IO.File]::WriteAllText($boundedLog,('A' * 32768))
+    $logDiagnostic=Read-AcceptanceBoundedDiagnosticFile $boundedLog 16
+    Assert-Acceptance ($logDiagnostic.capturedBytes -eq 16 -and $logDiagnostic.truncated -and $logDiagnostic.text.Length -eq 16) 'Inbox bounded diagnostic file capture failed.'
     Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
     [ordered]@{
         passed = $true
         productionInstallerExecuted = $false
         powerShellVersion = $PSVersionTable.PSVersion.ToString()
         uiaAssembly = [System.Windows.Automation.AutomationElement].Assembly.Location
+        inboxRuntimeClassifier = $true; payloadRuntimeModulesValidator = $true
+        manualAppIdProviderValidator = $true
+        processExitObservation = $exitObservations
+        boundedDiagnosticLogCapture = $true
     } | ConvertTo-Json
     return
 }
@@ -61,6 +207,8 @@ Assert-Acceptance ([Environment]::UserInteractive -and [Diagnostics.Process]::Ge
 $manifestPath = Join-Path $InputDirectory 'acceptance-input.json'
 $inputManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 Assert-Acceptance ($inputManifest.schemaVersion -eq 1 -and $inputManifest.sandboxOnly -eq $true -and $inputManifest.networkingDisabled -eq $true) 'Expected the offline Sandbox input manifest.'
+$scenario=Get-AcceptanceScenario $inputManifest
+$localCandidate=$scenario -ceq 'CandidateFirstInstall'
 $runId = [guid]::Parse([string]$inputManifest.runId).ToString('N')
 Assert-Acceptance (-not [string]::IsNullOrWhiteSpace([string]$inputManifest.hostComputerName) -and $env:COMPUTERNAME -ine $inputManifest.hostComputerName) 'Refusing to execute a production installer on the input host.'
 $computer = Get-CimInstance Win32_ComputerSystem
@@ -96,6 +244,8 @@ $taskRoot = Join-Path $env:TEMP ('SteamWrapperClean-' + $runId)
 Assert-Acceptance (-not (Test-Path -LiteralPath $taskRoot)) 'The guest work directory is not fresh.'
 $events = New-Object 'System.Collections.Generic.List[object]'
 $ownedManagers = New-Object 'System.Collections.Generic.List[object]'
+$managerCloseDiagnostics = New-Object 'System.Collections.Generic.List[object]'
+$runnerDiagnostics = New-Object 'System.Collections.Generic.List[object]'
 $warnings = New-Object 'System.Collections.Generic.List[string]'
 $evidence = [ordered]@{
     schemaVersion = 1; runId = $runId; result = 'running'; startedAt = [DateTime]::UtcNow.ToString('o')
@@ -109,7 +259,10 @@ $evidence = [ordered]@{
     runtimeInventoryBeforeInstallation = $null; externalSdkOrRuntimeInstalled = $false
     realSteamInstalled = $false; productionInstallers = $true; testEnvironmentOverrides = $false
     publicUpdateNetworkTested = $false; networkingDisabled = $true
-    steps = $events; ownedManagers = $ownedManagers; warnings = $warnings
+    scenario=$scenario; localCandidate=$localCandidate; unpublishedCandidate=$localCandidate; numericUpgradeTested=$false; publicSevenAssetsTested=$false
+    sourceHeadCommit=$(if ($localCandidate) {$inputManifest.sourceHeadCommit} else {$null}); workingCopyDirty=$(if ($localCandidate) {$inputManifest.workingCopyDirty} else {$null})
+    candidateInstallerBuild=$(if ($localCandidate) {$inputManifest.candidateInstallerBuild} else {$null})
+    steps = $events; ownedManagers = $ownedManagers; warnings = $warnings; managerCloseDiagnostics = $managerCloseDiagnostics; runnerDiagnostics = $runnerDiagnostics
 }
 $evidencePath = Join-Path $OutputDirectory 'evidence.json'
 $utf8 = New-Object Text.UTF8Encoding($false)
@@ -121,8 +274,10 @@ function Record-Acceptance([string]$Name, $Details) {
     Write-AcceptanceEvidence
 }
 function Read-AcceptanceAsset($Asset) {
-    Assert-Acceptance ([string]$Asset.fileName -cmatch '^SteamWrapper-v[0-9]+\.[0-9]+\.[0-9]+-preview\.[0-9]+-win-x64-setup\.exe$') 'Unexpected installer filename.'
-    Assert-Acceptance ([string]$Asset.tag -cmatch '^v[0-9]+\.[0-9]+\.[0-9]+-preview\.[0-9]+$' -and $Asset.fileName -ceq ('SteamWrapper-' + $Asset.tag + '-win-x64-setup.exe')) 'Installer filename/tag disagree.'
+    $number = '(?:0|[1-9][0-9]*)'
+    $identifier = '(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'
+    $tagPattern = '^v' + $number + '\.' + $number + '\.' + $number + '(?:-' + $identifier + '(?:\.' + $identifier + ')*)?$'
+    Assert-Acceptance ([string]$Asset.tag -cmatch $tagPattern -and ([string]$Asset.tag).Length -le 80 -and $Asset.fileName -ceq ('SteamWrapper-' + $Asset.tag + '-win-x64-setup.exe')) 'Installer filename/tag disagree.'
     Assert-Acceptance ([string]$Asset.sha256 -cmatch '^[a-f0-9]{64}$' -and [long]$Asset.bytes -gt 0 -and [long]$Asset.bytes -le 512MB) 'Unexpected installer digest or size.'
     $path = Join-Path $InputDirectory $Asset.fileName
     $file = Get-Item -LiteralPath $path
@@ -217,7 +372,7 @@ function Start-AcceptanceManager([string]$Program, [string]$Tag, [string]$Name) 
     $manager = Wait-Acceptance {
         foreach ($candidate in [Diagnostics.Process]::GetProcessesByName('SteamWrapper.Manager')) {
             try {
-                if ($candidate.MainModule.FileName -ieq $expected -and $candidate.MainWindowHandle -ne [IntPtr]::Zero) { return $candidate }
+                if ($candidate.MainModule.FileName -ieq $expected -and $candidate.MainWindowHandle -ne [IntPtr]::Zero) { Retain-AcceptanceProcessHandle $candidate; return $candidate }
             } catch { }
             $candidate.Dispose()
         }
@@ -225,17 +380,22 @@ function Start-AcceptanceManager([string]$Program, [string]$Tag, [string]$Name) 
     $window = [System.Windows.Automation.AutomationElement]::FromHandle($manager.MainWindowHandle)
     Assert-Acceptance ($window.Current.ProcessId -eq $manager.Id) 'The UI window is not owned by the installed Manager.'
     $null = Wait-Acceptance { $button = Find-AcceptanceElement $window 'AddGame'; $button -and $button.Current.IsEnabled } 'Manager initialization'
+    $manager.Refresh()
+    $runtimeModules = Get-AcceptancePayloadRuntimeModules @($manager.Modules) ([IO.Path]::GetDirectoryName($expected))
     $timer.Stop()
     $ownedManagers.Add([ordered]@{ processId = $manager.Id; path = $expected; normalLauncher = $true })
     Capture-AcceptanceWindow $window $Name
-    Record-Acceptance $Name ([ordered]@{ processId = $manager.Id; executable = $expected; processStartupMilliseconds = $timer.ElapsedMilliseconds; startupWorkingSetBytes = $manager.WorkingSet64; addGameName = (Find-AcceptanceElement $window 'AddGame').Current.Name })
+    Record-Acceptance $Name ([ordered]@{ processId = $manager.Id; executable = $expected; processStartupMilliseconds = $timer.ElapsedMilliseconds; startupWorkingSetBytes = $manager.WorkingSet64; addGameName = (Find-AcceptanceElement $window 'AddGame').Current.Name; payloadRuntimeModules = $runtimeModules })
     return [pscustomobject]@{ Process = $manager; Window = $window }
 }
 function Close-AcceptanceManager($Manager) {
     Assert-Acceptance ($Manager.Window.Current.ProcessId -eq $Manager.Process.Id) 'Refusing to close a foreign window.'
     ([System.Windows.Automation.WindowPattern]$Manager.Window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern)).Close()
     Assert-Acceptance ($Manager.Process.WaitForExit(45000)) 'Manager did not close normally; it was not killed.'
-    Assert-Acceptance ($Manager.Process.ExitCode -eq 0) 'Manager exited unsuccessfully.'
+    $diagnostic = Get-AcceptanceExitDiagnostic $Manager.Process.ExitCode
+    $managerCloseDiagnostics.Add([ordered]@{processId=$Manager.Process.Id;normalCloseRequested=$true;waitForExitSucceeded=$true;exit=$diagnostic;observer='retained inbox Framework Process handle'})
+    Write-AcceptanceEvidence
+    Assert-Acceptance ($diagnostic.observed -and $diagnostic.exitCode -eq 0) ("Manager did not report a successful normal exit. Observed={0}, signed ExitCode={1}, unsigned ExitCode={2}, hex ExitCode={3}. See managerCloseDiagnostics evidence." -f $diagnostic.observed, $diagnostic.exitCode, $diagnostic.unsignedExitCode, $diagnostic.hexExitCode)
     $Manager.Process.Dispose()
 }
 function Invoke-AcceptanceRunner([string]$Name, [string]$Marker, [string]$ExpectedWorkingDirectory) {
@@ -246,7 +406,15 @@ function Invoke-AcceptanceRunner([string]$Name, [string]$Marker, [string]$Expect
     $start.Arguments = '--appid "487" -- "unused original Steam command"'
     $runner = [Diagnostics.Process]::Start($start)
     try {
-        Assert-Acceptance ($runner.WaitForExit(30000) -and $runner.ExitCode -eq 0) 'Headless Runner failed or did not wait for the fixture; no process was killed.'
+        $waitSucceeded=$runner.WaitForExit(30000)
+        $exit=Get-AcceptanceExitDiagnostic $(if ($waitSucceeded) { $runner.ExitCode } else { $null })
+        $logs=@(
+            (Read-AcceptanceBoundedDiagnosticFile (Join-Path $dataRoot 'logs\runner-487.log')),
+            (Read-AcceptanceBoundedDiagnosticFile (Join-Path $dataRoot 'logs\manager-startup.log'))
+        )
+        $runnerDiagnostics.Add([ordered]@{name=$Name;processId=$runner.Id;stablePath=$start.FileName;waitSucceeded=$waitSucceeded;exit=$exit;diagnosticLogs=$logs;perLogCaptureLimitBytes=16384;gameMarkerPresent=(Test-Path -LiteralPath $Marker -PathType Leaf)})
+        Write-AcceptanceEvidence
+        Assert-Acceptance ($waitSucceeded -and $exit.observed -and $exit.exitCode -eq 0) ("Headless Runner failed or did not wait for the fixture. WaitSucceeded={0}, observed ExitCode={1}, signed ExitCode={2}, unsigned ExitCode={3}, hex ExitCode={4}. See runnerDiagnostics evidence; no process was killed." -f $waitSucceeded, $exit.observed, $exit.exitCode, $exit.unsignedExitCode, $exit.hexExitCode)
         Assert-Acceptance ((Test-Path -LiteralPath $Marker) -and [IO.File]::ReadAllText($Marker) -ceq $ExpectedWorkingDirectory) 'Runner did not execute the configured native test program in its game folder.'
         Assert-Acceptance (@(Get-Process -Name SteamWrapper.Manager -ErrorAction SilentlyContinue).Count -eq 0) 'Runner unexpectedly opened Manager.'
         Record-Acceptance $Name ([ordered]@{ exitCode = $runner.ExitCode; stablePath = $start.FileName; managerClosed = $true; harmlessProgramCompleted = $true; realSteam = $false })
@@ -257,17 +425,26 @@ try {
     [IO.Directory]::CreateDirectory($taskRoot) | Out-Null
     $framework = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction SilentlyContinue
     $dotnetDirectories = @('C:\Program Files\dotnet', 'C:\Program Files (x86)\dotnet', (Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet')) | Where-Object { Test-Path -LiteralPath $_ }
-    $appRuntimePackages = @(Get-AppxPackage -Name '*WindowsAppRuntime*' -ErrorAction SilentlyContinue | Select-Object Name, Version)
+    $appRuntimePackages = @(Get-AppxPackage -Name '*WindowsAppRuntime*' -ErrorAction SilentlyContinue | Select-Object Name, Version, Publisher, SignatureKind, NonRemovable, InstallLocation, IsFramework)
+    $inboxRuntimePackages = @($appRuntimePackages | Where-Object { Test-AcceptanceInboxRuntimePackage $_ (Join-Path $env:windir 'SystemApps') })
+    $externalRuntimePackages = @($appRuntimePackages | Where-Object { -not (Test-AcceptanceInboxRuntimePackage $_ (Join-Path $env:windir 'SystemApps')) })
     $evidence.runtimeInventoryBeforeInstallation = [ordered]@{
         dotnetDirectories = @($dotnetDirectories); dotnetOnPath = [bool](Get-Command dotnet -ErrorAction SilentlyContinue)
         windowsAppRuntimePackages = $appRuntimePackages; netFrameworkRelease = $(if ($null -ne $framework) { $framework.Release } else { $null })
+        inboxWindowsAppRuntimePackages = $inboxRuntimePackages; externalWindowsAppRuntimePackages = $externalRuntimePackages
+        systemVCRuntime = @(@('vcruntime140.dll','vcruntime140_1.dll') | ForEach-Object {
+            $path=Join-Path (Join-Path $env:windir 'System32') $_
+            $item=Get-Item -LiteralPath $path -ErrorAction SilentlyContinue
+            [ordered]@{name=$_;path=$path;present=($null -ne $item);bytes=$(if ($null -ne $item) {$item.Length} else {$null});fileVersion=$(if ($null -ne $item) {$item.VersionInfo.FileVersion} else {$null});productVersion=$(if ($null -ne $item) {$item.VersionInfo.ProductVersion} else {$null})}
+        })
     }
-    Assert-Acceptance (@($dotnetDirectories).Count -eq 0 -and -not $evidence.runtimeInventoryBeforeInstallation.dotnetOnPath -and $appRuntimePackages.Count -eq 0) 'The guest already contains a machine .NET runtime/SDK or Windows App Runtime; start a pristine Sandbox.'
+    Assert-Acceptance (@($dotnetDirectories).Count -eq 0 -and -not $evidence.runtimeInventoryBeforeInstallation.dotnetOnPath -and $externalRuntimePackages.Count -eq 0) 'The guest already contains a machine .NET runtime/SDK or an external Windows App Runtime; start a pristine Sandbox.'
     Record-Acceptance 'fresh offline Windows client' ([ordered]@{ productAbsent = $true; sdkAbsent = $true; steamAbsent = $true; nativeAppData = $true })
     Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
     $baselineSetup = Read-AcceptanceAsset $inputManifest.baseline
-    $targetSetup = Read-AcceptanceAsset $inputManifest.target
-    Record-Acceptance 'public production installer digests verified in guest' ([ordered]@{ baselineSha256 = $inputManifest.baseline.sha256; targetSha256 = $inputManifest.target.sha256 })
+    $targetSetup = if ($localCandidate) {$baselineSetup} else {Read-AcceptanceAsset $inputManifest.target}
+    $digestStep=if ($localCandidate) {'unpublished local candidate installer digest verified in guest'} else {'public production installer digests verified in guest'}
+    Record-Acceptance $digestStep ([ordered]@{ baselineSha256 = $inputManifest.baseline.sha256; targetSha256 = $inputManifest.target.sha256; localCandidate=$localCandidate })
 
     $gameDirectory = Join-Path $taskRoot ('Harmless game ' + $chineseWord)
     [IO.Directory]::CreateDirectory($gameDirectory) | Out-Null
@@ -297,7 +474,16 @@ public static class SteamWrapperCleanFixture {
     $window = $manager.Window
     Invoke-AcceptanceElement (Wait-AcceptanceElement $window 'AddGame')
     $manual = Wait-AcceptanceElement $window 'SecondaryButton'
-    Assert-Acceptance ($manual.Current.ProcessId -eq $manager.Process.Id -and $manual.Current.Name -in @('Enter AppID manually', $chineseManualButton)) 'The manual AppID action is not the expected Manager dialog.'
+    $manualName = [string]$manual.Current.Name
+    $manualState = [ordered]@{
+        name = $manualName; processId = [int]$manual.Current.ProcessId; rootProcessId = $window.Current.ProcessId
+        expectedProcessId = $manager.Process.Id; expectedNames = @('Enter AppID manually', $chineseManualButton)
+        nameCodeUnits = @($manualName.ToCharArray() | ForEach-Object { [int]$_ })
+        automationId = $manual.Current.AutomationId; enabled = $manual.Current.IsEnabled; offscreen = $manual.Current.IsOffscreen
+    }
+    $evidence['manualAppIdDialog'] = $manualState
+    Write-AcceptanceEvidence
+    Assert-AcceptanceManualAppIdAction $manualState $window.Current.ProcessId $manager.Process.Id
     Invoke-AcceptanceElement $manual
     $null = Wait-AcceptanceElement $window 'AppId'
     Set-AcceptanceValue $window 'ProfileName' $profileName
@@ -322,6 +508,7 @@ public static class SteamWrapperCleanFixture {
     $null = Read-AcceptanceInstallation $defaultProgram $inputManifest.baseline.tag
     Assert-AcceptanceShortcuts $defaultProgram $true
     Assert-AcceptanceDataHashes $preserved
+    if (-not $localCandidate) {
     Invoke-AcceptanceInstaller $targetSetup 'target-genuine-in-place-upgrade'
     $state = Read-AcceptanceInstallation $defaultProgram $inputManifest.target.tag
     Assert-Acceptance ($state.previous.tag -ceq $inputManifest.baseline.tag) 'Upgrade did not retain the genuine previous version.'
@@ -334,6 +521,8 @@ public static class SteamWrapperCleanFixture {
     Assert-Acceptance $state.healthy 'The new Manager did not acknowledge healthy startup.'
     Invoke-AcceptanceRunner 'Runner-after-Manager-upgrade' $marker $gameDirectory
     Record-Acceptance 'genuine upgrade preserved profiles and stable Runner' ([ordered]@{ previousTag = $state.previous.tag; currentTag = $state.current.tag; healthy = $state.healthy; dataHashes = $preserved })
+    $evidence.numericUpgradeTested=$true
+    }
 
     Invoke-AcceptanceInstaller (Join-Path $defaultProgram 'unins000.exe') 'default-uninstall-keeps-data'
     Assert-Acceptance (-not (Test-Path -LiteralPath (Join-Path $defaultProgram 'SteamWrapper.exe')) -and -not (Test-Path -LiteralPath $registration)) 'Default uninstall retained Manager or its installation registration.'

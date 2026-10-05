@@ -38,9 +38,11 @@ foreach ($tag in @('v01.2.0', 'v1.02.3', 'v1.2.03', 'v1.2.3-01', 'v1.2.3-rc..1',
 Write-Output 'PASS: invalid numeric versions, prerelease labels, build metadata and ref characters are rejected.'
 foreach ($tag in @('v0.2.0', 'v0.2.0-rc.1')) {
     $plan = Get-WinUIReleasePlan -Tag $tag -Commit $commit -RepositoryRoot $source
-    if ($plan.Version -ne '0.2.0' -or $plan.Commit -ne $commit -or -not $plan.GitHubPrerelease -or $plan.Signed) { throw 'The exact version/commit/preview policy was lost.' }
+    $expectedPrerelease = $tag -eq 'v0.2.0-rc.1'
+    $expectedChannel = if ($expectedPrerelease) { 'preview' } else { 'stable' }
+    if ($plan.Version -ne '0.2.0' -or $plan.Commit -ne $commit -or $plan.GitHubPrerelease -ne $expectedPrerelease -or $plan.ReleaseChannel -cne $expectedChannel -or $plan.Signed) { throw 'Strict version tags must select stable; prerelease tags must select preview.' }
 }
-Write-Output 'PASS: numeric and prerelease tags retain exact metadata and remain unsigned previews.'
+Write-Output 'PASS: numeric tags select stable and prerelease tags select preview without requiring Authenticode.'
 Assert-Rejected { Get-WinUIReleasePlan -Tag 'v0.2.0' -Commit 'main' -RepositoryRoot $source } 'Release commit must be*'
 Assert-Rejected { Get-WinUIReleasePlan -Tag 'v0.3.0' -Commit $commit -RepositoryRoot $source } 'Release base version*Manager*'
 $corePath = Join-Path $source 'crates/core/Cargo.toml'
@@ -128,6 +130,7 @@ $after = @(Get-WinUIReleaseFiles $publish $source | ForEach-Object { "$($_.Path)
 if (@(Compare-Object $before $after).Count -ne 0) { throw 'Packaging modified the publish files.' }
 $checked = Test-WinUIReleasePackageDirectory -PackageDirectory $result.Directory
 if ($checked.commit -ne $commit -or $checked.files.Count -ne $requiredFiles.Count + 3 -or
+    $checked.releaseChannel -cne 'stable' -or $checked.tagPrerelease -or $checked.githubPrerelease -or
     @($checked.files | Where-Object { $_.path -eq 'extra-runtime-dependency.dll' }).Count -ne 1) {
     throw 'The complete directory, notes or license were not recorded in the archive.'
 }

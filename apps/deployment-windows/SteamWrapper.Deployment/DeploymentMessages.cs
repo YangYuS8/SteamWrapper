@@ -60,6 +60,8 @@ public static class DeploymentMessages
             ("SameVersion", true) => "此发行包与同版本的原文件不同。请下载匹配的原始安装包或更新版本；现有文件已保留。",
             ("Space", false) => "There is not enough disk space for a complete staged update. Free space and retry; the active Manager is preserved.",
             ("Space", true) => "磁盘空间不足，无法暂存完整更新。请释放空间后重试；当前管理器已保留。",
+            ("Retention", false) => "Too many unconfirmed Manager versions are retained. Open the installed Manager once, close it normally, then retry the update. You can still uninstall Manager while keeping your game settings.",
+            ("Retention", true) => "保留的未确认管理器版本过多。请打开已安装的管理器一次，正常关闭后再重试更新。您仍可卸载管理器并保留游戏配置。",
             ("Missing", false) => "No complete Manager installation is available. Run the matching verified installer to install or repair it.",
             ("Missing", true) => "没有可用的完整管理器安装。请运行匹配且经过验证的安装包进行安装或修复。",
             ("Previous", false) => "No verified previous Manager is available. Reinstall from the matching original installer.",

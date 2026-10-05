@@ -64,6 +64,9 @@ jobs:
       - name: Verify Rust interoperability and real Runner consumption
         run: mise.exe run winui:contracts
 
+      - name: Test Runner dependency inspection tool versions
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-RunnerDependenciesScripts.ps1
+
       - name: Compile the actual WinUI Manager and Runner resources
         run: mise.exe run winui:build
 
@@ -79,6 +82,9 @@ jobs:
 
       - name: Test publication replacement using disposable files
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
+
+      - name: Test clean-client acceptance guards without launching Sandbox
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptanceScripts.ps1
 
       - name: Test version validation and release packaging safeguards
         run: |
@@ -108,10 +114,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'GitHub publisher regressions failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1 -Installable
           if ($LASTEXITCODE -ne 0) { throw 'Installable GitHub publisher regressions failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1 -Installable -Preview
+          if ($LASTEXITCODE -ne 0) { throw 'Preview GitHub publisher regressions failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1
           if ($LASTEXITCODE -ne 0) { throw 'CNB publisher regressions failed.' }
           mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1 -Installable
           if ($LASTEXITCODE -ne 0) { throw 'Installable CNB publisher regressions failed.' }
+          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1 -Installable -Preview
+          if ($LASTEXITCODE -ne 0) { throw 'Preview CNB publisher regressions failed.' }
 
       - name: Upload isolated contract evidence
         if: always()

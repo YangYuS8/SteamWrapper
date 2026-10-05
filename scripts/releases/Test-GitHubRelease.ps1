@@ -1,18 +1,19 @@
 [CmdletBinding()]
-param([string]$PackageDirectory, [switch]$Installable)
+param([string]$PackageDirectory, [switch]$Installable, [switch]$Preview)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $root = Join-Path $repoRoot ('target/github-publisher-tests/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root -Force | Out-Null
 if (-not $PackageDirectory) {
+    $tag = if ($Preview) { 'v0.2.0-rc.1' } else { 'v0.2.0' }
     if ($Installable) {
         . (Join-Path $repoRoot 'scripts/windows/WinUIInstallableRelease.TestFixtures.ps1')
-        $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package')
+        $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package') -Tag $tag
         $package = New-WinUIInstallableReleaseTestPackage $fixture
     } else {
         . (Join-Path $repoRoot 'scripts/windows/WinUIRelease.TestFixtures.ps1')
-        $fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package')
+        $fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package') -Tag $tag
         $package = New-WinUIReleasePackage -Tag $fixture.Tag -Commit $fixture.Commit -RepositoryRoot $fixture.RepositoryRoot -PublishDirectory $fixture.PublishDirectory -OutputDirectory $fixture.OutputDirectory
     }
     $PackageDirectory = $package.Directory
@@ -50,10 +51,10 @@ switch ($arguments[1]) {
         if ($state.scenario -eq 'missing-upload' -and $state.uploads -gt 0) { $visible = @($visible | Select-Object -SkipLast 1) }
         $target = $state.commit
         if ($state.scenario -eq 'changed-draft' -and $state.uploads -gt 0) { $target = 'f' * 40 }
-        @{ tagName = $state.tag; targetCommitish = $target; isDraft = $state.draft; isPrerelease = $true; assets = $visible } | ConvertTo-Json -Depth 8 -Compress
+        @{ tagName = $state.tag; targetCommitish = $target; isDraft = $state.draft; isPrerelease = $state.prerelease; assets = $visible } | ConvertTo-Json -Depth 8 -Compress
     }
     'create' {
-        if ($arguments -notcontains '--draft' -or $arguments -notcontains '--prerelease' -or $arguments -notcontains '--latest=false' -or $arguments -notcontains '--verify-tag') { throw 'Unsafe fixture release creation flags.' }
+        if ($arguments -notcontains '--draft' -or $arguments -notcontains ('--prerelease=' + $state.prerelease.ToString().ToLowerInvariant()) -or $arguments -notcontains '--latest=false' -or $arguments -notcontains '--verify-tag') { throw 'Unsafe fixture release creation flags.' }
         $state.present = $true
         $state.draft = $true
         Save-State
@@ -78,7 +79,7 @@ switch ($arguments[1]) {
         Save-State
     }
     'edit' {
-        if ($arguments -notcontains '--draft=false' -or $arguments -notcontains '--prerelease' -or $arguments -notcontains '--latest=false') { throw 'Unsafe fixture publication flags.' }
+        if ($arguments -notcontains '--draft=false' -or $arguments -notcontains ('--prerelease=' + $state.prerelease.ToString().ToLowerInvariant()) -or $arguments -notcontains ('--latest=' + (-not $state.prerelease).ToString().ToLowerInvariant())) { throw 'Unsafe fixture publication flags.' }
         $state.draft = $false
         Save-State
     }
@@ -95,8 +96,9 @@ function New-GhScenario([string]$Scenario, [bool]$Present = $false, [bool]$Draft
         Copy-Item -LiteralPath (Join-Path $PackageDirectory $name) -Destination $target -Force
         @{ name = $name; size = (Get-Item -LiteralPath $target).Length; file = $target }
     }
-    $state = @{ scenario = $Scenario; present = $Present; draft = $Draft; tag = $metadata.tag; commit = $metadata.commit; remoteCommit = $metadata.commit; uploads = 0; apiCalls = 0; assets = @($records); requests = @(); remoteDirectory = $remote }
+    $state = @{ scenario = $Scenario; present = $Present; draft = $Draft; prerelease = $metadata.githubPrerelease; tag = $metadata.tag; commit = $metadata.commit; remoteCommit = $metadata.commit; uploads = 0; apiCalls = 0; assets = @($records); requests = @(); remoteDirectory = $remote }
     if ($Scenario -eq 'wrong-tag') { $state.remoteCommit = 'f' * 40 }
+    if ($Scenario -eq 'wrong-channel') { $state.prerelease = -not $metadata.githubPrerelease }
     $path = Join-Path $caseRoot 'state.json'
     [IO.File]::WriteAllText($path, ($state | ConvertTo-Json -Depth 10))
     $env:STEAMWRAPPER_GH_FIXTURE = $path
@@ -122,12 +124,15 @@ try {
     $null = Invoke-FixturePublication
     $state = Read-FixtureState $path
     if ($state.draft -or $state.uploads -ne $names.Count -or @($state.requests | Where-Object { $_[1] -eq 'download' }).Count -ne $names.Count) { throw 'The complete draft/upload/download/publish sequence did not occur.' }
-    Write-Output "PASS: a new prerelease verifies all $($names.Count) uploaded assets before publishing."
+    Write-Output "PASS: a new $($metadata.releaseChannel) release verifies all $($names.Count) uploaded assets before publishing with the matching latest flag."
     $writes = @($state.requests | Where-Object { $_[1] -in @('create', 'upload', 'edit') }).Count
     $null = Invoke-FixturePublication
     $state = Read-FixtureState $path
     if (@($state.requests | Where-Object { $_[1] -in @('create', 'upload', 'edit') }).Count -ne $writes) { throw 'Retry modified an already-published identical release.' }
     Write-Output 'PASS: an identical published release is verified and reused without writes.'
+    $path = New-GhScenario 'wrong-channel' $true $false $names
+    Assert-GhRejected 'a release in the opposite channel is rejected without relabeling it' '*release channel*'
+    Assert-NoGhWrites (Read-FixtureState $path)
     $path = New-GhScenario 'retry' $true $true @($names[0])
     $null = Invoke-FixturePublication
     $state = Read-FixtureState $path

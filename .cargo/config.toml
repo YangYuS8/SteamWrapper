@@ -1,0 +1,5 @@
+# The stable Runner is installed as one independent executable. Static MSVC CRT
+# linkage keeps it usable on Windows clients without the VC redistributable.
+# Linux and Windows GNU targets retain their existing runtime linkage.
+[target.'cfg(all(target_os = "windows", target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]

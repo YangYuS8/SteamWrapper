@@ -8,4 +8,4 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'WinUIRelease.ps1')
 $plan = Get-WinUIReleasePlan -Tag $Tag -Commit $Commit -RepositoryRoot $RepositoryRoot
-Write-Output "Release preflight passed: $($plan.Tag), commit $($plan.Commit), Windows x64 unsigned preview."
+Write-Output "Release preflight passed: $($plan.Tag), commit $($plan.Commit), Windows x64 unsigned $($plan.ReleaseChannel)."
