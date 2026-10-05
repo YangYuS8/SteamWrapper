@@ -188,7 +188,7 @@ jobs:
     outputs:
       configured: ${{ steps.cnb.outputs.configured }}
     env:
-      CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN }}
+      CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN || secrets.CNB_GIT_TOKEN }}
       CNB_GIT_TOKEN: ${{ secrets.CNB_GIT_TOKEN }}
       RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
     steps:
@@ -200,7 +200,7 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::CNB binary release was skipped: configure CNB_RELEASE_TOKEN with repo-release read/write scope and CNB_GIT_TOKEN. GitHub is the available release channel."
+            echo "::notice::CNB binary release was skipped: configure CNB_GIT_TOKEN for source tags; add repo-release read/write scope to it or provide CNB_RELEASE_TOKEN. GitHub is the available release channel."
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: steps.cnb.outputs.configured == 'true'
@@ -249,7 +249,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           STEAMWRAPPER_UPDATE_PRIVATE_KEY: ${{ secrets.STEAMWRAPPER_UPDATE_PRIVATE_KEY }}
-          CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN }}
+          CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN || secrets.CNB_GIT_TOKEN }}
           RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
           CNB_MIRROR_VERIFIED: ${{ needs.mirror_cnb.result == 'success' && needs.mirror_cnb.outputs.configured == 'true' }}
         run: |

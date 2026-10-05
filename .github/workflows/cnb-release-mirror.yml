@@ -1,0 +1,105 @@
+name: Mirror an existing release to CNB
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published preview tag currently authorized by the update feed
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+# Serialize with version publication and scheduled renewal. A queued historical
+# mirror run must recheck the current signed release after acquiring this lock.
+concurrency:
+  group: steamwrapper-update-feeds
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      CNB_GIT_TOKEN: ${{ secrets.CNB_GIT_TOKEN }}
+      CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN || secrets.CNB_GIT_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download and inspect the exact published seven-asset release
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          if ([string]::IsNullOrWhiteSpace($env:CNB_GIT_TOKEN) -or [string]::IsNullOrWhiteSpace($env:CNB_RELEASE_TOKEN)) {
+            throw 'Configure CNB_GIT_TOKEN for tag pushes and repo-release read/write, or a separate CNB_RELEASE_TOKEN for releases.'
+          }
+          $tag = $env:RELEASE_TAG
+          if ($tag -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-preview\.[1-9][0-9]*$') { throw 'Select an existing versioned preview tag.' }
+          $commit = (& git rev-parse "refs/tags/$tag^{commit}").Trim()
+          if ($LASTEXITCODE -ne 0 -or $commit -cnotmatch '^[a-f0-9]{40}$') { throw 'The selected source tag does not exist.' }
+          & git merge-base --is-ancestor $commit origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'The source tag must already be merged into main.' }
+          $repository = 'YangYuS8/SteamWrapper'
+          $private = & gh api "repos/$repository" --jq '.private'
+          if ($LASTEXITCODE -ne 0 -or $private -cne 'false') { throw 'The source release repository must be public.' }
+          $remoteCommit = & gh api "repos/$repository/commits/$tag" --jq '.sha'
+          if ($LASTEXITCODE -ne 0 -or $remoteCommit -cne $commit) { throw 'The public source tag no longer matches the checked-out tag.' }
+          $json = & gh release view $tag --repo $repository --json tagName,isDraft,isPrerelease,assets
+          if ($LASTEXITCODE -ne 0) { throw 'The selected GitHub release is unavailable.' }
+          $release = ($json -join "`n") | ConvertFrom-Json
+          if ($release.tagName -cne $tag -or $release.isDraft -or -not $release.isPrerelease) { throw 'Only a published GitHub prerelease can be mirrored.' }
+          $names = @("SteamWrapper-$tag-win-x64.zip", "SteamWrapper-$tag-win-x64-setup.exe", "$tag.en.md", "$tag.zh-CN.md", 'release.json', 'portable-release.json', 'SHA256SUMS')
+          $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+          foreach ($asset in $release.assets) {
+            $limit = switch ($asset.name) { 'SHA256SUMS' { 16KB }; 'release.json' { 2MB }; 'portable-release.json' { 2MB }; "$tag.en.md" { 256KB }; "$tag.zh-CN.md" { 256KB }; "SteamWrapper-$tag-win-x64-setup.exe" { 512MB }; default { 1GB } }
+            if ($asset.name -cnotin $names -or -not $seen.Add($asset.name) -or $asset.size -lt 1 -or $asset.size -gt $limit -or $asset.digest -cnotmatch '^sha256:[a-f0-9]{64}$') { throw 'The GitHub release has unexpected, duplicate, unbounded or unhashed assets.' }
+          }
+          if ($seen.Count -ne 7) { throw 'The GitHub release must contain exactly seven immutable assets.' }
+          $directory = "target/cnb-release-mirror/$tag"
+          [IO.Directory]::CreateDirectory($directory) | Out-Null
+          foreach ($name in $names) {
+            & gh release download $tag --repo $repository --pattern $name --dir $directory
+            if ($LASTEXITCODE -ne 0) { throw "Cannot download the published asset: $name" }
+            $asset = @($release.assets | Where-Object name -CEQ $name)[0]
+            $path = Join-Path $directory $name
+            if ((Get-Item -LiteralPath $path).Length -ne $asset.size -or ('sha256:' + (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()) -cne $asset.digest) { throw 'Downloaded asset size or hash differs from the published release.' }
+          }
+          # Verifies all six checksummed assets, ZIP inventory, runtime/Runner
+          # contracts, Setup binding and the unmodified schema-2 descriptor.
+          $metadata = & ./scripts/windows/Test-WinUIReleasePackage.ps1 -PackageDirectory $directory
+          if ($metadata.schemaVersion -ne 2 -or $metadata.tag -cne $tag -or $metadata.commit -cne $commit) { throw 'Downloaded release identity differs from the exact source tag.' }
+          . ./scripts/releases/ProjectUpdates.ps1
+          $trustPath = 'packaging/windows/update-trust.json'
+          $trust = Read-ProjectUpdateTrust $trustPath
+          $feedDirectory = 'target/cnb-release-mirror/current-feed'
+          [IO.Directory]::CreateDirectory($feedDirectory) | Out-Null
+          & gh release download update-preview --repo $repository --pattern SteamWrapper-update.json --dir $feedDirectory
+          if ($LASTEXITCODE -ne 0) { throw 'A previously signed update-preview feed is required.' }
+          $current = Read-ProjectUpdateEnvelope -Path (Join-Path $feedDirectory 'SteamWrapper-update.json') -TrustPath $trustPath -AllowExpired
+          $candidate = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust $trust -IncludeCnbMirror
+          Assert-ProjectUpdateCurrentRelease -Payload $candidate -ExistingPayload $current
+          Write-Output "Verified all seven published assets for $tag at $commit; the signed feed authorizes this exact release."
+      - name: Push the matching source tag without rewriting history
+        shell: bash
+        run: |
+          set -euo pipefail
+          helper='!f() { printf "username=cnb\npassword=%s\n" "$CNB_GIT_TOKEN"; }; f'
+          git -c credential.helper= -c "credential.helper=$helper" push https://cnb.cool/Nesoriel/SteamWrapper "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+      - name: Publish and download-verify identical CNB assets
+        shell: pwsh
+        run: ./scripts/releases/Publish-CnbRelease.ps1 -PackageDirectory "target/cnb-release-mirror/$env:RELEASE_TAG" -Repository Nesoriel/SteamWrapper
+      - name: Add the verified mirror to the same authorized update release
+        shell: pwsh
+        env:
+          STEAMWRAPPER_UPDATE_PRIVATE_KEY: ${{ secrets.STEAMWRAPPER_UPDATE_PRIVATE_KEY }}
+        run: ./scripts/releases/Publish-UpdateMetadata.ps1 -PackageDirectory "target/cnb-release-mirror/$env:RELEASE_TAG" -IncludeCnbMirror -RequireCurrentRelease

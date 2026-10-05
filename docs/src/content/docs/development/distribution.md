@@ -145,7 +145,9 @@ For an on-demand preview, use **Run workflow** and choose the ref. There are no 
 
 ## Release channels
 
-GitHub Releases is the version-tag binary channel. The workflow can also copy the same assets to CNB when the repository has `CNB_RELEASE_TOKEN` with repository-release read/write permissions and the existing `CNB_GIT_TOKEN` for source/tag synchronization. It checks the uploaded downloads against the generated SHA-256 values. Without the release token, the CNB binary step is skipped; ordinary `main` source synchronization remains separate.
+GitHub Releases is the version-tag binary channel. CNB mirroring uses `CNB_GIT_TOKEN` for source/tag synchronization and prefers `CNB_RELEASE_TOKEN` for release operations. If no separate release token is configured, it reuses `CNB_GIT_TOKEN`; that token must also have `repo-release` read/write permission for `Nesoriel/SteamWrapper`. Git synchronization alone does not prove release permission. The publisher checks uploaded downloads against the original SHA-256 values; unavailable credentials skip the optional binary step.
+
+To mirror the current published preview without rebuilding it, run `gh workflow run cnb-release-mirror.yml --ref main -f tag=v0.2.5-preview.1`. This maintenance workflow checks the public seven-asset GitHub bundle, exact mainline source tag and currently authorized signed release, then publishes and verifies the same CNB assets. It adds the verified mirror to the update feed under the same publication/renewal lock. It cannot promote a different historical version or overwrite versioned attachments. A permission failure requires adding `repo-release` read/write permission to the existing token or supplying `CNB_RELEASE_TOKEN`; never put a token in repository files or chat.
 
 For `v0.2.3-preview.1`, all seven GitHub downloads were verified. CNB release credentials were not configured, so its binary mirror was skipped and no CNB binary download is advertised.
 
@@ -162,7 +164,7 @@ The version-tag workflow publishes immutable Setup/ZIP assets first, then `Publi
 
 One-time maintainer configuration uses `pwsh -NoProfile -File scripts/releases/Initialize-UpdateSigning.ps1` with authenticated `gh`. It generates an ECDSA P-256 key, sends the private half directly to GitHub's `STEAMWRAPPER_UPDATE_PRIVATE_KEY` secret, and writes only the public key to `packaging/windows/update-trust.json`. Existing keys are never replaced. Commit the public configuration before releasing a client. PR/main CI uses fixture keys; the protected signing secret is used only by release/renewal jobs. Players do not generate keys or install certificates. Key loss/rotation and download verification are described in the [delivery design](/SteamWrapper/project/design/windows-delivery/).
 
-CNB remains optional until `CNB_RELEASE_TOKEN` is configured and the matching binaries are uploaded and verified. Signed metadata then binds the same SHA-256/length for both sources. A CLI login alone does not configure long-lived CI credentials. The public client contains no access token. Existing releases without this update UI need one manual installation of the new client. Windows may still apply its own trust prompts or restrictions to unsigned executables.
+CNB remains unavailable as an update source until release credentials work and the matching binaries and public signed feed are verified. Signed metadata binds the same SHA-256/length for both sources. A CLI login alone does not configure long-lived CI credentials. The public client contains no access token. Existing releases without this update UI need one manual installation of the new client. Windows may still apply its own trust prompts or restrictions to unsigned executables.
 
 ## Covers and network boundary
 

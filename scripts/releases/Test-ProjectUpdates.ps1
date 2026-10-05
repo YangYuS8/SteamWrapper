@@ -21,6 +21,23 @@ try {
     $mirror = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust $trust -Now $now -IncludeCnbMirror
     if ($mirror.release.artifact.mirrorUrl -cne 'https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe') { throw 'Mirror does not bind the same versioned installer.' }
     Write-Output 'PASS: the optional mirror names the same build and single signed hash/size.'
+    Assert-ProjectUpdateCurrentRelease -Payload $mirror -ExistingPayload $payload
+    foreach ($field in @('missing', 'tag', 'commit', 'sha256', 'bytes', 'minimumWindowsVersion')) {
+        $different = ConvertFrom-ProjectUpdateJson ($payload | ConvertTo-Json -Depth 12 -Compress)
+        switch ($field) {
+            'missing' { $different = $null }
+            'tag' { $different.release.tag = 'v0.2.5-preview.2' }
+            'commit' { $different.release.commit = 'c' * 40 }
+            'sha256' { $different.release.artifact.sha256 = 'c' * 64 }
+            'bytes' { $different.release.artifact.bytes++ }
+            'minimumWindowsVersion' { $different.release.minimumWindowsVersion = '10.0.26200.0' }
+        }
+        $rejected = $false
+        try { Assert-ProjectUpdateCurrentRelease -Payload $mirror -ExistingPayload $different }
+        catch { if ($_.Exception.Message -notlike '*currently authorized release*') { throw }; $rejected = $true }
+        if (-not $rejected) { throw "The mirror operation accepted a different current release: $field" }
+    }
+    Write-Output 'PASS: mirror maintenance can only add a mirror to the exact currently authorized release, never replace an old or newer feed.'
     $envelope = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
     $envelope.signature = [Convert]::ToBase64String([byte[]]::new(64))
     $envelope | ConvertTo-Json | Set-Content -LiteralPath $path
@@ -89,6 +106,10 @@ switch ($a[1]) {
         if ((Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json).writes -ne 0 -or $LASTEXITCODE -ne 0) { throw 'An unpublished channel was mutated or leaves the GitHub pwsh step failing.' }
         Write-Output 'PASS: scheduled refresh skips an unpublished channel without signing secrets or writes.'
         $env:STEAMWRAPPER_UPDATE_PRIVATE_KEY = [Convert]::ToBase64String($key.ExportPkcs8PrivateKey())
+        $rejected = $false
+        try { $null = & (Join-Path $PSScriptRoot 'Publish-UpdateMetadata.ps1') -PackageDirectory $package.Directory -TrustPath $trustPath -GhExecutable $mock -IncludeCnbMirror -RequireCurrentRelease }
+        catch { if ($_.Exception.Message -notlike '*currently authorized release*') { throw }; $rejected = $true }
+        if (-not $rejected -or (Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json).writes -ne 0) { throw 'Mirror maintenance created an unauthorized initial update feed.' }
         $null = & (Join-Path $PSScriptRoot 'Publish-UpdateMetadata.ps1') -PackageDirectory $package.Directory -TrustPath $trustPath -GhExecutable $mock
         $published = Read-ProjectUpdateEnvelope -Path $remoteManifest -TrustPath $trustPath
         if ($published.release.tag -cne $packageMetadata.tag -or $published.release.artifact.sha256 -cne $packageMetadata.installerAsset.sha256) { throw 'The published feed selected different installer bytes.' }
@@ -98,6 +119,15 @@ switch ($a[1]) {
         Write-Output 'PASS: a version publish creates the dedicated feed; scheduled refresh advances it without building or replacing version assets.'
         $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
         $writes = $state.writes
+        $different = ConvertFrom-ProjectUpdateJson ($refreshed | ConvertTo-Json -Depth 12 -Compress)
+        $different.release.commit = 'f' * 40
+        Write-ProjectUpdateEnvelope -Payload $different -Key $key -KeyId 'fixture' -Path $remoteManifest
+        $rejected = $false
+        try { $null = & (Join-Path $PSScriptRoot 'Publish-UpdateMetadata.ps1') -PackageDirectory $package.Directory -TrustPath $trustPath -GhExecutable $mock -IncludeCnbMirror -RequireCurrentRelease }
+        catch { if ($_.Exception.Message -notlike '*currently authorized release*') { throw }; $rejected = $true }
+        if (-not $rejected -or (Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json).writes -ne $writes) { throw 'Mirror maintenance replaced a different already-authorized release.' }
+        Write-Output 'PASS: the mirror publisher rejects missing or changed signed releases before any network writes.'
+        Write-ProjectUpdateEnvelope -Payload $refreshed -Key $key -KeyId 'fixture' -Path $remoteManifest
         $tampered = Get-Content -LiteralPath $remoteManifest -Raw | ConvertFrom-Json
         $tampered.signature = [Convert]::ToBase64String([byte[]]::new(64))
         $tampered | ConvertTo-Json | Set-Content -LiteralPath $remoteManifest

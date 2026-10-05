@@ -31,7 +31,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           STEAMWRAPPER_UPDATE_PRIVATE_KEY: ${{ secrets.STEAMWRAPPER_UPDATE_PRIVATE_KEY }}
-          CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN }}
+          CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN || secrets.CNB_GIT_TOKEN }}
           UPDATE_CHANNEL: ${{ inputs.channel }}
         run: |
           $scheduled = $env:GITHUB_EVENT_NAME -eq 'schedule'
