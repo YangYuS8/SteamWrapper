@@ -9,7 +9,7 @@ description: "WinUI Manager、C# 应用服务、独立 Rust Runner 与稳定契�
 
 **WinUI 3 是唯一的 Manager 实现。**`apps/manager-winui` 中的 Windows Manager 采用 C#/XAML 与 C# 应用服务，Steam 通过既有 TOML/CLI 契约启动独立 Rust Runner。两者之间没有 Rust FFI、管理 helper 或后台服务。详见 [Windows 设计](/SteamWrapper/zh-cn/project/design/windows-v2/)。
 
-玩家配置一次，之后关闭 Manager，从 Steam 点击开始。[v0.2.7 正式版](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7)提供 Windows Setup 安装包和便携 ZIP。Linux 保留 Rust Runner 兼容性与进程 CI；当前没有 Linux GUI，新增 SteamOS/Proton 工作仍延期。
+玩家配置一次，之后关闭 Manager，从 Steam 点击开始。最新的 [v0.2.8 正式版](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8)提供 Setup 安装包和便携 ZIP。Linux 保留 Rust Runner 兼容性与进程 CI；当前没有 Linux GUI，新增 SteamOS/Proton 工作仍延期。
 
 ## 运行流程
 
@@ -71,9 +71,9 @@ Steam 游戏名由有界、只读解析器读取本地 `appcache/appinfo.vdf`，
 
 `OfficialUpdateService` 使用内嵌公钥验证项目签名的发行元数据，检查有效期和防回退状态，再将受大小限制、通过摘要验证的安装包下载到 SteamWrapper 更新缓存。WinUI 提供手动检查、明确启用的启动检查、进度／取消和安装确认；便携版提供发布页下载入口。现有 NativeAOT 辅助程序等待 Manager 正常退出，复核下载文件后启动同一个 Inno 安装器，成功后重新打开 Manager，不终止游戏，也不替换稳定 Runner。
 
-公开的 `v0.2.7` 在 GitHub 和 CNB 上均有七个经过匿名下载核验的附件。两个来源的稳定／预览更新源均通过真实项目公钥签名、有效期及准确安装包绑定检查，每个通道的两站内容逐字节一致。GitHub 为主源，已验证的 CNB 可作为备用源；自动检查默认关闭。项目自有 PE 文件和 Setup 仍未使用 Authenticode 签名；Windows 代码签名为可选能力。这些发布检查没有执行公开 `v0.2.7` 安装器；此前真实公开网络安装流程验证的是 CNB `0.2.5` → `0.2.6`。各载荷和结果的准确范围见[测试](/SteamWrapper/zh-cn/development/testing/)。
+公开的 `v0.2.8` 在 GitHub 和 CNB 上均有三个经过匿名下载核验的附件。两个来源的稳定／预览更新源均通过真实项目公钥签名、有效期及准确安装包绑定检查，每个通道的两站内容逐字节一致。CNB 发行元数据通过既有已登录 CLI 读取；附件及更新源请求没有使用凭据。GitHub 为主源，已验证的 CNB 可作为备用源；自动检查默认关闭。项目自有 PE 文件和 Setup 仍未使用 Authenticode 签名；Windows 代码签名为可选能力。这些发布检查没有执行公开 `v0.2.8` 安装器；此前真实公开网络安装流程验证的是 CNB `0.2.5` → `0.2.6`。各载荷和结果的准确范围见[测试](/SteamWrapper/zh-cn/development/testing/)。
 
-准备中的 `0.2.8` 打包采用内部第 3 版清单：仍校验完整七个包文件，版本发行仅公开 Setup、便携 ZIP 和 `SHA256SUMS`。历史七附件发行保持不可变。独立续期的项目签名更新源仍是必需部分，客户端载荷保留第 2 版格式、既有信任公钥及精确安装器绑定。Release 标题只含标签，GitHub 正文为英语，CNB 正文为简体中文。该源码变化不表示公开 `v0.2.8` 已交付。
+已发布的 `0.2.8` 打包采用内部第 3 版清单：仍校验完整七个包文件，版本发行仅公开 Setup、便携 ZIP 和 `SHA256SUMS`。历史七附件发行保持不可变。独立续期的项目签名更新源仍是必需部分，客户端载荷保留第 2 版格式、既有信任公钥及精确安装器绑定。Release 标题只含标签，已核验 GitHub 正文为英语，CNB 正文为简体中文。
 
 ### `crates/core`
 
@@ -128,7 +128,7 @@ WinUI 使用与 `profiles.toml` 同级的 `ui-settings.json`。没有 `language`
 
 ## 分发与稳定安装
 
-Windows 提供完整自包含布局、每用户 Inno 安装器及便携 ZIP。版本标签公开发布，手动工作流生成开发预览。日常 CI 只测试和编译，不打包应用。相关路径过滤跳过无关检查，依赖缓存减少重复准备，一次捕获的 Runner 套件提供必需进程证据；版本标签仍须完整门禁通过。准备中改动的远程耗时尚未测定。正式版支持范围为 Windows 11 24H2 x64，使用与 Steam 相同的 Windows 账户及普通权限。请从普通资源管理器或已安装快捷方式打开 Manager。通用自动应用 Steam 启动项尚未实现；明确清除选中游戏命令属于上文的限定操作。当前下载见[安装指南](/SteamWrapper/zh-cn/guides/installation/)，准确触发方式见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
+Windows 提供完整自包含布局、每用户 Inno 安装器及便携 ZIP。版本标签公开发布，手动工作流生成开发预览。日常 CI 只测试和编译，不打包应用。相关路径过滤跳过无关检查，依赖缓存减少重复准备，一次捕获的 Runner 套件提供必需进程证据；版本标签仍须完整门禁通过。CI 冷／热缓存观察见[测试](/SteamWrapper/zh-cn/development/testing/#public-028-and-ci-observations-2026-10-07)，不作为速度保证。正式版支持范围为 Windows 11 24H2 x64，使用与 Steam 相同的 Windows 账户及普通权限。请从普通资源管理器或已安装快捷方式打开 Manager。通用自动应用 Steam 启动项尚未实现；明确清除选中游戏命令属于上文的限定操作。当前下载见[安装指南](/SteamWrapper/zh-cn/guides/installation/)，准确触发方式见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\

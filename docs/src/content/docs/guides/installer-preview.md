@@ -71,7 +71,7 @@ Windows Authenticode signing is optional and is not present in the current relea
 
 Manager's update feature uses a separate **project signature** to verify update information, then checks the exact installer size and hash before offering installation. It does not require players to install a certificate or create a signing key.
 
-Use **Check for updates** in Manager, download an offered version, then confirm installation. Automatic checks are off by default. Installed copies update at their registered location; your profiles and stable Runner remain separate. A version without the update interface needs one manual Setup installation first. The published stable and preview update channels both offer v0.2.7.
+Use **Check for updates** in Manager, download an offered version, then confirm installation. Automatic checks are off by default. Installed copies update at their registered location; your profiles and stable Runner remain separate. A version without the update interface needs one manual Setup installation first. The published stable and preview update channels both offer v0.2.8.
 
 For a **portable ZIP**, download a newer complete ZIP and extract it into a new folder. Close the old Manager, then open the new copy from File Explorer. The update feature does not install over an arbitrary portable folder. Your existing profiles and stable Runner stay in the same Windows data folder, so moving Manager does not require changing Steam Launch Options. Removing the old portable application folder does not remove that separate data.
 
