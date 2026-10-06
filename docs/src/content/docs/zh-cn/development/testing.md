@@ -309,6 +309,8 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 
 旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；手动发布工作流预览运行真实隔离安装器进程，本地原生 UI 自动化现有首个回归切片。完整原生验收、干净客户端交付和启用更新后的验收仍属于路线图。
 
+聚焦的原生 `runner-update` 回归首先因启动时隐藏了可识别旧 Runner 的升级提示而失败；管理器显示该信息状态并说明保存一个游戏配置即可更新 Runner 后，通过了实测。英中切换保留了夹具 Runner 和全部原有偏好值，测试没有执行用于模拟旧 Runner 的非可执行哨兵文件。证据：`target/winui/native-ui/中文 空格 ' f1ab49725af841a48eefe4a703623271/evidence.json`。聚焦 Runner／本地化服务门槛通过 11 项。这增加的是启动提示，不是自动替换 Runner 或干净客户端证据。
+
 ## 限制
 
 - C# 服务/契约和发布检查不能证明原生 UI、可访问性或干净 Windows 安装；原生 UI 工具仅证明在交互桌面实际执行的夹具用例，不等于整个 W1 门槛通过。

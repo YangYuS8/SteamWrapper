@@ -95,7 +95,7 @@ public sealed partial class MainWindow : Window
             EditorPanel.Visibility = Visibility.Collapsed;
             StatusBar.IsOpen = false;
             var status = await runner.InspectAsync();
-            if (!status.IsReady) ShowStatus(status.Text, InfoBarSeverity.Informational);
+            if (!status.IsReady || status.CanInstall) ShowStatus(status.Text, InfoBarSeverity.Informational);
         }
         catch (Exception ex)
         {

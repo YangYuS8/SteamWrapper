@@ -325,6 +325,8 @@ The former Dioxus Native E2E, AppImage job and NSIS release chain are removed. W
 
 <a id="限制"></a>
 
+The focused native `runner-update` regression first failed because startup hid a recognized older Runner's update guidance. It then passed after the Manager showed that informational status and explained that saving a game profile updates the Runner. English/Chinese switching preserved the fixture Runner and all original preference values; the test never executed its non-executable older-Runner sentinel. Evidence: `target/winui/native-ui/中文 空格 ' f1ab49725af841a48eefe4a703623271/evidence.json`. The focused Runner/localization service gate passed 11 cases. This adds startup guidance, not automatic Runner replacement or clean-client evidence.
+
 ## Limitations
 
 - C# service/contract and publish checks do not establish native UI behavior, accessibility or a clean Windows installation. The native UI harness proves only its executed fixture cases on an interactive desktop, not the complete W1 gate.

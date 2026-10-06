@@ -109,7 +109,7 @@
   <data name="RunnerContract" xml:space="preserve"><value>The installed Runner uses a different profile contract. Its file has been preserved. Use a matching Manager version.</value></data>
   <data name="RunnerNewer" xml:space="preserve"><value>The newer, compatible Runner has been kept.</value></data>
   <data name="RunnerSameVersion" xml:space="preserve"><value>Runner has the same version but different contents. Its file has been preserved because update order is unknown. Use a matching complete package.</value></data>
-  <data name="RunnerUpdate" xml:space="preserve"><value>A Runner update is available. The installed version is still usable.</value></data>
+  <data name="RunnerUpdate" xml:space="preserve"><value>A Runner update is available. Save a game profile to update it.</value></data>
   <data name="RunnerInspect" xml:space="preserve"><value>Could not inspect Runner: {0} Profiles remain editable.</value></data>
   <data name="RunnerCopyHash" xml:space="preserve"><value>The copied Runner failed verification. The original file was not replaced.</value></data>
   <data name="RunnerChanged" xml:space="preserve"><value>Runner was changed by another app. Check it again.</value></data>
