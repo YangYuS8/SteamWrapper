@@ -16,6 +16,7 @@ SteamWrapper 分别验证跨 Windows/Linux 的 Rust core 与独立 Runner，以�
 | 公开预览交付 | [发布运行 37462977733](https://github.com/YangYuS8/SteamWrapper/actions/runs/37462977733)通过 GitHub／CNB 发布及签名预览索引发布。另行匿名下载两站各七个附件，对照 API 摘要、长度、标签提交和第 2 版清单核验；该检查没有执行安装器。 |
 | 当前 C# 与 Runner 契约 | 178 项 Application、37 项 Windows、160 项 Deployment 通过，另有一项有条件的跨盘跳过。跨语言 Runner 契约通过，输出为 `target/winui-contracts/ef24ca53d4b24fd1a7f2051fea869138/results`。这是源码／服务／进程结果。 |
 | 旧 Runner 启动提示 | 聚焦原生 `runner-update` 回归先按预期失败，修复后通过；聚焦 Runner／本地化服务另通过 11 项。新增的是可见提示，保留旧 Runner，不自动替换。 |
+| 指定进程名观察修正（2026-10-07） | 实际 Windows CI 的发现失败与确定性隔离 CLI 复现揭示：目标比启动器先结束时会被漏过。在启动器运行期间观察后，两项新原生回归通过，Windows Runner 十项测试全部通过。保留基线排除、启动器状态及原有发现／空档／最长等待规则；最终 CI 还须验证 Linux。 |
 | 准备中的稳定版界面文案 | 0.2.7 发布目录的聚焦原生更新用例在两种语言中通过，夹具管理器正常退出。界面文案不代表稳定版本已公开或公网更新安装通过。 |
 | 真实隔离 0.2.6 → 0.2.7 安装 | 13 个符合预期的 Inno／maintenance 结果全部通过，包括实际回滚／再升级与六个数据夹具保留。使用隔离安装身份，`cleanVm=false`。 |
 | 原生清理与系统集成恢复 | 冻结的 0.2.6 安装器逻辑通过九项真实夹具清理选择。快捷方式与注册信息恢复分别记录通过部分，原始合并运行没有整体通过。这是宿主侧隔离夹具，不代表生产 0.2.7 的全部语言／失败组合。 |
@@ -49,6 +50,8 @@ Windows 11 x64 核心交付已有原生配置、已记录输入法／缩放、�
 [Manager 实测比较](/SteamWrapper/zh-cn/project/decisions/manager-comparison/)是选型的归档证据；[测量脚本](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/scripts/windows/Measure-ManagerComparison.ps1)与 Dioxus 源码固定在提交 `ca6a09e`，不再是当前开发前置条件。
 
 九项原生清理选择记录于 `target/winui/installer-options-ui-1609bfeae1ce48e8a04407f34e61a766` 和 `target/winui/installer-options-ui-cc094df9824a486f8e997fc31ebfcd05`。`target/winui/installer-options-ui-3ccb704b3d354d9fa98c09367ea842ee/shell-recovery-evidence.json` 的快捷方式部分通过，随后注册信息部分失败，不能称为整次通过。独立的 `target/winui/installer-options-ui-92ede02f27214ef7b5f784e65f297155/shell-recovery-evidence.json` 记录修正工具精确注册键权限还原后的注册信息单独续跑恢复。这些夹具保留未选数据、未知文件与还原备份，没有使用真实 Steam 或游戏文件。
+
+Windows [Rust 运行 37494490736](https://github.com/YangYuS8/SteamWrapper/actions/runs/37494490736)在 PR 提交 `0ee7be09b20670511b967c246bf552d3a15118bb` 的指定进程名用例失败，WinUI 和文档检查分别通过。确定性 CLI 失败记录为 `target/winui/process-name-race-e51e8fa3cfcd4cb5b67df963a5fa47b7/result.json`：唯一命名的无害子进程实际运行 400 毫秒并结束，启动器再等待 1,200 毫秒后退出；旧 Runner 却在原有 30 秒发现超时后返回 1。新增聚焦源码回归也先复现失败。Runner 现会在启动器退出前观察名称；真实进程回归覆盖子进程先结束及启动器本身就是匹配进程，并检查完成标记和实际启动器状态 7。原 Windows 指定名称用例改用唯一命名的测试 EXE 副本与完成标记，避免误匹配并行测试。七项名称过滤测试与十项 Windows Runner 套件本机通过，其中包含带保护的夹具入口，并非七个独立游戏场景；没有使用真实游戏或玩家数据。上方私有 0.2.7 安装器／便携证据仍绑定原始 Runner 字节，最终标签工作流须编译并验证修正后的 Runner。
 
 ## 按改动选择验证
 

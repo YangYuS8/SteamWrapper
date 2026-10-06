@@ -116,7 +116,7 @@ WinUI 使用与 `profiles.toml` 同级的 `ui-settings.json`。没有 `language`
 | --- | --- |
 | `root` | 等待直接启动的目标 |
 | `job` | 新 Windows 配置默认值；等待未脱离的 Job 成员 |
-| `process_name` | 启动器退出后，等待本次启动观察到的指定名称 |
+| `process_name` | 在启动器运行时观察新匹配进程；启动器退出后，继续等待这些匹配进程结束 |
 | `process_group` | 保留的 Linux 模式，等待同一 POSIX 进程组的派生进程 |
 | `none` | 启动后立即退出 |
 

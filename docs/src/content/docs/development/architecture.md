@@ -130,7 +130,7 @@ The sidebar selector refreshes application-owned text after successful persisten
 | --- | --- |
 | `root` | Wait for the directly launched target |
 | `job` | New Windows profile default; wait for Job members that do not break away |
-| `process_name` | After launcher exit, wait for the specified name observed during this launch |
+| `process_name` | Observe new matching processes while the launcher runs; after launcher exit, wait until those matching processes finish |
 | `process_group` | Retained Linux mode for descendants in the same POSIX process group |
 | `none` | Exit immediately after launch |
 

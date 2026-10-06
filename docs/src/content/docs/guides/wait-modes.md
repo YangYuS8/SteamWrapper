@@ -48,15 +48,15 @@ Enter the **actual process name**, for example `ExampleGame.exe`, in **Process n
 The current sequence is:
 
 1. Record matching processes that already exist.
-2. Start the configured target and wait for that launcher to exit.
-3. Look for a new matching process for up to **30 seconds**.
-4. Keep waiting while new matching processes remain, allowing a **500 ms** gap for replacement processes.
+2. Start the configured target and observe new matching processes while the launcher is running.
+3. If none has been observed when the launcher exits, continue looking for up to **30 seconds**.
+4. After the launcher exits, keep waiting while new matching processes remain, allowing a **500 ms** gap for replacement processes.
 
-Checks run about every **100 ms**. Waiting after discovery has a **24-hour** limit. Reaching a limit reports an error; it does not establish that the game session finished normally.
+Checks run about every **100 ms**. Once the launcher has exited and a match has been observed, waiting has a **24-hour** limit. Reaching a limit reports an error; it does not establish that the game session finished normally.
 
 Processes matching before launch are excluded using process identity, but an unrelated matching process started afterward can still be included. This mode cannot prove ownership by your game. A process that appears and exits before observation may also be missed.
 
-Because discovery starts after the direct launcher exits, choosing the actual game EXE as both the target and the process to wait for is usually not the intended setup: it may already be gone by discovery time. Prefer `job` or `root` for an ordinary direct game launch.
+An observed game process may finish before its launcher closes; Runner still waits for the launcher and returns its status. For an ordinary direct game launch, `job` or `root` remains the usual choice.
 
 The returned exit status is the launcher's status, not an exit-code report for all matched processes.
 
