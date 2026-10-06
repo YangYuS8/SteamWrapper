@@ -78,9 +78,14 @@ try {
     Assert-InstallerBoundary ($null -ne $image) 'Get-DiskImage did not return the newly created guest VHD.'
     $attached=[bool]$image.Attached
     Assert-InstallerBoundary ($createExitCode -eq 0 -and (Test-Path -LiteralPath ($letter + ':\'))) 'The bounded guest VHD could not be created; no physical disk was selected.'
-    $partition=Get-Partition -DriveLetter $letter
-    $disk=$image | Get-Disk
-    Assert-InstallerBoundary ($image.Attached -and $disk.Number -eq $partition.DiskNumber -and $disk.Size -le 512MB -and $disk.Size -ge 500MB) 'The assigned drive is not the newly created bounded VHD.'
+    # A newly attached VHD may not yet be present in Storage's cached CIM objects.
+    # Refresh only this disposable guest, then retain the actual image-to-disk binding.
+    Update-HostStorageCache -ErrorAction Stop | Out-Null
+    $report.storageEnumerationRefresh=$true
+    $binding=Wait-InstallerBoundaryVirtualDisk $vhd $letter {param($path) Get-DiskImage -ImagePath $path -ErrorAction Stop} {
+        param($inputImage) $inputImage | Get-Disk -ErrorAction Stop
+    } {param($driveLetter) Get-Partition -DriveLetter $driveLetter -ErrorAction Stop}
+    $report.storageBinding=[ordered]@{attempts=$binding.attempts;diskNumber=$binding.disk.Number;partitionDiskNumber=$binding.partition.DiskNumber;driveLetter=[string]$binding.partition.DriveLetter;capacityBytes=$binding.disk.Size}
     $attached=$true; $report.newVirtualDiskVerified=$true
     $volumeRoot=$letter + ':\SteamWrapperInstallerBoundary-' + $run
     $program=Join-Path $volumeRoot 'program'; $local=Join-Path $volumeRoot 'data'; $data=Join-Path $local 'SteamWrapper'

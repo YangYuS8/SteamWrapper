@@ -98,6 +98,30 @@ foreach ($invalid in @('C:\failure.vhd','C:\AcceptanceInput\failure.vhd', ($vhd 
 }
 foreach ($letter in @('C','D','R:','"R','r')) { Assert-BoundaryTestReject { New-InstallerBoundaryDiskPartCommands $vhd $letter 512 $run } 'A unsafe volume assignment was accepted.' }
 foreach ($size in @(0,128,513,1024)) { Assert-BoundaryTestReject { New-InstallerBoundaryDiskPartCommands $vhd 'R' $size $run } 'An unbounded virtual volume size was accepted.' }
+$expectedImage=[pscustomobject]@{Attached=$true}
+$expectedDisk=[pscustomobject]@{Number=1;Size=512MB}
+$expectedPartition=[pscustomobject]@{DiskNumber=1;DriveLetter='R'}
+$storageObservation=[pscustomobject]@{reads=0;diskReads=0}
+$binding=Wait-InstallerBoundaryVirtualDisk $vhd 'R' {
+    param($imagePath)
+    Assert-InstallerBoundary ($imagePath -ceq $vhd) 'The probe queried another image.'
+    $storageObservation.reads++
+    if($storageObservation.reads -lt 3){throw 'The newly attached disk is not yet visible to Storage CIM.'}
+    return $expectedImage
+} {
+    param($inputImage)
+    Assert-InstallerBoundary ([object]::ReferenceEquals($inputImage,$expectedImage)) 'The disk query lost the actual image binding.'
+    $storageObservation.diskReads++;return $expectedDisk
+} {param($driveLetter) Assert-InstallerBoundary ($driveLetter -ceq 'R') 'The probe queried another drive.';return $expectedPartition} 1000 1
+Assert-BoundaryTest ($storageObservation.reads -eq 3 -and $storageObservation.diskReads -eq 1 -and $binding.attempts -eq 3 -and
+    [object]::ReferenceEquals($binding.disk,$expectedDisk)) 'Transient Storage enumeration failures did not retain the actual image-to-disk binding.'
+Assert-BoundaryTestReject {Wait-InstallerBoundaryVirtualDisk $vhd 'R' {$null} {$expectedDisk} {$expectedPartition} 20 1} 'Missing Storage objects were accepted or kept waiting without a bound.'
+$foreignPartition=[pscustomobject]@{DiskNumber=2;DriveLetter='R'}
+Assert-BoundaryTestReject {Wait-InstallerBoundaryVirtualDisk $vhd 'R' {$expectedImage} {$expectedDisk} {$foreignPartition} 1000 1} 'A partition on another disk was accepted.'
+$oversizedDisk=[pscustomobject]@{Number=1;Size=1GB}
+Assert-BoundaryTestReject {Wait-InstallerBoundaryVirtualDisk $vhd 'R' {$expectedImage} {$oversizedDisk} {$expectedPartition} 1000 1} 'An oversized disk was accepted.'
+Assert-BoundaryTestReject {Wait-InstallerBoundaryVirtualDisk $vhd 'R' {([pscustomobject]@{Attached=$false})} {$expectedDisk} {$expectedPartition} 1000 1} 'A detached image was accepted.'
+Assert-BoundaryTestReject {Wait-InstallerBoundaryVirtualDisk $vhd 'R' {$expectedImage} {$expectedDisk} {$expectedPartition} 0 1} 'The Storage wait accepted an invalid timeout.'
 $facts = [pscustomobject]@{hostDigestVerified=$true;newVirtualDiskVerified=$true;journalWritten=$true;stagingCopyObserved=$true;stagingIncomplete=$true;hostExitCode=11;freeBytesAtFailure=0;currentInstallationUnchanged=$true;repairSucceeded=$true;dataUnchanged=$true}
 Assert-InstallerBoundaryDiskFullResult $facts
 $script:cases++

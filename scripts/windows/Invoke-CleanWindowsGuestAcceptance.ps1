@@ -324,6 +324,9 @@ function Get-AcceptanceProcessSecurity($Process) {
     $token=[SteamWrapperStandardAcceptance.Native]::GetToken($Process.Id)
     Assert-StandardAcceptanceProcessToken $token $inputManifest.expectedStandardUserSid
     Assert-Acceptance ($token.sessionId -eq $standardContext.sessionId) 'A product process escaped the verified standard-account desktop session.'
+    if($null -ne $inputManifest.PSObject.Properties['standardExpectedLogonSid']) {
+        Assert-Acceptance ($token.logonSid -ceq $inputManifest.standardExpectedLogonSid) 'A product process escaped the exact verified standard-account logon.'
+    }
     return [ordered]@{processId=$Process.Id;observed=$true;token=$token}
 }
 function Read-AcceptanceAsset($Asset) {
@@ -419,18 +422,27 @@ function Capture-AcceptanceWindow($Window, [string]$Name) {
 function Start-AcceptanceManager([string]$Program, [string]$Tag, [string]$Name) {
     $expected = Join-Path $Program ('versions\' + $Tag + '\SteamWrapper.Manager.exe')
     $timer = [Diagnostics.Stopwatch]::StartNew()
-    $launcherStart = New-Object Diagnostics.ProcessStartInfo
-    $launcherStart.FileName = Join-Path $Program 'SteamWrapper.exe'; $launcherStart.WorkingDirectory = $Program; $launcherStart.UseShellExecute = $true
-    $launcher = [Diagnostics.Process]::Start($launcherStart)
-    if ($null -ne $launcher) { $launcher.Dispose() }
-    $manager = Wait-Acceptance {
+    $shellSmoke=$standardAccount -and $Name -ceq 'baseline-manager-first-launch' -and
+        $null -ne $inputManifest.PSObject.Properties['standardExplorerShortcut'] -and $inputManifest.standardExplorerShortcut -eq $true
+    if($shellSmoke) {
+        $shellLaunch=Start-StandardAcceptanceExplorerManager $standardContext $inputManifest $Program $Tag
+        $manager=$shellLaunch.Process
+        $evidence['standardExplorerShortcut']=$shellLaunch.Observation
+        Write-AcceptanceEvidence
+    } else {
+        $launcherStart = New-Object Diagnostics.ProcessStartInfo
+        $launcherStart.FileName = Join-Path $Program 'SteamWrapper.exe'; $launcherStart.WorkingDirectory = $Program; $launcherStart.UseShellExecute = $true
+        $launcher = [Diagnostics.Process]::Start($launcherStart)
+        if ($null -ne $launcher) { $launcher.Dispose() }
+        $manager = Wait-Acceptance {
         foreach ($candidate in [Diagnostics.Process]::GetProcessesByName('SteamWrapper.Manager')) {
             try {
                 if ($candidate.MainModule.FileName -ieq $expected -and $candidate.MainWindowHandle -ne [IntPtr]::Zero) { Retain-AcceptanceProcessHandle $candidate; return $candidate }
             } catch { }
             $candidate.Dispose()
         }
-    } ('normal installed Manager window: ' + $Name) 60
+        } ('normal installed Manager window: ' + $Name) 60
+    }
     $window = [System.Windows.Automation.AutomationElement]::FromHandle($manager.MainWindowHandle)
     Assert-Acceptance ($window.Current.ProcessId -eq $manager.Id) 'The UI window is not owned by the installed Manager.'
     $null = Wait-Acceptance { $button = Find-AcceptanceElement $window 'AddGame'; $button -and $button.Current.IsEnabled } 'Manager initialization'
@@ -674,6 +686,7 @@ public static class SteamWrapperCleanFixture {
 } catch {
     $evidence.result = 'failed'
     $evidence.error = $_.Exception.ToString()
+    $evidence['errorLocation']=[ordered]@{script=$_.InvocationInfo.ScriptName;line=$_.InvocationInfo.ScriptLineNumber;scriptStack=$_.ScriptStackTrace}
     try {
         foreach ($entry in $ownedManagers) {
             $process = Get-Process -Id $entry.processId -ErrorAction SilentlyContinue

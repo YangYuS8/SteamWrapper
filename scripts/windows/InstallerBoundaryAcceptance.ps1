@@ -77,6 +77,33 @@ function New-InstallerBoundaryDiskPartCommands([string]$VhdPath, [string]$DriveL
         ('select vdisk file="' + $VhdPath + '"'),'attach vdisk','create partition primary',
         ('format fs=ntfs quick label="SwBd-' + $RunId.Substring(0,12) + '"'),('assign letter=' + $DriveLetter)) -join "`r`n"
 }
+function Wait-InstallerBoundaryVirtualDisk([string]$VhdPath, [string]$DriveLetter,
+    [scriptblock]$ReadImage, [scriptblock]$ReadDisk, [scriptblock]$ReadPartition,
+    [int]$TimeoutMilliseconds=30000, [int]$PollMilliseconds=250) {
+    Assert-InstallerBoundary ($TimeoutMilliseconds -gt 0 -and $TimeoutMilliseconds -le 30000 -and
+        $PollMilliseconds -gt 0 -and $PollMilliseconds -le 1000) 'Storage enumeration must have a bounded wait.'
+    $timer=[Diagnostics.Stopwatch]::StartNew();$attempts=0;$lastFailure='No complete Storage image/disk/partition result.'
+    do {
+        $attempts++;$observedImage=$null;$observedDisk=$null;$observedPartition=$null
+        try {
+            $observedImage=& $ReadImage $VhdPath
+            if($null -ne $observedImage){$observedDisk=& $ReadDisk $observedImage}
+            if($null -ne $observedDisk){$observedPartition=& $ReadPartition $DriveLetter}
+        } catch {$lastFailure=$_.Exception.Message}
+        if($null -ne $observedImage -and $null -ne $observedDisk -and $null -ne $observedPartition) {
+            Assert-InstallerBoundary (@($observedImage).Count -eq 1 -and @($observedDisk).Count -eq 1 -and @($observedPartition).Count -eq 1) 'Expected one actual VHD, disk and partition.'
+            foreach($pair in @(@($observedImage,'Attached'),@($observedDisk,'Number'),@($observedDisk,'Size'),@($observedPartition,'DiskNumber'),@($observedPartition,'DriveLetter'))) {
+                Assert-InstallerBoundary ($null -ne $pair[0].PSObject.Properties[$pair[1]]) 'Storage binding returned an incomplete object.'
+            }
+            Assert-InstallerBoundary ($observedImage.Attached -and $observedDisk.Number -eq $observedPartition.DiskNumber -and
+                $observedPartition.DriveLetter -ceq $DriveLetter -and $observedDisk.Size -le 512MB -and $observedDisk.Size -ge 500MB) 'The assigned drive is not the newly created bounded VHD.'
+            return [pscustomobject]@{image=$observedImage;disk=$observedDisk;partition=$observedPartition;attempts=$attempts}
+        }
+        if($timer.ElapsedMilliseconds -ge $TimeoutMilliseconds){break}
+        Start-Sleep -Milliseconds $PollMilliseconds
+    } while($timer.ElapsedMilliseconds -lt $TimeoutMilliseconds)
+    throw ('The new VHD did not appear in the bounded Storage enumeration wait: ' + $lastFailure)
+}
 function Assert-InstallerBoundaryDiskFullResult($Facts) {
     foreach ($name in @('hostDigestVerified','newVirtualDiskVerified','journalWritten','stagingCopyObserved','stagingIncomplete','currentInstallationUnchanged','repairSucceeded','dataUnchanged')) {
         Assert-InstallerBoundary ($Facts.$name -is [bool] -and $Facts.$name) ('Disk-full evidence did not establish ' + $name + '.')

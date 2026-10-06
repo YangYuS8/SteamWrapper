@@ -5,7 +5,7 @@ description: Get the complete WinUI preview, understand its data locations, and 
 
 For **Windows 11 24H2 x64**, use the **Setup installer**. It installs the WinUI Manager and its required .NET and Windows App SDK files; you do not need development tools or a separate runtime download.
 
-**[Download Setup — v0.2.5-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe)** · [CNB mirror](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe) · [Release notes and other downloads](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1)
+**[Download Setup — v0.2.6-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.6-preview.1/SteamWrapper-v0.2.6-preview.1-win-x64-setup.exe)** · [CNB mirror](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.6-preview.1/SteamWrapper-v0.2.6-preview.1-win-x64-setup.exe) · [Release notes and other downloads](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1)
 
 Both sources provide the same verified installer. Manager's download-source options also support CNB; automatic mode tries GitHub first and can use the verified CNB mirror after a network failure.
 
@@ -13,7 +13,7 @@ This is a technical preview without Windows Authenticode signing. Clean-client a
 
 ## Get a versioned preview
 
-1. Open the project's official [v0.2.5-preview.1 release](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1) and read its known limits. Other versions are listed in [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases).
+1. Open the project's official [v0.2.6-preview.1 release](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1) and read its known limits. Other versions are listed in [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases).
 2. Download **`SteamWrapper-<tag>-win-x64-setup.exe`** from that release. Match the version in the filename to the release you selected, then open it in File Explorer.
 3. Choose English or 简体中文, an installation directory and shortcuts. The default location is suitable for most players; a different location must be an empty directory on a fixed local drive. The Start menu shortcut is on by default and the desktop shortcut is off.
 4. Finish installation and open Manager. Its language follows the supported system language, falling back to English. Continue with [getting started](/SteamWrapper/guides/getting-started/) to configure your game once, then launch it normally from Steam.

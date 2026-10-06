@@ -5,7 +5,7 @@ description: 获取完整 WinUI 预览版，了解数据位置，并在不破坏
 
 **Windows 11 24H2 x64** 用户建议使用 **Setup 安装包**。它会安装 WinUI Manager 及所需的 .NET、Windows App SDK 文件，无需开发工具或单独下载运行时。
 
-**[下载安装包 — v0.2.5-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe)** · [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe) · [发布说明与其他下载](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1)
+**[下载安装包 — v0.2.6-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.6-preview.1/SteamWrapper-v0.2.6-preview.1-win-x64-setup.exe)** · [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.6-preview.1/SteamWrapper-v0.2.6-preview.1-win-x64-setup.exe) · [发布说明与其他下载](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1)
 
 两个来源提供相同且已核验的安装包。Manager 的下载来源选项也支持 CNB；自动模式先尝试 GitHub，网络失败时可使用已核验的 CNB 镜像。
 
@@ -13,7 +13,7 @@ description: 获取完整 WinUI 预览版，了解数据位置，并在不破坏
 
 ## 获取带版本的预览包
 
-1. 打开项目官方 [v0.2.5-preview.1 发布页](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1)，阅读已知限制；其他版本见 [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases)。
+1. 打开项目官方 [v0.2.6-preview.1 发布页](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1)，阅读已知限制；其他版本见 [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases)。
 2. 下载该发布的 **`SteamWrapper-<tag>-win-x64-setup.exe`**，确认文件名版本与所选发布一致，然后在文件资源管理器中打开。
 3. 选择 English 或简体中文、安装目录和快捷方式。大多数玩家保留默认目录即可；更换目录时需选择固定本地磁盘上的空目录。开始菜单快捷方式默认开启，桌面快捷方式默认关闭。
 4. 完成安装并打开 Manager。界面跟随已支持的系统语言，否则使用英语。按照[开始使用](/SteamWrapper/zh-cn/guides/getting-started/)配置一次游戏，之后照常从 Steam 启动。
