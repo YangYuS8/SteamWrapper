@@ -37,5 +37,7 @@ jobs:
           $scheduled = $env:GITHUB_EVENT_NAME -eq 'schedule'
           $channels = if ($scheduled) { @('preview', 'stable') } else { @($env:UPDATE_CHANNEL) }
           foreach ($channel in $channels) {
+            # Both historical and compact releases retain the same signed client
+            # payload; refresh renews those authorized bytes without a rebuild.
             ./scripts/releases/Publish-UpdateMetadata.ps1 -Refresh -Channel $channel -SkipMissingFeed:$scheduled
           }

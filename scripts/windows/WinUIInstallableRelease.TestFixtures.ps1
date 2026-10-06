@@ -9,6 +9,7 @@ function New-WinUIInstallableReleaseTestFixture {
         [ValidateSet('THIRD_PARTY_NOTICES.md', 'LICENSES/index.json')][string]$EmptyThirdPartyFile
     )
     $fixture = New-WinUIReleaseTestFixture -Root $Root -Tag $Tag
+    $version = (Get-WinUIReleaseTag $Tag).Version
     foreach ($relative in @('SteamWrapper.Deployment.dll', 'Deployment/SteamWrapper.exe', 'THIRD_PARTY_NOTICES.md', 'LICENSES/index.json')) {
         if ($relative -ceq $OmitThirdPartyFile) { continue }
         $path = Join-Path $fixture.PublishDirectory $relative
@@ -25,14 +26,14 @@ function New-WinUIInstallableReleaseTestFixture {
     })
     $license = Join-Path $fixture.RepositoryRoot 'LICENSE'
     $files += [ordered]@{ path = 'LICENSE'; bytes = (Get-Item -LiteralPath $license).Length; sha256 = (Get-FileHash -LiteralPath $license).Hash.ToLowerInvariant() }
-    $manifest = [ordered]@{ schemaVersion = 1; appId = 'SteamWrapper'; tag = $fixture.Tag; version = '0.2.0'; deploymentProtocol = 1; profileContract = 2; runnerContract = 2; managerExecutable = 'SteamWrapper.Manager.exe'; files = $files }
+    $manifest = [ordered]@{ schemaVersion = 1; appId = 'SteamWrapper'; tag = $fixture.Tag; version = $version; deploymentProtocol = 1; profileContract = 2; runnerContract = 2; managerExecutable = 'SteamWrapper.Manager.exe'; files = $files }
     $manifestPath = Join-Path $installer 'deployment-manifest.json'
     [IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 6), [Text.UTF8Encoding]::new($false))
     $name = "SteamWrapper-$($fixture.Tag)-win-x64-setup.exe"
     $setup = Join-Path $installer $name
     [IO.File]::WriteAllText($setup, 'Non-executable Setup byte-contract fixture; not a PE or acceptance result.')
     $setupRecord = [ordered]@{ fileName = $name; bytes = (Get-Item -LiteralPath $setup).Length; sha256 = (Get-FileHash -LiteralPath $setup).Hash.ToLowerInvariant(); signed = $false; canonicalIconFrames = 1 }
-    $build = [ordered]@{ schemaVersion = 1; tag = $fixture.Tag; version = '0.2.0'; platform = 'win-x64'; installer = $setupRecord; isolated = $false; deploymentManifestSha256 = (Get-FileHash -LiteralPath $manifestPath).Hash.ToLowerInvariant(); payloadFiles = $files.Count }
+    $build = [ordered]@{ schemaVersion = 1; tag = $fixture.Tag; version = $version; platform = 'win-x64'; installer = $setupRecord; isolated = $false; deploymentManifestSha256 = (Get-FileHash -LiteralPath $manifestPath).Hash.ToLowerInvariant(); payloadFiles = $files.Count }
     [IO.File]::WriteAllText((Join-Path $installer 'installer-build.json'), ($build | ConvertTo-Json -Depth 6), [Text.UTF8Encoding]::new($false))
     $fixture | Add-Member -NotePropertyName InstallerDirectory -NotePropertyValue $installer
     return $fixture

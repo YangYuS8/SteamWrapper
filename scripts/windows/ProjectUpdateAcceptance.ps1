@@ -20,6 +20,47 @@ function Get-ProjectUpdateNumericVersion([string]$Tag){
     Assert-ProjectUpdateAcceptance ($Tag.Length -le 80 -and $Tag -cmatch ('^v(?<base>'+$number+'\.'+$number+'\.'+$number+')(?:-'+$identifier+'(?:\.'+$identifier+')*)?$')) 'Expected a strict public update tag.'
     return [Version]$Matches['base']
 }
+function Get-ProjectUpdatePublicAssetLayout($Manifest,[string]$Role){
+    if($Role -cnotin @('baseline','target')){throw 'Unexpected public metadata role.'}
+    $property=$Manifest.PSObject.Properties[$Role+'PublicAssetLayout']
+    if($null -eq $property){return 2}
+    if(($property.Value -isnot [int] -and $property.Value -isnot [long]) -or $property.Value -notin @(2,3)){throw 'Unexpected public asset layout marker.'}
+    if($property.Value -eq 3 -and (Get-ProjectUpdateNumericVersion $Manifest.$Role.tag) -lt [Version]'0.2.8'){throw 'Compact public acceptance starts at version 0.2.8.'}
+    return [int]$property.Value
+}
+function Get-ProjectUpdateMetadataInputName($Manifest,[string]$Role){
+    if((Get-ProjectUpdatePublicAssetLayout $Manifest $Role) -eq 3){return $Role+'-public-installer.json'}
+    return $Role+'-release.json'
+}
+function Get-ProjectUpdateMetadataInputSeals($Manifest){
+    foreach($role in @('baseline','target')){
+        [pscustomobject]@{name=(Get-ProjectUpdateMetadataInputName $Manifest $role);hash=$Manifest.($role+'MetadataSha256')}
+        if((Get-ProjectUpdatePublicAssetLayout $Manifest $role) -eq 3){[pscustomobject]@{name=$role+'-public-api.json';hash=$Manifest.($role+'PublicApiSha256')}}
+    }
+}
+function Assert-ProjectUpdateSealedMetadata($Manifest,[string]$Role,$Metadata){
+    $asset=$Manifest.$Role;$layout=Get-ProjectUpdatePublicAssetLayout $Manifest $Role
+    Assert-ProjectUpdateAcceptance ($Metadata.tag -ceq $asset.tag -and $Metadata.commit -ceq $asset.commit -and
+        $Metadata.installerAsset.fileName -ceq $asset.fileName -and $Metadata.installerAsset.sha256 -ceq $asset.sha256 -and $Metadata.installerAsset.bytes -eq $asset.bytes) 'Sealed public installer metadata differs from its pinned acceptance identity.'
+    if($layout -eq 3){
+        $baseline=$Role -ceq 'baseline';$kind=if($baseline){'public-api-baseline'}else{'project-signature'}
+        Assert-ProjectUpdateAcceptance ($Metadata.schemaVersion -eq 1 -and $Metadata.kind -ceq 'PublicApiInstaller' -and $Metadata.publicAssetLayout -eq 3 -and
+            $Metadata.verificationKind -ceq $kind -and $Metadata.baselineScope -is [bool] -and $Metadata.baselineScope -eq $baseline -and
+            $Metadata.signatureVerified -is [bool] -and $Metadata.signatureVerified -eq (-not $baseline)) 'Compact public metadata has an invalid explicit baseline/signature verification scope.'
+    }else{Assert-ProjectUpdateAcceptance ($Metadata.schemaVersion -eq 2) 'Historical acceptance must retain its schema-2 public release descriptor.'}
+}
+function Assert-ProjectUpdateActivatedDeployment($Manifest,$Deployment,$Installation,[string]$ManifestSha256){
+    Assert-ProjectUpdateAcceptance ($ManifestSha256 -cmatch '^[a-f0-9]{64}$' -and $Installation.current.manifestSha256 -ceq $ManifestSha256 -and
+        $Installation.current.tag -ceq $Manifest.target.tag -and $Deployment.schemaVersion -eq 1 -and $Deployment.appId -ceq 'SteamWrapper' -and
+        $Deployment.tag -ceq $Manifest.target.tag -and [Version]$Deployment.version -eq (Get-ProjectUpdateNumericVersion $Manifest.target.tag) -and
+        $Deployment.profileContract -eq 2 -and $Deployment.runnerContract -eq 2 -and $Deployment.deploymentProtocol -eq 1) 'Activated deployment inventory differs from the actual signed Setup installation identity.'
+}
+function Assert-ProjectUpdateBundledRunner($Manifest,$Bundle,$RunnerRecord,[long]$Bytes,[string]$Sha256){
+    Assert-ProjectUpdateAcceptance ($Bundle.schemaVersion -eq 1 -and $Bundle.contractVersion -eq 2 -and
+        [Version]$Bundle.version -eq (Get-ProjectUpdateNumericVersion $Manifest.target.tag) -and $Bundle.sha256 -cmatch '^[a-f0-9]{64}$' -and
+        $RunnerRecord.path -ieq 'Runner/SteamWrapperRunner.exe' -and $RunnerRecord.bytes -eq $Bytes -and $Bytes -gt 0 -and $Bytes -le 512MB -and
+        $Bundle.sha256 -ceq $RunnerRecord.sha256 -and $Bundle.sha256 -ceq $Sha256) 'Bundled Runner contract or actual bytes differ from the selected deployment inventory.'
+}
 function Assert-ProjectUpdateAcceptanceManifest($Manifest){
     Assert-ProjectUpdateAcceptance ($Manifest.schemaVersion -eq 1 -and $Manifest.scenario -ceq 'PublicProjectUpdate' -and
         $Manifest.runId -cmatch '^[a-f0-9]{32}$' -and $Manifest.sandboxOnly -is [bool] -and $Manifest.sandboxOnly -and
@@ -89,6 +130,7 @@ if($HelpersOnly){return}
 if(-not $IsWindows){throw 'Public update client acceptance requires a Windows host.'}
 . (Join-Path $PSScriptRoot 'CleanWindowsAcceptance.ps1')
 . (Join-Path $PSScriptRoot '../releases/ProjectUpdates.ps1')
+. (Join-Path $PSScriptRoot '../releases/PublicReleaseDownload.ps1')
 $repo=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'));$prefix=Join-Path $repo 'target/winui/public-update-'
 if($Action -ceq 'ReadEvidence'){
     $root=Assert-WinUIReleasePath $PreparedRoot (Join-Path $repo 'target/winui')
@@ -102,7 +144,26 @@ if($PreparedRoot -or -not $Tag){throw 'Prepare requires an explicit published ta
 $null=Get-ProjectUpdateNumericVersion $Tag;$null=Get-ProjectUpdateNumericVersion $BaselineTag
 Assert-ProjectUpdateAcceptance ((Get-ProjectUpdateNumericVersion $Tag) -gt (Get-ProjectUpdateNumericVersion $BaselineTag)) 'A same-numeric public release cannot exercise genuine application upgrade.'
 function Invoke-ProjectUpdateGh([string[]]$Arguments){$raw=& gh @Arguments 2>&1|Out-String;if($LASTEXITCODE -ne 0){throw ('Read-only public GitHub preparation failed: '+$Arguments[0])};return $raw.Trim()}
-function Get-ProjectUpdatePublicRelease([string]$ReleaseTag,[string]$Directory,[switch]$WithInstaller){
+function Get-ProjectUpdatePublicRelease([string]$ReleaseTag,[string]$Directory,[switch]$WithInstaller,[switch]$BaselineOnly,[string]$EnvelopePath,[string]$TrustPath=(Join-Path $PSScriptRoot '../../packaging/windows/update-trust.json')){
+    if((Get-ProjectUpdateNumericVersion $ReleaseTag) -ge [Version]'0.2.8'){
+        $raw=Invoke-ProjectUpdateGh @('api',('repos/YangYuS8/SteamWrapper/releases/tags/'+$ReleaseTag),'--method','GET')
+        $state=ConvertFrom-WinUIInstallableJson $raw
+        $commit=Invoke-ProjectUpdateGh @('api',('repos/YangYuS8/SteamWrapper/commits/'+$ReleaseTag),'--jq','.sha')
+        $parameters=@{ReleaseState=$state;Tag=$ReleaseTag;Commit=$commit}
+        if($BaselineOnly){$parameters.BaselineOnly=$true}else{$parameters.EnvelopePath=$EnvelopePath;$parameters.TrustPath=$TrustPath}
+        $metadata=New-WinUIPublicInstallerDescriptor @parameters
+        [IO.Directory]::CreateDirectory($Directory)|Out-Null
+        [IO.File]::WriteAllText((Join-Path $Directory 'public-api.json'),$raw,[Text.UTF8Encoding]::new($false))
+        $metadata|ConvertTo-Json -Depth 8|Set-Content -LiteralPath (Join-Path $Directory 'public-installer.json') -Encoding utf8NoBOM
+        if($WithInstaller){
+            $path=Join-Path $Directory $metadata.installerAsset.fileName
+            if($BaselineInstallerPath){$cached=Assert-WinUIReleasePath $BaselineInstallerPath ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($BaselineInstallerPath)));Copy-Item -LiteralPath $cached -Destination $path}else{$null=Invoke-ProjectUpdateGh @('release','download',$ReleaseTag,'--repo','YangYuS8/SteamWrapper','--pattern',$metadata.installerAsset.fileName,'--dir',$Directory)}
+            $file=Get-Item -LiteralPath $path -Force
+            Assert-ProjectUpdateAcceptance ($file -is [IO.FileInfo] -and -not($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -and $file.Length -eq $metadata.installerAsset.bytes -and (Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant() -ceq $metadata.installerAsset.sha256) 'Compact baseline Setup differs from its complete official API receipt.'
+        }
+        Assert-ProjectUpdateAcceptance ((Invoke-ProjectUpdateGh @('api',('repos/YangYuS8/SteamWrapper/commits/'+$ReleaseTag),'--jq','.sha')) -ceq $commit) 'The compact public source tag moved during preparation.'
+        return $metadata
+    }
     $state=Invoke-ProjectUpdateGh @('release','view',$ReleaseTag,'--repo','YangYuS8/SteamWrapper','--json','tagName,isDraft,isPrerelease,assets')|ConvertFrom-Json
     Assert-CleanWindowsPublicRelease $state $ReleaseTag;[IO.Directory]::CreateDirectory($Directory)|Out-Null
     $apiPath=Join-Path $Directory 'public-api.json';$state|ConvertTo-Json -Depth 10|Set-Content -LiteralPath $apiPath -Encoding utf8NoBOM
@@ -121,12 +182,12 @@ function Get-ProjectUpdatePublicRelease([string]$ReleaseTag,[string]$Directory,[
 }
 $runId=[guid]::NewGuid().ToString('N');$root=$prefix+$runId;$inputRoot=Join-Path $root 'input';$outputRoot=Join-Path $root 'evidence'
 [IO.Directory]::CreateDirectory($inputRoot)|Out-Null;[IO.Directory]::CreateDirectory($outputRoot)|Out-Null
-$baseline=Get-ProjectUpdatePublicRelease $BaselineTag (Join-Path $root 'packages/baseline') -WithInstaller
-$target=Get-ProjectUpdatePublicRelease $Tag (Join-Path $root 'packages/target')
 $channel=if($BaselineTag.Contains('-')){'preview'}else{'stable'}
 $base=if($Source -ceq 'github'){'https://github.com/YangYuS8/SteamWrapper/releases/download/'}else{'https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/'}
 $envelopePath=Join-Path $inputRoot 'signed-public-feed.json';[IO.File]::WriteAllBytes($envelopePath,(Read-ProjectUpdatePublicBytes ([Uri]($base+'update-'+$channel+'/SteamWrapper-update.json'))))
 $payload=Read-ProjectUpdateEnvelope -Path $envelopePath -TrustPath (Join-Path $repo 'packaging/windows/update-trust.json')
+$baseline=Get-ProjectUpdatePublicRelease $BaselineTag (Join-Path $root 'packages/baseline') -WithInstaller -BaselineOnly
+$target=Get-ProjectUpdatePublicRelease $Tag (Join-Path $root 'packages/target') -EnvelopePath $envelopePath
 Assert-ProjectUpdateAcceptance ($payload.channel -ceq $channel -and $payload.release.tag -ceq $Tag -and $payload.release.commit -ceq $target.commit -and $payload.release.artifact.sha256 -ceq $target.installerAsset.sha256 -and $payload.release.artifact.bytes -eq $target.installerAsset.bytes) 'The real project-signed feed does not authorize the exact public target installer.'
 $mirror=$false
 if($Source -ceq 'cnb'){
@@ -142,7 +203,17 @@ $manifest=[ordered]@{schemaVersion=1;scenario='PublicProjectUpdate';runId=$runId
     feed=@{sequence=$payload.sequence;payloadSha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($payloadBytes)).ToLowerInvariant();envelopeSha256=(Get-FileHash -LiteralPath $envelopePath).Hash.ToLowerInvariant();mirrorVerified=$mirror}}
 foreach($file in @('ProjectUpdateAcceptance.ps1','Invoke-ProjectUpdateGuestAcceptance.ps1','Invoke-CleanWindowsGuestAcceptance.ps1')){Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $inputRoot;$manifest[$file.Replace('.ps1','')+'Sha256']=(Get-FileHash -LiteralPath (Join-Path $inputRoot $file)).Hash.ToLowerInvariant()}
 Copy-Item -LiteralPath (Join-Path (Join-Path $root 'packages/baseline') $baseline.installerAsset.fileName) -Destination $inputRoot
-foreach($pair in @(@('baseline',$baseline),@('target',$target))){Copy-Item -LiteralPath (Join-Path (Join-Path $root ('packages/'+$pair[0])) 'release.json') -Destination (Join-Path $inputRoot ($pair[0]+'-release.json'));$manifest[$pair[0]+'MetadataSha256']=(Get-FileHash -LiteralPath (Join-Path $inputRoot ($pair[0]+'-release.json'))).Hash.ToLowerInvariant()}
+foreach($pair in @(@('baseline',$baseline),@('target',$target))){
+    $role=$pair[0];$metadata=$pair[1];$directory=Join-Path $root ('packages/'+$role)
+    $kind=$metadata.PSObject.Properties['kind'];$compact=$null -ne $kind -and $kind.Value -ceq 'PublicApiInstaller'
+    if($compact){$manifest[$role+'PublicAssetLayout']=3}
+    $sourceName=if($compact){'public-installer.json'}else{'release.json'}
+    $name=Get-ProjectUpdateMetadataInputName ([pscustomobject]$manifest) $role
+    Copy-Item -LiteralPath (Join-Path $directory $sourceName) -Destination (Join-Path $inputRoot $name)
+    $manifest[$role+'MetadataSha256']=(Get-FileHash -LiteralPath (Join-Path $inputRoot $name)).Hash.ToLowerInvariant()
+    if($compact){$apiName=$role+'-public-api.json';Copy-Item -LiteralPath (Join-Path $directory 'public-api.json') -Destination (Join-Path $inputRoot $apiName);$manifest[$role+'PublicApiSha256']=(Get-FileHash -LiteralPath (Join-Path $inputRoot $apiName)).Hash.ToLowerInvariant()}
+    Assert-ProjectUpdateSealedMetadata ([pscustomobject]$manifest) $role $metadata
+}
 $texts=[ordered]@{}
 foreach($key in @('UpdateDownload','UpdateReady','UpdateInstall','UpdateInstallTitle','RunnerUpdate')){$values=@();foreach($language in @('Strings.resx','Strings.zh-CN.resx')){$xml=[xml][IO.File]::ReadAllText((Join-Path $repo ('apps/manager-winui/SteamWrapper.Application/Localization/'+$language)));$values+=[string]$xml.SelectSingleNode('/root/data[@name="'+$key+'"]/value').InnerText};$texts[$key]=$values}
 $manifest.uiTexts=$texts

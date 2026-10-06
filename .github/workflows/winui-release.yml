@@ -97,8 +97,32 @@ jobs:
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
         with:
           version: '2026.9.1'
-          install_args: 'dotnet rust powershell'
-          cache: false
+          install_args: 'dotnet powershell'
+          cache: true
+      - name: Setup pinned Rust
+        uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+        with:
+          toolchain: '1.98.1'
+      - name: Cache locked NuGet packages
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.nuget/packages
+          key: windows-nuget-${{ hashFiles('global.json', '**/packages.lock.json') }}
+          restore-keys: windows-nuget-
+      - name: Cache locked Cargo dependencies
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target/debug/.fingerprint
+            target/debug/build
+            target/debug/deps
+            target/release/.fingerprint
+            target/release/build
+            target/release/deps
+          key: windows-cargo-winui-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml', '.cargo/config.toml', 'mise.toml') }}
       - name: Set the exact release identity for manual previews
         run: |
           if ([string]::IsNullOrWhiteSpace($env:STEAMWRAPPER_RELEASE_TAG)) {
@@ -106,12 +130,12 @@ jobs:
             "STEAMWRAPPER_RELEASE_TAG=v$version-preview.$env:GITHUB_RUN_NUMBER" >> $env:GITHUB_ENV
           }
       - name: Publish and run all five publication regressions
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
+        run: pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1
       - name: Inspect coordinated product versions and the actual NativeAOT launcher
         run: |
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIProductMetadata.ps1
+          pwsh -NoProfile -File scripts/windows/Test-WinUIProductMetadata.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Published product metadata is invalid.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIHostLanguage.ps1
+          pwsh -NoProfile -File scripts/windows/Test-WinUIHostLanguage.ps1
           if ($LASTEXITCODE -ne 0) { throw 'NativeAOT Host language acceptance failed.' }
       - name: Upload a manual preview without publishing a Release
         if: needs.preflight.outputs.publish != 'true'
@@ -122,24 +146,24 @@ jobs:
           if-no-files-found: error
       - name: Test an isolated installer and build the unsigned Setup
         run: |
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
+          pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Installer compiler verification failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1
+          pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Isolated installer acceptance failed.' }
           if ([string]::IsNullOrWhiteSpace($env:RELEASE_TAG)) {
             $sourceVersion = ([xml](Get-Content apps/manager-winui/SteamWrapper.Manager/SteamWrapper.Manager.csproj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ }
             $tag = "v$sourceVersion-preview.$env:GITHUB_RUN_NUMBER"
           } else { $tag = $env:RELEASE_TAG }
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerOptions.ps1 -PublishDirectory target/winui/publish -Tag $tag
+          pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerOptions.ps1 -PublishDirectory target/winui/publish -Tag $tag
           if ($LASTEXITCODE -ne 0) { throw 'Isolated installer option acceptance failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag $tag
+          pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag $tag
           if ($LASTEXITCODE -ne 0) { throw 'Installer packaging failed.' }
-      - name: Inspect and package the explicit schema-2 installable release
+      - name: Inspect the complete internal package and selected public downloads
         if: needs.preflight.outputs.publish == 'true'
         run: |
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/New-WinUIInstallableRelease.ps1 -Tag $env:RELEASE_TAG -Commit $env:RELEASE_COMMIT -InstallerDirectory "target/winui/installers/$env:RELEASE_TAG" -OutputDirectory "target/winui/releases/$env:RELEASE_TAG"
+          pwsh -NoProfile -File scripts/windows/New-WinUIInstallableRelease.ps1 -Tag $env:RELEASE_TAG -Commit $env:RELEASE_COMMIT -InstallerDirectory "target/winui/installers/$env:RELEASE_TAG" -OutputDirectory "target/winui/releases/$env:RELEASE_TAG"
           if ($LASTEXITCODE -ne 0) { throw 'Installable release packaging failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIReleasePackage.ps1 -PackageDirectory "target/winui/releases/$env:RELEASE_TAG"
+          pwsh -NoProfile -File scripts/windows/Test-WinUIReleasePackage.ps1 -PackageDirectory "target/winui/releases/$env:RELEASE_TAG"
           if ($LASTEXITCODE -ne 0) { throw 'Final installable release validation failed.' }
       - name: Upload the unsigned installer preview without publishing a Release
         if: needs.preflight.outputs.publish != 'true'
@@ -148,7 +172,7 @@ jobs:
           name: SteamWrapper-WinUI-installer-preview-windows-x64
           path: target/winui/installers/v*-preview.${{ github.run_number }}/
           if-no-files-found: error
-      - name: Upload the inspected versioned release assets
+      - name: Retain the complete internal release package for publication jobs
         if: needs.preflight.outputs.publish == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:

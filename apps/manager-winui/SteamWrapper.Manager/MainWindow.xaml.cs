@@ -24,6 +24,7 @@ public sealed partial class MainWindow : Window
     private readonly List<TextBox> arguments = [];
     private readonly Dictionary<TextBox, ProfileTextValue> textValues = [];
     private IReadOnlyList<SteamGame> installedGames = [];
+    private string? steamRoot;
     private ProfileSnapshot? snapshot;
     private ProfileData? editing;
     private EditorValues? editorBaseline;
@@ -85,8 +86,8 @@ public sealed partial class MainWindow : Window
         try
         {
             snapshot = await store.LoadAsync();
-            try { installedGames = (await new SteamScanner().ScanAsync()).Games; }
-            catch (Exception) { installedGames = []; }
+            try { var steam = await new SteamScanner().ScanAsync(); installedGames = steam.Games; steamRoot = steam.SteamRoot; }
+            catch (Exception) { installedGames = []; steamRoot = null; }
             editing = null;
             editorBaseline = null;
             dirty = false;
@@ -117,10 +118,11 @@ public sealed partial class MainWindow : Window
         foreach (var profile in snapshot!.Profiles)
         {
             var label = new StackPanel { Spacing = 4, Margin = new Thickness(0, 6, 0, 6) };
-            label.Children.Add(new TextBlock { Text = profile.Name, TextWrapping = TextWrapping.Wrap, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+            var displayName = DisplayProfileName(profile);
+            label.Children.Add(new TextBlock { Text = displayName, TextWrapping = TextWrapping.Wrap, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
             label.Children.Add(new TextBlock { Text = $"AppID {profile.AppId ?? profile.Key}", FontSize = 12, Opacity = .65 });
             var item = new ListViewItem { Content = label, Tag = profile, HorizontalContentAlignment = HorizontalAlignment.Stretch };
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, profile.Name);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, displayName);
             ProfilesList.Items.Add(item);
             if (profile.Key == editing?.Key) ProfilesList.SelectedItem = item;
         }
@@ -164,7 +166,7 @@ public sealed partial class MainWindow : Window
             mode.IsEnabled = foreign || (string)mode.Tag != "process_group";
         FormFields.IsEnabled = !foreign;
         SaveButton.IsEnabled = !foreign;
-        EditorHeading.Text = create ? localizer["NewProfile"] : profile.Name;
+        EditorHeading.Text = create ? localizer["NewProfile"] : DisplayProfileName(profile);
         WelcomePanel.Visibility = Visibility.Collapsed;
         EditorPanel.Visibility = Visibility.Visible;
         LaunchPanel.Visibility = Visibility.Collapsed;
@@ -176,6 +178,7 @@ public sealed partial class MainWindow : Window
         editorBaseline = ReadEditorValues();
         loading = false;
         dirty = false;
+        RefreshProfileActions();
     }
 
     private async void AddGame_Click(object sender, RoutedEventArgs e)
@@ -185,6 +188,8 @@ public sealed partial class MainWindow : Window
         await dialog.ShowAsync();
         if (!dialog.Manual && dialog.SelectedGame is null) return;
         installedGames = dialog.DiscoveredGames;
+        steamRoot = dialog.DiscoveredSteamRoot;
+        RefreshProfiles();
         var game = dialog.SelectedGame;
         if (game is not null)
         {
@@ -195,7 +200,7 @@ public sealed partial class MainWindow : Window
         selecting = true;
         ProfilesList.SelectedItem = null;
         selecting = false;
-        Edit(new ProfileData(game?.AppId ?? "", game?.Name ?? "", game?.AppId, "windows", game is { InstallationAmbiguous: false } ? game.GameDirectory : "", "", null, [], "job", null), true);
+        Edit(new ProfileData(game?.AppId ?? "", game?.GetDisplayName(localizer.Language) ?? "", game?.AppId, "windows", game is { InstallationAmbiguous: false } ? game.GameDirectory : "", "", null, [], "job", null), true);
     }
 
     private async void Reload_Click(object sender, RoutedEventArgs e)
@@ -277,7 +282,7 @@ public sealed partial class MainWindow : Window
     private void RefreshDirtyState()
     {
         if (loading || applyingLanguage) return;
-        if (editing is null || editorBaseline is null) { dirty = false; return; }
+        if (editing is null || editorBaseline is null) { dirty = false; RefreshProfileActions(); return; }
         var current = ReadEditorValues();
         // WinUI may deliver programmatic TextChanged/SelectionChanged events after
         // Edit has finished. Events are notifications, not evidence of a user edit.
@@ -286,6 +291,7 @@ public sealed partial class MainWindow : Window
             || current.WorkingDirectory != editorBaseline.WorkingDirectory || current.ProcessName != editorBaseline.ProcessName
             || current.WaitMode != editorBaseline.WaitMode
             || !current.Arguments.SequenceEqual(editorBaseline.Arguments, StringComparer.Ordinal);
+        RefreshProfileActions();
     }
 
     private async void Save_Click(object sender, RoutedEventArgs e)
@@ -330,7 +336,7 @@ public sealed partial class MainWindow : Window
             dirty = false;
             saved = true;
             AppIdInput.IsReadOnly = true;
-            EditorHeading.Text = editing.Name;
+            EditorHeading.Text = DisplayProfileName(editing);
             RefreshProfiles();
             var status = await runner.InstallOrRepairAsync();
             if (!status.IsReady) { ShowStatus(Messages.Text("SavedWithStatus", status.Text), InfoBarSeverity.Warning); return; }
@@ -378,6 +384,7 @@ public sealed partial class MainWindow : Window
         ProfilesList.IsEnabled = !value;
         EditorPanel.IsEnabled = !value;
         LanguageInput.IsEnabled = !value;
+        RefreshProfileActions();
     }
 
     private void ShowStatus(LocalMessage message, InfoBarSeverity severity)

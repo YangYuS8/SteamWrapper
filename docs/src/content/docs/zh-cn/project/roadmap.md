@@ -205,6 +205,8 @@ P0 反馈与 P1 打包准备可以并行。首个稳定版需满足已记录的 
 
 **交付目标：**针对所选 Steam 用户的所选游戏，提供可选、可审阅的写入及安全恢复路径。
 
+准备中的 `0.2.8` 源码已实现范围更小的既有命令处理：Manager 可还原未保存编辑，在 Steam 正常退出后清除选中 AppID 精确识别的生成命令，并仅在完整账号扫描确认没有残留引用后移除可编辑配置。自定义命令、无关 TOML 和游戏文件保留，未知旧参数无法重建。服务／原生夹具及真实隔离升级检查见[测试](/SteamWrapper/zh-cn/development/testing/#player-refinements-source-028-2026-10-07)；这些不是公开 `v0.2.8` 交付或真实游戏库执行证据。下方未勾选门槛针对通用应用和记录来源的历史参数恢复。
+
 - [ ] 识别本地 Steam、游戏和多个用户，不猜测账号。展示准确原值／拟写入启动项，并要求明确选择目标。
 - [ ] Steam 运行时阻止写入，变更前再次检查。保留无关数据、稳定 Runner 引用与既有 `%command%` 位置。
 - [ ] 变更前备份原值／文件，采用原子替换、复读验证和中断恢复。记录足以仅恢复本次改动的来源信息。
@@ -223,6 +225,6 @@ P0 反馈与 P1 打包准备可以并行。首个稳定版需满足已记录的 
 
 ## 现有实现记录与证据边界
 
-当前源码包含 WinUI Manager、C# 配置服务及独立 Rust core／Runner。Manager 支持本地 Steam 发现／封面、TOML 编辑、稳定 Runner 安装和启动项生成。已移除的 [Dioxus 应用](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/apps/manager-dioxus)、[Rust 管理层](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/crates/manager-core)和[旧 UI 发布工作流](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09e/.github/workflows/release.yml)可在 `ca6a09e` 查阅，属于历史参考，不是当前 Windows UI 或交付证据。
+当前源码包含 WinUI Manager、C# 配置服务及独立 Rust core／Runner。Manager 支持本地 Steam 发现／封面、TOML 编辑、稳定 Runner 安装和启动项生成。准备中的 `0.2.8` 增加上文的有界配置操作及只读本地 Steam 名称本地化，保留自定义／保存名称和未保存输入。CI 采用相关路径过滤、依赖缓存及合并 Runner 测试，保留完整标签门禁；远程耗时尚未测定。内部第 3 版包清单保留七文件校验，公开仅提供 Setup、便携 ZIP 和 `SHA256SUMS`，标题只含标签，GitHub 正文为英语，CNB 正文为中文。历史版本附件保持不可变，续期签名更新源保留客户端第 2 版格式。已移除的 [Dioxus 应用](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/apps/manager-dioxus)、[Rust 管理层](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/crates/manager-core)和[旧 UI 发布工作流](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09e/.github/workflows/release.yml)可在 `ca6a09e` 查阅，属于历史参考，不是当前 Windows UI 或交付证据。
 
 旧路线的 Dioxus、Linux/AppImage 勾选保留为 `31a609d:docs/roadmap.md` 中的历史记录，2026-10-02 的移除不改写早先结果。WinUI 配置／交付核心已取得 Windows 11 24H2 x64 当前账户流程的真实普通权限产品、干净客户端、便携、限定恢复及 CNB 更新证据，公开 v0.2.7 交付另经独立核验。更广账户／硬件／故障矩阵及 Steam 一键应用／恢复继续独立推进。Authenticode 可选；核心通过或公开可用不代表未执行组合或更广游戏／成就保证。

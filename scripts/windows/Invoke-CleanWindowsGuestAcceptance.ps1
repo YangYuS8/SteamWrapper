@@ -58,6 +58,38 @@ function Get-AcceptanceScenario($Manifest) {
     }
     return $scenario
 }
+function Get-AcceptancePublicRecordName($Manifest, [string]$Role) {
+    Assert-Acceptance ($Role -cin @('baseline','target')) 'Unexpected public installer record role.'
+    $property=$Manifest.PSObject.Properties[$Role + 'PublicAssetLayout']
+    if ($null -eq $property) {return "$Role-release.json"}
+    Assert-Acceptance (($property.Value -is [int] -or $property.Value -is [long]) -and $property.Value -eq 3 -and (Get-AcceptanceNumericVersion $Manifest.$Role.tag) -ge [Version]'0.2.8') 'Unexpected sealed public asset layout.'
+    return "$Role-public-installer.json"
+}
+function Read-AcceptancePublicSourceRecord($Manifest, [string]$InputPath, [string]$Role) {
+    $name=Get-AcceptancePublicRecordName $Manifest $Role
+    $records=@(@{name=$name;hash=$Manifest.($Role + 'PublicReleaseSha256')},@{name="$Role-api.json";hash=$Manifest.($Role + 'PublicApiSha256')})
+    if ($Role -ceq 'target' -and $name -ceq 'target-public-installer.json') {$records+=@{name='target-signed-update.json';hash=$Manifest.targetPublicEnvelopeSha256}}
+    foreach($record in $records) {
+        $item=Get-Item -LiteralPath (Join-Path $InputPath $record.name)
+        Assert-Acceptance ($record.hash -cmatch '^[a-f0-9]{64}$' -and -not $item.PSIsContainer -and $item.Length -gt 0 -and $item.Length -le 2MB -and
+            -not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -and (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $record.hash) 'The sealed public installer source record changed.'
+    }
+    if ($name -ceq "$Role-release.json") {return $null}
+    $descriptor=Get-Content -LiteralPath (Join-Path $InputPath $name) -Raw | ConvertFrom-Json
+    $state=Get-Content -LiteralPath (Join-Path $InputPath "$Role-api.json") -Raw | ConvertFrom-Json
+    $baseline=$Role -ceq 'baseline'; $expectedKind=if($baseline){'public-api-baseline'}else{'project-signature'}
+    Assert-Acceptance ($descriptor.schemaVersion -eq 1 -and $descriptor.kind -ceq 'PublicApiInstaller' -and $descriptor.publicAssetLayout -eq 3 -and
+        $descriptor.baselineScope -is [bool] -and $descriptor.baselineScope -eq $baseline -and $descriptor.signatureVerified -is [bool] -and $descriptor.signatureVerified -eq (-not $baseline) -and
+        $descriptor.verificationKind -ceq $expectedKind -and $descriptor.tag -ceq $Manifest.$Role.tag -and $descriptor.commit -ceq $Manifest.$Role.commit -and
+        $descriptor.installerAsset.fileName -ceq $Manifest.$Role.fileName -and $descriptor.installerAsset.bytes -eq $Manifest.$Role.bytes -and $descriptor.installerAsset.sha256 -ceq $Manifest.$Role.sha256) 'The sealed public installer identity or explicit verification scope differs.'
+    $names=@($descriptor.installerAsset.fileName,"SteamWrapper-$($descriptor.tag)-win-x64.zip",'SHA256SUMS')
+    Assert-Acceptance ($state.tag_name -ceq $descriptor.tag -and $state.target_commitish -ceq $descriptor.commit -and $state.draft -is [bool] -and -not $state.draft -and
+        @($state.assets).Count -eq 3 -and @($state.assets.name | Sort-Object -Unique).Count -eq 3 -and @($state.assets.name | Where-Object {$_ -cnotin $names}).Count -eq 0) 'The sealed compact public API inventory differs.'
+    foreach($asset in $state.assets) {Assert-Acceptance ($asset.state -ceq 'uploaded' -and $asset.digest -cmatch '^sha256:[a-f0-9]{64}$' -and $asset.size -gt 0 -and $asset.size -le 1GB) 'The sealed compact public API asset is invalid.'}
+    $setup=@($state.assets | Where-Object name -CEQ $descriptor.installerAsset.fileName)[0]
+    Assert-Acceptance ($setup.size -eq $Manifest.$Role.bytes -and $setup.digest -ceq ('sha256:' + $Manifest.$Role.sha256)) 'The sealed compact API installer bytes differ.'
+    return [ordered]@{publicAssetLayout=3;verificationKind=$expectedKind;baselineScope=$baseline;signatureVerified=(-not $baseline);sourceCommit=$descriptor.commit}
+}
 function Quote-AcceptanceArgument([string]$Value) {
     if ($Value.Contains('"') -or $Value.Contains("`r") -or $Value.Contains("`n")) { throw 'Unexpected command-line characters.' }
     return '"' + $Value.TrimEnd('\') + '"'
@@ -555,16 +587,14 @@ try {
         }
     }
     if ($candidateUpgrade) {
-        foreach($record in @(
-            @{name='baseline-release.json';hash=$inputManifest.baselinePublicReleaseSha256},
-            @{name='baseline-api.json';hash=$inputManifest.baselinePublicApiSha256}
-        )) {
-            $item=Get-Item -LiteralPath (Join-Path $InputDirectory $record.name)
-            Assert-Acceptance ($item.Length -gt 0 -and $item.Length -le 2MB -and -not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
-                (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $record.hash) 'The sealed public baseline source record changed.'
-        }
+        $evidence.baselinePublicInstallerVerification=Read-AcceptancePublicSourceRecord $inputManifest $InputDirectory baseline
         $evidence.baselineRunnerOperationalTested=$false
         $evidence.baselineRunnerLimitation='The historical baseline Runner is not exercised; its missing-VC loader defect is separately recorded. This lane verifies the actual upgrade and updated Runner.'
+    }
+    foreach($role in @('baseline','target')) {
+        if ($null -ne $inputManifest.PSObject.Properties[$role + 'PublicAssetLayout'] -and -not ($candidateUpgrade -and $role -ceq 'baseline')) {
+            $evidence[$role + 'PublicInstallerVerification']=Read-AcceptancePublicSourceRecord $inputManifest $InputDirectory $role
+        }
     }
 
     $gameDirectory = Join-Path $taskRoot ('Harmless game ' + $chineseWord)

@@ -33,8 +33,7 @@ public sealed partial class MainWindow
         try
         {
             Root.Language = localizer.Language;
-            var buildLabel = localizer[InstalledReleaseTag is not null && !InstalledReleaseTag.Contains('-') ? "Windows" : "Preview"];
-            Title = "SteamWrapper · " + buildLabel;
+            Title = "SteamWrapper";
             LanguageInput.Header = localizer["Language"];
             LanguageInput.SelectedItem = LanguageInput.Items.Cast<ComboBoxItem>().Single(item => (string)item.Tag == localizer.Language);
             LocalizedTagline.Text = localizer["Tagline"];
@@ -42,7 +41,8 @@ public sealed partial class MainWindow
             LocalizedConfiguredGames.Text = localizer["ConfiguredGames"];
             ReloadButton.Content = localizer["Reload"];
             UpdatesButton.Content = localizer["Updates"];
-            LocalizedPreview.Text = buildLabel;
+            var version = typeof(MainWindow).Assembly.GetName().Version!;
+            LocalizedPreview.Text = InstalledReleaseTag ?? $"v{version.Major}.{version.Minor}.{version.Build}";
             LocalizedWelcomeTitle.Text = localizer["WelcomeTitle"];
             LocalizedWelcomeDescription.Text = localizer["WelcomeDescription"];
             LocalizedWelcomeSteps.Text = localizer["WelcomeSteps"];
@@ -82,12 +82,16 @@ public sealed partial class MainWindow
             }
             ProcessNameInput.Header = localizer["ProcessName"];
             SaveButton.Content = localizer["Save"];
+            RevertEditsButton.Content = localizer["RevertEdits"];
+            RestoreSteamButton.Content = localizer["RestoreSteamLaunch"];
+            RemoveProfileButton.Content = localizer["RemoveProfile"];
             LocalizedLaunchTitle.Text = localizer["LaunchTitle"];
             LocalizedLaunchInstructions.Text = localizer["LaunchInstructions"];
             LocalizedLaunchBackup.Text = localizer["LaunchBackup"];
             CopyButton.Content = localizer["Copy"];
             LocalizedLaunchDone.Text = localizer["LaunchDone"];
-            if (editing is not null) EditorHeading.Text = isNew ? localizer["NewProfile"] : editing.Name;
+            if (editing is not null) EditorHeading.Text = isNew ? localizer["NewProfile"] : DisplayProfileName(editing);
+            if (snapshot is not null) RefreshProfiles();
             RefreshSteamInstallation();
             foreach (var row in ArgumentRows.Children.Cast<Grid>())
             {

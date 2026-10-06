@@ -8,14 +8,14 @@ using System.Runtime.InteropServices;
 
 namespace SteamWrapper.NativeUi.Tests;
 
-internal static class Program
+internal static partial class Program
 {
     private static readonly List<object> Results = [];
     private static readonly List<string> FixtureRoots = [];
     private static Dictionary<string, string> publicationHashes = [];
     private static string publication = "";
     private static string evidenceRoot = "";
-    private static readonly string[] FocusedCases = ["add-local", "manual-appid", "dirty-add", "keyboard", "updates", "runner-update"];
+    private static readonly string[] FocusedCases = ["add-local", "manual-appid", "dirty-add", "keyboard", "updates", "runner-update", "profile-actions", "steam-names"];
     private static readonly string[] SupportedCases = [.. FocusedCases, "existing-editor", "saved-editor"];
     private static readonly List<object> FixtureProcesses = [];
     private static readonly List<object> KeyboardObservations = [];
@@ -30,7 +30,7 @@ internal static class Program
         catch (ArgumentException error)
         {
             Console.Error.WriteLine(error.Message);
-            Console.Error.WriteLine("Usage: SteamWrapper.NativeUi.Tests <repo-root> <publish-directory> [--inspect | --case <add-local|manual-appid|dirty-add|keyboard|updates|runner-update|existing-editor|saved-editor> ...]");
+            Console.Error.WriteLine("Usage: SteamWrapper.NativeUi.Tests <repo-root> <publish-directory> [--inspect | --case <add-local|manual-appid|dirty-add|keyboard|updates|runner-update|profile-actions|steam-names|existing-editor|saved-editor> ...]");
             return 2;
         }
         if (!Environment.UserInteractive || Process.GetCurrentProcess().SessionId == 0)
@@ -168,7 +168,9 @@ internal static class Program
                 UnknownRunner(args[0], args[1]);
             }
             foreach (var name in FocusedCases.Where(name => selectedCases.Count == 0 || selectedCases.Contains(name)))
-                AdditionalFlow(args[0], args[1], name);
+                if (name == "profile-actions") ProfileActionsFlow(args[0], args[1]);
+                else if (name == "steam-names") SteamNamesFlow(args[0], args[1]);
+                else AdditionalFlow(args[0], args[1], name);
             AssertPublicationUnchanged();
         }
         catch (Exception error) { Results.Add(new { name = "native suite", passed = false, error = error.ToString() }); Console.Error.WriteLine(error); }
@@ -270,8 +272,7 @@ internal static class Program
         NativeWindow.Wait(() => window.ById("AutomaticUpdateChecks").Current.IsEnabled, "update preferences loaded");
         Assert(window.ById("InstalledUpdateVersion").Current.Name.StartsWith("Installed version: ", StringComparison.Ordinal), "Update dialog did not identify the installed version.");
         var installedLabel = window.ById("InstalledUpdateVersion").Current.Name;
-        if (installedLabel.StartsWith("Installed version: v", StringComparison.Ordinal))
-            Equal("SteamWrapper · " + (installedLabel.Contains('-') ? "Windows preview" : "Windows"), window.Root.Current.Name);
+        Equal("SteamWrapper", window.Root.Current.Name);
         Assert(((TogglePattern)window.ById("AutomaticUpdateChecks").GetCurrentPattern(TogglePattern.Pattern)).Current.ToggleState == ToggleState.Off,
             "Opening Updates enabled automatic checks without consent.");
         ((ExpandCollapsePattern)window.ById("UpdateSourceOptions").GetCurrentPattern(ExpandCollapsePattern.Pattern)).Expand();

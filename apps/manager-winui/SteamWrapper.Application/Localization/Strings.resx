@@ -195,4 +195,25 @@
   <data name="UpdateAutoFound" xml:space="preserve"><value>SteamWrapper {0} is available. Open Updates to download it.</value></data>
   <data name="UpdateOpenPageFailed" xml:space="preserve"><value>Couldn't open the release page. Try opening the official repository in your browser.</value></data>
   <data name="UpdateClose" xml:space="preserve"><value>Close</value></data>
+  <data name="RevertEdits" xml:space="preserve"><value>Revert edits</value></data>
+  <data name="EditsReverted" xml:space="preserve"><value>Reverted the unsaved changes. Nothing was written to Steam or your game files.</value></data>
+  <data name="RestoreSteamLaunch" xml:space="preserve"><value>Restore Steam launch</value></data>
+  <data name="RestoreSteamTitle" xml:space="preserve"><value>Restore the original Steam launch?</value></data>
+  <data name="RestoreSteamBody" xml:space="preserve"><value>For {0}, clear only SteamWrapper's exact generated launch command and keep this configuration. Exit Steam normally first. Steam account files are backed up; game files and saves stay untouched. Custom launch options are left alone. Earlier arguments were not recorded when you pasted the command, so they cannot be recovered automatically.</value></data>
+  <data name="SteamLaunchRestored" xml:space="preserve"><value>Removed SteamWrapper's launch command. Steam will use its normal game launch. Your configuration was kept.</value></data>
+  <data name="SteamLaunchUnchanged" xml:space="preserve"><value>No matching SteamWrapper command was found. Nothing was changed.</value></data>
+  <data name="SteamLaunchCustom" xml:space="preserve"><value>Custom or unrecognized SteamWrapper launch options remain untouched. Review them in Steam before removing this configuration.</value></data>
+  <data name="SteamRestoreFailed" xml:space="preserve"><value>Couldn't restore the Steam launch: {0}</value></data>
+  <data name="RemoveProfile" xml:space="preserve"><value>Remove configuration</value></data>
+  <data name="RemoveProfileTitle" xml:space="preserve"><value>Remove this configuration?</value></data>
+  <data name="RemoveProfileBody" xml:space="preserve"><value>Remove only the saved configuration for {0}, keeping a backup. Game files, saves and Runner stay untouched. Exit Steam normally first. If Steam still uses this configuration, restore its Steam launch before removing it.</value></data>
+  <data name="ProfileRemoved" xml:space="preserve"><value>Configuration removed. The previous configuration file was backed up; game files and saves were not changed.</value></data>
+  <data name="ProfileRemoveFailed" xml:space="preserve"><value>Couldn't remove this configuration: {0}</value></data>
+  <data name="ProfileSteamUnavailable" xml:space="preserve"><value>Steam could not be located. Select its folder in Add Steam game before restoring or removing a configuration.</value></data>
+  <data name="ProfileSteamRunning" xml:space="preserve"><value>Exit Steam normally, then retry. SteamWrapper won't close Steam or any games for you.</value></data>
+  <data name="ProfileSteamReferenced" xml:space="preserve"><value>Steam still references this configuration. Restore its Steam launch first. Custom launch options must be checked manually in Steam.</value></data>
+  <data name="ProfileSteamInspectionFailed" xml:space="preserve"><value>Some Steam account files couldn't be checked safely. Keep the configuration and resolve the file access or format problem before retrying.</value></data>
+  <data name="ProfileDataBusy" xml:space="preserve"><value>The configuration is busy in another operation. Let it finish, then retry.</value></data>
+  <data name="ProfileDeleteUnsupported" xml:space="preserve"><value>This profile cannot be removed safely by the Windows editor. Use an editable explicit Windows [profiles.ID] table; the file was preserved.</value></data>
+  <data name="ProfileUnsafePath" xml:space="preserve"><value>The profiles file, lock, or backup location is readonly or uses a reparse point. The file was preserved.</value></data>
 </root>

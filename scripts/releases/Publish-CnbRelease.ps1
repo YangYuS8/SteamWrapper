@@ -4,7 +4,11 @@
 [CmdletBinding()]
 param(
     [string]$PackageDirectory,
-    [string]$Repository = 'Nesoriel/SteamWrapper'
+    [string]$Repository = 'Nesoriel/SteamWrapper',
+    [string]$PublicReleaseVerificationPath,
+    [string]$TrustPath = (Join-Path $PSScriptRoot '../../packaging/windows/update-trust.json'),
+    [string]$SourceRepositoryRoot = (Join-Path $PSScriptRoot '../..'),
+    [switch]$RefreshPresentation
 )
 . (Join-Path $PSScriptRoot 'CnbUploadConfirmation.ps1')
 
@@ -13,33 +17,47 @@ function Invoke-CnbRelease {
     param(
         [Parameter(Mandatory)][string]$PackageDirectory,
         [string]$Repository = 'Nesoriel/SteamWrapper',
-        [Net.Http.HttpClient]$Client
+        [Net.Http.HttpClient]$Client,
+        [string]$PublicReleaseVerificationPath,
+        [string]$TrustPath = (Join-Path $PSScriptRoot '../../packaging/windows/update-trust.json'),
+        [string]$SourceRepositoryRoot = (Join-Path $PSScriptRoot '../..'),
+        [switch]$RefreshPresentation
     )
     $ErrorActionPreference = 'Stop'
     Set-StrictMode -Version Latest
     if ($Repository -notmatch '^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+$' -or $Repository.Split('/') -contains '..') { throw 'Invalid CNB repository.' }
     $directory = (Resolve-Path -LiteralPath $PackageDirectory).Path
     if ((Get-Item -LiteralPath $directory).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Release package directory must not be a link.' }
-    $metadataPath = Join-Path $directory 'release.json'
-    if ((Get-Item -LiteralPath $metadataPath).Length -gt 2MB) { throw 'Release metadata is too large.' }
     # Validate the exact downloaded bundle, including compressed file inventory,
     # Runner contract/hash and included runtime, before any authenticated request.
-    $metadata = & (Join-Path $PSScriptRoot '../windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $directory
     . (Join-Path $PSScriptRoot '../windows/WinUIInstallableRelease.ps1')
+    if ($PublicReleaseVerificationPath) {
+        # Historical compact mirroring requires its signed installer authority
+        # and exact public API byte receipt; it does not invent build metadata.
+        . (Join-Path $PSScriptRoot 'PublicReleaseDownload.ps1')
+        $metadata = Read-WinUIPublicReleaseVerification -PackageDirectory $directory -VerificationPath $PublicReleaseVerificationPath -TrustPath $TrustPath -RepositoryRoot $SourceRepositoryRoot
+        if ($Repository -cne (Read-ProjectUpdateTrust $TrustPath).cnbRepository) { throw 'Verified compact assets can only be mirrored to the configured official repository.' }
+    } else {
+        $metadataPath = Join-Path $directory 'release.json'
+        if ((Get-Item -LiteralPath $metadataPath).Length -gt 2MB) { throw 'Release metadata is too large.' }
+        $metadata = & (Join-Path $PSScriptRoot '../windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $directory
+    }
     $tagIdentity = Get-WinUIReleaseTag $metadata.tag
-    if ($metadata.schemaVersion -notin @(1, 2) -or $metadata.commit -notmatch '^[a-f0-9]{40}$' -or $metadata.platform -ne 'win-x64' -or $metadata.releaseChannel -cne $tagIdentity.Channel -or $metadata.githubPrerelease -ne $tagIdentity.Prerelease -or $metadata.signed -ne $false -or $metadata.installer -ne ($metadata.schemaVersion -eq 2)) { throw 'Unsupported release metadata or channel flags.' }
+    if ($metadata.schemaVersion -notin @(1, 2, 3) -or $metadata.commit -notmatch '^[a-f0-9]{40}$' -or $metadata.platform -ne 'win-x64' -or $metadata.releaseChannel -cne $tagIdentity.Channel -or $metadata.githubPrerelease -ne $tagIdentity.Prerelease -or $metadata.signed -ne $false -or $metadata.installer -ne ($metadata.schemaVersion -in @(2, 3))) { throw 'Unsupported release metadata or channel flags.' }
     $tag = $metadata.tag
     $archiveName = "SteamWrapper-$tag-win-x64.zip"
     if ($metadata.archive.fileName -cne $archiveName) { throw 'Unexpected release archive name.' }
-    $assetNames = @(Get-WinUIReleaseAssetNames $metadata)
+    $assetNames = @(Get-WinUIPublicReleaseAssetNames $metadata)
     $assets = @{}
-    foreach ($name in $assetNames) {
+    $localNames = if ($PublicReleaseVerificationPath) { $assetNames } else { @(Get-WinUIReleaseAssetNames $metadata) }
+    foreach ($name in $localNames) {
         $path = Join-Path $directory $name
         $file = Get-Item -LiteralPath $path
         if ($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -le 0 -or $file.Length -gt 1GB) { throw 'Release assets must be regular, nonempty files within the size limit.' }
         $assets[$name] = @{ Path = $path; Bytes = $file.Length; Hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() }
     }
-    if ($assets['SHA256SUMS'].Bytes -gt 16KB -or $assets["$tag.en.md"].Bytes -gt 256KB -or $assets["$tag.zh-CN.md"].Bytes -gt 256KB) { throw 'Release notes or checksums are too large.' }
+    $notesPath = if ($PublicReleaseVerificationPath) { $metadata.notesPath } else { $assets["$tag.zh-CN.md"].Path }
+    if ($assets['SHA256SUMS'].Bytes -gt 16KB -or (Get-Item -LiteralPath $notesPath).Length -gt 256KB) { throw 'Release notes or checksums are too large.' }
     $checksums = @{}
     foreach ($line in [IO.File]::ReadAllLines($assets['SHA256SUMS'].Path)) {
         if ($line -notmatch '^([a-f0-9]{64})  ([A-Za-z0-9_.-]+)$' -or $checksums.ContainsKey($Matches[2])) { throw 'Invalid release checksum file.' }
@@ -161,10 +179,10 @@ function Invoke-CnbRelease {
         if ($remoteTag.name -cne $tag -or $remoteTag.commit.sha -cne $metadata.commit) { throw 'CNB tag commit does not match the package.' }
         $release = Read-CnbJson 'GET' ($base + 'releases/tags/' + [Uri]::EscapeDataString($tag)) -AllowMissing
         $created = $null -eq $release
-        $notes = [IO.File]::ReadAllText($assets["$tag.en.md"].Path) + [char]10 + [char]10 + [IO.File]::ReadAllText($assets["$tag.zh-CN.md"].Path)
-        $releaseLabel = if ($metadata.githubPrerelease) { 'Windows preview' } else { 'Windows' }
+        if ($RefreshPresentation -and ($created -or $release.draft -or @($release.assets).Count -eq 0)) { throw 'Presentation refresh requires an existing complete published release.' }
+        $notes = [IO.File]::ReadAllText($notesPath)
         $latest = (-not $metadata.githubPrerelease).ToString().ToLowerInvariant()
-        $body = @{ tag_name = $tag; target_commitish = $metadata.commit; name = "SteamWrapper $tag ($releaseLabel)"; body = $notes; draft = $true; prerelease = $metadata.githubPrerelease; make_latest = 'false' }
+        $body = @{ tag_name = $tag; target_commitish = $metadata.commit; name = $tag; body = $notes; draft = $true; prerelease = $metadata.githubPrerelease; make_latest = 'false' }
         if ($created) { $release = Read-CnbJson 'POST' ($base + 'releases') $body }
         $existing = Get-CnbReleaseAssets $release
         $id = $release.id
@@ -177,6 +195,16 @@ function Invoke-CnbRelease {
             } else {
                 $null = Get-CnbReleaseAssets $release -Complete $true -RequireChannel
                 foreach ($name in $assetNames) { Assert-CnbDownload $name }
+                if ($RefreshPresentation) {
+                    $remoteTag = Read-CnbJson 'GET' ($base + 'git/tags/' + [Uri]::EscapeDataString($tag))
+                    if ($remoteTag.name -cne $tag -or $remoteTag.commit.sha -cne $metadata.commit) { throw 'CNB source tag changed; presentation refresh refused.' }
+                    # An explicit presentation repair never uploads, replaces,
+                    # removes or relabels any already-published release bytes.
+                    $null = Read-CnbJson 'PATCH' ($base + "releases/$id") @{ name = $tag; body = $notes }
+                    $presented = Read-CnbJson 'GET' ($base + 'releases/tags/' + [Uri]::EscapeDataString($tag))
+                    $null = Get-CnbReleaseAssets $presented -Complete $true -ExpectedId $id -ExpectedDraft $false -RequireChannel
+                    if ($presented.name -cne $tag -or $presented.body -cne $notes) { throw 'CNB presentation refresh was not confirmed.' }
+                }
                 return "https://cnb.cool/$Repository/-/releases/tag/$tag"
             }
         } elseif ($existing.Count -gt 0) {
@@ -217,5 +245,5 @@ function Invoke-CnbRelease {
 
 if ($MyInvocation.InvocationName -ne '.') {
     if ([string]::IsNullOrWhiteSpace($PackageDirectory)) { throw '-PackageDirectory is required.' }
-    Invoke-CnbRelease -PackageDirectory $PackageDirectory -Repository $Repository
+    Invoke-CnbRelease -PackageDirectory $PackageDirectory -Repository $Repository -PublicReleaseVerificationPath $PublicReleaseVerificationPath -TrustPath $TrustPath -SourceRepositoryRoot $SourceRepositoryRoot -RefreshPresentation:$RefreshPresentation
 }

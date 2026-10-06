@@ -3,13 +3,29 @@ name: Rust core and Runner CI
 on:
   push:
     branches: ["main", "v2"]
+    paths: &rust_paths
+      - 'crates/**'
+      - 'tests/**'
+      - '.cargo/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.vsconfig'
+      - 'mise.toml'
+      - 'mise.lock'
+      - '.github/workflows/v2-ci.yml'
+      - '.github/workflows/winui-release.yml'
   pull_request:
-    branches: ["main", "v2", "feat/runner-process-lifecycle"]
+    branches: ["main", "v2"]
+    paths: *rust_paths
   workflow_dispatch:
   workflow_call:
 
 permissions:
   contents: read
+
+concurrency:
+  group: rust-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -21,7 +37,7 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Check required project docs and assets
         shell: pwsh
@@ -56,7 +72,7 @@ jobs:
           }
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
         with:
           toolchain: '1.98.1'
           components: rustfmt, clippy
@@ -64,45 +80,50 @@ jobs:
       - name: Cargo fmt
         run: cargo fmt --all -- --check
 
-      - name: Cargo check
-        run: cargo check --locked --workspace
+      - name: Cache locked Cargo dependencies
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target/debug/.fingerprint
+            target/debug/build
+            target/debug/deps
+          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml', '.cargo/config.toml', 'mise.toml') }}
 
-      - name: Cargo test
-        run: cargo test --locked --workspace
-
-      - name: Run Linux process-group integration test
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          output="$(cargo test -p steamwrapper-runner process_group_waits_for_descendants_after_launcher_exits -- --nocapture 2>&1)"
-          printf '%s\n' "$output"
-          grep -Eq 'running 1 test' <<< "$output"
-          grep -Eq 'test result: ok\. 1 passed;' <<< "$output"
-
-      - name: Run Windows Job Object integration test
-        if: runner.os == 'Windows'
+      # Build normal binaries, then reuse dependencies for one workspace test run.
+      # Require each real process case in that run instead of rerunning it.
+      - name: Build and test the workspace with real platform process cases
         shell: pwsh
+        env:
+          CARGO_INCREMENTAL: '0'
         run: |
-          $output = cargo test -p steamwrapper-runner job_object_waits_for_descendants_after_launcher_exits -- --nocapture 2>&1 | Out-String
+          cargo build --locked --workspace
+          if ($LASTEXITCODE -ne 0) { throw 'Rust workspace build failed.' }
+          $output = cargo test --locked --workspace -- --color never 2>&1 | Out-String
+          $exitCode = $LASTEXITCODE
           Write-Output $output
-          if ($LASTEXITCODE -ne 0) { throw "Windows Job Object integration test failed" }
-          if ($output -notmatch 'running 1 test') { throw "Windows Job Object integration test did not run exactly one test" }
-          if ($output -notmatch 'test result: ok\. 1 passed;') { throw "Windows Job Object integration test did not pass" }
-
-      - name: Run process-name integration tests
-        shell: pwsh
-        run: |
+          if ($exitCode -ne 0) { throw 'Rust workspace tests failed.' }
           $tests = if ($IsWindows) {
-            @('process_name_waits_for_a_new_named_process_after_launcher_exits_on_windows', 'process_name_requires_a_non_empty_name_before_launching')
+            @(
+              'job_object_waits_for_descendants_after_launcher_exits',
+              'process_name_waits_for_a_new_named_process_after_launcher_exits_on_windows',
+              'process_name_observes_a_named_process_before_launcher_exits_on_windows',
+              'process_name_accepts_the_named_launcher_itself_on_windows',
+              'process_name_requires_a_non_empty_name_before_launching'
+            )
           } else {
-            @('process_name_waits_for_a_new_named_process_after_launcher_exits', 'process_name_ignores_matching_processes_that_existed_before_launch', 'process_name_waits_across_named_process_replacement', 'process_name_requires_a_non_empty_name_before_launching')
+            @(
+              'process_group_waits_for_descendants_after_launcher_exits',
+              'process_name_waits_for_a_new_named_process_after_launcher_exits',
+              'process_name_ignores_matching_processes_that_existed_before_launch',
+              'process_name_waits_across_named_process_replacement',
+              'process_name_requires_a_non_empty_name_before_launching'
+            )
           }
           foreach ($test in $tests) {
             $qualified = "platform::tests::$test"
-            $output = cargo test -p steamwrapper-runner -- --exact $qualified --nocapture 2>&1 | Out-String
-            Write-Output $output
-            if ($LASTEXITCODE -ne 0) { throw "process_name integration test failed: $test" }
-            if ($output -notmatch 'running 1 test') { throw "process_name integration test did not run exactly once: $test" }
-            if ($output -notmatch 'test result: ok\. 1 passed;') { throw "process_name integration test did not pass: $test" }
+            $passed = [regex]::Matches($output, "(?m)^test $([regex]::Escape($qualified)) \.\.\. ok\r?$").Count
+            if ($passed -ne 1) { throw "Required real-process case did not pass exactly once: $test" }
           }

@@ -7,6 +7,19 @@ namespace SteamWrapper.Application.Services;
 public sealed record SteamGame(string AppId, string Name, string GameDirectory, string? CoverPath, bool InstallationAmbiguous = false)
 {
     public IReadOnlyList<string> LocalCoverCandidates { get; init; } = [];
+    public string? MetadataName { get; init; }
+    public IReadOnlyDictionary<string, string> LocalizedNames { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>Steam's local application title for the selected Manager UI language.</summary>
+    public string GetDisplayName(string? language)
+    {
+        var steamLanguage = Localizer.NormalizeLanguage(language) == Localizer.Chinese ? "schinese" : "english";
+        return LocalizedNames.GetValueOrDefault(steamLanguage) ?? MetadataName ?? Name;
+    }
+
+    /// <summary>Exact known Steam titles may be localized for display; custom profile names stay literal.</summary>
+    public bool IsDefaultName(string name) => string.Equals(name, Name, StringComparison.Ordinal) ||
+        string.Equals(name, MetadataName, StringComparison.Ordinal) || LocalizedNames.Values.Contains(name, StringComparer.Ordinal);
 }
 public sealed record SteamScanResult(IReadOnlyList<SteamGame> Games, IReadOnlyList<LocalMessage> WarningTexts, string? SteamRoot)
 {
@@ -103,6 +116,10 @@ public sealed class SteamScanner(Func<string, string?>? environment = null)
             }
             catch (Exception ex) when (IsReadError(ex)) { warnings.Add(Messages.Text("SteamLibraryUnreadable", library, ex)); }
         }
+        // Optional metadata affects display only, never the manifest identity or saved profile text.
+        var names = SteamAppInfoNames.Read(root, games.Keys, cancellationToken);
+        foreach (var (appId, metadata) in names)
+            games[appId] = games[appId] with { MetadataName = metadata.Name, LocalizedNames = metadata.LocalizedNames };
         return new(games.Values.OrderBy(g => g.Name, StringComparer.CurrentCultureIgnoreCase).ToArray(), warnings, root);
     }
 

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$Compact)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'ProjectUpdates.ps1')
@@ -75,9 +75,21 @@ try {
     if ($renew.sequence -le $payload.sequence -or ($renew.release.artifact | ConvertTo-Json -Compress) -cne $oldArtifact) { throw 'Refresh changed the authorized artifact or did not advance sequence.' }
     Write-Output 'PASS: low-frequency releases can renew signed freshness without authorizing new software.'
 
+    $compactMetadata = [pscustomobject]@{ schemaVersion = 3; tag = 'v0.2.8'; version = '0.2.8'; commit = ('e' * 40); minimumWindowsVersion = '10.0.26100.0'; releaseChannel = 'stable'; installerAsset = [pscustomobject]@{ fileName = 'SteamWrapper-v0.2.8-win-x64-setup.exe'; bytes = 128; sha256 = ('f' * 64) } }
+    foreach ($channel in @('stable', 'preview')) {
+        $compactPayload = New-ProjectUpdatePayload -ReleaseMetadata $compactMetadata -Trust $trust -Now $now -Channel $channel
+        Write-ProjectUpdateEnvelope -Payload $compactPayload -Key $key -KeyId 'fixture' -Path $path
+        $compactVerified = Read-ProjectUpdateEnvelope -Path $path -TrustPath $trustPath -Now $now
+        if ($compactVerified.schemaVersion -ne 2 -or $compactVerified.release.artifact.sha256 -cne $compactMetadata.installerAsset.sha256) { throw 'Internal schema 3 must keep the schema-2 client update contract and exact installer hash.' }
+        $compactRenewed = Update-ProjectUpdateFreshness -Payload $compactVerified -Now $now.AddDays(31)
+        if (($compactRenewed.release | ConvertTo-Json -Depth 8 -Compress) -cne ($compactVerified.release | ConvertTo-Json -Depth 8 -Compress)) { throw 'Renewal changed the compact release installer descriptor.' }
+    }
+    Write-Output 'PASS: compact public assets retain the current schema-2 signed client contract in both channels and during renewal.'
+
     . (Join-Path $PSScriptRoot '../windows/WinUIInstallableRelease.TestFixtures.ps1')
-    $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package') -Tag 'v0.2.0-rc.1'
-    $package = New-WinUIInstallableReleaseTestPackage $fixture
+    $fixtureVersion = if ($Compact) { '0.2.8' } else { '0.2.0' }
+    $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package') -Tag "v$fixtureVersion-rc.1"
+    $package = if ($Compact) { New-WinUIInstallableReleasePackage -Tag $fixture.Tag -Commit $fixture.Commit -RepositoryRoot $fixture.RepositoryRoot -PublishDirectory $fixture.PublishDirectory -InstallerDirectory $fixture.InstallerDirectory -OutputDirectory $fixture.OutputDirectory } else { New-WinUIInstallableReleaseTestPackage $fixture }
     $packageMetadata = Get-Content -LiteralPath $package.Metadata -Raw | ConvertFrom-Json
     $mock = Join-Path $root 'gh-fixture.ps1'
     [IO.File]::WriteAllText($mock, @'
@@ -122,6 +134,11 @@ switch ($a[1]) {
     try {
         $env:STEAMWRAPPER_UPDATE_FIXTURE = $statePath
         $env:STEAMWRAPPER_UPDATE_PRIVATE_KEY = $null
+        $rejected = $false
+        try { $null = & (Join-Path $PSScriptRoot 'Publish-UpdateMetadata.ps1') -PackageDirectory $package.Directory -PublicReleaseVerificationPath 'missing-fixture-receipt.json' -TrustPath $trustPath -GhExecutable $mock }
+        catch { if ($_.Exception.Message -notlike '*must only add a mirror*') { throw }; $rejected = $true }
+        if (-not $rejected -or (Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json).writes -ne 0) { throw 'Compact public maintenance can issue new software or mutate a feed without current-release guards.' }
+        Write-Output 'PASS: compact public maintenance requires both mirror selection and the exact-current-release guard before network writes.'
         $null = & (Join-Path $PSScriptRoot 'Publish-UpdateMetadata.ps1') -Refresh -SkipMissingFeed -Channel stable -TrustPath $trustPath -GhExecutable $mock
         if ((Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json).writes -ne 0 -or $LASTEXITCODE -ne 0) { throw 'An unpublished channel was mutated or leaves the GitHub pwsh step failing.' }
         Write-Output 'PASS: scheduled refresh skips an unpublished channel without signing secrets or writes.'
@@ -156,8 +173,8 @@ switch ($a[1]) {
         catch { if ($_.Exception.Message -notlike '*signature*') { throw }; $rejected = $true }
         if (-not $rejected -or (Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json).writes -ne $writes) { throw 'Invalid old metadata was reauthorized or mutated.' }
         Write-Output 'PASS: the scheduled publisher rejects tampered existing metadata before any network writes.'
-        $stableFixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'stable-package')
-        $stablePackage = New-WinUIInstallableReleaseTestPackage $stableFixture
+        $stableFixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'stable-package') -Tag "v$fixtureVersion"
+        $stablePackage = if ($Compact) { New-WinUIInstallableReleasePackage -Tag $stableFixture.Tag -Commit $stableFixture.Commit -RepositoryRoot $stableFixture.RepositoryRoot -PublishDirectory $stableFixture.PublishDirectory -InstallerDirectory $stableFixture.InstallerDirectory -OutputDirectory $stableFixture.OutputDirectory } else { New-WinUIInstallableReleaseTestPackage $stableFixture }
         $stablePackageMetadata = Get-Content -LiteralPath $stablePackage.Metadata -Raw | ConvertFrom-Json
         $assetHashes = @(Get-ChildItem -LiteralPath $stablePackage.Directory -File | Sort-Object Name | ForEach-Object { $_.Name + ':' + (Get-FileHash -LiteralPath $_.FullName).Hash })
         foreach ($channel in @('stable', 'preview')) {

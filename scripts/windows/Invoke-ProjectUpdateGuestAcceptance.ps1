@@ -17,11 +17,17 @@ foreach($folder in @($InputDirectory,$OutputDirectory)){
     $ancestor=Get-Item -LiteralPath $folder -Force
     while($null -ne $ancestor){Assert-ProjectUpdateAcceptance (-not($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint)) 'Acceptance mapping has a linked ancestor.';$ancestor=$ancestor.Parent}
 }
-foreach($pair in @(@('ProjectUpdateAcceptance.ps1','ProjectUpdateAcceptanceSha256'),@('Invoke-ProjectUpdateGuestAcceptance.ps1','Invoke-ProjectUpdateGuestAcceptanceSha256'),@('Invoke-CleanWindowsGuestAcceptance.ps1','Invoke-CleanWindowsGuestAcceptanceSha256'),@('baseline-release.json','baselineMetadataSha256'),@('target-release.json','targetMetadataSha256'),@('signed-public-feed.json','unused'))){
+foreach($pair in @(@('ProjectUpdateAcceptance.ps1','ProjectUpdateAcceptanceSha256'),@('Invoke-ProjectUpdateGuestAcceptance.ps1','Invoke-ProjectUpdateGuestAcceptanceSha256'),@('Invoke-CleanWindowsGuestAcceptance.ps1','Invoke-CleanWindowsGuestAcceptanceSha256'),@('signed-public-feed.json','unused'))){
     $path=Join-Path $InputDirectory $pair[0];$file=Get-Item -LiteralPath $path -Force
     $expected=if($pair[0] -ceq 'signed-public-feed.json'){$inputManifest.feed.envelopeSha256}else{$inputManifest.($pair[1])}
     Assert-ProjectUpdateAcceptance (-not $file.PSIsContainer -and -not($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -and $file.Length -gt 0 -and $file.Length -le 2MB -and $expected -cmatch '^[a-f0-9]{64}$' -and (Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant() -ceq $expected) ('Pinned public acceptance input changed: '+$pair[0])
 }
+foreach($seal in @(Get-ProjectUpdateMetadataInputSeals $inputManifest)){
+    $path=Join-Path $InputDirectory $seal.name;$file=Get-Item -LiteralPath $path -Force
+    Assert-ProjectUpdateAcceptance (-not $file.PSIsContainer -and -not($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -and $file.Length -gt 0 -and $file.Length -le 2MB -and
+        $seal.hash -cmatch '^[a-f0-9]{64}$' -and (Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant() -ceq $seal.hash) ('Pinned public acceptance input changed: '+$seal.name)
+}
+foreach($role in @('baseline','target')){Assert-ProjectUpdateSealedMetadata $inputManifest $role (Read-ProjectGuestJson (Join-Path $InputDirectory (Get-ProjectUpdateMetadataInputName $inputManifest $role)))}
 Assert-ProjectUpdateAcceptance (-not(Test-Path -LiteralPath (Join-Path $InputDirectory $inputManifest.target.fileName))) 'The target installer must come from the actual Manager network download, never a staged candidate.'
 . (Get-ProjectUpdateCleanHelperDefinitions (Join-Path $InputDirectory 'Invoke-CleanWindowsGuestAcceptance.ps1'))
 $standardAccount=$false
@@ -161,8 +167,19 @@ public static class SteamWrapperPublicUpdateFixture {
     $null=Wait-Acceptance {Test-ProjectUpdateElementEnabled (Find-AcceptanceElement $manager.Window 'SaveProfile')} 'retained profile editor ready'
     Invoke-AcceptanceElement (Wait-AcceptanceElement $manager.Window 'SaveProfile')
     $bundle=Read-ProjectGuestJson (Join-Path $defaultProgram ('versions\'+$inputManifest.target.tag+'\Runner\runner-manifest.json'))
-    $targetMeta=Read-ProjectGuestJson (Join-Path $InputDirectory 'target-release.json');$deployment=$targetMeta.deploymentManifest.json|ConvertFrom-Json;$runnerRecord=@($deployment.files|Where-Object path -IEQ 'Runner/SteamWrapperRunner.exe')[0]
-    Assert-Acceptance ($bundle.sha256 -ceq $runnerRecord.sha256) 'Target bundled Runner differs from the public sealed inventory.'
+    if((Get-ProjectUpdatePublicAssetLayout $inputManifest target) -eq 3){
+        # This is the inventory actually activated by the exact signed Setup
+        # just downloaded and run through Manager, not synthesized build data.
+        $deploymentPath=Join-Path $defaultProgram ('versions\'+$inputManifest.target.tag+'\deployment-manifest.json')
+        $deployment=Read-ProjectGuestJson $deploymentPath
+        Assert-ProjectUpdateActivatedDeployment $inputManifest $deployment $after (Get-FileHash -LiteralPath $deploymentPath).Hash.ToLowerInvariant()
+        $runnerInventorySource='activated-signed-setup-manifest'
+    }else{$targetMeta=Read-ProjectGuestJson (Join-Path $InputDirectory 'target-release.json');$deployment=$targetMeta.deploymentManifest.json|ConvertFrom-Json;$runnerInventorySource='sealed-public-release-inventory'}
+    $runnerRecords=@($deployment.files|Where-Object path -IEQ 'Runner/SteamWrapperRunner.exe');Assert-Acceptance ($runnerRecords.Count -eq 1) 'Target deployment must contain exactly one bundled Runner record.'
+    $bundledRunner=Get-Item -LiteralPath (Join-Path $defaultProgram ('versions\'+$inputManifest.target.tag+'\Runner\SteamWrapperRunner.exe')) -Force
+    Assert-Acceptance ($bundledRunner -is [IO.FileInfo] -and -not($bundledRunner.Attributes -band [IO.FileAttributes]::ReparsePoint)) 'Target bundled Runner must be a regular unlinked file.'
+    Assert-ProjectUpdateBundledRunner $inputManifest $bundle $runnerRecords[0] $bundledRunner.Length (Get-FileHash -LiteralPath $bundledRunner.FullName).Hash.ToLowerInvariant()
+    Record-Acceptance 'target bundled Runner matches activated product bytes' ([ordered]@{inventorySource=$runnerInventorySource;sha256=$bundle.sha256;bytes=$bundledRunner.Length})
     $null=Wait-Acceptance {(Test-ProjectUpdateElementEnabled (Find-AcceptanceElement $manager.Window 'SaveProfile')) -and (Get-FileHash -LiteralPath (Join-Path $dataRoot 'bin\SteamWrapperRunner.exe')).Hash.ToLowerInvariant() -ceq $bundle.sha256} 'explicit stable Runner update after saving retained profile'
     foreach($key in @('profiles.toml','ui-settings.json')){Assert-Acceptance ((Get-FileHash -LiteralPath (Join-Path $dataRoot $key)).Hash.ToLowerInvariant() -ceq $preserved[$key]) 'Explicit Runner update changed prior player configuration bytes.'}
     $newLaunch=Wait-AcceptanceElement $manager.Window 'LaunchOptions';Assert-Acceptance (([System.Windows.Automation.ValuePattern]$newLaunch.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)).Current.Value -ceq $expectedLaunch) 'Runner update changed stable Launch Options.'
