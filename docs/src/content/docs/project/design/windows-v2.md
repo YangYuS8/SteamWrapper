@@ -156,7 +156,7 @@ Routine automation uses isolated Steam/user directories and controlled processes
 
 ## 6. Safe one-click apply and restore
 
-The Windows preview supports manually copied Launch Options. **One-click apply/restore remains planned P4 work**, after the P0 configuration and P1/P2 delivery safeguards, and before new cross-platform scope. It does not depend on the optional P3 updater. Establish and verify safe writes before considering them the default flow.
+Public `v0.2.8` supports manually copied Launch Options and clearing recognized generated commands. **Automatic application and recorded-original restoration remain planned P4 work**, after the P0 configuration and P1/P2 delivery safeguards, and before new cross-platform scope. The [account-specific implementation plan](/SteamWrapper/project/design/steam-launch-options/) defines the player flow, backups, recovery and delivery gates. It does not depend on the optional P3 updater. Establish and verify safe writes before considering them the default flow.
 
 Do not treat Steam's private local files as a stable public write API. Recheck actual structures before implementation and verify parsing/unrelated-data preservation using redacted fixtures. The flow must:
 
