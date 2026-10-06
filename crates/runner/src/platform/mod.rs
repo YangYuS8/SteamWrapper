@@ -72,26 +72,41 @@ fn launch_process_name(
     let mut child = command
         .spawn()
         .context("failed to start process-name launcher")?;
-    let launcher_status = child
-        .wait()
-        .context("failed while waiting for process-name launcher")?;
-
-    let discovery_started = Instant::now();
-    loop {
+    // A target may finish before its launcher exits (or be the launcher
+    // itself). Observe it while the launcher is alive, not only afterwards.
+    let mut observed_named_process = false;
+    let launcher_status = loop {
         system.refresh_processes(ProcessesToUpdate::All, true);
-        if matching_processes(&system, process_name)
+        observed_named_process |= matching_processes(&system, process_name)
             .iter()
-            .any(|identity| !baseline.contains(identity))
+            .any(|identity| !baseline.contains(identity));
+        if let Some(status) = child
+            .try_wait()
+            .context("failed while waiting for process-name launcher")?
         {
-            break;
-        }
-        if discovery_started.elapsed() >= PROCESS_NAME_DISCOVERY_TIMEOUT {
-            bail!(
-                "process named {process_name:?} did not appear within {} seconds",
-                PROCESS_NAME_DISCOVERY_TIMEOUT.as_secs()
-            );
+            break status;
         }
         thread::sleep(PROCESS_NAME_POLL_INTERVAL);
+    };
+
+    if !observed_named_process {
+        let discovery_started = Instant::now();
+        loop {
+            system.refresh_processes(ProcessesToUpdate::All, true);
+            if matching_processes(&system, process_name)
+                .iter()
+                .any(|identity| !baseline.contains(identity))
+            {
+                break;
+            }
+            if discovery_started.elapsed() >= PROCESS_NAME_DISCOVERY_TIMEOUT {
+                bail!(
+                    "process named {process_name:?} did not appear within {} seconds",
+                    PROCESS_NAME_DISCOVERY_TIMEOUT.as_secs()
+                );
+            }
+            thread::sleep(PROCESS_NAME_POLL_INTERVAL);
+        }
     }
 
     let wait_started = Instant::now();
@@ -407,7 +422,12 @@ mod tests {
     #[test]
     fn process_name_waits_for_a_new_named_process_after_launcher_exits_on_windows() {
         let root = TempDir::new("process-name-windows");
-        let test_binary = std::env::current_exe().expect("resolve current test binary");
+        let test_binary = unique_named_test_binary(&root);
+        fs::write(
+            root.path().join("process-name-after-launcher.enabled"),
+            "enabled",
+        )
+        .unwrap();
         let script = format!(
             "$env:STEAMWRAPPER_PROCESS_NAME_TEST='1'; Start-Process -WindowStyle Hidden -FilePath '{}' -ArgumentList @('--exact','platform::tests::process_name_windows_descendant_fixture','--nocapture'); exit 7",
             test_binary.to_string_lossy().replace('\'', "''")
@@ -434,6 +454,10 @@ mod tests {
         let exit_code = launch_profile(&profile).expect("launch Windows process-name fixture");
 
         assert_eq!(exit_code, 7);
+        assert_eq!(
+            fs::read_to_string(root.path().join("process-name-child-finished.txt")).unwrap(),
+            "done"
+        );
         assert!(
             started.elapsed() >= Duration::from_millis(300),
             "runner returned before the named process exited"
@@ -443,11 +467,138 @@ mod tests {
     #[cfg(target_os = "windows")]
     #[test]
     fn process_name_windows_descendant_fixture() {
-        if std::env::var_os("STEAMWRAPPER_PROCESS_NAME_TEST").is_none() {
+        let before_launcher = Path::new("process-name-before-launcher.enabled").exists();
+        if std::env::var_os("STEAMWRAPPER_PROCESS_NAME_TEST").is_none() && !before_launcher {
             return;
         }
 
         std::thread::sleep(Duration::from_millis(400));
+        if before_launcher || Path::new("process-name-after-launcher.enabled").exists() {
+            fs::write("process-name-child-finished.txt", "done").expect("record named child exit");
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    fn unique_named_test_binary(root: &TempDir) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let named = root.path().join(format!("sw-name-{nonce}.exe"));
+        fs::copy(std::env::current_exe().unwrap(), &named)
+            .expect("copy uniquely named test fixture");
+        named
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn process_name_observes_a_named_process_before_launcher_exits_on_windows() {
+        let root = TempDir::new("process-name-before-launcher");
+        let named = unique_named_test_binary(&root);
+        fs::write(
+            root.path().join("process-name-before-launcher.enabled"),
+            named.file_name().unwrap().to_string_lossy().as_bytes(),
+        )
+        .unwrap();
+        let profile = Profile {
+            name: "named child ends before launcher fixture".to_string(),
+            app_id: None,
+            platform: Some(Platform::Windows),
+            game_dir: root.path().to_path_buf(),
+            target: std::env::current_exe().unwrap(),
+            working_dir: None,
+            args: vec![
+                "--exact".to_string(),
+                "platform::tests::process_name_windows_slow_launcher_fixture".to_string(),
+                "--nocapture".to_string(),
+            ],
+            wait_mode: WaitMode::ProcessName,
+            process_name: Some(named.file_name().unwrap().to_string_lossy().to_string()),
+        };
+        assert_eq!(
+            launch_profile(&profile).expect("observe named child before its launcher exits"),
+            7
+        );
+        assert_eq!(
+            fs::read_to_string(root.path().join("process-name-child-finished.txt")).unwrap(),
+            "done"
+        );
+        assert_eq!(
+            fs::read_to_string(root.path().join("process-name-launcher-waited.txt")).unwrap(),
+            "done"
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn process_name_windows_slow_launcher_fixture() {
+        let name = match fs::read_to_string("process-name-before-launcher.enabled") {
+            Ok(value) => value,
+            Err(_) => return,
+        };
+        let mut command = Command::new(std::env::current_dir().unwrap().join(name));
+        command.args([
+            "--exact",
+            "platform::tests::process_name_windows_descendant_fixture",
+            "--nocapture",
+        ]);
+        prepare_command(&mut command);
+        let status = command.spawn().unwrap().wait().unwrap();
+        assert!(status.success(), "named child did not exit normally");
+        assert_eq!(
+            fs::read_to_string("process-name-child-finished.txt").unwrap(),
+            "done"
+        );
+        fs::write("process-name-launcher-waited.txt", "done").unwrap();
+        // Root wait cannot discover this already-finished target afterwards.
+        thread::sleep(Duration::from_millis(1200));
+        std::process::exit(7);
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn process_name_accepts_the_named_launcher_itself_on_windows() {
+        let root = TempDir::new("process-name-direct-launcher");
+        let named = unique_named_test_binary(&root);
+        fs::write(
+            root.path().join("process-name-direct-launcher.enabled"),
+            "enabled",
+        )
+        .unwrap();
+        let profile = Profile {
+            name: "direct named launcher fixture".to_string(),
+            app_id: None,
+            platform: Some(Platform::Windows),
+            game_dir: root.path().to_path_buf(),
+            target: named.clone(),
+            working_dir: None,
+            args: vec![
+                "--exact".to_string(),
+                "platform::tests::process_name_windows_direct_launcher_fixture".to_string(),
+                "--nocapture".to_string(),
+            ],
+            wait_mode: WaitMode::ProcessName,
+            process_name: Some(named.file_name().unwrap().to_string_lossy().to_string()),
+        };
+        assert_eq!(
+            launch_profile(&profile).expect("observe the named launcher itself"),
+            7
+        );
+        assert_eq!(
+            fs::read_to_string(root.path().join("process-name-direct-finished.txt")).unwrap(),
+            "done"
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn process_name_windows_direct_launcher_fixture() {
+        if !Path::new("process-name-direct-launcher.enabled").exists() {
+            return;
+        }
+        thread::sleep(Duration::from_millis(400));
+        fs::write("process-name-direct-finished.txt", "done").unwrap();
+        std::process::exit(7);
     }
 
     #[cfg(not(target_os = "windows"))]

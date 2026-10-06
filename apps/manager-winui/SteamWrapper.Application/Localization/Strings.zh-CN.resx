@@ -7,6 +7,7 @@
   <data name="ConfiguredGames" xml:space="preserve"><value>已配置的游戏</value></data>
   <data name="Reload" xml:space="preserve"><value>重新读取配置</value></data>
   <data name="Preview" xml:space="preserve"><value>Windows 预览版</value></data>
+  <data name="Windows" xml:space="preserve"><value>Windows 版</value></data>
   <data name="WelcomeTitle" xml:space="preserve"><value>配置一次，照常开始</value></data>
   <data name="WelcomeDescription" xml:space="preserve"><value>让 Steam 启动你选择的汉化程序或启动器。配置完成后，直接从 Steam 开始游戏即可。</value></data>
   <data name="WelcomeSteps" xml:space="preserve"><value>1  添加 Steam 游戏

@@ -33,7 +33,8 @@ public sealed partial class MainWindow
         try
         {
             Root.Language = localizer.Language;
-            Title = "SteamWrapper · " + localizer["Preview"];
+            var buildLabel = localizer[InstalledReleaseTag is not null && !InstalledReleaseTag.Contains('-') ? "Windows" : "Preview"];
+            Title = "SteamWrapper · " + buildLabel;
             LanguageInput.Header = localizer["Language"];
             LanguageInput.SelectedItem = LanguageInput.Items.Cast<ComboBoxItem>().Single(item => (string)item.Tag == localizer.Language);
             LocalizedTagline.Text = localizer["Tagline"];
@@ -41,7 +42,7 @@ public sealed partial class MainWindow
             LocalizedConfiguredGames.Text = localizer["ConfiguredGames"];
             ReloadButton.Content = localizer["Reload"];
             UpdatesButton.Content = localizer["Updates"];
-            LocalizedPreview.Text = localizer["Preview"];
+            LocalizedPreview.Text = buildLabel;
             LocalizedWelcomeTitle.Text = localizer["WelcomeTitle"];
             LocalizedWelcomeDescription.Text = localizer["WelcomeDescription"];
             LocalizedWelcomeSteps.Text = localizer["WelcomeSteps"];

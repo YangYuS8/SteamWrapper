@@ -4,7 +4,7 @@
 
 Configure a game once in Manager, then launch it normally from Steam. Manager is configuration UI only; Steam calls the independent, headless Runner. Successful daily launch must not show Manager.
 
-Windows is the current product priority. WinUI 3/C# is the only Manager implementation, with C# configuration services in `apps/manager-winui` and an independent Rust Runner connected by the existing TOML/CLI contracts. Read [the Windows design](docs/src/content/docs/project/design/windows-v2.md) for implementation work. Dioxus, its Rust management layer and its UI/build/release workflows have been removed. WinUI remains a preview until Windows delivery gates pass. Linux / SteamOS expansion is deferred; preserve existing Rust Runner compatibility and process CI.
+Windows is the current product priority. WinUI 3/C# is the only Manager implementation, with C# configuration services in `apps/manager-winui` and an independent Rust Runner connected by the existing TOML/CLI contracts. Read [the Windows design](docs/src/content/docs/project/design/windows-v2.md) for implementation work. Dioxus, its Rust management layer and its UI/build/release workflows have been removed. The scoped Windows 11 24H2 x64 core acceptance is complete for first stable delivery; actual publication still requires the exact mainline tag workflow and verified downloads. Manager runs in the Windows account used for Steam. A fresh-account primary sign-in, two-user GUI, cross-user Run as and multi-monitor hardware matrix are not established by the same-primary-SID ordinary-permission test; preserve these limits and the failed cross-user evidence. Linux / SteamOS expansion is deferred; preserve existing Rust Runner compatibility and process CI.
 
 ## Working agreement
 

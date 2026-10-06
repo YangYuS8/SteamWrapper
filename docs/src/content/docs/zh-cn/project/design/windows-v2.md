@@ -11,6 +11,22 @@ description: "Windows 产品需求、配置保真、架构与实施阶段。"
 
 **2026-10-02 实现更新：**WinUI 现为唯一 Manager。按用户要求，已移除 Dioxus 应用、Rust `manager-core`、Dioxus Native E2E 和旧 UI 发布链，历史源码仍可在 `ca6a09e` 查阅。这取代最初的分阶段退役决定，不改写九月的测量结果，也不完成剩余 Windows 验收门槛。主线集成仍是预览，不是稳定发布。当前优先级见[路线图](/SteamWrapper/zh-cn/project/roadmap/)。
 
+## 当前验收（2026-10-06）
+
+上方九月状态保留为历史记录。有界 P0／P1 核心已具备 **Windows 11 x64、当前 Windows／Steam 账户**的首个稳定版交付条件，并已实际以普通权限执行产品。准确标签的正常 CI、发布检查及公开下载核验仍不可省略。最新公开版本仍为 **[v0.2.6-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1)**，提供相同的 [CNB 附件](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.6-preview.1)；**实际发布成功之前，0.2.7 仍为私有候选**。[运行 37462977733](https://github.com/YangYuS8/SteamWrapper/actions/runs/37462977733) 发布两个公开预览来源及签名索引，两个来源的全部七附件通过独立匿名长度／摘要、标签提交和包内清单核验；该检查没有执行 Setup。
+
+当前源码通过 178 项 Application、37 项 Windows、160 项 Deployment 测试，有一项条件式跨卷跳过，Runner 契约通过。真实隔离 0.2.6 → 0.2.7 安装／回滚／再升级通过 13 个结果。私有便携候选通过十项无 SDK、构建 26100 步骤，包含中文目录配置、Manager 移动及独立 Runner 使用；五项实际 NativeAOT Host 语言用例另行通过。已记录的 16 项双语原生用例、物理拼音输入及活动显示器 DPI 切片建立核心 UI 范围，同时保留对应实际载荷与夹具／客体边界。这些检查不代表 0.2.7 已发布或所有账户／硬件组合通过。
+
+真实 CNB 公开 0.2.5 → 0.2.6 手动更新通过全部 12 项原生／安装器步骤：签名更新源、未映射目标 Setup 的准确网络下载、旧 Manager 正常退出、实际 Setup、自动健康重启、配置／偏好／信任状态保持原字节、明确保存配置以安装修正 Runner、独立运行及默认卸载保留。Manager 替换期间保留旧 Runner，没有运行它。另一次明确选择 GitHub 的下载按未改变的产品策略超时，未执行目标安装器，原安装／数据保持不变；其失败记录继续记为失败。两个结果都不覆盖启用启动检查或所有网络。
+
+实际生产安装身份 0.2.7 Setup（SHA-256 `5c9ab6482f67711bc61813563e687cf13c2f10b79f47a1930127502e3b4a6b5f`）在全新离线、构建 26100 客体通过全部 **14 项产品生命周期步骤**，没有 SDK 或预先准备的运行时。当前主 SID 的新 Users／Medium 主令牌没有 Administrators SID 或启用的关键管理员特权。Manager 加载自己的 .NET／XAML 模块、保存配置并安装 Runner；修复、默认卸载、中文目录重装及卸载／移动后的独立 Runner 通过。两次 Manager、三次 Runner 退出均实际观察为 0，临时 WinSta0／Default 安全描述符及原始 544／545／555 组成员关系精确还原。这是真实普通权限产品执行，`freshStandardAccount=false`、`primaryStandardSignInTested=false`、`twoUserGuiTested=false`，不是控制器单独通过。
+
+先前新 SwAcc 跨用户二次登录试验安装 Setup 后，在 WinUI `Application.Start` 发生 `0x8000FFFF`；同 SDK 空控件也在回调前失败。未精确确定原因，失败记录保留。在其他账户的既有桌面上跨用户 RunAs 不属于首个版本的当前账户流程。同 SID 通过不证明其根因、新普通账户主登录或双用户 GUI 使用通过。
+
+实际 NativeAOT 0.2.5 → 0.2.7 复制／恢复在自有 512 MiB 客体 VHD 通过，使用本地重建清单，`actualInno=false`。辅助程序写入安装事务日志及 26,424 字节部分载荷，在剩余 4,096 字节时退出 11；原安装与数据保持不变。只移除自有填充文件后，修复退出 0，VHD 正常分离。先前测试工具失败继续保留。此结果证明该复制中途磁盘满／恢复流程，不代表 Inno 故障、系统盘耗尽或断电恢复通过。
+
+先前微软拼音组合／提交／取消及保留其他字节的保存通过；修正候选窗口在活动显示器以 96／144／192 DPI 实测，宿主还原 125%，28 项放置回归通过。这些观察不证明多屏硬件或后续载荷的所有对话框／语言／缩放组合通过。[测试](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-06)记录准确产物及保留的失败；[路线图](/SteamWrapper/zh-cn/project/roadmap/)分别记录核心就绪、剩余发布门槛与后续扩展。
+
 ## 1. 回到最初要解决的问题
 
 **让 Windows 玩家通过 Steam 启动汉化版游戏或自定义启动器，尽可能让 Steam 的游玩状态和时长跟随真实游戏生命周期。配置一次，平时只在 Steam 点击开始。**
@@ -135,15 +151,15 @@ Windows 预览支持手动复制启动项。**一键应用／恢复仍是 P4 待
 
 ## 7. 安装、更新、卸载
 
-**当前实现，2026-10-05：**P1 已提供共享同一应用布局的 **unpackaged 自包含每用户 Inno 安装器与 portable ZIP**，同时携带 .NET 和 Windows App SDK 依赖。普通玩家无需安装开发工具或手动准备运行时；Runner 仍是独立 Rust EXE，不承诺单文件 EXE。安装器已存在，隔离安装／升级测试已通过，干净客户端和更广泛恢复验收仍待完成。这更新了上文九月的实现状态。[官方自包含部署](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps)
+**实现基线，2026-10-05：**P1 已提供共享同一应用布局的 **unpackaged 自包含每用户 Inno 安装器与 portable ZIP**，同时携带 .NET 和 Windows App SDK 依赖。普通玩家无需安装开发工具或手动准备运行时；Runner 仍是独立 Rust EXE，不承诺单文件 EXE。安装器已存在，隔离安装／升级测试已通过，干净客户端和更广泛恢复验收仍待完成。这更新了上文九月的实现状态。[官方自包含部署](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps)
 
 首次安装默认使用 `%LOCALAPPDATA%\Programs\SteamWrapper\`，也可选择经过验证的固定本地盘空目录。升级和修复保留已注册位置；更换位置需先只卸载 Manager 并保留数据，再安装到新位置。开始菜单快捷方式默认开启、桌面快捷方式默认关闭，安装完成后可选择打开 Manager。Manager 单独校验并准备 `%LOCALAPPDATA%\SteamWrapper\bin` 中的稳定 Runner。Runner 占用时保留原二进制、配置和有效启动项，游戏结束后可重试；版本／兼容检查防止随意降级，摘要不同本身不是可升级的证明。
 
-默认卸载只删除 Manager、快捷方式和注册信息。七个独立可选项可移除已识别 Steam 启动选项、下载缓存、日志、偏好、配置、配置备份或经过验证的 Runner 文件。Steam 关闭后，严格标准命令先备份再清空；不推测自定义命令或未知历史值。删除配置／Runner 必须完整扫描账号，确认没有残留 Runner 引用或未解决的还原备份。未知／占用文件、游戏／存档、更新信任状态和 Steam 恢复备份始终保留。限定英／中取消及仅缓存检查已通过，最终布局／默认保留检查另行记录，更广选项组合仍需验收；边界和恢复方法见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)。
+默认卸载只删除 Manager、快捷方式和注册信息。七个独立可选项可移除已识别 Steam 启动选项、下载缓存、日志、偏好、配置、配置备份或经过验证的 Runner 文件。Steam 关闭后，严格标准命令先备份再清空；不推测自定义命令或未知历史值。删除配置／Runner 必须完整扫描账号，确认没有残留 Runner 引用或未解决的还原备份。未知／占用文件、游戏／存档、更新信任状态和 Steam 恢复备份始终保留。冻结 0.2.6 共用清理逻辑通过九项隔离原生选择场景：七项分别单选、还原／配置／Runner 合选及全七项选择。生产 0.2.7 普通权限流程另验证默认保留，不代表全部语言或生产 0.2.7 选择逐项重跑。先前双语取消／缓存／布局检查继续保留各自范围，控件与保护边界见[安装器指南](/SteamWrapper/zh-cn/guides/installer-preview/)。
 
-每个候选安装器和 portable 包仍须在无开发环境的 Windows 11 x64 VM 中验证安装、配置、关闭 Manager 后启动、原地更新、受支持的换位置方式，以及适用的卸载／保留行为。本机夹具通过不完成该门槛。记录包体、冷启动和空闲内存后再优化；MSIX、ARM64 和 Windows 10 单独评估。
+每次安装器或便携载荷改变后，都需要绑定实际字节的验证，源码测试本身不足。已通过核心包含无 SDK WDAG 安装／升级／便携、0.2.7 普通权限产品生命周期、真实隔离升级／回滚、默认数据保留、限定清理及注册／快捷方式恢复部分、有界版本保留。自有 VHD NativeAOT 复制中途修复使用本地清单夹具，未执行 Inno；部分结果通过时也保留先前整体失败。完整新账户主登录、双用户 GUI、其他硬件／构建／语言组合及物理断电仍独立评估，宿主夹具、客体产品执行和独立 ISO 证据分别记录。先记录包体／安装体积和启动观察，再优化；MSIX、ARM64、Windows 10 留待后续。
 
-P2 已自动化版本标签的 Setup／便携 ZIP 交付、校验和及完整英语／简体中文说明；只有相同附件发布并核验后，CNB 才可作为二进制镜像。P3 已在 `0.2.5` 实现手动检查、可选启动检查、项目签名元数据、有界验证下载，以及确认后交给现有安装器的流程。Windows Authenticode 是可选能力，与必须验证的项目更新签名独立。真实隔离 `0.2.4` → `0.2.5` 安装接力已通过，限定安装器原生流程也已通过，公开下载至安装、更广原生交互、干净客户端和恢复验收仍独立保留。详见[分发说明](/SteamWrapper/zh-cn/development/distribution/)及[测试](/SteamWrapper/zh-cn/development/testing/)。更新不进入 Runner 日常启动路径，并保留用户数据和可用稳定 Runner。
+P2 已自动化版本标签的 Setup／便携 ZIP 交付、校验和及完整英语／简体中文说明；公开 `v0.2.6-preview.1` 的相同附件已在 GitHub 与 CNB 核验。P3 自 `0.2.5` 起提供手动检查、可选启动检查、项目签名元数据、有界验证下载，以及确认后交给现有安装器的流程。Windows Authenticode 可选，与必须验证的项目更新签名独立。先前真实隔离 `0.2.4` → `0.2.5` 接力继续保留为历史证据；CNB 公开 0.2.5 → 0.2.6 原生下载至安装流程现已另行通过，GitHub 的真实超时失败及更广自动检查／原生／客户端／恢复门槛仍保留。Manager 更新保留既有稳定 Runner 字节。旧版已知 Runner 需要修正时，Manager 引导明确保存配置以安装随包 Runner；替换 Manager 不会静默替换它，也不证明旧二进制可运行。详见[分发说明](/SteamWrapper/zh-cn/development/distribution/)及[测试](/SteamWrapper/zh-cn/development/testing/)。更新不进入 Runner 日常启动路径，并保留用户数据。
 
 ## 8. 实施顺序与停止条件
 

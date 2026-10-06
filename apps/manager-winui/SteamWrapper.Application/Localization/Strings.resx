@@ -7,6 +7,7 @@
   <data name="ConfiguredGames" xml:space="preserve"><value>Configured games</value></data>
   <data name="Reload" xml:space="preserve"><value>Reload profiles</value></data>
   <data name="Preview" xml:space="preserve"><value>Windows preview</value></data>
+  <data name="Windows" xml:space="preserve"><value>Windows</value></data>
   <data name="WelcomeTitle" xml:space="preserve"><value>Configure once. Play as usual.</value></data>
   <data name="WelcomeDescription" xml:space="preserve"><value>Choose the translated game or launcher that Steam should run. After setup, start your game from Steam as usual.</value></data>
   <data name="WelcomeSteps" xml:space="preserve"><value>1  Add a Steam game

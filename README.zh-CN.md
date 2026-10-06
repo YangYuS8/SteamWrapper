@@ -12,13 +12,13 @@
 
 ## 当前状态
 
-项目优先做好 Windows。**WinUI 3/C# Manager 已有可用预览**，支持本地 Steam 发现、原生选择器、保留语法的配置编辑、高级参数与启动选项复制。WinUI 是唯一的 Manager；旧 Dioxus 界面与发布链已移除。可从 [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases) 下载未签名 Windows Setup 和完整便携 ZIP，使用前阅读[安装器指南](https://yangyus8.top/SteamWrapper/zh-cn/guides/installer-preview/)。干净系统验收和生产签名仍待完成。
+项目优先做好 Windows。**WinUI 3/C# Manager** 支持本地 Steam 发现、原生选择器、保留语法的配置编辑、高级参数与启动选项复制。WinUI 是唯一的 Manager。可从 [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases) 下载 Windows Setup 或完整便携 ZIP，使用前阅读[安装器指南](https://yangyus8.top/SteamWrapper/zh-cn/guides/installer-preview/)。最新公开预览为 `v0.2.6-preview.1`，`0.2.7` 正在完成稳定版的最终验收。
 
 Manager 首次启动跟随已支持的系统界面语言，不支持时回退英语，提供完整简体中文。已保存的手动语言选择优先。切换语言保留游戏名称、路径、参数与已保存配置。请将官方 Steam 安装与第三方汉化版分开放置，详见[汉化游戏、存档与成就](https://yangyus8.top/SteamWrapper/zh-cn/guides/translated-games/)。兼容性记录限定于具体游戏和场景，不保证所有游戏均可用。
 
 封面优先使用自定义与本地 Steam 图片。可选的官方 Steam CDN 补图默认关闭，使用有界的 SteamWrapper 缓存并提供清理入口；缺图不影响配置或启动。详见[封面设置](https://yangyus8.top/SteamWrapper/zh-cn/guides/configuration/#cover-settings)。
 
-拉取请求与 `main` 运行测试及编译检查。版本标签构建完整便携 ZIP 和每用户 Setup，明确标为未签名技术预发布；手动工作流只生成预览产物，不公开发布 Release。技术预览为 Foundation 审核准备当前产品形式。干净 Windows、更广原生交互、旧版本保留和生产签名仍是稳定版门槛。详见[发布准备](https://yangyus8.top/SteamWrapper/zh-cn/development/distribution/)和[代码签名政策（Code signing policy）](https://yangyus8.top/SteamWrapper/zh-cn/project/design/code-signing/)。
+拉取请求与 `main` 运行测试及编译检查。版本标签构建并发布 Setup 和便携 ZIP：纯版本标签选择稳定版，预发布后缀选择预览版；手动工作流只生成试用产物，不公开发布 Release。Windows Authenticode 签名是可选项，应用更新通过项目签名元数据认证并校验精确安装包。首个稳定版仍以干净客户端及原生交互验收为门槛。详见[发布准备](https://yangyus8.top/SteamWrapper/zh-cn/development/distribution/)和[代码签名政策](https://yangyus8.top/SteamWrapper/zh-cn/project/design/code-signing/)。
 
 ## 文档
 
