@@ -13,7 +13,7 @@ internal static class SteamLaunchRestoration
     private const int MaximumBytes = 32 * 1024 * 1024;
 
     internal static SteamLaunchPlan Inspect(string steamRoot, string dataRoot, string? selectedAppId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, string? selectedProfileKey = null)
     {
         SafePaths.CheckAncestors(steamRoot);
         if (!Directory.Exists(Path.Combine(steamRoot, "steamapps")))
@@ -22,6 +22,7 @@ internal static class SteamLaunchRestoration
         SafePaths.CheckAncestors(userdata);
         var changes = new List<SteamLaunchChange>();
         var unknown = 0;
+        var selectedIdentifiers = new[] { selectedAppId, selectedProfileKey }.OfType<string>().Distinct(StringComparer.Ordinal).ToArray();
         if (!Directory.Exists(userdata)) return new(changes, unknown);
         var accounts = Directory.GetDirectories(userdata).Where(path =>
             Path.GetFileName(path).All(char.IsAsciiDigit)).Take(129).ToArray();
@@ -42,14 +43,14 @@ internal static class SteamLaunchRestoration
             {
                 if (!entry.Value.Contains("SteamWrapperRunner", StringComparison.OrdinalIgnoreCase)) continue;
                 var names = entry.Keys;
-                // Selection also covers a custom command in another game's options which still
-                // launches this AppID. Such a command blocks profile removal but is never rewritten.
+                // Removal also checks the profile's legacy key because Runner accepts either
+                // key or app_id. Restore callers supply only the selected canonical AppID.
                 var selectedPath = names.Length >= 6 && names.Take(5).SequenceEqual(
                     new[] { "UserLocalConfigStore", "Software", "Valve", "Steam", "apps" }, StringComparer.OrdinalIgnoreCase)
-                    && names[5] == selectedAppId;
-                if (selectedAppId is not null && !selectedPath && !Regex.IsMatch(entry.Value,
-                    "(?:^|\\s)\"?--appid\"?(?:\\s+|=)\"?" + Regex.Escape(selectedAppId) + "\"?(?=\\s|$)",
-                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)) continue;
+                    && selectedIdentifiers.Contains(names[5], StringComparer.Ordinal);
+                if (selectedAppId is not null && !selectedPath && !selectedIdentifiers.Any(identifier => Regex.IsMatch(entry.Value,
+                    "(?:^|\\s)\"?--appid\"?(?:\\s+|=)\"?" + Regex.Escape(identifier) + "\"?(?=\\s|$)",
+                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))) continue;
                 var correctPath = names.Length == 7 &&
                     names.Take(5).SequenceEqual(new[] { "UserLocalConfigStore", "Software", "Valve", "Steam", "apps" }, StringComparer.OrdinalIgnoreCase) &&
                     names[6].Equals("LaunchOptions", StringComparison.OrdinalIgnoreCase) &&

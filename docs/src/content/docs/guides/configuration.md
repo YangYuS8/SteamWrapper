@@ -104,7 +104,7 @@ The editor preserves unedited TOML values and creates configuration backups when
 
 To stop redirecting a game through SteamWrapper, exit Steam normally and choose **Restore Steam launch**. This clears only that game's exact generated SteamWrapper command, backs up affected Steam account files and keeps your configuration. Custom or unrecognized launch options stay untouched. Old arguments were not recorded when you manually pasted the command, so unknown earlier arguments cannot be recovered automatically.
 
-**Remove configuration** removes only the selected saved configuration and keeps an exact backup. Exit Steam normally first. Removal is refused while any checked Steam account still references it; restore the Steam launch or review custom options before retrying. Game files, saves and the stable Runner remain untouched. Unsupported or readonly profile layouts cannot be removed through the editor.
+**Remove configuration** removes only the selected saved configuration and keeps an exact backup. Exit Steam normally first. Removal is refused while any checked Steam account still references it; restore the Steam launch or review custom options before retrying. Game files, saves and the stable Runner remain untouched. Unsupported or readonly profile layouts cannot be removed through the editor. Hand-edited legacy configurations that cannot be safely checked are preserved with an inspection message.
 
 ## Copy the generated Steam command
 

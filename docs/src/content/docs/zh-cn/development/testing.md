@@ -59,7 +59,9 @@ Windows [Rust 运行 37494490736](https://github.com/YangYuS8/SteamWrapper/actio
 
 ## 玩家反馈改进，源码 0.2.8（2026-10-07）
 
-以下是本地发布前结果；最新公开版本仍为 `v0.2.7`。216 项 Application、37 项 Windows 和 167 项 Deployment 测试全部通过，有一项条件式跨卷跳过。C#/Rust 契约通过，记录为 `target/winui-contracts/f4a2ed8ddb5a40eeb7d30f65e1266d65/results`。服务回归覆盖选定配置删除、字节／备份保留、Steam 退出／引用保护，以及有界只读 Steam 游戏名解析。
+以下是本地发布前结果；最新公开版本仍为 `v0.2.7`。初始快照通过 216 项 Application、37 项 Windows 和 167 项 Deployment 测试，有一项条件式跨卷跳过。C#/Rust 契约通过，记录为 `target/winui-contracts/f4a2ed8ddb5a40eeb7d30f65e1266d65/results`。服务回归覆盖选定配置删除、字节／备份保留、Steam 退出／引用保护，以及有界只读 Steam 游戏名解析。
+
+最终复核复现了跨游戏旧配置 Key 引用漏检。移除现在同时检查配置 Key 与 AppID，恢复仍只清除所选规范 AppID 的标准命令。新增十一项缺失行为用例先失败，字面／前缀对照通过；最终聚焦门槛通过 25 项、完整 Deployment 门槛通过 180 项，各有一项条件式跨卷跳过。需要命令行转义的 Key 会保留配置并报告检查失败，不会视为没有引用。Manager 已针对新保护编译通过。下方私有原生／安装器载荷早于最后这处保护，最终发布仍须准确标签构建与安装器门禁。
 
 旧 `0.2.7` 界面先在缺少配置操作及本地化名称的预期检查上失败。重新构建的私有 `0.2.8` 通过四个实际原生夹具用例：英语／中文 `profile-actions`、`steam-names` 和 `updates`，记录于 `target/winui/native-ui/中文 空格 ' e2366d302b4f4dc191fe95e1f4a566d6/evidence.json`。覆盖未保存编辑还原、取消恢复／移除、本地化选择器／侧边栏／搜索、自定义及保存名称、语言切换时未保存输入／选择保留，以及简洁的 SteamWrapper 窗口标题。实际恢复／删除写入由一次性服务夹具覆盖；这些原生用例没有修改真实 Steam 设置或游戏。
 

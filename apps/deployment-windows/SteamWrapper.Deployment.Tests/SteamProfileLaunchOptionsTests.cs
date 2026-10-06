@@ -66,6 +66,91 @@ public sealed class SteamProfileLaunchOptionsTests
     }
 
     [TestMethod]
+    [DataRow("legacy")]
+    [DataRow("456")]
+    [DataRow("legacy + (版).*[x]?")]
+    public async Task CrossGameProfileKeyReferenceBlocksRemovalWithoutChangingAnyFile(string profileKey)
+    {
+        using var fixture = new Fixture();
+        var data = Path.Combine(fixture.Directory, "data"); var steam = Path.Combine(fixture.Directory, "steam");
+        var path = Config(steam, "1", ("999", Command(data, profileKey)), ("789", Command(data, "789")));
+        var before = File.ReadAllBytes(path);
+        var error = await Assert.ThrowsAsync<DeploymentException>(() =>
+            SteamProfileLaunchOptions.EnsureRemovalAllowedAsync(data, steam, "123", profileKey, () => false));
+        Assert.AreEqual("SteamReferences", error.Code);
+        CollectionAssert.AreEqual(before, File.ReadAllBytes(path));
+        Assert.IsFalse(Directory.Exists(data));
+    }
+
+    [TestMethod]
+    [DataRow("legacy")]
+    [DataRow("456")]
+    [DataRow("legacy + (版).*[x]?")]
+    public async Task CanonicalRestorePreservesAliasReferenceWhichStillBlocksRemoval(string profileKey)
+    {
+        using var fixture = new Fixture();
+        var data = Path.Combine(fixture.Directory, "data"); var steam = Path.Combine(fixture.Directory, "steam");
+        var canonical = Command(data, "123");
+        var path = Config(steam, "1", ("123", canonical), ("999", Command(data, profileKey)));
+        var before = File.ReadAllBytes(path);
+        var result = await SteamProfileLaunchOptions.RestoreSelectedAsync(data, steam, "123", () => false);
+        Assert.AreEqual(1, result.ClearedCommands);
+        Assert.AreEqual(Encoding.UTF8.GetString(before).Replace(Escape(canonical), "", StringComparison.Ordinal), File.ReadAllText(path));
+        var after = File.ReadAllBytes(path);
+        var error = await Assert.ThrowsAsync<DeploymentException>(() =>
+            SteamProfileLaunchOptions.EnsureRemovalAllowedAsync(data, steam, "123", profileKey, () => false));
+        Assert.AreEqual("SteamReferences", error.Code);
+        CollectionAssert.AreEqual(after, File.ReadAllBytes(path));
+        CollectionAssert.AreEqual(before, File.ReadAllBytes(Directory.GetFiles(Path.Combine(data, "backups", "steam-launch-options"), "*-localconfig.vdf", SearchOption.AllDirectories).Single()));
+    }
+
+    [TestMethod]
+    [DataRow("legacy", "legacy-other")]
+    [DataRow("legacy.*", "legacy-other")]
+    public async Task ProfileKeyIsMatchedLiterallyWithArgumentBoundaries(string profileKey, string unrelatedKey)
+    {
+        using var fixture = new Fixture();
+        var data = Path.Combine(fixture.Directory, "data"); var steam = Path.Combine(fixture.Directory, "steam");
+        var path = Config(steam, "1", ("999", Command(data, unrelatedKey)));
+        var before = File.ReadAllBytes(path);
+        await SteamProfileLaunchOptions.EnsureRemovalAllowedAsync(data, steam, "123", profileKey, () => false);
+        CollectionAssert.AreEqual(before, File.ReadAllBytes(path));
+    }
+
+    [TestMethod]
+    [DataRow("quoted\"key", "quoted\\\"key")]
+    [DataRow("trailing\\", "trailing\\\\")]
+    public async Task WindowsEscapedCrossGameKeyFailsClosedInsteadOfAllowingRemoval(string profileKey, string escapedCliKey)
+    {
+        using var fixture = new Fixture();
+        var data = Path.Combine(fixture.Directory, "data"); var steam = Path.Combine(fixture.Directory, "steam");
+        var path = Config(steam, "1", ("999", Command(data, escapedCliKey)));
+        var before = File.ReadAllBytes(path);
+        var error = await Assert.ThrowsAsync<DeploymentException>(() =>
+            SteamProfileLaunchOptions.EnsureRemovalAllowedAsync(data, steam, "123", profileKey, () => false));
+        Assert.AreEqual("SteamInspect", error.Code);
+        CollectionAssert.AreEqual(before, File.ReadAllBytes(path));
+        Assert.IsFalse(Directory.Exists(data));
+    }
+
+    [TestMethod]
+    [DataRow("tab\tkey")]
+    [DataRow("line\nkey")]
+    [DataRow("slash\\key")]
+    public async Task UninspectableKeyRefusesRemovalEvenWhenNoRecognizedCommandIsPresent(string profileKey)
+    {
+        using var fixture = new Fixture();
+        var data = Path.Combine(fixture.Directory, "data"); var steam = Path.Combine(fixture.Directory, "steam");
+        var path = Config(steam, "1", ("999", "-windowed"));
+        var before = File.ReadAllBytes(path);
+        var error = await Assert.ThrowsAsync<DeploymentException>(() =>
+            SteamProfileLaunchOptions.EnsureRemovalAllowedAsync(data, steam, "123", profileKey, () => false));
+        Assert.AreEqual("SteamInspect", error.Code);
+        CollectionAssert.AreEqual(before, File.ReadAllBytes(path));
+        Assert.IsFalse(Directory.Exists(data));
+    }
+
+    [TestMethod]
     public async Task RunningSteamStopsRestoreAndRemovalBeforeAnyMutation()
     {
         using var fixture = new Fixture();

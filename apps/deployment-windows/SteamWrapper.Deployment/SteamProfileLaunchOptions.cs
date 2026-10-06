@@ -27,6 +27,26 @@ public static class SteamProfileLaunchOptions
     public static Task EnsureRemovalAllowedAsync(string dataRoot, string steamRoot, string appId,
         CancellationToken cancellationToken = default) => EnsureRemovalAllowedAsync(dataRoot, steamRoot, appId, IsSteamRunning, cancellationToken);
 
+    public static Task EnsureRemovalAllowedAsync(string dataRoot, string steamRoot, string appId, string profileKey,
+        CancellationToken cancellationToken = default) => EnsureRemovalAllowedAsync(dataRoot, steamRoot, appId, profileKey, IsSteamRunning, cancellationToken);
+
+    internal static Task EnsureRemovalAllowedAsync(string dataRoot, string steamRoot, string appId, string profileKey,
+        Func<bool> steamRunning, CancellationToken cancellationToken = default)
+        => RunAsync(() =>
+        {
+            Validate(dataRoot, steamRoot, appId);
+            // The bounded reference matcher is not a Windows command-line decoder. Preserve
+            // profiles whose keys require escaping rather than claim their references were absent.
+            if (string.IsNullOrEmpty(profileKey) || profileKey.Any(character => character is '\\' or '"' || char.IsControl(character)))
+                throw new InvalidDataException("The profile key cannot be safely checked for escaped Runner references; the profile was preserved.");
+            RequireSteamStopped(steamRunning);
+            var inspection = Inspection(SteamLaunchRestoration.Inspect(steamRoot, dataRoot, appId, cancellationToken, profileKey));
+            RequireSteamStopped(steamRunning);
+            if (inspection.HasReferences)
+                throw new DeploymentException("SteamReferences", "Steam Launch Options still reference this configuration. Clear recognized integration first; preserve and review custom options manually.");
+            return true;
+        }, cancellationToken);
+
     internal static Task<SteamProfileLaunchRestoreResult> RestoreSelectedAsync(string dataRoot, string steamRoot, string appId,
         Func<bool> steamRunning, Action<string>? beforeReplace = null, CancellationToken cancellationToken = default)
         => RunAsync(() =>
@@ -48,16 +68,7 @@ public static class SteamProfileLaunchOptions
         }, cancellationToken);
 
     internal static Task EnsureRemovalAllowedAsync(string dataRoot, string steamRoot, string appId, Func<bool> steamRunning,
-        CancellationToken cancellationToken = default) => RunAsync(() =>
-        {
-            Validate(dataRoot, steamRoot, appId);
-            RequireSteamStopped(steamRunning);
-            var inspection = Inspection(SteamLaunchRestoration.Inspect(steamRoot, dataRoot, appId, cancellationToken));
-            RequireSteamStopped(steamRunning);
-            if (inspection.HasReferences)
-                throw new DeploymentException("SteamReferences", "Steam Launch Options still reference this configuration. Clear recognized integration first; preserve and review custom options manually.");
-            return true;
-        }, cancellationToken);
+        CancellationToken cancellationToken = default) => EnsureRemovalAllowedAsync(dataRoot, steamRoot, appId, appId, steamRunning, cancellationToken);
 
     private static SteamProfileLaunchInspection Inspection(SteamLaunchPlan plan) =>
         new(plan.Changes.Sum(change => change.Count), plan.UnrecognizedReferences);

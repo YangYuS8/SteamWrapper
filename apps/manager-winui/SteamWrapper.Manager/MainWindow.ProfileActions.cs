@@ -75,7 +75,7 @@ public sealed partial class MainWindow
         {
             var root = RequireSteamRoot();
             snapshot = await store.DeleteAsync(snapshot, profile.Key, token =>
-                SteamProfileLaunchOptions.EnsureRemovalAllowedAsync(paths.Root, root, profile.AppId ?? profile.Key, token));
+                SteamProfileLaunchOptions.EnsureRemovalAllowedAsync(paths.Root, root, profile.AppId ?? profile.Key, profile.Key, token));
             editing = null; editorBaseline = null; dirty = false; isNew = false;
             RefreshProfiles();
             EditorPanel.Visibility = Visibility.Collapsed;
