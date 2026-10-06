@@ -1,13 +1,13 @@
 ---
-title: "Windows installer preview"
+title: "Windows installer"
 description: "Choose an installation folder, update or repair Manager, and remove only the data you select."
 ---
 
 ## Current boundary
 
-SteamWrapper's Windows installer is a technical preview for **Windows 11 24H2 or newer, x64**. It installs for the current Windows user and includes the files needed to run Manager; you do not need a developer SDK or a separate .NET installation.
+SteamWrapper **v0.2.7** is the first stable Windows release, verified for **Windows 11 24H2 x64**. Other Windows builds are not yet verified. It installs for the current Windows user and includes the files needed to run Manager; you do not need a developer SDK or a separate .NET installation. Use the same Windows account you normally use for Steam.
 
-See the [installation guide](/SteamWrapper/guides/installation/) for currently published downloads. The preview does not have Windows Authenticode signing. Project signatures used by the update feature are explained [below](#signing-and-updates); they do not provide a Windows publisher certificate.
+See the [installation guide](/SteamWrapper/guides/installation/) for published downloads. This release does not have Windows Authenticode signing. Project signatures used by the update feature are explained [below](#signing-and-updates); they do not provide a Windows publisher certificate.
 
 ## Installation and daily use
 
@@ -67,11 +67,11 @@ Busy, unknown or unverified files are preserved. The uninstaller does not follow
 
 ## Signing and updates
 
-Windows Authenticode signing is optional and is not present in the current preview. Windows may therefore show an unknown-publisher warning. Download only from the sources linked in the [installation guide](/SteamWrapper/guides/installation/), and keep normal Windows protection enabled.
+Windows Authenticode signing is optional and is not present in the current release. Windows may therefore show an unknown-publisher warning. Download only from the sources linked in the [installation guide](/SteamWrapper/guides/installation/), and keep normal Windows protection enabled.
 
 Manager's update feature uses a separate **project signature** to verify update information, then checks the exact installer size and hash before offering installation. It does not require players to install a certificate or create a signing key.
 
-Use **Check for updates** in Manager, download an offered version, then confirm installation. Automatic checks are off by default. Installed copies update at their registered location; your profiles and stable Runner remain separate. A version without the update interface needs one manual Setup installation first. Public availability depends on the published release and its update feed; this guide does not announce a stable release.
+Use **Check for updates** in Manager, download an offered version, then confirm installation. Automatic checks are off by default. Installed copies update at their registered location; your profiles and stable Runner remain separate. A version without the update interface needs one manual Setup installation first. The published stable and preview update channels both offer v0.2.7.
 
 For a **portable ZIP**, download a newer complete ZIP and extract it into a new folder. Close the old Manager, then open the new copy from File Explorer. The update feature does not install over an arbitrary portable folder. Your existing profiles and stable Runner stay in the same Windows data folder, so moving Manager does not require changing Steam Launch Options. Removing the old portable application folder does not remove that separate data.
 

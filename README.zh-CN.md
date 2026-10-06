@@ -12,13 +12,13 @@
 
 ## 当前状态
 
-项目优先做好 Windows。**WinUI 3/C# Manager** 支持本地 Steam 发现、原生选择器、保留语法的配置编辑、高级参数与启动选项复制。WinUI 是唯一的 Manager。可从 [GitHub Releases](https://github.com/YangYuS8/SteamWrapper/releases) 下载 Windows Setup 或完整便携 ZIP，使用前阅读[安装器指南](https://yangyus8.top/SteamWrapper/zh-cn/guides/installer-preview/)。最新公开预览为 `v0.2.6-preview.1`，`0.2.7` 正在完成稳定版的最终验收。
+项目优先做好 Windows。**WinUI 3/C# Manager** 支持本地 Steam 发现、原生选择器、保留语法的配置编辑、高级参数与启动选项复制，是唯一的 Manager。**[v0.2.7](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7) 已成为首个 Windows 稳定版**，提供内容相同的 [CNB 下载](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.7)。需要 Windows 11 24H2 x64，请使用平时运行 Steam 的 Windows 账户。下载 Setup 或完整便携 ZIP，按[安装指南](https://yangyus8.top/SteamWrapper/zh-cn/guides/installation/)使用。
 
 Manager 首次启动跟随已支持的系统界面语言，不支持时回退英语，提供完整简体中文。已保存的手动语言选择优先。切换语言保留游戏名称、路径、参数与已保存配置。请将官方 Steam 安装与第三方汉化版分开放置，详见[汉化游戏、存档与成就](https://yangyus8.top/SteamWrapper/zh-cn/guides/translated-games/)。兼容性记录限定于具体游戏和场景，不保证所有游戏均可用。
 
 封面优先使用自定义与本地 Steam 图片。可选的官方 Steam CDN 补图默认关闭，使用有界的 SteamWrapper 缓存并提供清理入口；缺图不影响配置或启动。详见[封面设置](https://yangyus8.top/SteamWrapper/zh-cn/guides/configuration/#cover-settings)。
 
-拉取请求与 `main` 运行测试及编译检查。版本标签构建并发布 Setup 和便携 ZIP：纯版本标签选择稳定版，预发布后缀选择预览版；手动工作流只生成试用产物，不公开发布 Release。Windows Authenticode 签名是可选项，应用更新通过项目签名元数据认证并校验精确安装包。首个稳定版仍以干净客户端及原生交互验收为门槛。详见[发布准备](https://yangyus8.top/SteamWrapper/zh-cn/development/distribution/)和[代码签名政策](https://yangyus8.top/SteamWrapper/zh-cn/project/design/code-signing/)。
+拉取请求与 `main` 运行测试及编译检查。版本标签构建并发布 Setup 和便携 ZIP：纯版本标签选择稳定版，预发布后缀选择预览版；手动工作流只生成试用产物，不公开发布 Release。Windows Authenticode 签名是可选项，应用更新通过项目签名元数据认证并校验精确安装包。限定范围的客户端／原生门槛与 v0.2.7 完整发布工作流已通过，两个下载源及更新渠道已独立核验。详见[发布准备](https://yangyus8.top/SteamWrapper/zh-cn/development/distribution/)和[代码签名政策](https://yangyus8.top/SteamWrapper/zh-cn/project/design/code-signing/)。
 
 ## 文档
 
@@ -34,7 +34,7 @@ Manager 首次启动跟随已支持的系统界面语言，不支持时回退英
 
 ## 本地开发
 
-请从 `main` 创建聚焦的功能分支，并将拉取请求提交到 `main`。按自己的方式安装改动所需工具；[mise](mise.toml) 是可选的便利工具，不是贡献者要求。SDK 版本与 MSVC/SDK 安装见 Windows 环境指南。在 PATH 中准备好 PowerShell 7、.NET 和 Rust 后，WinUI 预览命令如下：
+请从 `main` 创建聚焦的功能分支，并将拉取请求提交到 `main`。按自己的方式安装改动所需工具；[mise](mise.toml) 是可选的便利工具，不是贡献者要求。SDK 版本与 MSVC/SDK 安装见 Windows 环境指南。在 PATH 中准备好 PowerShell 7、.NET 和 Rust 后，WinUI 开发命令如下：
 
 ```powershell
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
@@ -60,6 +60,6 @@ Node/pnpm 用于开发和静态文档构建，不是桌面应用的运行要求�
 
 请阅读[贡献指南](CONTRIBUTING.zh-CN.md)、[行为准则](CODE_OF_CONDUCT.zh-CN.md)、[安全策略](SECURITY.zh-CN.md)和[使用帮助](SUPPORT.zh-CN.md)。欢迎英语和简体中文反馈。报告中不得包含凭据、未脱敏用户数据、存档或游戏二进制。SteamWrapper 不注入 DLL、不修补游戏／Steam 二进制、不绕过 DRM，也不上传用户数据。
 
-默认分支 `main` 包含 v2，使用 [Apache-2.0](LICENSE)。历史 v1 标签和提交保留其原有许可证。拉取请求以 `main` 为目标，社区模板和 GitHub Pages 文档也由该分支提供。合入主线不代表 WinUI 预览已成为稳定版本；后续工作见[交付路线图](https://yangyus8.top/SteamWrapper/zh-cn/project/roadmap/)。
+默认分支 `main` 包含 v2，使用 [Apache-2.0](LICENSE)。历史 v1 标签和提交保留其原有许可证。拉取请求以 `main` 为目标，社区模板和 GitHub Pages 文档也由该分支提供。后续工作见[交付路线图](https://yangyus8.top/SteamWrapper/zh-cn/project/roadmap/)。
 
 [原创项目图标](assets/brand/README.zh-CN.md)结合了 Rust 风格的铜色齿轮和 Steam 风格的连杆。SteamWrapper 与 Valve 或 Rust 项目没有隶属或背书关系。

@@ -1,13 +1,13 @@
 ---
-title: Install the Windows preview
-description: Install or use the complete Windows preview, keep your game configurations, and update safely.
+title: Install SteamWrapper for Windows
+description: Install or use the complete Windows release, keep your game configurations, and update safely.
 ---
 
 For **Windows 11 24H2 x64**, we recommend **Setup**. It includes the files needed to run Manager; you do not need development tools or a separate runtime installation. Other Windows builds are not yet verified.
 
-**[Download Setup — v0.2.6-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.6-preview.1/SteamWrapper-v0.2.6-preview.1-win-x64-setup.exe)** · [CNB mirror](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.6-preview.1/SteamWrapper-v0.2.6-preview.1-win-x64-setup.exe) · [Release notes and other downloads](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1)
+**[Download Setup — v0.2.7](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.7/SteamWrapper-v0.2.7-win-x64-setup.exe)** · [CNB mirror](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.7/SteamWrapper-v0.2.7-win-x64-setup.exe) · [Release notes and other downloads](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7)
 
-GitHub and CNB provide the same verified installer. This is the public 0.2.6 preview; private 0.2.7 validation builds are not yet a public release. The preview has no Windows Authenticode signature, so Windows may show an unknown-publisher warning. Use the official downloads above and keep normal Windows protection enabled.
+GitHub and CNB provide the same verified installer for **v0.2.7, the first stable Windows release**. It has no Windows Authenticode signature, so Windows may show an unknown-publisher warning. Use the official downloads above and keep normal Windows protection enabled.
 
 <a id="get-a-versioned-preview"></a>
 <a id="open-the-complete-application"></a>
@@ -27,7 +27,7 @@ Without a saved language choice, Manager follows a supported system UI language 
 
 ## Use the portable ZIP
 
-If you prefer not to install Manager, download **`SteamWrapper-v0.2.6-preview.1-win-x64.zip`** from the [same release page](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1). Extract the **complete ZIP** into a folder you intend to keep, then open `SteamWrapper.Manager.exe` from File Explorer.
+If you prefer not to install Manager, download **`SteamWrapper-v0.2.7-win-x64.zip`** from the [same release page](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7). Extract the **complete ZIP** into a folder you intend to keep, then open `SteamWrapper.Manager.exe` from File Explorer.
 
 Keep all accompanying files together. Do not run the EXE inside the ZIP or copy out just the EXE. Close Manager before moving its complete folder. Your separate game configurations and stable Runner keep their existing locations, so moving Manager does not require changing Steam Launch Options.
 

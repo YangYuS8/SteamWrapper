@@ -7,7 +7,7 @@ description: "WinUI/C# Manager、独立 Rust Runner 与 Windows 优先的开发�
 
 ## 目标方案
 
-**C#/XAML WinUI 3 是唯一的 Manager**，使用可独立测试的 C# Application 服务和独立 Rust Runner。Windows 配置预览、自包含目录构建已实现。Dioxus、其 Rust Manager 服务层、Native E2E 和 GUI 发布工作流已移除，历史结果不定义当前产品。详见 [Windows 设计](/SteamWrapper/zh-cn/project/design/windows-v2/)与 [WinUI 评估](/SteamWrapper/zh-cn/project/decisions/winui3/)。
+**C#/XAML WinUI 3 是唯一的 Manager**，使用可独立测试的 C# Application 服务和独立 Rust Runner。Windows 正式版通过每用户 Setup 安装包和便携 ZIP 交付完整自包含布局。Dioxus、其 Rust Manager 服务层、Native E2E 和 GUI 发布工作流已移除，历史结果不定义当前产品。详见 [Windows 设计](/SteamWrapper/zh-cn/project/design/windows-v2/)与 [WinUI 评估](/SteamWrapper/zh-cn/project/decisions/winui3/)。
 
 | 部分 | 当前选择 | 边界 |
 | --- | --- | --- |
@@ -16,8 +16,8 @@ description: "WinUI/C# Manager、独立 Rust Runner 与 Windows 优先的开发�
 | 日常运行 | 独立 Rust Runner | 既有 CLI 与进程生命周期；游玩时关闭 Manager |
 | 配置 | `profiles.toml` v2 | C# 编辑保留未知／未编辑数据，测试实际 Rust 消费 |
 | 封面 | 自定义／本地 Steam 图片、可选官方 Steam CDN 回退与占位 | 默认离线；有界请求与 SteamWrapper 缓存 |
-| 交付 | unpackaged 自包含 Windows 布局；版本标签 portable ZIP 或手动预览产物 | 未签名预发布；每用户安装器、签名与更新器仍待完成 |
-| 平台 | Windows 11 24H2 x64 预览 | 仅保留已有 Linux Runner 兼容性／CI，没有 Linux GUI |
+| 交付 | unpackaged 自包含 Windows 布局；每用户 Inno Setup 和便携 ZIP | 官方更新使用项目签名；Windows Authenticode 仍未提供且为可选；便携版手动替换 |
+| 平台 | Windows 11 24H2 x64，与 Steam 相同的 Windows 账户及普通权限 | 其他 Windows 环境仍未验证；仅保留已有 Linux Runner 兼容性／CI，没有 Linux GUI |
 
 C# 使用 Tomlyn 2.10.1 语法树和字段跨度，而非全模型序列化；生成 Rust 可读的 TOML 1.0 字符串子集，保留其他源码。字段、缺省值、旧别名、路径与参数由跨语言及真实 Runner 测试约束。[Tomlyn 包](https://www.nuget.org/packages/Tomlyn/2.10.1)、[语法 API](https://github.com/xoofx/Tomlyn/blob/2.10.1/site/docs/low-level.md)
 
@@ -29,6 +29,7 @@ Runner 保持 Rust。早先 NativeAOT 备选属于归档评估，不是另一实
 apps/manager-winui/SteamWrapper.Manager             # WinUI UI
 apps/manager-winui/SteamWrapper.Application         # C# 配置服务
 apps/manager-winui/SteamWrapper.Application.Tests   # MSTest
+apps/deployment-windows                            # 共享部署及 NativeAOT Manager 启动器／辅助程序
 crates/core                                       # Rust 配置/路径契约
 crates/runner                                     # Steam 调用的无界面运行器
 tests/contracts                                   # C# / Rust 契约与驱动
@@ -60,12 +61,12 @@ Manager 使用 Windows App SDK 2.4.0 组件集，直接固定 `Microsoft.Windows
 
 按需组件引用是官方支持的自包含部署方式。Manager 通过项目引用排除未使用的 AI、ML、Search、Widgets、DWrite，不手动删除发布 DLL。2026-09-07 组件精简记录为未压缩约 **171 MiB、457 文件**；早先 **226.23 MiB** 版本的启动／内存结果仍属于历史，未对该较小产物重测。后续产物各有清单，这些数字不代表所有当前构建。[官方组件说明](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/release-notes/windows-app-sdk-1-8#version-180-18250907003)、[比较记录](/SteamWrapper/zh-cn/project/decisions/manager-comparison/)、[预览记录](/SteamWrapper/zh-cn/project/validation/winui/)
 
-预览目标为 Windows 11 24H2（26100）x64，自包含且关闭 trimming。服务使用 net10.0，测试使用 MSTest 4.4.0 / Test SDK 18.9.0，并有 NuGet 锁文件。Manager 项目直接维护，不使用 alpha 模板或 WinApp MSIX 调试身份包。发布先构建并验证新目录，再替换旧产物。命令与发布回归见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。
+受支持的 Windows 正式版目标为 Windows 11 24H2（26100）x64，自包含且关闭 trimming。服务使用 net10.0，测试使用 MSTest 4.4.0 / Test SDK 18.9.0，并有 NuGet 锁文件。Manager 项目直接维护，不使用 alpha 模板或 WinApp MSIX 调试身份包。发布先构建并验证新目录，再替换旧产物。命令与发布回归见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。
 
 Node/pnpm 用于品牌资源生成和静态文档，不是桌面运行时。`pnpm brand:generate`／`pnpm brand:check` 使用仅开发期需要的 `@resvg/resvg-js` 处理统一 SVG/PNG/ICO。`docs/` 工作区使用 Astro 7.3.1 / Starlight 0.42.0，详见[文档维护](/SteamWrapper/zh-cn/development/documentation/)。
 
-日常 Windows CI 执行测试／契约并编译实际 Manager，不打包应用。版本标签／手动发布工作流生成包含 `Runner/SteamWrapperRunner.exe` 和版本／摘要元数据的完整布局；标签运行另生成 portable ZIP、双语说明和校验和，用于未签名预发布。Rust CI 保留 Linux 进程兼容性。WinUI 安装器、签名、更新器和自动 Steam 启动项写入仍属于[路线图](/SteamWrapper/zh-cn/project/roadmap/)工作；当前不提供 Linux GUI 包。发布准备见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
+日常 Windows CI 执行测试／契约并编译实际 Manager，不打包应用。版本标签发布七个不可变附件：Setup、便携 ZIP、两份发布描述、校验和及双语说明；手动工作流生成开发预览。公开 `v0.2.7` 的附件与签名稳定／预览更新源均在 GitHub 和 CNB 完成核验。项目自有 PE 文件和 Setup 仍未使用 Authenticode 签名，Windows 代码签名为可选能力；自动 Steam 启动项写入仍属于[路线图](/SteamWrapper/zh-cn/project/roadmap/)工作。Rust CI 保留 Linux 进程兼容性，不提供 Linux GUI 包。下载见[安装指南](/SteamWrapper/zh-cn/guides/installation/)，发布准备和限定证据见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
 
 ## 不选的方向
 
-当前产品不保留 Dioxus，不恢复 Tauri/React、Electron、Node UI runtime 或 Python 运行时组件。不增加 C ABI、管理 helper 或全 C# Runner 重写。Windows 10、ARM64、MSIX、Linux GUI 和 SteamOS/Proton 扩展需要独立决策和证据；Windows x64 预览结果不证明这些平台。
+当前产品不保留 Dioxus，不恢复 Tauri/React、Electron、Node UI runtime 或 Python 运行时组件。不增加 C ABI、管理 helper 或全 C# Runner 重写。Windows 10、ARM64、MSIX、Linux GUI 和 SteamOS/Proton 扩展需要独立决策和证据；Windows 11 24H2 x64 正式版不证明这些平台。

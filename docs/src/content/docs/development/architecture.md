@@ -9,9 +9,9 @@ description: "WinUI Manager, C# application services, independent Rust Runner, a
 
 ## Core goal
 
-**WinUI 3 is the only Manager implementation.** The Windows preview in `apps/manager-winui` uses C#/XAML and C# application services. Steam launches the independent Rust Runner through the existing TOML/CLI contracts. There is no Rust FFI, management helper, or background service. See the [Windows design](/SteamWrapper/project/design/windows-v2/).
+**WinUI 3 is the only Manager implementation.** The Windows Manager in `apps/manager-winui` uses C#/XAML and C# application services. Steam launches the independent Rust Runner through the existing TOML/CLI contracts. There is no Rust FFI, management helper, or background service. See the [Windows design](/SteamWrapper/project/design/windows-v2/).
 
-Configure a game once, then click Play in Steam with Manager closed. Removing the old UI does not complete installation, update, or stable-release acceptance. Linux retains Rust Runner compatibility and process CI; there is no Linux GUI, and new SteamOS/Proton work is deferred.
+Configure a game once, then click Play in Steam with Manager closed. The [v0.2.7 stable release](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7) provides Windows Setup and a portable ZIP. Linux retains Rust Runner compatibility and process CI; there is no Linux GUI, and new SteamOS/Proton work is deferred.
 
 <a id="运行流程"></a>
 
@@ -37,7 +37,7 @@ Open WinUI Manager
 → generate/copy Launch Options for manual application
 ```
 
-Manager still generates Launch Options for manual application. The `0.2.5` uninstall work adds a separate, explicitly selected removal of exact recognized SteamWrapper commands; it does not recover unknown earlier arguments or provide general automatic application. Its dedicated acceptance remains in progress.
+Manager still generates Launch Options for manual application. Uninstall offers a separate, explicitly selected removal of exact recognized SteamWrapper commands; it does not recover unknown earlier arguments or provide general automatic application. Scoped restoration and cleanup evidence is recorded in [Testing](/SteamWrapper/development/testing/).
 
 <a id="launch-options-合约"></a>
 
@@ -73,11 +73,11 @@ crates/core                                 # shared configuration/path contract
 
 `apps/deployment-windows` contains a GUI-independent C# deployment library and NativeAOT `SteamWrapper.exe` launcher/helper. Manager acquires a shared installation lease before initialization and keeps it until process exit; its health acknowledgment binds the current transaction. Inno and explicit repair/rollback/uninstall use the same exclusive lease and manifest/journal engine. First installation may choose a validated empty directory on a fixed local drive; updates and repairs use the registered root. The stable data directory stays separate.
 
-The helper launches Manager or a confirmed SteamWrapper installer and never launches games. The narrow uninstall exception permits explicitly selected removal of recognized SteamWrapper Launch Options and selected owned data. Steam must be stopped; affected account files are backed up and unrelated bytes preserved. Profiles/Runner removal also requires no remaining Runner references, and Runner bytes must match supported metadata. Default uninstall preserves data, and every path preserves games, saves, Steam restoration backups, update trust state and unknown files. These new choices are being integrated and require dedicated acceptance. See [installer ownership and recovery](/SteamWrapper/guides/installer-preview/).
+The helper launches Manager or a confirmed SteamWrapper installer and never launches games. The narrow uninstall exception permits explicitly selected removal of recognized SteamWrapper Launch Options and selected owned data. Steam must be stopped for restoration or profiles/Runner cleanup; affected account files are backed up and unrelated bytes preserved. Profiles/Runner removal also requires no remaining Runner references, and Runner bytes must match supported metadata. Default uninstall preserves data, and every path preserves games, saves, Steam restoration backups, update trust state and unknown files. See [installer ownership and recovery](/SteamWrapper/guides/installer-preview/) and the scoped acceptance in [Testing](/SteamWrapper/development/testing/).
 
 `OfficialUpdateService` verifies project-signed release metadata with an embedded public key, checks freshness and rollback state, then downloads a bounded, digest-verified installer into SteamWrapper's update cache. WinUI supplies manual checking, opt-in startup checks, progress/cancellation and installation confirmation; a portable copy links to release downloads. The existing NativeAOT helper waits for Manager to exit normally, rechecks the downloaded file and opens the same Inno installer, then reopens Manager after success. It does not terminate games or replace the stable Runner.
 
-The current `0.2.5` source implements this flow and has a real project public key plus a configured GitHub signing secret. Tagged feed publication and end-to-end delivery acceptance remain pending. GitHub is the primary source; CNB fallback only becomes usable after mirror credentials and matching release assets are published. SignPath/Authenticode is optional and separate from update authenticity; clean-client delivery remains an acceptance gate.
+The public `v0.2.7` release has seven anonymously verified assets on both GitHub and CNB. Both sources' stable and preview feeds passed real project-key signature, freshness and exact installer-binding checks, with identical bytes between sources for each channel. GitHub is the primary source and verified CNB is available as a fallback; automatic checks are off by default. Project-owned PE files and Setup remain Authenticode-unsigned; Windows code signing is optional. These publication checks did not execute the public `v0.2.7` installer; the actual public-network installation flow tested earlier was CNB `0.2.5` → `0.2.6`. See [Testing](/SteamWrapper/development/testing/) for each payload and result.
 
 ### `crates/core`
 
@@ -140,7 +140,7 @@ Missing legacy `wait_mode` always parses as `root`. No Linux Manager currently c
 
 ## Distribution and stable installation
 
-Windows uses a complete self-contained preview layout, a per-user Inno installer and a portable ZIP through local builds and the version-tag/manual release workflow. Daily CI tests and compiles without packaging the application. Open Manager from ordinary File Explorer or its installed shortcut. The application updater is implemented but still needs public-feed and full delivery acceptance; automatic Steam writes remain unimplemented. Tagged packages remain Authenticode-unsigned prereleases until the applicable delivery gates pass. See [distribution](/SteamWrapper/development/distribution/) for the exact triggers.
+Windows uses a complete self-contained layout, a per-user Inno installer and a portable ZIP. Version tags publish releases; manual workflow runs produce development previews. Daily CI tests and compiles without packaging the application. The supported release scope is Windows 11 24H2 x64, using the same Windows account as Steam with ordinary permissions. Open Manager from ordinary File Explorer or its installed shortcut. General automatic Steam Launch Options writes remain unimplemented. See [installation](/SteamWrapper/guides/installation/) for current downloads and [distribution](/SteamWrapper/development/distribution/) for the exact triggers.
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\
@@ -152,7 +152,7 @@ Windows uses a complete self-contained preview layout, a per-user Inno installer
   cache\
 ```
 
-`%LOCALAPPDATA%\Programs\SteamWrapper` is a proposed future Manager installation location. Runner installation preserves profiles and other user data.
+`%LOCALAPPDATA%\Programs\SteamWrapper` is the default Manager installation location; first installation may choose another validated empty directory on a fixed local drive. Runner installation preserves profiles and other user data.
 
 Existing Linux Runner uses `$XDG_DATA_HOME/SteamWrapper/`, falling back to `~/.local/share/SteamWrapper/`, and `bin/steamwrapper-runner`. Preserve existing data there; no Linux GUI or automatic installer is provided.
 
@@ -166,7 +166,7 @@ Official Steam CDN fallback is an explicit preference, disabled by default and l
 
 `CoverService` limits downloads to two concurrent operations, ten seconds per operation including response reads and redirects, at most two redirects, and 4 MiB encoded image data. Image validation also has a two-operation limit. WinUI decodes static JPEG, PNG or WebP using available Windows codecs and rejects malformed content or images above 4096 pixels on either edge or eight million pixels in total. A failed request has a five-minute cooldown instead of automatic retries. Disabling fallback cancels the active dialog's in-flight requests and prevents new ones there.
 
-Only downloaded covers are managed under `%LOCALAPPDATA%\SteamWrapper\cache\covers\`: a 32 MiB/64-file quota, thirty-day expiry, eviction and a clear action. Cache changes use an exclusive cross-process file lease; an in-use cache leaves a placeholder or a recoverable clear error. Cleanup does not touch custom art, Steam cache files, games, profiles, Runner or other SteamWrapper data. See [cover settings](/SteamWrapper/guides/configuration/#cover-settings) and remaining [P0 native acceptance](/SteamWrapper/project/roadmap/).
+Only downloaded covers are managed under `%LOCALAPPDATA%\SteamWrapper\cache\covers\`: a 32 MiB/64-file quota, thirty-day expiry, eviction and a clear action. Cache changes use an exclusive cross-process file lease; an in-use cache leaves a placeholder or a recoverable clear error. Cleanup does not touch custom art, Steam cache files, games, profiles, Runner or other SteamWrapper data. See [cover settings](/SteamWrapper/guides/configuration/#cover-settings) and scoped [native acceptance](/SteamWrapper/development/testing/).
 
 SteamWrapper does not inject DLLs, patch Steam/game files, bypass DRM, or upload user data. Unresolved save/cloud conflicts stop live acceptance.
 
@@ -176,4 +176,4 @@ SteamWrapper does not inject DLLs, patch Steam/game files, bypass DRM, or upload
 
 WinUI/C# Application and Rust Runner are the sole current product path. Dioxus and Tauri/React are historical implementations. Node/pnpm serve development assets and static documentation, not desktop runtime.
 
-Windows preview evidence does not establish installer/update/uninstall or clean-system acceptance. Linux Runner CI does not establish a Linux GUI, Steam Deck support, or Proton integration. See [distribution](/SteamWrapper/development/distribution/) and the [roadmap](/SteamWrapper/project/roadmap/).
+Acceptance records retain their exact package and environment scope. Ordinary-permission evidence in the existing Steam user's SID does not establish a fresh primary standard-account sign-in, separate-user desktop, two-user session or multi-monitor acceptance. Linux Runner CI does not establish a Linux GUI, Steam Deck support, or Proton integration. See [Testing](/SteamWrapper/development/testing/) and the [roadmap](/SteamWrapper/project/roadmap/).

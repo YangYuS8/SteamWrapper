@@ -7,6 +7,8 @@ description: "准备 Windows SDK 和工具，直接运行构建，并查阅验�
 
 按自己的方式安装开发工具。**mise 是可选项**，不是贡献或构建的前提。`global.json` 选择 .NET SDK；项目清单及锁文件定义依赖，根 `package.json` 选择 pnpm，`.vsconfig` 声明 MSVC/Windows SDK 组件。可选的 `mise.toml` / `mise.lock` 记录便利的本地工具组合及同一脚本的快捷入口。WinUI Manager 位于 `apps/manager-winui`；Rust workspace 包含 core 与独立 Runner。Dioxus 及其管理服务、Native E2E 和打包工具链已移除。独立模板 smoke 继续保留在忽略的 `target/toolchain-smoke/` 下用于环境诊断。
 
+玩家可以[安装已公开的 v0.2.7 正式版](/SteamWrapper/zh-cn/guides/installation/)，选择 Setup 或完整便携 ZIP，无需这些开发工具。支持范围为 Windows 11 24H2 x64，使用与 Steam 相同的 Windows 账户及普通权限。准确的公开产物与更新核验另见[测试](/SteamWrapper/zh-cn/development/testing/)；本地源码构建不证明那些公开安装包字节已经实际执行。
+
 ## 版本与管理范围
 
 | 工具 | 当前版本或组件 | 要求／来源 |
@@ -70,9 +72,9 @@ pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox  # 发布
 
 NuGet 依赖由各项目 `packages.lock.json` 固定，日常命令使用 locked restore。Application 和部署项目显式列出 win-x64，避免测试与发布轮换时漂移。Host 固定 NativeAOT 依赖；发布先加载既定原生 SDK，再生成独立 GUI 子系统可执行文件。只在有意更新依赖／目标时使用 `--force-evaluate`，并审查锁文件差异。
 
-`Test-WinUINativeUi.ps1` 验证已有完整便携目录，构建／运行仅用于开发的控制台 UIA 工具，以新建可丢弃 Steam／用户数据夹具操作实际窗口。它不重新发布 Manager、不操作真实游戏库。`-PublishDirectory` 可选择具体便携目录；已安装的版本目录会被拒绝。执行需要解锁的交互 Windows 桌面，CI 只编译工具。可选 mise 别名为 `winui:native-test`。夹具证据保存在 `target/winui/native-ui/`；覆盖范围和剩余原生门槛见[测试](/SteamWrapper/zh-cn/development/testing/)。
+`Test-WinUINativeUi.ps1` 验证已有完整便携目录，构建／运行仅用于开发的控制台 UIA 工具，以新建可丢弃 Steam／用户数据夹具操作实际窗口。它不重新发布 Manager、不操作真实游戏库。`-PublishDirectory` 可选择具体便携目录；已安装的版本目录会被拒绝。执行需要解锁的交互 Windows 桌面，CI 只编译工具。可选 mise 别名为 `winui:native-test`。夹具证据保存在 `target/winui/native-ui/`；覆盖范围和单独记录的交互证据见[测试](/SteamWrapper/zh-cn/development/testing/)。
 
-`-Action Test` 包含部署回归，`-Action Build` 编译 Host，但不发布应用包。`-Action Publish` 也包含 `SteamWrapper.Deployment.dll` 和 `Deployment/SteamWrapper.exe`。已验证 Inno 编译器、真实隔离安装测试及本地安装包构建的直接命令见[安装器预览指南](/SteamWrapper/zh-cn/guides/installer-preview/)。可选 mise 别名为 `winui:installer-tools`、`winui:installer-test` 和 `winui:signing-test`。
+`-Action Test` 包含部署回归，`-Action Build` 编译 Host，但不发布应用包。`-Action Publish` 也包含 `SteamWrapper.Deployment.dll` 和 `Deployment/SteamWrapper.exe`。已验证 Inno 编译器、真实隔离安装测试及本地安装包构建的直接命令见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。可选 mise 别名为 `winui:installer-tools`、`winui:installer-test` 和 `winui:signing-test`。
 
 Manager 已从 Windows App SDK 2.4.0 总包改为上述组件包，保留原组件版本与摘要；InteractiveExperiences 显式固定 2.1.6，避免依赖回落到 2.1.3。AI、ML、Search、Widgets、DWrite 及其未使用发布文件不再进入新产物；独立环境 smoke 仍使用总包，不随此次精简改变。
 
@@ -137,7 +139,7 @@ Manager 和 Steam 启动的 Runner 必须看到同一份 `%LOCALAPPDATA%\SteamWr
 
 官方 CLI 模板能够通过 .NET 创建 WinUI/XAML 项目。0.0.6-alpha 的创建后操作会无条件更新三个 NuGet 包，`UseLatestWindowsAppSDK=false` 未约束这些操作；脚本在生成后用 XML 固定实际包引用和最低系统版本，再发布。不能只凭模板参数宣称版本已经固定。[WinUI 官方快速入门](https://learn.microsoft.com/en-us/windows/apps/get-started/start-here)
 
-原生 UI 工具提供首个可重复的 WinUI 回归切片，更广验收仍在[路线图](/SteamWrapper/zh-cn/project/roadmap/)中。它引用 Windows 自动化／WPF API 作为开发工具，不是随产品交付的 UI 实现。C# 服务、契约、发布及工具编译不能替代实际交互执行，也不覆盖其余选择器、键盘／输入法、语言、缩放与玩家检查。本地隔离执行不等于干净 Windows 安装。
+原生 UI 工具提供可重复的 WinUI 回归切片。它引用 Windows 自动化／WPF API 作为开发工具，不是随产品交付的 UI 实现。C# 服务、契约、发布及工具编译不能替代实际交互执行。真实选择器、键盘／输入法、语言、缩放与玩家证据各有范围，见[测试](/SteamWrapper/zh-cn/development/testing/)；仅本地隔离执行不等于干净 Windows 安装。
 
 smoke 使用 `net10.0-windows10.0.26100.0`、x64、unpackaged、.NET/Windows App SDK self-contained，暂不启用 trimming。它验证 XAML 编译与发布目录，不安装/启动 MSIX、不启用 Developer Mode、不启动游戏，也不证明干净系统运行或原生交互已经验收。实际 Manager 已建立独立项目、包锁定、服务和跨语言测试。
 

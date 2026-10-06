@@ -7,9 +7,9 @@ description: "WinUI Manager、C# 应用服务、独立 Rust Runner 与稳定契�
 
 ## 核心目标
 
-**WinUI 3 是唯一的 Manager 实现。**`apps/manager-winui` 中的 Windows 预览采用 C#/XAML 与 C# 应用服务，Steam 通过既有 TOML/CLI 契约启动独立 Rust Runner。两者之间没有 Rust FFI、管理 helper 或后台服务。详见 [Windows 设计](/SteamWrapper/zh-cn/project/design/windows-v2/)。
+**WinUI 3 是唯一的 Manager 实现。**`apps/manager-winui` 中的 Windows Manager 采用 C#/XAML 与 C# 应用服务，Steam 通过既有 TOML/CLI 契约启动独立 Rust Runner。两者之间没有 Rust FFI、管理 helper 或后台服务。详见 [Windows 设计](/SteamWrapper/zh-cn/project/design/windows-v2/)。
 
-玩家配置一次，之后关闭 Manager，从 Steam 点击开始。移除旧 UI 不等于完成安装、更新或稳定发布验收。Linux 保留 Rust Runner 兼容性与进程 CI；当前没有 Linux GUI，新增 SteamOS/Proton 工作仍延期。
+玩家配置一次，之后关闭 Manager，从 Steam 点击开始。[v0.2.7 正式版](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7)提供 Windows Setup 安装包和便携 ZIP。Linux 保留 Rust Runner 兼容性与进程 CI；当前没有 Linux GUI，新增 SteamOS/Proton 工作仍延期。
 
 ## 运行流程
 
@@ -33,7 +33,7 @@ Steam 状态、时长、成就与云行为分别需要限定范围的验收。
 → 生成/复制启动项，由用户手动应用
 ```
 
-Manager 仍生成启动项，由用户手动应用。`0.2.5` 的卸载改动增加独立、明确选择的功能：移除严格识别的 SteamWrapper 命令；它不能恢复未知的历史参数，也不是通用自动应用能力。专门验收仍在进行中。
+Manager 仍生成启动项，由用户手动应用。卸载提供独立、明确选择的功能：移除严格识别的 SteamWrapper 命令；它不能恢复未知的历史参数，也不是通用自动应用能力。限定范围的恢复和清理证据见[测试](/SteamWrapper/zh-cn/development/testing/)。
 
 ## Launch Options 合约
 
@@ -65,11 +65,11 @@ crates/core                                 # 共享配置/路径契约
 
 `apps/deployment-windows` 包含不依赖 GUI 的 C# 部署库和 NativeAOT `SteamWrapper.exe` 启动器／辅助程序。Manager 初始化前取得共享安装锁，保持到进程退出，健康确认绑定当前事务。Inno 和显式修复／回退／卸载共用独占锁及清单／日志引擎。首次安装可选择本地固定磁盘上经过验证的空目录；升级和修复使用已登记的程序位置，稳定数据目录仍独立存放。
 
-辅助程序启动 Manager 或经确认的 SteamWrapper 安装器，不启动游戏。卸载有一项严格限定的例外：按用户明确选择移除可识别的 SteamWrapper 启动选项和选定的自有数据。Steam 必须退出，受影响账号文件先备份并保留其他字节。删除配置／Runner 还需确认没有残留 Runner 引用，且 Runner 字节匹配受支持元数据。默认卸载保留数据，所有路径都保留游戏、存档、Steam 恢复备份、更新信任状态及未知文件。这些新选项正在整合，需专门验收。详见[安装器所有权与恢复](/SteamWrapper/zh-cn/guides/installer-preview/)。
+辅助程序启动 Manager 或经确认的 SteamWrapper 安装器，不启动游戏。卸载有一项严格限定的例外：按用户明确选择移除可识别的 SteamWrapper 启动选项和选定的自有数据。恢复启动命令或清理配置／Runner 前，Steam 必须退出；受影响账号文件先备份并保留其他字节。删除配置／Runner 还需确认没有残留 Runner 引用，且 Runner 字节匹配受支持元数据。默认卸载保留数据，所有路径都保留游戏、存档、Steam 恢复备份、更新信任状态及未知文件。详见[安装器所有权与恢复](/SteamWrapper/zh-cn/guides/installer-preview/)及[测试](/SteamWrapper/zh-cn/development/testing/)中的限定验收。
 
 `OfficialUpdateService` 使用内嵌公钥验证项目签名的发行元数据，检查有效期和防回退状态，再将受大小限制、通过摘要验证的安装包下载到 SteamWrapper 更新缓存。WinUI 提供手动检查、明确启用的启动检查、进度／取消和安装确认；便携版提供发布页下载入口。现有 NativeAOT 辅助程序等待 Manager 正常退出，复核下载文件后启动同一个 Inno 安装器，成功后重新打开 Manager，不终止游戏，也不替换稳定 Runner。
 
-当前 `0.2.5` 源码已实现此流程，并配置真实项目公钥及 GitHub 签名 secret；标签更新源发布和端到端交付验收仍待完成。GitHub 为主源，CNB 只有在镜像凭据就绪并发布相同发行附件后才能作为备用源。SignPath／Authenticode 是独立于更新真实性验证的可选能力，干净客户端交付仍需验收。
+公开的 `v0.2.7` 在 GitHub 和 CNB 上均有七个经过匿名下载核验的附件。两个来源的稳定／预览更新源均通过真实项目公钥签名、有效期及准确安装包绑定检查，每个通道的两站内容逐字节一致。GitHub 为主源，已验证的 CNB 可作为备用源；自动检查默认关闭。项目自有 PE 文件和 Setup 仍未使用 Authenticode 签名；Windows 代码签名为可选能力。这些发布检查没有执行公开 `v0.2.7` 安装器；此前真实公开网络安装流程验证的是 CNB `0.2.5` → `0.2.6`。各载荷和结果的准确范围见[测试](/SteamWrapper/zh-cn/development/testing/)。
 
 ### `crates/core`
 
@@ -124,7 +124,7 @@ WinUI 使用与 `profiles.toml` 同级的 `ui-settings.json`。没有 `language`
 
 ## 分发与稳定安装
 
-当前 Windows 提供完整自包含预览布局、每用户 Inno 安装器及便携 ZIP，可本地生成，也可通过版本标签／手动发布工作流构建。日常 CI 只测试和编译，不打包应用。请从普通资源管理器或已安装快捷方式打开 Manager。应用更新器已实现，公开更新源及完整交付验收仍待完成；自动 Steam 写入尚未实现。标签包继续作为未使用 Authenticode 签名的预发布，适用的交付门槛通过后才进入稳定版。准确触发方式见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
+Windows 提供完整自包含布局、每用户 Inno 安装器及便携 ZIP。版本标签公开发布，手动工作流生成开发预览。日常 CI 只测试和编译，不打包应用。正式版支持范围为 Windows 11 24H2 x64，使用与 Steam 相同的 Windows 账户及普通权限。请从普通资源管理器或已安装快捷方式打开 Manager。通用自动写入 Steam 启动项尚未实现。当前下载见[安装指南](/SteamWrapper/zh-cn/guides/installation/)，准确触发方式见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\
@@ -136,7 +136,7 @@ WinUI 使用与 `profiles.toml` 同级的 `ui-settings.json`。没有 `language`
   cache\
 ```
 
-`%LOCALAPPDATA%\Programs\SteamWrapper` 是未来 Manager 安装位置的提案。Runner 安装保留配置及其他用户数据。
+`%LOCALAPPDATA%\Programs\SteamWrapper` 是 Manager 的默认安装位置；首次安装可以选择本地固定磁盘上另一个经过验证的空目录。Runner 安装保留配置及其他用户数据。
 
 现有 Linux Runner 使用 `$XDG_DATA_HOME/SteamWrapper/`，缺省为 `~/.local/share/SteamWrapper/`，Runner 位于 `bin/steamwrapper-runner`。保留其中已有数据；当前不提供 Linux GUI 或自动安装器。
 
@@ -148,7 +148,7 @@ WinUI 优先读取各用户的自定义 Steam `config/grid/` 图片，再读取�
 
 `CoverService` 最多同时进行两个下载，每次操作最多十秒，包括响应读取与重定向；最多跟随两次重定向，编码图片数据不超过 4 MiB。图片验证同样限制为两个并发操作。WinUI 使用可用的 Windows codec 解码静态 JPEG、PNG 或 WebP，拒绝损坏内容、单边超过 4096 像素或总计超过八百万像素的图片。请求失败后冷却五分钟，不自动重试。关闭回退会取消当前对话框中进行的请求，并阻止该对话框的新请求。
 
-仅下载的封面由 `%LOCALAPPDATA%\SteamWrapper\cache\covers\` 管理：配额为 32 MiB／64 个文件，三十天过期，并有淘汰与清理入口。缓存变更使用跨进程独占文件锁；缓存被占用时保留占位，或显示可恢复的清理错误。清理不影响自定义图片、Steam 缓存、游戏、配置、Runner 或 SteamWrapper 的其他数据。详见[封面设置](/SteamWrapper/zh-cn/guides/configuration/#cover-settings)及剩余的 [P0 原生验收](/SteamWrapper/zh-cn/project/roadmap/)。
+仅下载的封面由 `%LOCALAPPDATA%\SteamWrapper\cache\covers\` 管理：配额为 32 MiB／64 个文件，三十天过期，并有淘汰与清理入口。缓存变更使用跨进程独占文件锁；缓存被占用时保留占位，或显示可恢复的清理错误。清理不影响自定义图片、Steam 缓存、游戏、配置、Runner 或 SteamWrapper 的其他数据。详见[封面设置](/SteamWrapper/zh-cn/guides/configuration/#cover-settings)及限定范围的[原生验收](/SteamWrapper/zh-cn/development/testing/)。
 
 SteamWrapper 不注入 DLL、不修改 Steam／游戏文件、不绕过 DRM，也不上传用户数据。未解决的存档／云冲突会停止真实验收。
 
@@ -156,4 +156,4 @@ SteamWrapper 不注入 DLL、不修改 Steam／游戏文件、不绕过 DRM，�
 
 WinUI/C# Application 与 Rust Runner 是唯一当前产品路径。Dioxus 和 Tauri/React 属于历史实现；Node/pnpm 用于开发资源和静态文档，不是桌面运行时。
 
-Windows 预览证据不证明安装器／更新／卸载或干净系统验收。Linux Runner CI 不证明 Linux GUI、Steam Deck 支持或 Proton 集成。详见[分发](/SteamWrapper/zh-cn/development/distribution/)和[路线图](/SteamWrapper/zh-cn/project/roadmap/)。
+验收记录保留准确的产物与环境范围。现有 Steam 用户 SID 下的普通权限证据，不代表全新标准账户的主登录、其他用户桌面、双用户会话或多显示器已经验收。Linux Runner CI 不证明 Linux GUI、Steam Deck 支持或 Proton 集成。详见[测试](/SteamWrapper/zh-cn/development/testing/)和[路线图](/SteamWrapper/zh-cn/project/roadmap/)。

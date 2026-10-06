@@ -70,7 +70,7 @@ A successful launch result in this mode means the process was started, not that 
 
 `process_group` is the retained Unix-like implementation. The current Windows Runner rejects it, and WinUI disables it for Windows profiles.
 
-A profile explicitly marked for Linux or SteamOS is viewable but not editable in the Windows preview. This option does not provide Windows process groups or prove Proton/Steam Deck compatibility. New Linux/SteamOS expansion remains deferred.
+A profile explicitly marked for Linux or SteamOS is viewable but not editable in Windows Manager. This option does not provide Windows process groups or prove Proton/Steam Deck compatibility. New Linux/SteamOS expansion remains deferred.
 
 ## Check a changed mode
 

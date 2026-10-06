@@ -1,13 +1,13 @@
 ---
-title: 安装 Windows 预览版
-description: 安装或使用完整的 Windows 预览版，保留游戏配置，并安全更新。
+title: 安装 Windows 版 SteamWrapper
+description: 安装或使用完整的 Windows 发行版，保留游戏配置，并安全更新。
 ---
 
 **Windows 11 24H2 x64** 用户建议使用 **Setup 安装包**。它包含运行 Manager 所需的文件，无需开发工具或单独安装运行时。其他 Windows 版本尚未验证。
 
-**[下载安装包 — v0.2.6-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.6-preview.1/SteamWrapper-v0.2.6-preview.1-win-x64-setup.exe)** · [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.6-preview.1/SteamWrapper-v0.2.6-preview.1-win-x64-setup.exe) · [发布说明与其他下载](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1)
+**[下载安装包 — v0.2.7](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.7/SteamWrapper-v0.2.7-win-x64-setup.exe)** · [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.7/SteamWrapper-v0.2.7-win-x64-setup.exe) · [发布说明与其他下载](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7)
 
-GitHub 和 CNB 提供相同且已核验的安装包。这是已公开的 0.2.6 预览版；用于验收的私有 0.2.7 构建尚未公开发布。预览版没有 Windows Authenticode 签名，因此 Windows 可能显示未知发布者提示。请使用上面的官方下载，并保持正常 Windows 防护开启。
+GitHub 和 CNB 提供相同且已核验的安装包，对应 **v0.2.7，首个 Windows 稳定版本**。它没有 Windows Authenticode 签名，因此 Windows 可能显示未知发布者提示。请使用上面的官方下载，并保持正常 Windows 防护开启。
 
 <a id="获取带版本的预览包"></a>
 <a id="打开完整应用"></a>
@@ -27,7 +27,7 @@ GitHub 和 CNB 提供相同且已核验的安装包。这是已公开的 0.2.6 �
 
 ## 使用便携 ZIP
 
-如果不想安装 Manager，请从[同一发布页](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1)下载 **`SteamWrapper-v0.2.6-preview.1-win-x64.zip`**。将**完整 ZIP** 解压到准备保留的目录，再通过文件资源管理器打开 `SteamWrapper.Manager.exe`。
+如果不想安装 Manager，请从[同一发布页](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7)下载 **`SteamWrapper-v0.2.7-win-x64.zip`**。将**完整 ZIP** 解压到准备保留的目录，再通过文件资源管理器打开 `SteamWrapper.Manager.exe`。
 
 请保留全部配套文件。不要在 ZIP 内运行 EXE，也不要只复制 EXE。移动完整目录前先关闭 Manager。单独存放的游戏配置和稳定 Runner 仍在原来的位置，因此移动 Manager 不需要修改 Steam 启动项。
 

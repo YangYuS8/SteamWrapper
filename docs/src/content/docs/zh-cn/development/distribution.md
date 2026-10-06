@@ -1,15 +1,15 @@
 ---
 title: "v2 分发与安装方案"
-description: "WinUI 预览目录、稳定 Runner 安装及剩余 Windows 交付工作。"
+description: "Windows 稳定版 Setup／便携 ZIP、稳定 Runner 安装及已核验的更新交付。"
 ---
 
 <a id="v2-分发与安装方案"></a>
 
 ## 原则
 
-WinUI 是唯一当前 Manager。交付包含 **Windows 11 24H2 x64 自包含目录**和未签名的[每用户安装器](/SteamWrapper/zh-cn/guides/installer-preview/)。版本标签打包 Setup 与便携 ZIP：有预发布后缀时发布预览版，纯版本标签发布稳定版。手动工作流构建和测试安装器，但不公开发布。常规拉取请求与 `main` 只检查，不打包应用。项目认证的应用更新已实现，公开可用性以实际版本／更新源发布为准。客户端验收通过前，WinUI 仍处于预览阶段。通用的 Steam 启动项自动应用仍未实现；卸载只移除严格识别的 SteamWrapper 命令。
+WinUI 是唯一当前 Manager。交付包含 **Windows 11 24H2 x64 自包含目录**和未签名的[每用户安装器](/SteamWrapper/zh-cn/guides/installer-preview/)。版本标签打包 Setup 与便携 ZIP：有预发布后缀时发布预览版，纯版本标签发布稳定版。手动工作流构建和测试安装器，但不公开发布。常规拉取请求与 `main` 只检查，不打包应用。项目认证的应用更新已实现，公开可用性以实际版本／更新源发布为准。首个稳定版为 v0.2.7，支持已测试的 Windows 11 24H2 x64、当前 Windows／Steam 账户范围。通用的 Steam 启动项自动应用仍未实现；卸载只移除严格识别的 SteamWrapper 命令。
 
-安装器预览包含运行时文件，按当前用户安装且通常无需提权。`0.2.5` 的安装选项改动允许首次安装选择本地固定磁盘上的空目录，升级和修复仍使用已登记位置；开始菜单快捷方式默认开启、桌面快捷方式默认关闭，完成后可打开 Manager。仅卸载 Manager 时保留稳定 Runner 和数据；七个独立且默认关闭的卸载选项提供严格限定的还原与清理。限定范围的本机安装选项及原生检查已通过；干净客户端及更广泛恢复门槛仍未完成。Manager 占用会阻止变更，不强制结束进程。未知文件保留，复制中断的暂存文件可以隔离后人工排查。注册表／快捷方式／断电整体恢复、干净客户端交付及稳定状态仍是独立门槛。
+安装器包含运行时文件，按当前用户安装且通常无需提权。首次安装可选本地固定盘上的空目录，升级／修复留在已登记位置；开始菜单快捷方式默认开启、桌面快捷方式默认关闭，完成后可打开 Manager。默认卸载保留稳定 Runner／数据，七个独立且默认关闭的选项提供有界还原与清理。无 SDK 核心生命周期、真实升级／回退、便携迁移、普通进程权限及已记录故障恢复路径分别通过。新账户完整登录、双用户 GUI、多屏硬件、物理断电及全部语言／失败组合仍未验证；占用的 Manager 阻止变更，不强制退出，未知文件与隔离暂存始终保护。准确载荷范围见[测试](/SteamWrapper/zh-cn/development/testing/)。
 
 [已批准的 Windows 交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)区分已实现的部署／更新保护与剩余客户端验收。Windows Authenticode 为可选，独立于项目更新密钥。详见[代码签名政策](/SteamWrapper/zh-cn/project/design/code-signing/)，尚无可用生产 Windows 证书。
 
@@ -21,7 +21,7 @@ GitHub/CNB 二进制发布须检查实际可下载产物。源码同步或发布
 pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
 ```
 
-`target/winui/publish` 包含 Manager、.NET、Windows App SDK、原生／本地化资源、品牌资源及 `Runner/`。发布工作流将这套完整布局打包为 Windows x64 portable ZIP。解压全部文件后从普通资源管理器打开 Manager；单独的安装器预览也包含这套完整布局，Manager 本身不是单文件应用。
+`target/winui/publish` 包含 Manager、.NET、Windows App SDK、原生／本地化资源、品牌资源及 `Runner/`。发布工作流将这套完整布局打包为 Windows x64 portable ZIP。解压全部文件后从普通资源管理器打开 Manager；安装器也包含这套完整布局，Manager 本身不是单文件应用。
 
 `pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Sandbox` 使用一次性隔离数据；普通启动使用真实 `%LOCALAPPDATA%`。开发宿主可能重定向 AppData，因此路径存在不能证明 Steam 看到相同文件。Manager 检查最终共享文件位置，发现重定向时报告未就绪。详见 [Windows 开发环境](/SteamWrapper/zh-cn/development/windows/)。
 
@@ -125,15 +125,15 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 | 在所选分支／ref 上 **Run workflow** | 完整门禁、完整 `SteamWrapper-WinUI-preview-windows-x64` 目录，以及通过测试的未签名 `SteamWrapper-WinUI-installer-preview-windows-x64` 产物；不公开发布 |
 | `main` 上相关文档变更 | 独立的文档检查与 GitHub Pages 部署 |
 
-发布标签采用 `vMAJOR.MINOR.PATCH`，可带 SemVer 预发布后缀。三位基础版本必须与 `SteamWrapper.Manager.csproj` 的 `<Version>` 及 `crates/core/Cargo.toml`、`crates/runner/Cargo.toml` 的包版本一致，生产 Application、Deployment 和 Host 版本也须协调。提交必须在 `main` 的历史中，且对应版本中须包含 `releases/<tag>.en.md` 与 `releases/<tag>.zh-CN.md`。无效标签、版本不匹配或缺失说明均会在交付前失败。纯标签发布稳定版，预发布标签发布预览版。剩余客户端验收通过后才能创建首个纯标签，且必须使用新的协调数字版本，例如从 `0.2.6-preview.1` 升到 `0.2.7`。
+发布标签采用 `vMAJOR.MINOR.PATCH`，可带 SemVer 预发布后缀。三位基础版本必须与 `SteamWrapper.Manager.csproj` 的 `<Version>` 及 `crates/core/Cargo.toml`、`crates/runner/Cargo.toml` 的包版本一致，生产 Application、Deployment 和 Host 版本也须协调。提交必须在 `main` 的历史中，且对应版本中须包含 `releases/<tag>.en.md` 与 `releases/<tag>.zh-CN.md`。无效标签、版本不匹配或缺失说明均会在交付前失败。纯标签发布稳定版，预发布标签发布预览版。限定范围的客户端门槛通过后，首个纯标签 `v0.2.7` 已正式发布。后续每个内容变化的可安装载荷仍需新的协调数字版本及相应发布门禁。
 
-当前协调的源码／产品版本为 `0.2.7`，正在验收，尚无稳定发布。最新公开版本为 [v0.2.6-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1)，另有 [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.6-preview.1)，附完整双语说明。[发布运行 37462977733](https://github.com/YangYuS8/SteamWrapper/actions/runs/37462977733)通过两站二进制发布及签名预览索引；两站各七附件的独立匿名核验通过，证据为 `target/winui/public-assets-effbde03ba68438ca6e0adbcaf066aa9/summary.json`。[当前验收摘要](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-06)记录 178／37／160 项 C# 和 Runner 契约、聚焦 Runner／稳定文案原生 UI、真实隔离 0.2.6 → 0.2.7 安装、干净候选便携版十步及实际 Host 语言五项通过。公开 CNB 0.2.5 → 0.2.6 更新的完整十二步界面至 Setup 生命周期通过；明确选择 GitHub 的下载超时，旧安装／数据未变。客体专用 VHD 的实际复制失败与修复另行通过，使用本地载荷清单，actualInno=false。最终同主 SID 的 Users／Medium 0.2.7 生命周期及控制器十四步整体通过，并精确还原客体状态。核心首发条件已在该范围内成立；新账户完整主登录及双用户 GUI 仍未验证。
+当前源码／产品版本 **0.2.7 已作为 [v0.2.7](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7) 正式发布**，提供相同的 [CNB 下载](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.7)。[发布运行 37500459000](https://github.com/YangYuS8/SteamWrapper/actions/runs/37500459000)在提交 `0987802b86460eff711c6cf694015cdbf086bbb2` 上九项任务全部通过，独立匿名核验两站各七附件及稳定／预览签名更新源，以真实项目公钥和精确公开 Setup 为准。[当前验收](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-07)明确区分公开字节、较早私有客户端载荷、公开 0.2.5 → 0.2.6 的 CNB 实际更新、安全失败的明确 GitHub 下载，以及 `actualInno=false` 的本地清单 VHD 路径。全新账户完整主登录、双用户 GUI 与更广硬件矩阵仍未验证。
 
 历史未签名的 [v0.2.3-preview.1 技术预览](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1)已由成功的[运行 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907)公开。已下载 GitHub 全部七个公开附件，核对长度、API 摘要和第 2 版清单；七个自有 PE 产品版本及下载后 NativeAOT Host 的五项实际语言用例也通过。具体范围见[测试](/SteamWrapper/zh-cn/development/testing/)。此前升级／回滚及 PE 资源记录保留为有日期的证据。不要覆盖已有标签或发布。未来需协调 Rust、Manager、Application、部署产品版本及锁文件，并提供完整双语说明。打标签前确认所选主线提交已通过 CI；准备说明或合并本身不证明发布。
 
 安装器升级时，每个新可安装载荷／清单都递增三段基础版本，不能只改预发布后缀。`v0.2.1-preview.1` → `v0.2.1-preview.2` 会改变部署清单，但两者数字版本均为 `0.2.1`，会被当前同版本不同内容保护拒绝。手动运行序号产物是独立试用，不是升级序列。真实升级验收使用冻结旧包和真正编译、尚未使用的新基础版本。首次新签名载荷也必须使用尚未使用的基础版本，例如未签名 `0.2.4` 之后使用 `0.2.5`，不能让重新签名／时间戳后的不同 Runner 字节复用此前未签名版本。不可变产物的重试保持原样。
 
-标签流水线现已使用明确的第 2 版未签名可安装产物，同时保留完整的第 1 版便携验证器。[执行队列](/SteamWrapper/zh-cn/project/roadmap/#执行队列2026-10-03)区分已完成的版本保留／源码回归，以及稳定交付仍需的原生与干净客户端／恢复验收。Foundation 申请被拒后，Windows Authenticode 改为可选；项目签名应用更新使用独立配置的密钥。Foundation 证书不是稳定发布的前置条件。已实现的公网更新流程仍需要实际客户端／下载／安装证据；通用 Steam 自动应用／恢复继续暂缓。
+标签流水线现已使用明确的第 2 版未签名可安装产物，同时保留完整的第 1 版便携验证器。[当前验收](/SteamWrapper/zh-cn/project/roadmap/#当前验收2026-10-07)区分首版已完成的版本保留、客户端／原生及恢复切片，与更广泛的剩余验收矩阵。Foundation 申请被拒后，Windows Authenticode 改为可选；项目签名应用更新使用独立配置的密钥。Foundation 证书不是稳定发布的前置条件。公开 CNB 0.2.5 → 0.2.6 客户端／下载／安装路径已通过，与公开 0.2.7 附件／更新源检查及未来启用启动检查后的验收分别记录；通用 Steam 自动应用／恢复继续暂缓。
 
 下方已完成的 `0.2.5` 发布操作说明源码／说明审阅及 CI 之后的版本标签交付流程。不要重复现有标签，未来发行必须使用新的协调版本：
 
@@ -157,7 +157,7 @@ git push origin v0.2.5-preview.1
 
 GitHub Releases 是版本标签二进制发布渠道。CNB 镜像使用 `CNB_GIT_TOKEN` 同步源码／标签，并优先使用 `CNB_RELEASE_TOKEN` 操作版本发布；未配置独立发布令牌时，复用 `CNB_GIT_TOKEN`，但该令牌还必须具有 `Nesoriel/SteamWrapper` 的 `repo-release` 读写权限。Git 同步成功不代表具有发布权限。发布器对照原始 SHA-256 验证上传后的下载副本；缺少可用凭据时跳过可选二进制步骤。
 
-当前预览如需镜像维护而不重新构建，可使用 `gh workflow run cnb-release-mirror.yml --ref main -f tag=v0.2.6-preview.1`；已经核验的镜像无需重复上传。维护工作流核对 GitHub 公开的七个附件、已合入主线的精确源码标签及当前签名授权版本，再发布并核验同一组 CNB 附件。它与发布和续期共用锁，最后把已核验镜像写入更新索引；不能切换到其他历史版本，也不能覆盖版本附件。权限失败时，为现有令牌补充 `repo-release` 读写权限，或配置 `CNB_RELEASE_TOKEN`；不要把令牌写入仓库文件或聊天。
+当前发行如需镜像维护而不重新构建，可使用 `gh workflow run cnb-release-mirror.yml --ref main -f tag=v0.2.7`；已经核验的镜像无需重复上传。维护工作流核对 GitHub 公开的七个附件、已合入主线的精确源码标签及当前签名授权版本，再发布并核验同一组 CNB 附件。它与发布和续期共用锁，最后把已核验镜像写入更新索引；不能切换到其他历史版本，也不能覆盖版本附件。权限失败时，为现有令牌补充 `repo-release` 读写权限，或配置 `CNB_RELEASE_TOKEN`；不要把令牌写入仓库文件或聊天。
 
 `v0.2.3-preview.1` 的七个 GitHub 下载附件均已核验。CNB 发布凭据未配置，二进制镜像实际跳过，因此不公告 CNB 二进制下载。
 
