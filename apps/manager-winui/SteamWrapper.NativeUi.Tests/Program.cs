@@ -15,7 +15,7 @@ internal static class Program
     private static Dictionary<string, string> publicationHashes = [];
     private static string publication = "";
     private static string evidenceRoot = "";
-    private static readonly string[] FocusedCases = ["add-local", "manual-appid", "dirty-add", "keyboard", "updates"];
+    private static readonly string[] FocusedCases = ["add-local", "manual-appid", "dirty-add", "keyboard", "updates", "runner-update"];
     private static readonly string[] SupportedCases = [.. FocusedCases, "existing-editor", "saved-editor"];
     private static readonly List<object> FixtureProcesses = [];
     private static readonly List<object> KeyboardObservations = [];
@@ -30,7 +30,7 @@ internal static class Program
         catch (ArgumentException error)
         {
             Console.Error.WriteLine(error.Message);
-            Console.Error.WriteLine("Usage: SteamWrapper.NativeUi.Tests <repo-root> <publish-directory> [--inspect | --case <add-local|manual-appid|dirty-add|keyboard|updates|existing-editor|saved-editor> ...]");
+            Console.Error.WriteLine("Usage: SteamWrapper.NativeUi.Tests <repo-root> <publish-directory> [--inspect | --case <add-local|manual-appid|dirty-add|keyboard|updates|runner-update|existing-editor|saved-editor> ...]");
             return 2;
         }
         if (!Environment.UserInteractive || Process.GetCurrentProcess().SessionId == 0)
@@ -190,6 +190,17 @@ internal static class Program
     {
         var fixture = NativeUiFixture.Create(repoRoot, publish);
         FixtureRoots.Add(fixture.Root);
+        if (name == "runner-update")
+        {
+            // Known older ownership metadata, only in this disposable fixture.
+            // These sentinel bytes are not executable and are never launched.
+            var bin = Path.Combine(fixture.DataRoot, "bin");
+            Directory.CreateDirectory(bin);
+            var path = Path.Combine(bin, "SteamWrapperRunner.exe");
+            File.WriteAllText(path, "Known older native UI Runner fixture; never execute.\n");
+            File.WriteAllText(Path.Combine(bin, "runner-manifest.json"), JsonSerializer.Serialize(new
+            { schemaVersion = 1, contractVersion = 2, version = "0.0.1", sha256 = DeploymentHash(path) }));
+        }
         var profiles = File.ReadAllBytes(fixture.ProfilesPath);
         var settings = File.ReadAllBytes(fixture.SettingsPath);
         File.WriteAllBytes(Path.Combine(fixture.Root, "original-profiles.toml"), profiles);
@@ -210,6 +221,7 @@ internal static class Program
                     case "dirty-add": DirtyAdd(window, fixture, profiles); break;
                     case "keyboard": KeyboardFlow(window, fixture, profiles); break;
                     case "updates": UpdatesFlow(window, fixture); break;
+                    case "runner-update": RunnerUpdateNotice(window, fixture); break;
                 }
             });
             if (name is "add-local" or "manual-appid")
@@ -232,7 +244,18 @@ internal static class Program
                 });
             }
             else BytesEqual(profiles, File.ReadAllBytes(fixture.ProfilesPath), "Canceled/focus-only interaction changed profile bytes.");
-            BytesEqual(settings, File.ReadAllBytes(fixture.SettingsPath), "The focused flow modified language, cover or unknown preferences.");
+            if (name == "runner-update")
+            {
+                // The explicit language round trip may canonicalize JSON whitespace
+                // and add default keys. Existing values must remain identical.
+                using var before = JsonDocument.Parse(settings);
+                using var after = JsonDocument.Parse(File.ReadAllBytes(fixture.SettingsPath));
+                foreach (var property in before.RootElement.EnumerateObject())
+                    Assert(after.RootElement.TryGetProperty(property.Name, out var value) && JsonElement.DeepEquals(property.Value, value),
+                        "The language round trip changed an existing preference: " + property.Name);
+                Assert(!after.RootElement.TryGetProperty("automaticUpdateChecks", out var checks) || !checks.GetBoolean(), "Showing Runner guidance enabled automatic updates.");
+            }
+            else BytesEqual(settings, File.ReadAllBytes(fixture.SettingsPath), "The focused flow modified language, cover or unknown preferences.");
             BytesEqual(profiles, File.ReadAllBytes(Path.Combine(fixture.Root, "original-profiles.toml")), "Original profile evidence changed.");
             BytesEqual(settings, File.ReadAllBytes(Path.Combine(fixture.Root, "original-ui-settings.json")), "Original preference evidence changed.");
             foreach (var (path, hash) in protectedFiles) Equal(hash, DeploymentHash(Path.Combine(fixture.Root, path)));
@@ -259,6 +282,17 @@ internal static class Program
         window.InvokeName("Close");
         Assert(!window.HasId("AutomaticUpdateChecks"), "Closing Updates left its dialog open.");
         BytesEqual(before, File.ReadAllBytes(fixture.SettingsPath), "Opening or canceling Updates wrote preferences.");
+    }
+
+    private static void RunnerUpdateNotice(NativeWindow window, NativeUiFixture fixture)
+    {
+        var path = Path.Combine(fixture.DataRoot, "bin", "SteamWrapperRunner.exe");
+        var before = File.ReadAllBytes(path);
+        NativeWindow.Wait(() => window.HasName("A Runner update is available. Save a game profile to update it.", ControlType.Text), "visible older Runner update guidance");
+        window.Language("简体中文");
+        NativeWindow.Wait(() => window.HasName("启动组件可更新。保存一个游戏配置即可更新。", ControlType.Text), "localized older Runner update guidance");
+        BytesEqual(before, File.ReadAllBytes(path), "Inspecting or switching language replaced the older Runner.");
+        window.Language("English");
     }
 
     private static string DeploymentHash(string path)
