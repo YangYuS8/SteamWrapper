@@ -15,10 +15,11 @@ description: "Windows 玩家反馈、交付、发布、可选更新与安全 Ste
 
 ## 当前验收（2026-10-07）
 
-首个 Windows 稳定版本 **[v0.2.7](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7)** 已公开，提供相同附件的 [CNB 发行](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.7)。P0／P1 核心范围为 **Windows 11 24H2 x64、当前 Windows／Steam 账户**。准确标签的发布工作流及独立公开附件／更新源核验均通过。下方有日期的记录保留各自产物与验收范围，准确证据见[测试](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-06)。
+最新稳定版本 **[v0.2.8](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8)** 已公开，提供相同附件的 [CNB 发行](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.8)；v0.2.7 仍是首个 Windows 稳定版。P0／P1 核心范围为 **Windows 11 24H2 x64、当前 Windows／Steam 账户**。准确标签的工作流及独立三个附件／四份更新源核验均通过。下方有日期的记录保留各自产物与验收范围，准确证据见[测试](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-06)。
 
 | 范围 | 当前结果与尚未覆盖的边界 |
 | --- | --- |
+| 公开精简稳定交付 | [运行 37520487430](https://github.com/YangYuS8/SteamWrapper/actions/runs/37520487430)九项任务全部通过，从 `8fc993e4b99bbb5de4a281971885dc89f48a1c50` 发布 v0.2.8。两站的 Setup、ZIP、SHA256SUMS 各通过匿名下载／长度／摘要检查。四份稳定／预览更新源通过真实公钥、时效、精确安装器／来源及同通道字节一致性检查。CNB 发行元数据通过已登录 CLI 读取，附件／更新源请求没有使用凭据。该检查没有执行 Setup 或扩展客户端／游玩验收范围。 |
 | 公开稳定交付 | [运行 37500459000](https://github.com/YangYuS8/SteamWrapper/actions/runs/37500459000) 全部九个 job 通过，从 `0987802b86460eff711c6cf694015cdbf086bbb2` 发布 v0.2.7。两个来源的全部七附件通过独立匿名长度／摘要、标签提交及第 2 版清单核验。两站的稳定与预览更新源均通过项目签名、时效及准确安装器验证，同一频道的两站字节一致。该核验没有执行 Setup。 |
 | 先前公开预览交付 | [运行 37462977733](https://github.com/YangYuS8/SteamWrapper/actions/runs/37462977733) 发布 v0.2.6-preview.1 GitHub／CNB 附件及项目签名预览索引。两个来源的七附件均独立匿名下载，并通过长度／摘要、标签提交和包内清单核验。附件检查本身没有执行 Setup。 |
 | 发布前 0.2.7 候选 | 178 项 Application、37 项 Windows、160 项 Deployment 测试通过，有一项条件式跨卷跳过；Runner 契约通过。真实隔离 0.2.6 → 0.2.7 安装／回滚／再升级通过 13 个结果。无需 SDK 的便携候选在全新构建 26100 WDAG 客体通过十步，包含移动目录与独立 Runner 使用；五项实际 NativeAOT Host 语言用例另行通过。这些结果及下方普通权限生命周期使用最后 Runner 进程名修复前的私有载荷，不是执行后来公开的 v0.2.7 字节。 |
@@ -179,13 +180,13 @@ P0 反馈与 P1 打包准备可以并行。首个稳定版需满足已记录的 
 - [x] 分离日常测试／编译 CI 与版本标签 Setup／portable 技术预发布打包，保留不公开发布的明确手动预览，建立严格版本／说明预检、校验和及可选 CNB 二进制镜像
 - [x] 构建／测试准确 WinUI 标签版本，检查实际安装器／portable 内容、Runner 元数据和本地化资源，首次由 `v0.2.3-preview.1` 建立证据。如实标识历史启动器／UI 发行；旧公开 `v1.0.0` 启动器不代表当前 WinUI 交付或安装器验收结果。
 - [ ] 可选：未来有服务方可用时增加 Windows Authenticode 发布者身份及时间戳验证。如实标识未签名发行。项目更新签名不消除 Windows 信誉警告，不要求玩家关闭防护。
-- [x] 发布 SHA-256 校验和、准确版本／提交／平台标识、英语与完整简体中文发布说明、已知限制和安装／更新／恢复指南；最新公开版本为稳定版 `v0.2.7`。
-- [x] 向 GitHub Releases 与 CNB Releases 发布相同二进制及校验和，再验证两个渠道可下载的实际副本。两站全部七项 `v0.2.7` 附件及四份稳定／预览签名更新源均通过独立公开核验。后续镜像仍需逐版本核验，源码同步本身不足。
+- [x] 发布 SHA-256 校验和、准确版本／提交／平台标识、英语与完整简体中文发布说明、已知限制和安装／更新／恢复指南；最新公开版本为稳定版 `v0.2.8`，GitHub 正文为英语，CNB 正文为简体中文。
+- [x] 向 GitHub Releases 与 CNB Releases 发布相同二进制及校验和，再验证两个渠道可下载的实际副本。两站全部三个 `v0.2.8` 附件及四份稳定／预览签名更新源均通过独立公开核验，历史七附件发行保持不可变。后续镜像仍需逐版本核验，源码同步本身不足。
 - [x] 核心验收、准确标签工作流及公开附件／更新源核验通过后，已将 v0.2.7 发布为首个 WinUI 稳定版本。保留预发布／稳定版区别，明确未验证操作或平台。
 
 **验收：**另一位维护者能够识别源码标签，从两个渠道下载每个公开产物、验证摘要及适用签名，并按文档安装／更新／卸载。签名凭据与发布密钥不进入仓库。合并分支、打标签或上传 CI 预览，都不能单独完成该门槛。
 
-[标签工作流与维护者步骤](/SteamWrapper/zh-cn/development/distribution/#准备并触发发布)实现 P2 自动化，合并不发布版本。稳定版 `v0.2.7` 已在准确标签工作流及独立附件／更新源核验通过后公开。更早公开发行及私有升级试验保留各自原始字节与有日期的范围。版本标签保留安装器／便携版契约，并增加独立项目签名更新信息；手动预览仍只生成产物。先前公开 0.2.5 → 0.2.6 CNB 安装流程仍是独立结果，不是公开 v0.2.7 安装实测。Foundation 批准不作为交付门槛。
+[标签工作流与维护者步骤](/SteamWrapper/zh-cn/development/distribution/#准备并触发发布)实现 P2 自动化，合并不发布版本。稳定版 `v0.2.8` 已在准确标签工作流及独立三个附件／四份更新源核验通过后公开。更早公开发行及私有升级试验保留各自原始字节与有日期的范围。版本标签保留安装器／便携版契约，并增加独立项目签名更新信息；手动预览仍只生成产物。先前公开 0.2.5 → 0.2.6 CNB 安装流程仍是独立结果，不是执行公开 v0.2.7 或 v0.2.8 安装器。Foundation 批准不作为交付门槛。
 
 ## P3. 可选应用更新
 
@@ -205,7 +206,7 @@ P0 反馈与 P1 打包准备可以并行。首个稳定版需满足已记录的 
 
 **交付目标：**针对所选 Steam 用户的所选游戏，提供可选、可审阅的写入及安全恢复路径。
 
-准备中的 `0.2.8` 源码已实现范围更小的既有命令处理：Manager 可还原未保存编辑，在 Steam 正常退出后清除选中 AppID 精确识别的生成命令，并仅在完整账号扫描确认没有残留引用后移除可编辑配置。自定义命令、无关 TOML 和游戏文件保留，未知旧参数无法重建。服务／原生夹具及真实隔离升级检查见[测试](/SteamWrapper/zh-cn/development/testing/#player-refinements-source-028-2026-10-07)；这些不是公开 `v0.2.8` 交付或真实游戏库执行证据。下方未勾选门槛针对通用应用和记录来源的历史参数恢复。
+已发布的 `0.2.8` 实现范围更小的既有命令处理：Manager 可还原未保存编辑，在 Steam 正常退出后清除选中 AppID 精确识别的生成命令，并仅在完整账号扫描确认没有对配置 Key 或 AppID 的残留引用后移除可编辑配置。自定义命令、无关 TOML 和游戏文件保留，未知旧参数无法重建。[测试](/SteamWrapper/zh-cn/development/testing/#player-refinements-source-028-2026-10-07)保留服务／原生夹具及私有隔离升级结果，包含最后的引用保护修正；它们不是执行公开 `v0.2.8` 安装器或真实游戏库恢复命令的证据。下方未勾选门槛针对通用应用和记录来源的历史参数恢复。
 
 - [ ] 识别本地 Steam、游戏和多个用户，不猜测账号。展示准确原值／拟写入启动项，并要求明确选择目标。
 - [ ] Steam 运行时阻止写入，变更前再次检查。保留无关数据、稳定 Runner 引用与既有 `%command%` 位置。
@@ -225,6 +226,6 @@ P0 反馈与 P1 打包准备可以并行。首个稳定版需满足已记录的 
 
 ## 现有实现记录与证据边界
 
-当前源码包含 WinUI Manager、C# 配置服务及独立 Rust core／Runner。Manager 支持本地 Steam 发现／封面、TOML 编辑、稳定 Runner 安装和启动项生成。准备中的 `0.2.8` 增加上文的有界配置操作及只读本地 Steam 名称本地化，保留自定义／保存名称和未保存输入。CI 采用相关路径过滤、依赖缓存及合并 Runner 测试，保留完整标签门禁；远程耗时尚未测定。内部第 3 版包清单保留七文件校验，公开仅提供 Setup、便携 ZIP 和 `SHA256SUMS`，标题只含标签，GitHub 正文为英语，CNB 正文为中文。历史版本附件保持不可变，续期签名更新源保留客户端第 2 版格式。已移除的 [Dioxus 应用](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/apps/manager-dioxus)、[Rust 管理层](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/crates/manager-core)和[旧 UI 发布工作流](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09e/.github/workflows/release.yml)可在 `ca6a09e` 查阅，属于历史参考，不是当前 Windows UI 或交付证据。
+当前源码包含 WinUI Manager、C# 配置服务及独立 Rust core／Runner。Manager 支持本地 Steam 发现／封面、TOML 编辑、稳定 Runner 安装和启动项生成。已发布的 `0.2.8` 增加上文的有界配置操作及只读本地 Steam 名称本地化，保留自定义／保存名称和未保存输入。CI 采用相关路径过滤、依赖缓存及合并 Runner 测试，保留完整标签门禁，限定的冷／热缓存观察记录于[测试](/SteamWrapper/zh-cn/development/testing/#public-028-and-ci-observations-2026-10-07)。内部第 3 版包清单保留七文件校验，公开仅提供 Setup、便携 ZIP 和 `SHA256SUMS`，标题只含标签，GitHub 正文为英语，CNB 正文为中文。历史版本附件保持不可变，续期签名更新源保留客户端第 2 版格式。已移除的 [Dioxus 应用](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/apps/manager-dioxus)、[Rust 管理层](https://github.com/YangYuS8/SteamWrapper/tree/ca6a09e/crates/manager-core)和[旧 UI 发布工作流](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09e/.github/workflows/release.yml)可在 `ca6a09e` 查阅，属于历史参考，不是当前 Windows UI 或交付证据。
 
 旧路线的 Dioxus、Linux/AppImage 勾选保留为 `31a609d:docs/roadmap.md` 中的历史记录，2026-10-02 的移除不改写早先结果。WinUI 配置／交付核心已取得 Windows 11 24H2 x64 当前账户流程的真实普通权限产品、干净客户端、便携、限定恢复及 CNB 更新证据，公开 v0.2.7 交付另经独立核验。更广账户／硬件／故障矩阵及 Steam 一键应用／恢复继续独立推进。Authenticode 可选；核心通过或公开可用不代表未执行组合或更广游戏／成就保证。

@@ -7,7 +7,7 @@ description: "Windows 稳定版 Setup／便携 ZIP、稳定 Runner 安装及已�
 
 ## 原则
 
-WinUI 是唯一当前 Manager。交付包含 **Windows 11 24H2 x64 自包含目录**和未签名的[每用户安装器](/SteamWrapper/zh-cn/guides/installer-preview/)。版本标签打包 Setup 与便携 ZIP：有预发布后缀时发布预览版，纯版本标签发布稳定版。手动工作流构建和测试安装器，但不公开发布。常规拉取请求与 `main` 只检查，不打包应用。项目认证的应用更新已实现，公开可用性以实际版本／更新源发布为准。首个稳定版为 v0.2.7，支持已测试的 Windows 11 24H2 x64、当前 Windows／Steam 账户范围。通用的 Steam 启动项自动应用仍未实现；卸载只移除严格识别的 SteamWrapper 命令。
+WinUI 是唯一当前 Manager。交付包含 **Windows 11 24H2 x64 自包含目录**和未签名的[每用户安装器](/SteamWrapper/zh-cn/guides/installer-preview/)。版本标签打包 Setup 与便携 ZIP：有预发布后缀时发布预览版，纯版本标签发布稳定版。手动工作流构建和测试安装器，但不公开发布。常规拉取请求与 `main` 只检查，不打包应用。项目认证的应用更新已实现，公开可用性以实际版本／更新源发布为准。首个稳定版为 v0.2.7，支持已测试的 Windows 11 24H2 x64、当前 Windows／Steam 账户范围。通用的 Steam 启动项自动应用仍未实现；Manager 明确恢复选中 AppID 及卸载只能清除精确识别的 SteamWrapper 命令。
 
 安装器包含运行时文件，按当前用户安装且通常无需提权。首次安装可选本地固定盘上的空目录，升级／修复留在已登记位置；开始菜单快捷方式默认开启、桌面快捷方式默认关闭，完成后可打开 Manager。默认卸载保留稳定 Runner／数据，七个独立且默认关闭的选项提供有界还原与清理。无 SDK 核心生命周期、真实升级／回退、便携迁移、普通进程权限及已记录故障恢复路径分别通过。新账户完整登录、双用户 GUI、多屏硬件、物理断电及全部语言／失败组合仍未验证；占用的 Manager 阻止变更，不强制退出，未知文件与隔离暂存始终保护。准确载荷范围见[测试](/SteamWrapper/zh-cn/development/testing/)。
 
@@ -127,7 +127,7 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 
 发布标签采用 `vMAJOR.MINOR.PATCH`，可带 SemVer 预发布后缀。三位基础版本必须与 `SteamWrapper.Manager.csproj` 的 `<Version>` 及 `crates/core/Cargo.toml`、`crates/runner/Cargo.toml` 的包版本一致，生产 Application、Deployment 和 Host 版本也须协调。提交必须在 `main` 的历史中，且对应版本中须包含 `releases/<tag>.en.md` 与 `releases/<tag>.zh-CN.md`。无效标签、版本不匹配或缺失说明均会在交付前失败。纯标签发布稳定版，预发布标签发布预览版。限定范围的客户端门槛通过后，首个纯标签 `v0.2.7` 已正式发布。后续每个内容变化的可安装载荷仍需新的协调数字版本及相应发布门禁。
 
-当前源码／产品版本 **0.2.7 已作为 [v0.2.7](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7) 正式发布**，提供相同的 [CNB 下载](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.7)。[发布运行 37500459000](https://github.com/YangYuS8/SteamWrapper/actions/runs/37500459000)在提交 `0987802b86460eff711c6cf694015cdbf086bbb2` 上九项任务全部通过，独立匿名核验两站各七附件及稳定／预览签名更新源，以真实项目公钥和精确公开 Setup 为准。[当前验收](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-07)明确区分公开字节、较早私有客户端载荷、公开 0.2.5 → 0.2.6 的 CNB 实际更新、安全失败的明确 GitHub 下载，以及 `actualInno=false` 的本地清单 VHD 路径。全新账户完整主登录、双用户 GUI 与更广硬件矩阵仍未验证。
+当前源码／产品版本 **0.2.8 已作为 [v0.2.8](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8) 正式发布**，提供相同的 [CNB 下载](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.8)。[发布运行 37520487430](https://github.com/YangYuS8/SteamWrapper/actions/runs/37520487430)在提交 `8fc993e4b99bbb5de4a281971885dc89f48a1c50` 上九项任务全部通过。独立检查匿名下载两站各三个附件及全部四份稳定／预览签名更新源，核对长度／摘要、真实项目公钥和精确公开 Setup。CNB 发行元数据通过既有已登录 CLI 读取，下载请求没有使用凭据。[当前验收](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-07)明确区分公开字节、较早私有客户端载荷、公开 0.2.5 → 0.2.6 的 CNB 实际更新、安全失败的明确 GitHub 下载，以及 `actualInno=false` 的本地清单 VHD 路径。此次没有执行公开 v0.2.8 Setup。全新账户完整主登录、双用户 GUI 与更广硬件矩阵仍未验证。
 
 历史未签名的 [v0.2.3-preview.1 技术预览](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.3-preview.1)已由成功的[运行 37120893907](https://github.com/YangYuS8/SteamWrapper/actions/runs/37120893907)公开。已下载 GitHub 全部七个公开附件，核对长度、API 摘要和第 2 版清单；七个自有 PE 产品版本及下载后 NativeAOT Host 的五项实际语言用例也通过。具体范围见[测试](/SteamWrapper/zh-cn/development/testing/)。此前升级／回滚及 PE 资源记录保留为有日期的证据。不要覆盖已有标签或发布。未来需协调 Rust、Manager、Application、部署产品版本及锁文件，并提供完整双语说明。打标签前确认所选主线提交已通过 CI；准备说明或合并本身不证明发布。
 
@@ -163,7 +163,7 @@ GitHub Releases 是版本标签二进制发布渠道。CNB 镜像使用 `CNB_GIT
 
 如需明确修正当前签名授权版本在 CNB 上的展示，可在镜像工作流调用中加入 `-f refreshPresentation=true`，默认值为 false。该选项先核验准确标签／源码及每个不可变附件，再仅修改标题与中文正文，保留全部附件及发布标记。
 
-当前发行如需镜像维护而不重新构建，可使用 `gh workflow run cnb-release-mirror.yml --ref main -f tag=v0.2.7`；已经核验的镜像无需重复上传。维护工作流核对 GitHub 完整公开下载集、已合入主线的精确源码标签及当前签名授权版本，再发布并核验同一组 CNB 附件。历史版本保留七文件验证器；v0.2.8 起核验三个下载、精确 API 摘要、签名授权的 Setup 及准确提交中的中文说明，并使用外部验证记录，不能伪造内部元数据。它与发布和续期共用锁，最后把已核验镜像写入更新索引；不能切换到其他历史版本，也不能覆盖版本附件。权限失败时，为现有令牌补充 `repo-release` 读写权限，或配置 `CNB_RELEASE_TOKEN`；不要把令牌写入仓库文件或聊天。
+当前发行如需镜像维护而不重新构建，可使用 `gh workflow run cnb-release-mirror.yml --ref main -f tag=v0.2.8`；已经核验的镜像无需重复上传。维护工作流核对 GitHub 完整公开下载集、已合入主线的精确源码标签及当前签名授权版本，再发布并核验同一组 CNB 附件。历史版本保留七文件验证器；v0.2.8 起核验三个下载、精确 API 摘要、签名授权的 Setup 及准确提交中的中文说明，并使用外部验证记录，不能伪造内部元数据。它与发布和续期共用锁，最后把已核验镜像写入更新索引；不能切换到其他历史版本，也不能覆盖版本附件。权限失败时，为现有令牌补充 `repo-release` 读写权限，或配置 `CNB_RELEASE_TOKEN`；不要把令牌写入仓库文件或聊天。
 
 `v0.2.3-preview.1` 的七个 GitHub 下载附件均已核验。CNB 发布凭据未配置，二进制镜像实际跳过，因此不公告 CNB 二进制下载。
 

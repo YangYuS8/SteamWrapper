@@ -12,13 +12,13 @@
 
 ## 当前状态
 
-项目优先做好 Windows。**WinUI 3/C# Manager** 支持本地 Steam 发现、原生选择器、保留语法的配置编辑、高级参数与启动选项复制，是唯一的 Manager。**[v0.2.7](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7) 已成为首个 Windows 稳定版**，提供内容相同的 [CNB 下载](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.7)。需要 Windows 11 24H2 x64，请使用平时运行 Steam 的 Windows 账户。下载 Setup 或完整便携 ZIP，按[安装指南](https://yangyus8.top/SteamWrapper/zh-cn/guides/installation/)使用。
+项目优先做好 Windows。**WinUI 3/C# Manager** 支持本地 Steam 发现、原生选择器、保留语法的配置编辑、高级参数与启动选项复制，是唯一的 Manager。**[v0.2.8](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8) 是最新稳定版**，提供内容相同的 [CNB 下载](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.8)：Setup、完整便携 ZIP 和 `SHA256SUMS`。v0.2.7 是首个 Windows 稳定版。需要 Windows 11 24H2 x64，请使用平时运行 Steam 的 Windows 账户，按[安装指南](https://yangyus8.top/SteamWrapper/zh-cn/guides/installation/)使用。
 
 Manager 首次启动跟随已支持的系统界面语言，不支持时回退英语，提供完整简体中文。已保存的手动语言选择优先。切换语言保留游戏名称、路径、参数与已保存配置。请将官方 Steam 安装与第三方汉化版分开放置，详见[汉化游戏、存档与成就](https://yangyus8.top/SteamWrapper/zh-cn/guides/translated-games/)。兼容性记录限定于具体游戏和场景，不保证所有游戏均可用。
 
 封面优先使用自定义与本地 Steam 图片。可选的官方 Steam CDN 补图默认关闭，使用有界的 SteamWrapper 缓存并提供清理入口；缺图不影响配置或启动。详见[封面设置](https://yangyus8.top/SteamWrapper/zh-cn/guides/configuration/#cover-settings)。
 
-拉取请求与 `main` 运行测试及编译检查。版本标签构建并发布 Setup 和便携 ZIP：纯版本标签选择稳定版，预发布后缀选择预览版；手动工作流只生成试用产物，不公开发布 Release。Windows Authenticode 签名是可选项，应用更新通过项目签名元数据认证并校验精确安装包。限定范围的客户端／原生门槛与 v0.2.7 完整发布工作流已通过，两个下载源及更新渠道已独立核验。详见[发布准备](https://yangyus8.top/SteamWrapper/zh-cn/development/distribution/)和[代码签名政策](https://yangyus8.top/SteamWrapper/zh-cn/project/design/code-signing/)。
+拉取请求与 `main` 运行相关测试及编译检查。版本标签构建并发布 Setup 和便携 ZIP：纯版本标签选择稳定版，预发布后缀选择预览版；手动工作流只生成试用产物，不公开发布 Release。Windows Authenticode 签名是可选项，应用更新通过项目签名元数据认证并校验精确安装包。[v0.2.8 完整标签工作流](https://github.com/YangYuS8/SteamWrapper/actions/runs/37520487430)已通过，两站三个下载附件及签名更新渠道均经独立核验。先前客户端／原生结果继续保留各自载荷范围。详见[发布准备](https://yangyus8.top/SteamWrapper/zh-cn/development/distribution/)和[代码签名政策](https://yangyus8.top/SteamWrapper/zh-cn/project/design/code-signing/)。
 
 ## 文档
 
