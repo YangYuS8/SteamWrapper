@@ -94,6 +94,14 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 执行需要**解锁的交互 Windows 桌面**，套件操作夹具窗口期间应保持该桌面可用。CI 仅编译这个开发用控制台 UIA 工具。WPF 引用用于取得 Windows 自动化 API，不是另一个 Manager 实现，也不进入应用包。托管服务会话中的编译不能记为原生测试通过。
 
+单独验证 DPI 与中文输入法时，可用 `Test-WinUINativeUi.ps1 -Inspect` 保留可丢弃夹具 Manager 窗口。将输出的 PID 记为 `$fixturePid`，再读取实际窗口指标：
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Read-WinUIWindowMetrics.ps1 -ProcessId $fixturePid
+```
+
+只读工具要求进程位于当前会话，且 Manager 可执行文件在本仓库 `target/winui` 内。它记录窗口／工作区像素边界、真实 HWND DPI／缩放、键盘布局及可读取的旧式 IMM 状态；无 IMM 上下文明确记为 `unknown`，不能据此认为现代 TSF 输入已禁用。可选的 `-OutputPath target/winui/window-metrics.json` 在已有证据目录创建新 JSON，拒绝覆盖和链接路径。工具不改变焦点、窗口大小、输入或显示设置；单次指标不证明视觉可用性或输入法组合输入。应使用实际按键观察候选、提交和取消，并在截图旁记录真实 DPI；Unicode `ValuePattern.SetValue` 或放大截图不能代替这些验收。
+
 首个切片检查英语启动、现有 AppID 不可改、切换语言时保留 Unicode 编辑、取消未保存导航／关闭窗口、外部保存冲突、重启后保留中文偏好／未知设置，以及未知 Runner 失败时不替换其字节。另覆盖取消原生目标选择器、CDN 关闭时选择／筛选封面缺失或损坏的本地游戏，以及成功保存后保留未知 TOML 并生成稳定 Runner 启动项。选择检查不能证明所有封面已正确呈现或网络请求为零。证据与窗口快照保存在 `target/winui/native-ui/`。工具仅正常关闭自己创建的夹具 Manager；未解决的夹具窗口与诊断文件会保留。中文输入法组合输入、显示缩放、可访问性／布局、剪贴板、实际下载／网络行为及更广玩家验收仍需单独证据。
 
 **2026-10-03 本地记录：**包装脚本针对真正编译的 `0.2.2` 便携目录执行，**10 项原生用例全部通过**。三个可丢弃夹具分别覆盖普通编辑／重启、选择器／封面／成功保存流程和未知 Runner 失败。证据记录实际发布的 EXE／DLL／Runner／清单哈希及 `cleanVm=false`；成功保存另保留 TOML 注释、未知字段与备份字节。这是该切片的真实交互窗口证据，不代表 CI 原生执行、输入法／缩放／剪贴板、零 HTTP 或真实 Steam 验收。W1 仍未完成。
@@ -188,6 +196,14 @@ WinUI Manager 使用与 `profiles.toml` 同级的 `ui-settings.json`，`language
 
 ## 干净 Windows Sandbox 验收
 
+普通 Windows CI 使用可丢弃输入执行以下验收工具回归。便携检查覆盖压缩包清单、哈希和安全解压；普通账户检查覆盖身份／令牌、交接路径与 ACL 边界，不创建用户。工作流另使用 Windows 自带 PowerShell 5.1 解析只读指标脚本并编译其嵌入 C#，不读取窗口。这些门禁不执行客体、不构建安装包，也不发布版本：
+
+```powershell
+pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptanceScripts.ps1
+pwsh -NoProfile -File scripts/windows/Test-PortableAcceptanceScripts.ps1
+pwsh -NoProfile -File scripts/windows/Test-StandardUserAcceptanceScripts.ps1
+```
+
 Runner 依赖检查器按四个数值文件版本字段选择官方 MSVC 工具。托管工具的显示字符串可能附带 `built by: cloudtest`，首次 CI 因把显示文本当版本号解析而失败。`pwsh -NoProfile -File scripts/windows/Test-RunnerDependenciesScripts.ps1` 的四项聚焦选择回归通过，现已加入正常 CI，在编译前执行。此工具修正不改变已验收候选载荷的字节。
 
 Windows Sandbox 提供全新的 Windows 客户端，不带宿主机已安装的开发工具。以管理员身份启用 `Containers-DisposableClientVM` Windows 功能，并完成系统要求的重启。这是维护者可选的验收环境，不是贡献者的前置要求。分别记录实际客体与宿主构建：2026-10-06 运行中客体为 **26100**，宿主为 **26300**。这个由 Sandbox 管理的客体使用管理员账户，并非独立 ISO 安装的虚拟机，不代表标准用户或其他构建兼容性通过。
@@ -230,6 +246,24 @@ Windows 自带 CBS 运行库与外部安装运行库通过准确的 Microsoft �
 实际中文原生 UI 保存 AppID `487`，生成准确的稳定 Runner 启动项，并安装通过哈希验证的 Runner。关闭 Manager 后，Runner 完成无害夹具并以 0 退出。修复、默认卸载、卸载后独立 Runner、自定义中文目录重装、重新打开后的配置可见、迁移后的 Runner 及最终卸载均通过；Manager 在两个位置都从自己的 `0.2.6` 载荷加载 `coreclr.dll` 和 `Microsoft.UI.Xaml.dll`。配置／Runner／清单三个准确哈希保留；最终移除核验自有程序版本、快捷方式和注册已删除，无害夹具未变。
 
 这是已通过的**本地未发布 `CandidateFirstInstall`** 生命周期，`unpublishedCandidate=true`、`workingCopyDirty=true`、`numericUpgradeTested=false`、`publicSevenAssetsTested=false`。账户是具有管理员身份的 `WDAGUtilityAccount`，不是普通账户或独立 ISO 虚拟机；不代表干净真实数字版本升级、便携版、多种 DPI／中文输入法、公开下载／公网更新或真实 Steam／游戏验收完成。先前一次 Sandbox 断连提示经明确重新连接恢复；产品路径通过不保证 Sandbox 本身可靠。整体 W2／稳定门槛及公开发布仍独立保留。
+
+**公开基线 → 本地候选的干净升级（2026-10-06）：**明确的 `CandidateUpgrade` 路径在全新离线构建 26100 客体通过 **18 步**，`ReadEvidence` 核验通过。在上述候选准备命令中加入 `-BaselineTag v0.2.5-preview.1` 即选择该路径；基线独立核验公开七附件与准确提交。证据为 `target/winui/clean-windows-9b0667b94cd946d2805377067870a21b/evidence/evidence.json`。基线 Setup 哈希为 `0cd78a00070d4e40eeb1f376a98b94f0b3febb82a3357be3b6b0b35555ae57da`，目标为上方同一个 `26ebacd4…` 候选。真实安装／修复／升级、原生界面复用配置、配置／偏好字节不变、上一版本保留、默认卸载及自定义目录重装均通过。保存保留的配置后安装实际更新的静态 Runner，生成的启动项不变；关闭 Manager 后，三次无害 Runner 启动均以 0 退出。
+
+该升级路径明确**未运行**历史基线 Runner：其加载缺陷保留在上方记录，`baselineRunnerOperationalTested=false`。通过结果证明 `numericUpgradeTested=true`、`stableRunnerUpdated=true`，不代表旧 Runner 可用、目标已公开发布、普通账户或联网更新接力通过。输入保留准确的公开基线描述符／API 哈希和本地候选来源；聚焦回归拒绝相同／更高数字版本基线及不符合范围的证据。
+
+**干净便携候选（2026-10-06，DPI 布局修改之前）：**实际 schema 1 五附件 ZIP 通过 **10 步**，证据为 `target/winui/portable-client-8c6b61d0557c4fb7891fea190f5f09cb/evidence/evidence.json`。ZIP SHA-256 为 `4766f2d7ffc1d97043bd0bd90c12658049f68827cbfca4394724a0dcac23a309`。603 个载荷文件全部核验，解压到全新离线、构建 26100 且无需准备 SDK／运行库的客体中文目录。原生配置保存、共享稳定 Runner 安装、两次正常 Manager 退出及两次独立 Runner 退出均通过。实际 NativeAOT 安装辅助程序拒绝占用的便携目录，退出码 11，全部载荷／数据哈希未变。关闭后移动 Manager 目录，配置和 Runner 仍可用。未运行 Setup、Steam 或操作游戏文件；不证明安装版转便携版、普通账户或公开发行验收。载荷变化后须重新验收，不能复用本记录。
+
+**普通账户的环境阻塞（2026-10-06）：**仅客体可运行的控制器在全新构建 26100 Sandbox 创建了真正的本地普通账户；直接令牌读取确认子进程属于新 SID、Medium 完整性、未提升且完全没有 Administrators 组，不是过滤后的管理员。子进程未进入 PowerShell 诊断：控制器等待超时，Windows Application Popup 事件 26 记录 `0xC0000142`。证据位于 `target/winui/clean-windows-9175aa168e2840da94d21ba8ef9ecb9c/evidence/`，包含 `standard-controller.json`、`standard-child-token.json`、`standard-startup-events.json` 与 `standard-observation.json`。不把事件代码当作已观察的进程退出码，也不据此确定某个 DLL／桌面原因；未执行生产 Setup，没有普通账户完整生命周期通过。桌面／映射 ACL、UAC 和机器策略未变；官方停止 Sandbox 后临时账户随客体销毁。完整普通账户验收仍受阻，等待可用的独立会话。
+
+**DPI 修复后的最终载荷（2026-10-06）：**`target/winui/installers/client-final2-v0.2.6/` 中的新封存 Setup 为 49,925,609 字节，SHA-256 `9c2b1a7424f9f3157f4705d25f8dc78c54a8682c2e57065600d19408890b8ac9`。在 `target/winui/clean-windows-441fc7b4a6044012bb8bb77eba19cf8c/evidence/evidence.json` 再次通过完整 **18 步 CandidateUpgrade**，客体退出码 0，宿主 `ReadEvidence` 匹配核验通过。Manager 与 Runner 各三次正常退出且退出码 0；客体没有 SDK／准备过的运行库或两项 System32 VC DLL。配置／偏好字节、有效的稳定启动项、上一版本保留及默认卸载的数据保留均通过。实际更新的静态 Runner 哈希为 `02cc236966d34fbcd3d038486f2196913055b4ed18fa768ffe5fadde82c1f3de`。本路径仍未运行有已知问题的基线 Runner。
+
+`target/winui/releases/client-final2-v0.2.6/` 的最终 ZIP 为 73,813,972 字节，SHA-256 `85eb556835aeb768d4b93bfdabe21ad377f6e921c76036e0a0cadadc0ef00e5d`。使用最终窗口代码及修正后的共享辅助函数依赖，另行重复通过全部 **10 步便携验收**，证据为 `target/winui/portable-final2-c2ffc44039ed495b95afc28a008806c3/evidence/evidence.json`。603 个载荷文件、两次正常 Manager 退出及两次 Runner 退出均通过。本轮最终结果取代此前候选字节，但仍明确记录 `unpublishedCandidate=true`、未提交源码来源、构建 26100 的管理员 Sandbox；不代表目标公开发布／联网更新／普通账户／ISO 或真实 Steam／游戏验收。中间封存包保留，没有覆盖。
+
+**原生 DPI 与中文输入（2026-10-06）：**真实微软拼音候选组合提交了名称 `测试`；Escape 取消后续组合并保留已提交文字，原生保存与准确的保存前备份逐字比较，仅改变预期名称。中文语言偏好与未知设置在正常重启后保留。人工证据为 `target/winui/native-ui/中文 空格 ' a7c534dc20944c3db817dcc88236145d/manual-ime-evidence.json`；这与工具使用 Unicode setter／HWND 键盘消息的证据分开。
+
+实际 200% 冷启动窗口原先仍固定为 1160 × 900 物理像素，界面明显受挤压。初始放置修复后，最终 Manager DLL SHA-256 `7fa74fbfb34c1178d6589ed66f57f0e3e2e18764238e7372ada0b70542fc003b` 实测为 **96／144／192 DPI**，对应物理尺寸 **1160 × 900／1740 × 1350／2320 × 1344**，所有边缘都在真实活动工作区内。记录为 `target/winui/window-metrics-final-{100,150,200}-cold.json` 及 `target/winui/final-native-dpi-evidence.json`。宿主“设置”中确认已还原 **125%**；键盘布局保持中文，未切换输入语言／模式，没有停止用户／游戏进程。纯函数红／绿回归先复现固定物理像素缺陷，再复现显示器相对坐标错误，最终 **28 项通过**；多屏硬件及每一种对话框／语言／DPI 组合仍属独立验收。
+
+还原宿主后，最终产物通过默认原生工具的英中双语 **16 项用例**，覆盖语言持久化、冲突、取消、选择器、封面占位、保存及聚焦键盘／更新路径。证据为 `target/winui/native-ui/中文 空格 ' c987f88c13644090895b2cbc8eef4c13/evidence.json`，全部夹具 Manager 正常关闭。必需 C# 门禁通过 **178 项 Application、37 项 Windows、160 项 Deployment**，另有一项有条件的跨盘跳过；跨语言 Runner 契约也通过。这些结果不消除普通账户阻塞，也不代表稳定版／公开更新完整验收完成。
 
 ## 本地命令
 

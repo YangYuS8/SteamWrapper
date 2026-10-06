@@ -14,5 +14,7 @@
     <ProjectReference Include="../SteamWrapper.Application/SteamWrapper.Application.csproj" />
     <!-- Exercises the exact production decoder without loading WinUI or creating a window. -->
     <Compile Include="../SteamWrapper.Manager/CoverImageValidator.cs" Link="CoverImageValidator.cs" />
+    <!-- Pure production placement policy; does not create a WinUI window. -->
+    <Compile Include="../SteamWrapper.Manager/InitialWindowPlacement.cs" Link="InitialWindowPlacement.cs" />
   </ItemGroup>
 </Project>

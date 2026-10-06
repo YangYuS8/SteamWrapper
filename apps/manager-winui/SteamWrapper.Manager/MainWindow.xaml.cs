@@ -1,6 +1,7 @@
 using SteamWrapper.Application.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Windowing;
 using Microsoft.Windows.Storage.Pickers;
 using SteamWrapper.Application.Profiles;
 using SteamWrapper.Application.Services;
@@ -26,7 +27,7 @@ public sealed partial class MainWindow : Window
     private ProfileSnapshot? snapshot;
     private ProfileData? editing;
     private EditorValues? editorBaseline;
-    private bool isNew, loading, dirty, busy, selecting, allowClose, confirming;
+    private bool isNew, loading, dirty, busy, selecting, allowClose, confirming, initialWindowPlaced;
 
     private sealed record EditorValues(string AppId, string Name, string GameDirectory, string Target,
         string WorkingDirectory, string ProcessName, string? WaitMode, string[] Arguments);
@@ -36,7 +37,6 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         settings = new UiSettingsStore(paths.UiSettingsPath);
         ApplyLanguage();
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(1160, 900));
         store = new ProfileStore(paths.ProfilesPath);
         runner = new RunnerInstaller(paths, Path.Combine(AppContext.BaseDirectory, "Runner"));
         Closed += (_, _) => CloseUpdates();
@@ -52,6 +52,7 @@ public sealed partial class MainWindow : Window
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        PlaceInitialWindow();
         SetBusy(true);
         var preference = await settings.LoadAsync();
         localizer.SetLanguage(preference.Language);
@@ -61,6 +62,21 @@ public sealed partial class MainWindow : Window
             ShowStatus(Messages.Text("SettingsRead", preference.ReadError), InfoBarSeverity.Warning);
         InitializationCompleted?.Invoke(this, EventArgs.Empty);
         await CheckUpdatesOnOpenAsync(preference);
+    }
+
+    private void PlaceInitialWindow()
+    {
+        if (initialWindowPlaced) return;
+        initialWindowPlaced = true;
+        var display = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest);
+        if (display is null) return;
+        var work = display.WorkArea;
+        if (work.Width <= 0 || work.Height <= 0) return;
+        var outer = display.OuterBounds;
+        var position = AppWindow.Position;
+        var bounds = InitialWindowPlacement.CalculateForDisplay(Root.XamlRoot.RasterizationScale,
+            outer.X, outer.Y, work.X, work.Y, work.Width, work.Height, position.X, position.Y);
+        AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(bounds.X, bounds.Y, bounds.Width, bounds.Height));
     }
 
     private async Task ReloadAsync()

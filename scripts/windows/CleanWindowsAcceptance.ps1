@@ -5,7 +5,7 @@
 function Get-CleanWindowsScenario($Manifest) {
     $property=$Manifest.PSObject.Properties['scenario']
     if ($null -eq $property) { return 'PublicUpgrade' }
-    if ($property.Value -cnotin @('PublicUpgrade','CandidateFirstInstall')) { throw 'Unexpected clean Windows acceptance scenario.' }
+    if ($property.Value -cnotin @('PublicUpgrade','CandidateFirstInstall','CandidateUpgrade')) { throw 'Unexpected clean Windows acceptance scenario.' }
     return [string]$property.Value
 }
 function Assert-CleanWindowsScenario($Manifest) {
@@ -18,22 +18,35 @@ function Assert-CleanWindowsScenario($Manifest) {
     } else {
         if ($Manifest.localCandidate -isnot [bool] -or -not $Manifest.localCandidate -or $Manifest.sourceHeadCommit -cnotmatch '^[a-f0-9]{40}$' -or
             $Manifest.workingCopyDirty -isnot [bool] -or $Manifest.sourceHeadCommit -cne $Manifest.target.commit) { throw 'Candidate first install requires explicit local source provenance.' }
-        foreach ($key in @('tag','fileName','bytes','sha256','commit')) {
-            if ($Manifest.baseline.$key -cne $Manifest.target.$key) { throw 'Candidate first install requires two identical candidate identities.' }
+        if ($scenario -ceq 'CandidateFirstInstall') {
+            foreach ($key in @('tag','fileName','bytes','sha256','commit')) {
+                if ($Manifest.baseline.$key -cne $Manifest.target.$key) { throw 'Candidate first install requires two identical candidate identities.' }
+            }
+        } else {
+            if ([Version](Get-WinUIReleaseTag $Manifest.target.tag).Version -le [Version](Get-WinUIReleaseTag $Manifest.baseline.tag).Version -or
+                $Manifest.baselinePublicReleaseSha256 -cnotmatch '^[a-f0-9]{64}$' -or $Manifest.baselinePublicApiSha256 -cnotmatch '^[a-f0-9]{64}$') {
+                throw 'Candidate upgrade requires a genuinely older, sealed public baseline.'
+            }
         }
     }
 }
 function Assert-CleanWindowsEvidenceScope($Manifest, $Evidence) {
     if ($null -eq $Manifest.PSObject.Properties['scenario']) { return }
     $scenario=Get-CleanWindowsScenario $Manifest
-    $candidate=$scenario -ceq 'CandidateFirstInstall'
+    $candidate=$scenario -cne 'PublicUpgrade'
+    $upgrade=$scenario -cne 'CandidateFirstInstall'
     if ($Evidence.scenario -cne $scenario -or $Evidence.localCandidate -isnot [bool] -or $Evidence.localCandidate -ne $candidate -or
         $Evidence.unpublishedCandidate -isnot [bool] -or $Evidence.unpublishedCandidate -ne $candidate -or
-        $Evidence.numericUpgradeTested -isnot [bool] -or $Evidence.numericUpgradeTested -eq $candidate) {
+        $Evidence.numericUpgradeTested -isnot [bool] -or $Evidence.numericUpgradeTested -ne $upgrade) {
         throw 'Guest evidence does not match the prepared candidate/public-upgrade scope.'
     }
     if ($candidate -and ($Evidence.sourceHeadCommit -cne $Manifest.sourceHeadCommit -or $Evidence.workingCopyDirty -isnot [bool] -or $Evidence.workingCopyDirty -ne $Manifest.workingCopyDirty)) {
         throw 'Guest candidate evidence differs from its recorded local source provenance.'
+    }
+    if ($scenario -ceq 'CandidateUpgrade' -and ($Evidence.baselinePublic -isnot [bool] -or -not $Evidence.baselinePublic -or
+        $Evidence.stableRunnerUpdated -isnot [bool] -or -not $Evidence.stableRunnerUpdated -or
+        $Evidence.baselineRunnerOperationalTested -isnot [bool] -or $Evidence.baselineRunnerOperationalTested)) {
+        throw 'Candidate upgrade must verify the new stable Runner without claiming an operational baseline test.'
     }
 }
 function Read-CleanWindowsCandidateInstaller([string]$Directory, [string]$Tag) {
