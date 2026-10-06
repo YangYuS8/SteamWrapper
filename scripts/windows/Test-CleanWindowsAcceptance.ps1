@@ -60,6 +60,7 @@ function Get-PublicRelease([string]$ReleaseTag, [string]$Directory, [string]$Cac
     $remoteCommit = Invoke-AcceptanceGh @('api', "repos/YangYuS8/SteamWrapper/commits/$ReleaseTag", '--jq', '.sha')
     $setupAsset = @($selected | Where-Object name -CNE 'release.json')[0]
     Assert-CleanWindowsPublicInstaller $metadata $setupAsset $ReleaseTag $remoteCommit
+    $metadata | Add-Member -NotePropertyName acceptancePublicApi -NotePropertyValue $state
     return $metadata
 }
 function Assert-PreparedInput([string]$Root, $Manifest) {
@@ -71,11 +72,21 @@ function Assert-PreparedInput([string]$Root, $Manifest) {
         Assert-CleanWindowsPreparedFile $path $item.sha256 $item.bytes
     }
     Assert-CleanWindowsScenario $Manifest
-    if ((Get-CleanWindowsScenario $Manifest) -ceq 'CandidateFirstInstall') {
+    if ((Get-CleanWindowsScenario $Manifest) -cne 'PublicUpgrade') {
         Assert-CleanWindowsPreparedFile (Join-Path $Root 'input/installer-build.json') $Manifest.candidateBuildSha256
         Assert-CleanWindowsPreparedFile (Join-Path $Root 'input/deployment-manifest.json') $Manifest.candidateDeploymentManifestSha256
         $candidate=Read-CleanWindowsCandidateInstaller (Join-Path $Root 'input') $Manifest.target.tag
         foreach($key in @('fileName','bytes','sha256')) { if ($candidate.installerAsset.$key -cne $Manifest.target.$key) { throw 'Prepared candidate differs from its sealed installer build.' } }
+    }
+    if ((Get-CleanWindowsScenario $Manifest) -ceq 'CandidateUpgrade') {
+        Assert-CleanWindowsPreparedFile (Join-Path $Root 'input/baseline-release.json') $Manifest.baselinePublicReleaseSha256
+        Assert-CleanWindowsPreparedFile (Join-Path $Root 'input/baseline-api.json') $Manifest.baselinePublicApiSha256
+        $baselineMetadata=Get-Content -LiteralPath (Join-Path $Root 'input/baseline-release.json') -Raw | ConvertFrom-Json
+        $baselineApi=Get-Content -LiteralPath (Join-Path $Root 'input/baseline-api.json') -Raw | ConvertFrom-Json
+        Assert-CleanWindowsPublicRelease $baselineApi $Manifest.baseline.tag
+        $baselineAsset=@($baselineApi.assets | Where-Object name -CEQ $Manifest.baseline.fileName)[0]
+        Assert-CleanWindowsPublicInstaller $baselineMetadata $baselineAsset $Manifest.baseline.tag $Manifest.baseline.commit
+        if ($baselineMetadata.installerAsset.sha256 -cne $Manifest.baseline.sha256 -or $baselineMetadata.installerAsset.bytes -ne $Manifest.baseline.bytes) { throw 'Prepared public baseline differs from its pinned release descriptor.' }
     }
     $script = Join-Path $Root 'input/Invoke-CleanWindowsGuestAcceptance.ps1'
     Assert-CleanWindowsPreparedFile $script $Manifest.guestScriptSha256
@@ -93,9 +104,11 @@ if ($Action -eq 'Prepare') {
     if ($PreparedRoot) { throw 'Prepare creates a fresh acceptance directory; do not provide PreparedRoot.' }
     if ($SandboxId) { throw 'Prepare does not execute an existing Sandbox.' }
     $targetIdentity = Get-WinUIReleaseTag $Tag
+    $candidateUpgrade=[bool]$CandidateInstallerDirectory -and $PSBoundParameters.ContainsKey('BaselineTag')
     if ($CandidateInstallerDirectory) {
-        if (-not $PSBoundParameters.ContainsKey('Tag') -or $PSBoundParameters.ContainsKey('BaselineTag') -or $BaselineInstallerPath -or $InstallerPath) { throw 'A candidate requires an explicit Tag and cannot mix public baseline/cached installer options.' }
+        if (-not $PSBoundParameters.ContainsKey('Tag') -or $InstallerPath -or ($BaselineInstallerPath -and -not $candidateUpgrade)) { throw 'A candidate requires an explicit Tag; a cached public baseline also requires an explicit BaselineTag.' }
         $candidate=Read-CleanWindowsCandidateInstaller $CandidateInstallerDirectory $Tag
+        if ($candidateUpgrade -and [Version]$targetIdentity.Version -le [Version](Get-WinUIReleaseTag $BaselineTag).Version) { throw 'Candidate upgrade requires a genuine newer numeric product version.' }
         $sourceHead=(& git -C $repo rev-parse HEAD | Out-String).Trim()
         if ($LASTEXITCODE -ne 0 -or $sourceHead -cnotmatch '^[a-f0-9]{40}$') { throw 'Cannot record the exact local candidate source HEAD.' }
         $dirtyStatus=& git -C $repo status --porcelain
@@ -116,9 +129,13 @@ if ($Action -eq 'Prepare') {
     $baselineDirectory = Join-Path $root 'packages/baseline'
     $targetDirectory = Join-Path $root 'packages/target'
     if ($CandidateInstallerDirectory) {
-        $baselineDirectory=$candidate.directory; $targetDirectory=$candidate.directory; $BaselineTag=$Tag
-        $baseline=[pscustomobject]@{tag=$Tag;version=$candidate.version;commit=$sourceHead;installerAsset=$candidate.installerAsset}
-        $target=$baseline
+        $targetDirectory=$candidate.directory
+        $target=[pscustomobject]@{tag=$Tag;version=$candidate.version;commit=$sourceHead;installerAsset=$candidate.installerAsset}
+        if ($candidateUpgrade) {
+            $baseline=Get-PublicRelease $BaselineTag $baselineDirectory $BaselineInstallerPath
+        } else {
+            $baselineDirectory=$candidate.directory; $BaselineTag=$Tag; $baseline=$target
+        }
     } else {
         $baseline = Get-PublicRelease $BaselineTag $baselineDirectory $BaselineInstallerPath
         $target = Get-PublicRelease $Tag $targetDirectory $InstallerPath
@@ -134,7 +151,7 @@ if ($Action -eq 'Prepare') {
         schemaVersion = 1; runId = $runId; sandboxOnly = $true; hostComputerName = $env:COMPUTERNAME
         hostBuild = (Get-CimInstance Win32_OperatingSystem).BuildNumber; preparedAt = [DateTimeOffset]::UtcNow.ToString('O')
         networkingDisabled = $true; startupMode = $StartupMode
-        scenario = $(if ($CandidateInstallerDirectory) {'CandidateFirstInstall'} else {'PublicUpgrade'}); localCandidate = [bool]$CandidateInstallerDirectory
+        scenario = $(if ($candidateUpgrade) {'CandidateUpgrade'} elseif ($CandidateInstallerDirectory) {'CandidateFirstInstall'} else {'PublicUpgrade'}); localCandidate = [bool]$CandidateInstallerDirectory
         guestScriptSha256 = (Get-FileHash -LiteralPath $guest -Algorithm SHA256).Hash.ToLowerInvariant()
         launchScriptSha256 = (Get-FileHash -LiteralPath $wrapper -Algorithm SHA256).Hash.ToLowerInvariant()
         baseline = @{ tag = $BaselineTag; fileName = $baseline.installerAsset.fileName; sha256 = $baseline.installerAsset.sha256; bytes = $baseline.installerAsset.bytes; commit = $baseline.commit }
@@ -145,6 +162,12 @@ if ($Action -eq 'Prepare') {
         foreach($file in @('installer-build.json','deployment-manifest.json')) { Copy-Item -LiteralPath (Join-Path $candidate.directory $file) -Destination $inputRoot }
         $manifest.candidateBuildSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'installer-build.json')).Hash.ToLowerInvariant()
         $manifest.candidateDeploymentManifestSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'deployment-manifest.json')).Hash.ToLowerInvariant()
+        if ($candidateUpgrade) {
+            Copy-Item -LiteralPath (Join-Path $baselineDirectory 'release.json') -Destination (Join-Path $inputRoot 'baseline-release.json')
+            $baseline.acceptancePublicApi | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $inputRoot 'baseline-api.json') -Encoding utf8
+            $manifest.baselinePublicReleaseSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'baseline-release.json')).Hash.ToLowerInvariant()
+            $manifest.baselinePublicApiSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'baseline-api.json')).Hash.ToLowerInvariant()
+        }
     }
     New-CleanWindowsSandboxConfiguration $inputRoot $outputRoot $StartupMode | Set-Content -LiteralPath (Join-Path $root 'acceptance.wsb') -Encoding utf8
     $manifest.configurationSha256 = (Get-FileHash -LiteralPath (Join-Path $root 'acceptance.wsb') -Algorithm SHA256).Hash.ToLowerInvariant()

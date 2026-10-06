@@ -86,6 +86,35 @@ jobs:
       - name: Test clean-client acceptance guards without launching Sandbox
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptanceScripts.ps1
 
+      - name: Test portable acceptance guards without running product binaries
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-PortableAcceptanceScripts.ps1
+
+      - name: Test standard-account acceptance guards without creating accounts
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-StandardUserAcceptanceScripts.ps1
+
+      - name: Compile read-only window diagnostics without observing a desktop
+        run: |
+          $validation = {
+            $ErrorActionPreference = 'Stop'
+            $path = Join-Path (Get-Location) 'scripts/windows/Read-WinUIWindowMetrics.ps1'
+            $tokens = $null
+            $parseErrors = $null
+            $syntax = [Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$parseErrors)
+            if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
+            $definitions = @($syntax.FindAll({
+              param($node)
+              $node -is [Management.Automation.Language.CommandAst] -and $node.GetCommandName() -eq 'Add-Type'
+            }, $true))
+            if ($definitions.Count -ne 1 -or
+                $definitions[0].CommandElements[2] -isnot [Management.Automation.Language.StringConstantExpressionAst]) {
+              throw 'Expected one embedded diagnostic C# definition.'
+            }
+            Add-Type -TypeDefinition $definitions[0].CommandElements[2].Value
+            Write-Output 'PowerShell 5.1 syntax and diagnostic C# compilation passed; no window was observed.'
+          }
+          powershell.exe -NoProfile -NonInteractive -Command ($validation.ToString())
+          if ($LASTEXITCODE -ne 0) { throw 'Read-only native-window diagnostic compilation failed.' }
+
       - name: Test version validation and release packaging safeguards
         run: |
           mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIReleaseScripts.ps1

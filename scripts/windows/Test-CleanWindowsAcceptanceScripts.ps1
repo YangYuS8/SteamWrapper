@@ -100,7 +100,7 @@ try {
     [IO.File]::WriteAllText($candidateBuildPath,($candidateBuild | ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
 }
 Assert-AcceptanceScriptReject { & $entry -Action Prepare -CandidateInstallerDirectory $candidateDirectory } 'A candidate was accepted without an explicit Tag.'
-Assert-AcceptanceScriptReject { & $entry -Action Prepare -CandidateInstallerDirectory $candidateDirectory -Tag 'v0.2.6' -BaselineTag 'v0.2.4-preview.1' } 'A first-install candidate mixed public-upgrade options.'
+Assert-AcceptanceScriptReject { & $entry -Action Prepare -CandidateInstallerDirectory $candidateDirectory -Tag 'v0.2.6' -BaselineTag 'v0.2.6-preview.1' } 'A candidate upgrade admitted an equal numeric baseline.'
 $candidateBuild.isolated=$true
 try {
     [IO.File]::WriteAllText($candidateBuildPath,($candidateBuild | ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
@@ -193,6 +193,33 @@ try {
     Assert-AcceptanceScriptReject { Assert-CleanWindowsScenario $candidateInput } 'Host accepted non-identical first-install candidates.'
     Assert-AcceptanceScriptReject { Get-AcceptanceScenario $candidateInput } 'Guest accepted non-identical first-install candidates.'
 } finally { $candidateInput.target.sha256=$originalTarget }
+$upgradeCandidate=$candidateInput | ConvertTo-Json -Depth 10 | ConvertFrom-Json
+$upgradeCandidate.scenario='CandidateUpgrade'
+$upgradeCandidate.baseline.tag='v0.2.5-preview.1'
+$upgradeCandidate.baseline.fileName='SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe'
+$upgradeCandidate.baseline.sha256=('c' * 64)
+$upgradeCandidate.baseline.commit=('d' * 40)
+$upgradeCandidate | Add-Member baselinePublicReleaseSha256 ('e' * 64)
+$upgradeCandidate | Add-Member baselinePublicApiSha256 ('f' * 64)
+Assert-CleanWindowsScenario $upgradeCandidate
+Assert-AcceptanceScript ((Get-AcceptanceScenario $upgradeCandidate) -ceq 'CandidateUpgrade') 'A genuine public-baseline to sealed-candidate upgrade was rejected.'
+foreach($equalTag in @('v0.2.6-preview.1','v0.2.7-preview.1')) {
+    $upgradeCandidate.baseline.tag=$equalTag
+    Assert-AcceptanceScriptReject { Assert-CleanWindowsScenario $upgradeCandidate } 'Candidate upgrade admitted an equal or newer baseline.'
+    Assert-AcceptanceScriptReject { Get-AcceptanceScenario $upgradeCandidate } 'Guest candidate upgrade admitted an equal or newer baseline.'
+}
+$upgradeCandidate.baseline.tag='v0.2.5-preview.1'
+$originalApiDigest=$upgradeCandidate.baselinePublicApiSha256
+$upgradeCandidate.baselinePublicApiSha256=''
+Assert-AcceptanceScriptReject { Assert-CleanWindowsScenario $upgradeCandidate } 'Candidate upgrade omitted its public baseline API binding.'
+Assert-AcceptanceScriptReject { Get-AcceptanceScenario $upgradeCandidate } 'Guest candidate upgrade omitted its public baseline API binding.'
+$upgradeCandidate.baselinePublicApiSha256=$originalApiDigest
+$upgradeEvidence=[pscustomobject]@{scenario='CandidateUpgrade';localCandidate=$true;unpublishedCandidate=$true;numericUpgradeTested=$true;sourceHeadCommit=$upgradeCandidate.sourceHeadCommit;workingCopyDirty=$upgradeCandidate.workingCopyDirty;baselinePublic=$true;stableRunnerUpdated=$true;baselineRunnerOperationalTested=$false}
+Assert-CleanWindowsEvidenceScope $upgradeCandidate $upgradeEvidence
+Assert-AcceptanceScript $true 'Candidate upgrade evidence was rejected despite genuine numeric upgrade and Runner update.'
+$upgradeEvidence.stableRunnerUpdated=$false
+Assert-AcceptanceScriptReject { Assert-CleanWindowsEvidenceScope $upgradeCandidate $upgradeEvidence } 'Candidate upgrade was accepted without preparing the updated stable Runner.'
+
 $publicScenario=[pscustomobject]@{baseline=[pscustomobject]@{tag='v0.2.4-preview.1'};target=[pscustomobject]@{tag='v0.2.6'}}
 Assert-CleanWindowsScenario $publicScenario
 Assert-AcceptanceScript ((Get-AcceptanceScenario $publicScenario) -ceq 'PublicUpgrade') 'Legacy public preparations lost their genuine upgrade scenario.'

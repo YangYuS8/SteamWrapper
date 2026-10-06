@@ -43,6 +43,8 @@ Manager 是一个配置工具。首页以“已配置游戏”和“添加游戏
 
 WinUI 封面保持本地优先、默认离线：自定义 Steam 图片优先于本地库缓存，并支持带哈希的文件名及嵌套哈希目录。需要明确启用、可随时关闭的偏好，为本地已发现 AppID 的缺失图片提供官方 Steam CDN 回退，限制请求并使用小型 SteamWrapper 缓存。缺失、不可读或不可获取的图片保留友好占位，不影响保存和启动。详见[封面设置](/SteamWrapper/zh-cn/guides/configuration/#cover-settings)及尚未完成的 [P0 验收门槛](/SteamWrapper/zh-cn/project/roadmap/)。默认跟随已支持的系统语言、回退英语及完整简体中文支持、键盘操作、原生文件选择、缩放及可恢复错误仍属于基本体验。
 
+Manager 初始窗口使用 1160 × 900 有效像素，按真实 XAML 缩放换算，并限制在当前显示器工作区内。尺寸与屏幕位置都限幅；放置前先把相对显示器的工作区偏移换算为屏幕坐标。只在首次加载时执行，不覆盖用户后续调整的尺寸。[微软的工作区定义](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.displayarea.workarea)和[窗口放置坐标](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.appwindow.moveandresize)说明原生接口边界；真实缩放观察记录在[测试](/SteamWrapper/zh-cn/development/testing/)中。
+
 暂不做账号登录、在线游戏资料、通用 mod 管理、多目标切换、常驻托盘、后台更新服务、Linux/SteamOS 新 GUI、Proton 或商店分发。Steam Overlay、成就和所有第三方 launcher 的兼容性不是默认承诺。
 
 ## 3. 技术决定

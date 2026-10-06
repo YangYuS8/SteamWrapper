@@ -13,6 +13,20 @@ Set-StrictMode -Version Latest
 function Assert-Acceptance([bool]$Condition, [string]$Message) {
     if (-not $Condition) { throw $Message }
 }
+function Get-AcceptanceAccountMode([string]$InputPath, [string]$OutputPath, [string]$UserName, [string]$ProfilePath, [string]$ScriptRoot) {
+    if ($InputPath -ceq 'C:\AcceptanceInput') {
+        Assert-Acceptance ($OutputPath -ceq 'C:\AcceptanceOutput') 'Expected the dedicated Sandbox mappings.'
+        Assert-Acceptance ($UserName -ieq 'WDAGUtilityAccount') 'Production acceptance is allowed only for Windows Sandbox WDAGUtilityAccount.'
+        Assert-Acceptance ($ProfilePath.TrimEnd('\') -ieq 'C:\Users\WDAGUtilityAccount') 'Unexpected Sandbox user profile.'
+        return 'WDAG'
+    }
+    Assert-Acceptance ($InputPath -cmatch '^C:\\Users\\Public\\SteamWrapperAcceptance-(?<run>[a-f0-9]{32})\\input$') 'Unexpected guest-local standard-account input.'
+    $run=[string]$Matches['run']; $expectedName='SwAcc-' + $run.Substring(0,14)
+    Assert-Acceptance ($OutputPath -ceq ('C:\Users\Public\SteamWrapperAcceptance-' + $run + '\evidence') -and
+        $UserName -ceq $expectedName -and $ProfilePath.TrimEnd('\') -ieq ('C:\Users\' + $expectedName) -and
+        $ScriptRoot -ieq $InputPath) 'The standard-account guest requires its exact run, native profile and sealed script root.'
+    return 'StandardUser'
+}
 function Get-AcceptanceNumericVersion([string]$Tag) {
     $number='(?:0|[1-9][0-9]*)'; $identifier='(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'
     Assert-Acceptance ($Tag.Length -le 80 -and $Tag -cmatch ('^v(?<base>' + $number + '\.' + $number + '\.' + $number + ')(?:-' + $identifier + '(?:\.' + $identifier + ')*)?$')) 'Expected a strict acceptance version tag.'
@@ -21,7 +35,7 @@ function Get-AcceptanceNumericVersion([string]$Tag) {
 function Get-AcceptanceScenario($Manifest) {
     $property=$Manifest.PSObject.Properties['scenario']
     $scenario=if ($null -eq $property) {'PublicUpgrade'} else {[string]$property.Value}
-    Assert-Acceptance ($scenario -cin @('PublicUpgrade','CandidateFirstInstall')) 'Unexpected clean Windows acceptance scenario.'
+    Assert-Acceptance ($scenario -cin @('PublicUpgrade','CandidateFirstInstall','CandidateUpgrade')) 'Unexpected clean Windows acceptance scenario.'
     $baseline=Get-AcceptanceNumericVersion $Manifest.baseline.tag
     $target=Get-AcceptanceNumericVersion $Manifest.target.tag
     if ($scenario -ceq 'PublicUpgrade') {
@@ -30,7 +44,11 @@ function Get-AcceptanceScenario($Manifest) {
     } else {
         Assert-Acceptance ($Manifest.localCandidate -is [bool] -and $Manifest.localCandidate -and $Manifest.sourceHeadCommit -cmatch '^[a-f0-9]{40}$' -and
             $Manifest.workingCopyDirty -is [bool] -and $Manifest.sourceHeadCommit -ceq $Manifest.target.commit) 'Candidate first install requires explicit local source provenance.'
-        foreach($key in @('tag','fileName','bytes','sha256','commit')) { Assert-Acceptance ($Manifest.baseline.$key -ceq $Manifest.target.$key) 'Candidate first install requires two identical candidate identities.' }
+        if ($scenario -ceq 'CandidateFirstInstall') {
+            foreach($key in @('tag','fileName','bytes','sha256','commit')) { Assert-Acceptance ($Manifest.baseline.$key -ceq $Manifest.target.$key) 'Candidate first install requires two identical candidate identities.' }
+        } else {
+            Assert-Acceptance ($target -gt $baseline -and $Manifest.baselinePublicReleaseSha256 -cmatch '^[a-f0-9]{64}$' -and $Manifest.baselinePublicApiSha256 -cmatch '^[a-f0-9]{64}$') 'Candidate upgrade requires a genuinely older, sealed public baseline.'
+        }
     }
     return $scenario
 }
@@ -200,15 +218,15 @@ public static class SteamWrapperExitObservationFixture {
 
 # Fail closed before making any directory, changing registration or executing
 # product bytes. The two mapped folders alone are not proof of a clean guest.
-Assert-Acceptance ($InputDirectory -ceq 'C:\AcceptanceInput' -and $OutputDirectory -ceq 'C:\AcceptanceOutput') 'Expected the dedicated Sandbox mappings.'
-Assert-Acceptance ($env:USERNAME -ieq 'WDAGUtilityAccount') 'Production acceptance is allowed only for Windows Sandbox WDAGUtilityAccount.'
-Assert-Acceptance ($env:USERPROFILE.TrimEnd('\') -ieq 'C:\Users\WDAGUtilityAccount') 'Unexpected Sandbox user profile.'
+$accountMode=Get-AcceptanceAccountMode $InputDirectory $OutputDirectory $env:USERNAME $env:USERPROFILE $PSScriptRoot
+$standardAccount=$accountMode -ceq 'StandardUser'
 Assert-Acceptance ([Environment]::UserInteractive -and [Diagnostics.Process]::GetCurrentProcess().SessionId -ne 0) 'An interactive Sandbox desktop is required.'
 $manifestPath = Join-Path $InputDirectory 'acceptance-input.json'
 $inputManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 Assert-Acceptance ($inputManifest.schemaVersion -eq 1 -and $inputManifest.sandboxOnly -eq $true -and $inputManifest.networkingDisabled -eq $true) 'Expected the offline Sandbox input manifest.'
 $scenario=Get-AcceptanceScenario $inputManifest
-$localCandidate=$scenario -ceq 'CandidateFirstInstall'
+$localCandidate=$scenario -cne 'PublicUpgrade'
+$candidateUpgrade=$scenario -ceq 'CandidateUpgrade'
 $runId = [guid]::Parse([string]$inputManifest.runId).ToString('N')
 Assert-Acceptance (-not [string]::IsNullOrWhiteSpace([string]$inputManifest.hostComputerName) -and $env:COMPUTERNAME -ine $inputManifest.hostComputerName) 'Refusing to execute a production installer on the input host.'
 $computer = Get-CimInstance Win32_ComputerSystem
@@ -221,6 +239,20 @@ foreach ($name in @('STEAMWRAPPER_E2E_ROOT', 'STEAMWRAPPER_DEPLOYMENT_TEST', 'ST
 }
 Assert-Acceptance (@(Get-ChildItem Env: | Where-Object Name -like 'STEAMWRAPPER_DEPLOYMENT_*').Count -eq 0) 'An installed-launch override was supplied.'
 Assert-Acceptance ($env:LOCALAPPDATA -ieq [Environment]::GetFolderPath('LocalApplicationData')) 'AppData is redirected.'
+$standardContext=$null
+if ($standardAccount) {
+    $standardHelper=Get-Item -LiteralPath (Join-Path $InputDirectory 'StandardUserAcceptance.ps1') -Force
+    Assert-Acceptance ($standardHelper -is [IO.FileInfo] -and $standardHelper.Length -gt 0 -and $standardHelper.Length -le 2MB -and
+        -not ($standardHelper.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
+        $inputManifest.standardControllerSha256 -cmatch '^[a-f0-9]{64}$' -and
+        (Get-FileHash -LiteralPath $standardHelper.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $inputManifest.standardControllerSha256) 'The guest-local standard-account helper changed.'
+    . $standardHelper.FullName -HelpersOnly
+    $standardContext=Get-StandardAcceptanceContext
+    $standardContext | Add-Member -NotePropertyName accountAdministratorMember -NotePropertyValue ([SteamWrapperStandardAcceptance.Native]::AccountIsAdministrator($env:USERNAME))
+    Assert-StandardAcceptanceChildContext $standardContext $inputManifest $InputDirectory $OutputDirectory
+    Assert-StandardAcceptanceRegularPath $InputDirectory $true
+    Assert-StandardAcceptanceRegularPath $OutputDirectory $true
+}
 
 $dataRoot = Join-Path $env:LOCALAPPDATA 'SteamWrapper'
 $defaultProgram = Join-Path $env:LOCALAPPDATA 'Programs\SteamWrapper'
@@ -237,8 +269,20 @@ Assert-Acceptance (-not (Test-Path -LiteralPath 'HKCU:\Software\Valve\Steam') -a
     -not (Test-Path -LiteralPath 'C:\Program Files (x86)\Steam')) 'The guest already has a Steam installation.'
 $existingOutput = @(Get-ChildItem -LiteralPath $OutputDirectory -Force)
 Assert-Acceptance (@($existingOutput | Where-Object {
-    $_ -isnot [IO.FileInfo] -or $_.Name -cne 'guest-launch.log' -or ($_.Attributes -band [IO.FileAttributes]::ReparsePoint)
+    $_ -isnot [IO.FileInfo] -or
+        ($_.Name -cne 'guest-launch.log' -and (-not $standardAccount -or $_.Name -cne 'standard-user-diagnostic.json')) -or
+        ($_.Attributes -band [IO.FileAttributes]::ReparsePoint)
 }).Count -eq 0) 'Use a fresh acceptance output folder containing at most its new guest-launch.log.'
+if ($standardAccount) {
+    $diagnosticPath=Join-Path $OutputDirectory 'standard-user-diagnostic.json'
+    Assert-StandardAcceptanceRegularPath $diagnosticPath $false
+    Assert-Acceptance ((Get-Item -LiteralPath $diagnosticPath).Length -le 65536) 'The standard-account prelude exceeds its read limit.'
+    $prelude=Get-Content -LiteralPath $diagnosticPath -Raw | ConvertFrom-Json
+    Assert-Acceptance ($prelude.runId -ceq $runId -and $prelude.result -ceq 'passed' -and $prelude.standardAccount -is [bool] -and $prelude.standardAccount -and
+        $prelude.desktop.windowStation -ceq 'WinSta0' -and $prelude.desktop.name -ceq 'Default' -and
+        $prelude.desktop.inputDesktopReadable -is [bool] -and $prelude.desktop.inputDesktopReadable) 'The exact standard-account token/desktop prelude did not pass.'
+    Assert-StandardAcceptanceChildContext $prelude.context $inputManifest $InputDirectory $OutputDirectory
+}
 
 $taskRoot = Join-Path $env:TEMP ('SteamWrapperClean-' + $runId)
 Assert-Acceptance (-not (Test-Path -LiteralPath $taskRoot)) 'The guest work directory is not fresh.'
@@ -254,12 +298,14 @@ $evidence = [ordered]@{
     hostBuild = [string]$inputManifest.hostBuild; computerName = $env:COMPUTERNAME
     userName = [Security.Principal.WindowsIdentity]::GetCurrent().Name
     administrator = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    accountMode=$accountMode; standardAccount=$standardAccount; standardAccountContext=$standardContext
     uiCulture = [Globalization.CultureInfo]::CurrentUICulture.Name; powerShellVersion = $PSVersionTable.PSVersion.ToString()
     nativeDataRoot = $dataRoot; baseline = $inputManifest.baseline; target = $inputManifest.target
     runtimeInventoryBeforeInstallation = $null; externalSdkOrRuntimeInstalled = $false
     realSteamInstalled = $false; productionInstallers = $true; testEnvironmentOverrides = $false
     publicUpdateNetworkTested = $false; networkingDisabled = $true
     scenario=$scenario; localCandidate=$localCandidate; unpublishedCandidate=$localCandidate; numericUpgradeTested=$false; publicSevenAssetsTested=$false
+    baselinePublic=($scenario -cne 'CandidateFirstInstall'); stableRunnerUpdated=$false; baselineRunnerOperationalTested=$false
     sourceHeadCommit=$(if ($localCandidate) {$inputManifest.sourceHeadCommit} else {$null}); workingCopyDirty=$(if ($localCandidate) {$inputManifest.workingCopyDirty} else {$null})
     candidateInstallerBuild=$(if ($localCandidate) {$inputManifest.candidateInstallerBuild} else {$null})
     steps = $events; ownedManagers = $ownedManagers; warnings = $warnings; managerCloseDiagnostics = $managerCloseDiagnostics; runnerDiagnostics = $runnerDiagnostics
@@ -272,6 +318,13 @@ function Write-AcceptanceEvidence {
 function Record-Acceptance([string]$Name, $Details) {
     $events.Add([ordered]@{ name = $Name; passed = $true; observedAt = [DateTime]::UtcNow.ToString('o'); details = $Details })
     Write-AcceptanceEvidence
+}
+function Get-AcceptanceProcessSecurity($Process) {
+    if (-not $standardAccount) { return $null }
+    $token=[SteamWrapperStandardAcceptance.Native]::GetToken($Process.Id)
+    Assert-StandardAcceptanceProcessToken $token $inputManifest.expectedStandardUserSid
+    Assert-Acceptance ($token.sessionId -eq $standardContext.sessionId) 'A product process escaped the verified standard-account desktop session.'
+    return [ordered]@{processId=$Process.Id;observed=$true;token=$token}
 }
 function Read-AcceptanceAsset($Asset) {
     $number = '(?:0|[1-9][0-9]*)'
@@ -296,9 +349,10 @@ function Invoke-AcceptanceInstaller([string]$Executable, [string]$Name, [string[
     $start.Arguments = $arguments -join ' '
     $process = [Diagnostics.Process]::Start($start)
     try {
+        $processSecurity=Get-AcceptanceProcessSecurity $process
         Assert-Acceptance ($process.WaitForExit(180000)) "$Name did not exit. It was not killed."
         Assert-Acceptance ($process.ExitCode -eq 0) "$Name exited with code $($process.ExitCode). See its preserved log."
-        Record-Acceptance $Name ([ordered]@{ actualInstaller = $true; silentInstaller = $true; exitCode = $process.ExitCode; log = [IO.Path]::GetFileName($log); executable = $Executable })
+        Record-Acceptance $Name ([ordered]@{ actualInstaller = $true; silentInstaller = $true; exitCode = $process.ExitCode; log = [IO.Path]::GetFileName($log); executable = $Executable; processSecurity=$processSecurity })
     } finally { $process.Dispose() }
 }
 function Read-AcceptanceInstallation([string]$Program, [string]$Tag) {
@@ -382,10 +436,11 @@ function Start-AcceptanceManager([string]$Program, [string]$Tag, [string]$Name) 
     $null = Wait-Acceptance { $button = Find-AcceptanceElement $window 'AddGame'; $button -and $button.Current.IsEnabled } 'Manager initialization'
     $manager.Refresh()
     $runtimeModules = Get-AcceptancePayloadRuntimeModules @($manager.Modules) ([IO.Path]::GetDirectoryName($expected))
+    $processSecurity=Get-AcceptanceProcessSecurity $manager
     $timer.Stop()
     $ownedManagers.Add([ordered]@{ processId = $manager.Id; path = $expected; normalLauncher = $true })
     Capture-AcceptanceWindow $window $Name
-    Record-Acceptance $Name ([ordered]@{ processId = $manager.Id; executable = $expected; processStartupMilliseconds = $timer.ElapsedMilliseconds; startupWorkingSetBytes = $manager.WorkingSet64; addGameName = (Find-AcceptanceElement $window 'AddGame').Current.Name; payloadRuntimeModules = $runtimeModules })
+    Record-Acceptance $Name ([ordered]@{ processId = $manager.Id; executable = $expected; processStartupMilliseconds = $timer.ElapsedMilliseconds; startupWorkingSetBytes = $manager.WorkingSet64; addGameName = (Find-AcceptanceElement $window 'AddGame').Current.Name; payloadRuntimeModules = $runtimeModules; processSecurity=$processSecurity })
     return [pscustomobject]@{ Process = $manager; Window = $window }
 }
 function Close-AcceptanceManager($Manager) {
@@ -406,6 +461,7 @@ function Invoke-AcceptanceRunner([string]$Name, [string]$Marker, [string]$Expect
     $start.Arguments = '--appid "487" -- "unused original Steam command"'
     $runner = [Diagnostics.Process]::Start($start)
     try {
+        $processSecurity=Get-AcceptanceProcessSecurity $runner
         $waitSucceeded=$runner.WaitForExit(30000)
         $exit=Get-AcceptanceExitDiagnostic $(if ($waitSucceeded) { $runner.ExitCode } else { $null })
         $logs=@(
@@ -417,7 +473,7 @@ function Invoke-AcceptanceRunner([string]$Name, [string]$Marker, [string]$Expect
         Assert-Acceptance ($waitSucceeded -and $exit.observed -and $exit.exitCode -eq 0) ("Headless Runner failed or did not wait for the fixture. WaitSucceeded={0}, observed ExitCode={1}, signed ExitCode={2}, unsigned ExitCode={3}, hex ExitCode={4}. See runnerDiagnostics evidence; no process was killed." -f $waitSucceeded, $exit.observed, $exit.exitCode, $exit.unsignedExitCode, $exit.hexExitCode)
         Assert-Acceptance ((Test-Path -LiteralPath $Marker) -and [IO.File]::ReadAllText($Marker) -ceq $ExpectedWorkingDirectory) 'Runner did not execute the configured native test program in its game folder.'
         Assert-Acceptance (@(Get-Process -Name SteamWrapper.Manager -ErrorAction SilentlyContinue).Count -eq 0) 'Runner unexpectedly opened Manager.'
-        Record-Acceptance $Name ([ordered]@{ exitCode = $runner.ExitCode; stablePath = $start.FileName; managerClosed = $true; harmlessProgramCompleted = $true; realSteam = $false })
+        Record-Acceptance $Name ([ordered]@{ exitCode = $runner.ExitCode; stablePath = $start.FileName; managerClosed = $true; harmlessProgramCompleted = $true; realSteam = $false; processSecurity=$processSecurity })
     } finally { $runner.Dispose() }
 }
 
@@ -442,9 +498,31 @@ try {
     Record-Acceptance 'fresh offline Windows client' ([ordered]@{ productAbsent = $true; sdkAbsent = $true; steamAbsent = $true; nativeAppData = $true })
     Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
     $baselineSetup = Read-AcceptanceAsset $inputManifest.baseline
-    $targetSetup = if ($localCandidate) {$baselineSetup} else {Read-AcceptanceAsset $inputManifest.target}
+    $targetSetup = if ($scenario -ceq 'CandidateFirstInstall') {$baselineSetup} else {Read-AcceptanceAsset $inputManifest.target}
     $digestStep=if ($localCandidate) {'unpublished local candidate installer digest verified in guest'} else {'public production installer digests verified in guest'}
     Record-Acceptance $digestStep ([ordered]@{ baselineSha256 = $inputManifest.baseline.sha256; targetSha256 = $inputManifest.target.sha256; localCandidate=$localCandidate })
+    if ($localCandidate) {
+        foreach($record in @(
+            @{name='installer-build.json';hash=$inputManifest.candidateBuildSha256},
+            @{name='deployment-manifest.json';hash=$inputManifest.candidateDeploymentManifestSha256}
+        )) {
+            $item=Get-Item -LiteralPath (Join-Path $InputDirectory $record.name)
+            Assert-Acceptance ($item.Length -gt 0 -and $item.Length -le 2MB -and -not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
+                (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $record.hash) 'The sealed candidate build record changed.'
+        }
+    }
+    if ($candidateUpgrade) {
+        foreach($record in @(
+            @{name='baseline-release.json';hash=$inputManifest.baselinePublicReleaseSha256},
+            @{name='baseline-api.json';hash=$inputManifest.baselinePublicApiSha256}
+        )) {
+            $item=Get-Item -LiteralPath (Join-Path $InputDirectory $record.name)
+            Assert-Acceptance ($item.Length -gt 0 -and $item.Length -le 2MB -and -not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
+                (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $record.hash) 'The sealed public baseline source record changed.'
+        }
+        $evidence.baselineRunnerOperationalTested=$false
+        $evidence.baselineRunnerLimitation='The historical baseline Runner is not exercised; its missing-VC loader defect is separately recorded. This lane verifies the actual upgrade and updated Runner.'
+    }
 
     $gameDirectory = Join-Path $taskRoot ('Harmless game ' + $chineseWord)
     [IO.Directory]::CreateDirectory($gameDirectory) | Out-Null
@@ -502,19 +580,56 @@ public static class SteamWrapperCleanFixture {
     $preserved = Get-AcceptanceDataHashes
     Assert-Acceptance ($preserved.Contains('profiles.toml') -and $preserved.Contains('bin\SteamWrapperRunner.exe')) 'UI save did not create profiles and Runner.'
     Record-Acceptance 'native UI profile save and stable Runner installation' ([ordered]@{ launchOptions = $expectedLaunch; retainedDataHashes = $preserved; profileEditedThroughUi = $true })
-    Invoke-AcceptanceRunner 'baseline-headless-Runner' $marker $gameDirectory
+    if (-not $candidateUpgrade) {
+        Invoke-AcceptanceRunner 'baseline-headless-Runner' $marker $gameDirectory
+        $evidence.baselineRunnerOperationalTested=$true
+    }
 
     Invoke-AcceptanceInstaller $baselineSetup 'baseline-normal-repair'
     $null = Read-AcceptanceInstallation $defaultProgram $inputManifest.baseline.tag
     Assert-AcceptanceShortcuts $defaultProgram $true
     Assert-AcceptanceDataHashes $preserved
-    if (-not $localCandidate) {
+    if ($scenario -cne 'CandidateFirstInstall') {
     Invoke-AcceptanceInstaller $targetSetup 'target-genuine-in-place-upgrade'
     $state = Read-AcceptanceInstallation $defaultProgram $inputManifest.target.tag
     Assert-Acceptance ($state.previous.tag -ceq $inputManifest.baseline.tag) 'Upgrade did not retain the genuine previous version.'
     Assert-AcceptanceShortcuts $defaultProgram $true
     Assert-AcceptanceDataHashes $preserved
     $manager = Start-AcceptanceManager $defaultProgram $inputManifest.target.tag 'target-upgraded-manager'
+    if ($candidateUpgrade) {
+        $bundle=Get-Content -LiteralPath (Join-Path $defaultProgram ('versions\' + $inputManifest.target.tag + '\Runner\runner-manifest.json')) -Raw | ConvertFrom-Json
+        $deployment=Get-Content -LiteralPath (Join-Path $InputDirectory 'deployment-manifest.json') -Raw | ConvertFrom-Json
+        $expectedRunner=@($deployment.files | Where-Object path -IEQ 'Runner/SteamWrapperRunner.exe')
+        Assert-Acceptance ($expectedRunner.Count -eq 1 -and $bundle.schemaVersion -eq 1 -and $bundle.contractVersion -eq 2 -and
+            $bundle.sha256 -ceq $expectedRunner[0].sha256 -and $bundle.sha256 -cne $preserved['bin\SteamWrapperRunner.exe']) 'The upgrade does not supply a genuinely new verified Runner.'
+        $profiles=Wait-AcceptanceElement $manager.Window 'Profiles'
+        $conditions=New-Object System.Windows.Automation.AndCondition -ArgumentList @(
+            (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty,$profileName)),
+            (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::ListItem))
+        )
+        $configured=Wait-Acceptance { $profiles.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$conditions) } 'retained upgrade profile'
+        ([System.Windows.Automation.SelectionItemPattern]$configured.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
+        $null=Wait-Acceptance {
+            $name=Find-AcceptanceElement $manager.Window 'ProfileName'
+            $null -ne $name -and ([System.Windows.Automation.ValuePattern]$name.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)).Current.Value -ceq $profileName
+        } 'retained profile editor after selection'
+        $null=Wait-AcceptanceElement $manager.Window 'SaveProfile'
+        Invoke-AcceptanceElement (Wait-AcceptanceElement $manager.Window 'SaveProfile')
+        $null=Wait-Acceptance {
+            (Find-AcceptanceElement $manager.Window 'SaveProfile').Current.IsEnabled -and
+            (Get-FileHash -LiteralPath (Join-Path $dataRoot 'bin\SteamWrapperRunner.exe') -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $bundle.sha256
+        } 'updated stable Runner after saving retained profile'
+        foreach($key in @('profiles.toml','ui-settings.json')) {
+            if ($preserved.Contains($key)) { Assert-Acceptance ((Get-FileHash -LiteralPath (Join-Path $dataRoot $key) -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $preserved[$key]) 'Saving the retained profile changed prior configuration bytes.' }
+        }
+        $updatedManifest=Get-Content -LiteralPath (Join-Path $dataRoot 'bin\runner-manifest.json') -Raw | ConvertFrom-Json
+        Assert-Acceptance ($updatedManifest.sha256 -ceq $bundle.sha256 -and $updatedManifest.version -ceq $bundle.version) 'The updated stable Runner manifest differs from the sealed bundle.'
+        $updatedLaunch=Wait-AcceptanceElement $manager.Window 'LaunchOptions'
+        Assert-Acceptance (([System.Windows.Automation.ValuePattern]$updatedLaunch.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)).Current.Value -ceq $expectedLaunch) 'Saving the retained profile changed its stable Launch Options.'
+        $preserved=Get-AcceptanceDataHashes
+        $evidence.stableRunnerUpdated=$true
+        Record-Acceptance 'retained profile saved and stable Runner updated' ([ordered]@{profileBytesUnchanged=$true;runnerSha256=$bundle.sha256;runnerVersion=$bundle.version;oldLaunchOptionsStillValid=$true})
+    }
     Close-AcceptanceManager $manager
     Assert-AcceptanceDataHashes $preserved
     $state = Read-AcceptanceInstallation $defaultProgram $inputManifest.target.tag
