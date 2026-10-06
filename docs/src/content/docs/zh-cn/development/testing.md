@@ -55,6 +55,18 @@ Windows 11 x64 核心交付已有原生配置、已记录输入法／缩放、�
 
 Windows [Rust 运行 37494490736](https://github.com/YangYuS8/SteamWrapper/actions/runs/37494490736)在 PR 提交 `0ee7be09b20670511b967c246bf552d3a15118bb` 的指定进程名用例失败，WinUI 和文档检查分别通过。确定性 CLI 失败记录为 `target/winui/process-name-race-e51e8fa3cfcd4cb5b67df963a5fa47b7/result.json`：唯一命名的无害子进程实际运行 400 毫秒并结束，启动器再等待 1,200 毫秒后退出；旧 Runner 却在原有 30 秒发现超时后返回 1。新增聚焦源码回归也先复现失败。Runner 现会在启动器退出前观察名称；真实进程回归覆盖子进程先结束及启动器本身就是匹配进程，并检查完成标记和实际启动器状态 7。原 Windows 指定名称用例改用唯一命名的测试 EXE 副本与完成标记，避免误匹配并行测试。七项名称过滤测试与十项 Windows Runner 套件本机通过，其中包含带保护的夹具入口，并非七个独立游戏场景；没有使用真实游戏或玩家数据。全新修正发布 CLI 记录为 `target/winui/process-name-race-5b26778900214ff182e5ade8c1488617/result.json`，5,347 毫秒内返回实际启动器状态 7；C#/Rust 契约重跑记录为 `target/winui-contracts/cf9ac5f2f2204b10ac1567fd021e2638/results`。上方私有 0.2.7 安装器／便携记录仍绑定原始 Runner 字节，成功的 v0.2.7 标签工作流另行编译并验证修正后的 Runner。
 
+<a id="player-refinements-source-028-2026-10-07"></a>
+
+## 玩家反馈改进，源码 0.2.8（2026-10-07）
+
+以下是本地发布前结果；最新公开版本仍为 `v0.2.7`。初始快照通过 216 项 Application、37 项 Windows 和 167 项 Deployment 测试，有一项条件式跨卷跳过。C#/Rust 契约通过，记录为 `target/winui-contracts/f4a2ed8ddb5a40eeb7d30f65e1266d65/results`。服务回归覆盖选定配置删除、字节／备份保留、Steam 退出／引用保护，以及有界只读 Steam 游戏名解析。
+
+最终复核复现了跨游戏旧配置 Key 引用漏检。移除现在同时检查配置 Key 与 AppID，恢复仍只清除所选规范 AppID 的标准命令。新增十一项缺失行为用例先失败，字面／前缀对照通过；最终聚焦门槛通过 25 项、完整 Deployment 门槛通过 180 项，各有一项条件式跨卷跳过。需要命令行转义的 Key 会保留配置并报告检查失败，不会视为没有引用。Manager 已针对新保护编译通过。下方私有原生／安装器载荷早于最后这处保护，最终发布仍须准确标签构建与安装器门禁。
+
+旧 `0.2.7` 界面先在缺少配置操作及本地化名称的预期检查上失败。重新构建的私有 `0.2.8` 通过四个实际原生夹具用例：英语／中文 `profile-actions`、`steam-names` 和 `updates`，记录于 `target/winui/native-ui/中文 空格 ' e2366d302b4f4dc191fe95e1f4a566d6/evidence.json`。覆盖未保存编辑还原、取消恢复／移除、本地化选择器／侧边栏／搜索、自定义及保存名称、语言切换时未保存输入／选择保留，以及简洁的 SteamWrapper 窗口标题。实际恢复／删除写入由一次性服务夹具覆盖；这些原生用例没有修改真实 Steam 设置或游戏。
+
+准确的公开 `v0.2.7` ZIP 先通过摘要核验，再作为基线，对私有 `0.2.8` 发布目录执行真实隔离安装／修复／`0.2.7 → 0.2.8` 升级／回滚／再升级／卸载。全部 13 个预期结果通过，六个数据夹具保留；实际 maintenance 回滚还原 `0.2.7` 并保留 1,206 个自有版本文件。证据为 `target/winui/installer acceptance 中文 ' dcc51b8b6de941439cda13fc5a015359/evidence.json`，`numericUpgradeUsesSyntheticMetadataFixture=false`、`cleanVm=false`。两个测试安装器均使用隔离安装身份。该结果不是新的干净 VM 验收、公开 `0.2.8` Setup 执行，也不证明尚未覆盖的账户／硬件矩阵。完整标签门禁及独立公开附件／更新源检查仍是必需步骤，准备中的 CI 精简尚无远程耗时测量。
+
 ## 按改动选择验证
 
 先读取受影响代码和测试，选择能证明本次结果的检查。无需每次编辑前运行整个 workspace，也无需为文档或纯样式调整新增匹配源码字符串的测试。
@@ -68,7 +80,7 @@ Windows [Rust 运行 37494490736](https://github.com/YangYuS8/SteamWrapper/actio
 | 纯视觉调整 | 构建并在隔离 Desktop 预览中检查受影响界面；按影响选择现有测试，不用固定 CSS 字符串代替视觉验收 |
 | 发布 / 工具链或共享构建变化 | 相关 Rust/WinUI 门禁、当前 Windows Runner staging、完整发布目录与 `Test-WinUIPublish.ps1`；安装器另行验收 |
 
-CI 工作流仍执行各自完整门禁。上表限定日常本地工作量，不删减 CI。已通过的检查只在新改动、失败或未解决疑点出现时重跑；缺少工具时记录阻塞，不把未运行写成通过。
+CI 工作流在相关输入路径变化时执行各自完整门禁；版本标签、手动运行及可复用工作流调用不受变更路径限制，仍执行完整门禁。上表限定日常本地工作量，不删减各 CI 门禁内的检查。已通过的检查只在新改动、失败或未解决疑点出现时重跑；缺少工具时记录阻塞，不把未运行写成通过。
 
 行为回归优先验证外部结果。服务或源码声明测试不能证明原生窗口、可访问性、布局或文件选择行为。现有仅用于开发的原生 UI 回归工具通过 Windows UI Automation 操作实际 WinUI 应用；首个切片不等于[原生验收路线图](/SteamWrapper/zh-cn/project/roadmap/)全部完成。实际执行用例与限定范围的人工检查须分别记录。
 
@@ -385,9 +397,13 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 
 ## CI
 
-`v2-ci.yml` 定义 Windows / Ubuntu 的 Rust core/Runner 格式／检查／测试门禁及平台进程测试。`winui-windows.yml` 在拉取请求与 `main` 中运行 C# Application 和 Windows 解码器测试、C# / Rust 契约、实际 WinUI 编译及原生 UI 工具的仅编译门禁；不在托管服务会话执行 UIA。日常 CI 还使用一次性文件／API fixture 运行发布替换、发布包安全和 mock GitHub/CNB 发布器测试，不向外部 Release 写入。它上传测试证据，不生成应用包。
+`v2-ci.yml` 检查 Rust 格式、构建普通工作区目标，并在 Windows / Ubuntu 上各运行一次完整 Rust 工作区测试。构建与测试复用已编译依赖，避免单独执行 `cargo check` 时的另一轮编译，以及重复运行进程测试。捕获结果必须显示每个所需平台进程用例恰好通过一次：Windows 包含 Job Object、命名子进程早于启动器退出，以及启动器本身即目标进程；Linux 包含进程组、排除既有同名进程及进程替换场景。
 
-`winui-release.yml` 在版本标签或明确请求的手动预览中重新执行完整门禁，再发布自包含应用，运行全部发布／恢复回归并检查完整布局。版本标签运行先验证源码／标签／版本和双语说明，再生成明确的 schema 2 包：Setup、portable ZIP、两份本地化说明、旧 portable 描述符、安装版描述符及校验和。纯版本标签发布稳定版，预发布后缀发布预览版；稳定发布把两个签名更新源推进到同一个新安装包。手动运行只上传预览产物。发布边界和可选 CNB 镜像见[发布准备](/SteamWrapper/zh-cn/development/distribution/)。
+拉取请求与分支推送按输入路径选择工作流：Rust crate、契约及构建清单触发 Rust CI；Windows 应用、契约、脚本、打包及共享 Rust 输入触发 WinUI CI；文档输入触发文档工作流。因此，纯文档修改不再运行两个桌面门禁。新的 PR 运行会取消被其取代的检查；版本发布及文档部署不会这样取消。工具／依赖缓存仅包含固定版本 SDK 与 PowerShell、NuGet 包及限定目录的 Cargo 注册表／构建依赖，不包含应用包或契约证据。每次选中的运行仍执行构建及测试。
+
+`winui-windows.yml` 运行 C# Application 和 Windows 解码器测试、C# / Rust 契约、实际 WinUI 编译及原生 UI 工具的仅编译门禁；不在托管服务会话执行 UIA。日常 CI 还使用一次性文件／API fixture 运行发布替换、发布包安全和 mock GitHub/CNB 发布器测试，不向外部 Release 写入。发布器形式覆盖旧便携、历史安装包及精简稳定／预览包。`Test-WinUICompactReleaseScripts.ps1`、`Test-ProjectUpdates.ps1 -Compact` 与 `Test-PublicReleaseDownload.ps1` 校验独立的内部／公开清单、不变的客户端签名载荷、准确提交中的说明、公开维护验证及历史七文件兼容性。精简公开更新的准备／验收夹具门禁保留仅 API 核验的基线与当前项目签名目标的区别。发布器各形式共享一个 PowerShell 进程，但保留全部断言。CI 上传测试证据，不生成应用包。
+
+`winui-release.yml` 在版本标签或明确请求的手动预览中重新执行完整门禁，再发布自包含应用，运行全部发布／恢复回归并检查完整布局。版本标签运行先验证源码／标签／版本和双语说明，再保留完整内部产物：Setup、portable ZIP、两份本地化说明、旧 portable 描述符、安装版描述符及校验和。自 v0.2.8 起，第 3 版仍校验这七个内部文件，但公开版本仅附加 Setup、ZIP 及列出两个载荷的校验和文件。历史第 2 版版本保留七个公开文件。纯版本标签发布稳定版，预发布后缀发布预览版；稳定发布把两个签名更新源推进到同一个新安装包，客户端签名载荷仍为第 2 版。手动运行只上传预览产物。发布边界和可选 CNB 镜像见[发布准备](/SteamWrapper/zh-cn/development/distribution/)。
 
 旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；手动发布工作流预览运行真实隔离安装器进程。首个稳定版已通过上方限定范围的客户端／原生门槛；更广硬件／账户矩阵与启用启动更新检查后的验收仍属于路线图。
 

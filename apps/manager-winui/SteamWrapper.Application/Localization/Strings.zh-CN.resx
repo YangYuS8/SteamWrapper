@@ -195,4 +195,25 @@
   <data name="UpdateAutoFound" xml:space="preserve"><value>SteamWrapper {0} 已可更新。打开“更新”即可下载。</value></data>
   <data name="UpdateOpenPageFailed" xml:space="preserve"><value>无法打开发布页。请在浏览器中访问官方仓库。</value></data>
   <data name="UpdateClose" xml:space="preserve"><value>关闭</value></data>
+  <data name="RevertEdits" xml:space="preserve"><value>撤销编辑</value></data>
+  <data name="EditsReverted" xml:space="preserve"><value>已撤销未保存的修改，没有写入 Steam 或游戏文件。</value></data>
+  <data name="RestoreSteamLaunch" xml:space="preserve"><value>恢复 Steam 启动</value></data>
+  <data name="RestoreSteamTitle" xml:space="preserve"><value>恢复 Steam 原版启动方式？</value></data>
+  <data name="RestoreSteamBody" xml:space="preserve"><value>只清除 {0} 对应的 SteamWrapper 标准启动命令，保留这份配置。请先正常退出 Steam。修改前会备份 Steam 账号文件，不改游戏或存档。自定义启动项保持原样；此前手动粘贴命令时没有记录旧参数，因此无法自动恢复未知的旧参数。</value></data>
+  <data name="SteamLaunchRestored" xml:space="preserve"><value>已移除 SteamWrapper 启动命令，Steam 将使用正常游戏启动方式；配置已保留。</value></data>
+  <data name="SteamLaunchUnchanged" xml:space="preserve"><value>没有找到匹配的 SteamWrapper 命令，未作修改。</value></data>
+  <data name="SteamLaunchCustom" xml:space="preserve"><value>自定义或无法识别的 SteamWrapper 启动项未修改。请先在 Steam 中检查，再移除配置。</value></data>
+  <data name="SteamRestoreFailed" xml:space="preserve"><value>无法恢复 Steam 启动：{0}</value></data>
+  <data name="RemoveProfile" xml:space="preserve"><value>移除配置</value></data>
+  <data name="RemoveProfileTitle" xml:space="preserve"><value>移除这份配置？</value></data>
+  <data name="RemoveProfileBody" xml:space="preserve"><value>只移除 {0} 的已保存配置，并保留备份，不改游戏、存档或 Runner。请先正常退出 Steam。如果 Steam 仍使用这份配置，请先恢复它的 Steam 启动方式。</value></data>
+  <data name="ProfileRemoved" xml:space="preserve"><value>配置已移除，修改前的配置文件已备份；游戏和存档未改变。</value></data>
+  <data name="ProfileRemoveFailed" xml:space="preserve"><value>无法移除这份配置：{0}</value></data>
+  <data name="ProfileSteamUnavailable" xml:space="preserve"><value>找不到 Steam。请先在“添加 Steam 游戏”中选择 Steam 文件夹，再恢复或移除配置。</value></data>
+  <data name="ProfileSteamRunning" xml:space="preserve"><value>请正常退出 Steam 后重试。SteamWrapper 不会替你关闭 Steam 或游戏。</value></data>
+  <data name="ProfileSteamReferenced" xml:space="preserve"><value>Steam 仍引用这份配置，请先恢复它的 Steam 启动方式；自定义启动项需在 Steam 中手动检查。</value></data>
+  <data name="ProfileSteamInspectionFailed" xml:space="preserve"><value>部分 Steam 账号文件无法安全检查。请保留配置，解决文件访问或格式问题后重试。</value></data>
+  <data name="ProfileDataBusy" xml:space="preserve"><value>其他操作正在使用配置，请等待完成后重试。</value></data>
+  <data name="ProfileDeleteUnsupported" xml:space="preserve"><value>Windows 编辑器无法安全移除这份配置，只支持可编辑的显式 Windows [profiles.ID] 表；文件已保留。</value></data>
+  <data name="ProfileUnsafePath" xml:space="preserve"><value>配置文件、锁或备份位置为只读，或使用了重解析点；文件已保留。</value></data>
 </root>

@@ -110,7 +110,7 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 
 ## CI / release 验证
 
-日常 Windows CI 测试 C# Application 服务与 Windows 解码器，验证跨语言契约和真实 Runner fixture，并编译实际 WinUI Manager 及仅用于开发的原生 UI 工具。托管服务会话不执行该工具；实际原生运行需要解锁的交互桌面与可丢弃夹具。Rust CI 保留格式／检查／测试门禁和受支持的 Windows/Linux 进程测试。这些运行保留测试证据，但不执行自包含发布，也不上传应用包。GitHub Pages 继续独立从 `main` 自动部署文档。
+相关源码、脚本、契约或构建输入变化时，日常 Windows CI 测试 C# Application 服务与 Windows 解码器，验证跨语言契约和真实 Runner fixture，并编译实际 WinUI Manager 及仅用于开发的原生 UI 工具。托管服务会话不执行该工具；实际原生运行需要解锁的交互桌面与可丢弃夹具。Rust CI 检查格式、构建普通工作区目标并执行完整工作区测试，且在同一次测试运行中核验受支持的 Windows/Linux 进程用例。纯文档修改使用独立文档检查及 `main` 的 GitHub Pages 部署。工具／依赖缓存不复用测试结果，也不跳过构建。这些运行保留测试证据，但不执行自包含发布，也不上传应用包。
 
 发布构建对所选源码重跑测试与编译门禁，再执行自包含发布、全部发布／恢复回归及实际包内容检查。portable ZIP 包含两种语言资源和经过验证的 Runner；校验和与发布元数据标识准确版本、提交和 Windows x64 平台。预发布不证明干净系统安装、更新、回滚或卸载通过；Authenticode 可选，Windows 稳定交付仍需客户端验收。
 
@@ -120,8 +120,8 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 
 | 触发方式 | 结果 |
 | --- | --- |
-| 拉取请求或推送 `main` | Rust Windows/Linux 检查、C# 测试／契约与实际 WinUI 编译；不生成应用压缩包 |
-| 推送版本标签 | 完整构建／测试门禁、完整 Windows x64 Setup 与 portable ZIP、第 2 版校验和／元数据及双语说明；纯版本标签发布稳定版，预发布后缀发布预览版 |
+| 拉取请求或推送 `main` 中相关源码／构建输入变更 | 按输入路径选择 Rust Windows/Linux 检查和／或 C# 测试／契约与实际 WinUI 编译；不生成应用压缩包 |
+| 推送版本标签 | 完整构建／测试门禁、完整 Windows x64 Setup 与 portable ZIP、经校验的内部元数据及双语说明；v0.2.8 起仅公开 Setup、ZIP 与校验和三个附件；纯版本标签发布稳定版，预发布后缀发布预览版 |
 | 在所选分支／ref 上 **Run workflow** | 完整门禁、完整 `SteamWrapper-WinUI-preview-windows-x64` 目录，以及通过测试的未签名 `SteamWrapper-WinUI-installer-preview-windows-x64` 产物；不公开发布 |
 | `main` 上相关文档变更 | 独立的文档检查与 GitHub Pages 部署 |
 
@@ -133,7 +133,7 @@ WinUI 发布脚本自动准备 Windows Runner 与验证后的清单。`Runner/St
 
 安装器升级时，每个新可安装载荷／清单都递增三段基础版本，不能只改预发布后缀。`v0.2.1-preview.1` → `v0.2.1-preview.2` 会改变部署清单，但两者数字版本均为 `0.2.1`，会被当前同版本不同内容保护拒绝。手动运行序号产物是独立试用，不是升级序列。真实升级验收使用冻结旧包和真正编译、尚未使用的新基础版本。首次新签名载荷也必须使用尚未使用的基础版本，例如未签名 `0.2.4` 之后使用 `0.2.5`，不能让重新签名／时间戳后的不同 Runner 字节复用此前未签名版本。不可变产物的重试保持原样。
 
-标签流水线现已使用明确的第 2 版未签名可安装产物，同时保留完整的第 1 版便携验证器。[当前验收](/SteamWrapper/zh-cn/project/roadmap/#当前验收2026-10-07)区分首版已完成的版本保留、客户端／原生及恢复切片，与更广泛的剩余验收矩阵。Foundation 申请被拒后，Windows Authenticode 改为可选；项目签名应用更新使用独立配置的密钥。Foundation 证书不是稳定发布的前置条件。公开 CNB 0.2.5 → 0.2.6 客户端／下载／安装路径已通过，与公开 0.2.7 附件／更新源检查及未来启用启动检查后的验收分别记录；通用 Steam 自动应用／恢复继续暂缓。
+标签流水线保留完整的第 1 版便携及第 2 版可安装验证器。自 v0.2.8 起，第 3 版元数据校验完整内部产物，同时选择三个公开附件。[当前验收](/SteamWrapper/zh-cn/project/roadmap/#当前验收2026-10-07)区分首版已完成的版本保留、客户端／原生及恢复切片，与更广泛的剩余验收矩阵。Foundation 申请被拒后，Windows Authenticode 改为可选；项目签名应用更新使用独立配置的密钥。Foundation 证书不是稳定发布的前置条件。公开 CNB 0.2.5 → 0.2.6 客户端／下载／安装路径已通过，与公开 0.2.7 附件／更新源检查及未来启用启动检查后的验收分别记录；通用 Steam 自动应用／恢复继续暂缓。
 
 下方已完成的 `0.2.5` 发布操作说明源码／说明审阅及 CI 之后的版本标签交付流程。不要重复现有标签，未来发行必须使用新的协调版本：
 
@@ -147,7 +147,9 @@ git push origin v0.2.5-preview.1
 
 这些命令描述明确的发布操作；写在文档中不会创建标签，也不证明已经发布。执行前核对所选提交。工作流检出准确标签并重跑门禁，不沿用之前的分支构建。它先创建非 Latest 草稿，上传并下载验证全部附件，再按标签通道发布。稳定版本设为 Latest，预览版本保持非 Latest。重试已经公开的版本只核验不可变附件，不改变发布标记。
 
-七个附件为 `SteamWrapper-<tag>-win-x64-setup.exe`、`SteamWrapper-<tag>-win-x64.zip`、`<tag>.en.md`、`<tag>.zh-CN.md`、`portable-release.json`、`release.json` 和 `SHA256SUMS`。外层 `release.json` 使用第 2 版结构，明确 `signed=false`、`installer=true`、`portable=true`，绑定两种产物的长度／摘要及部署清单。`portable-release.json` 保留第 1 版便携元数据和未放宽的旧验证门禁；`SHA256SUMS` 覆盖其余六个附件。ZIP 包含 `LICENSE` 及 `ReleaseNotes/` 中的双语说明。打包必须保留随附第三方的适用 notices／许可证和上游签名；第三方组件必须保留实际适用许可证，不能把全部依赖笼统描述为 MIT。
+自 v0.2.8 起，公开版本仅包含 `SteamWrapper-<tag>-win-x64-setup.exe`、`SteamWrapper-<tag>-win-x64.zip` 和 `SHA256SUMS`；校验和文件仅列出两个载荷。较早版本保留原有七个不可变公开附件。
+
+完整内部工作流产物仍包含这三个文件，以及 `<tag>.en.md`、`<tag>.zh-CN.md`、`portable-release.json` 与 `release.json`。第 3 版 `release.json` 绑定两个载荷、便携元数据、双语说明，以及真实的安装器／部署清单；发布与首次更新签署仍校验这份完整产物。历史第 2 版及第 1 版便携描述符保留原有验证器。公开三文件下载独立核对精确 API 摘要及项目签名授权的 Setup 字节，不能伪造内部安装器构建记录，也不证明打包／安装验收。ZIP 包含 `LICENSE` 及 `ReleaseNotes/` 中的双语说明。打包必须保留随附第三方的适用 notices／许可证和上游签名；第三方组件必须保留实际适用许可证，不能把全部依赖笼统描述为 MIT。
 
 按需预览使用 **Run workflow** 并选择 ref。没有发布模式输入：所有手动运行都只生成预览，即使选择了标签也不公开发布。发布上传失败时，解决原因后优先使用 **Re-run failed jobs**：发布 job 会复用同一个不可变的 `SteamWrapper-WinUI-release-assets` 构建产物。**Re-run all jobs** 会重新构建和打包；如果同版本的字节发生变化，发布必须拒绝覆盖。不同内容应使用新版本，不移动已发布标签，也不覆盖已发布附件。
 
@@ -157,7 +159,11 @@ git push origin v0.2.5-preview.1
 
 GitHub Releases 是版本标签二进制发布渠道。CNB 镜像使用 `CNB_GIT_TOKEN` 同步源码／标签，并优先使用 `CNB_RELEASE_TOKEN` 操作版本发布；未配置独立发布令牌时，复用 `CNB_GIT_TOKEN`，但该令牌还必须具有 `Nesoriel/SteamWrapper` 的 `repo-release` 读写权限。Git 同步成功不代表具有发布权限。发布器对照原始 SHA-256 验证上传后的下载副本；缺少可用凭据时跳过可选二进制步骤。
 
-当前发行如需镜像维护而不重新构建，可使用 `gh workflow run cnb-release-mirror.yml --ref main -f tag=v0.2.7`；已经核验的镜像无需重复上传。维护工作流核对 GitHub 公开的七个附件、已合入主线的精确源码标签及当前签名授权版本，再发布并核验同一组 CNB 附件。它与发布和续期共用锁，最后把已核验镜像写入更新索引；不能切换到其他历史版本，也不能覆盖版本附件。权限失败时，为现有令牌补充 `repo-release` 读写权限，或配置 `CNB_RELEASE_TOKEN`；不要把令牌写入仓库文件或聊天。
+公开版本标题仅使用标签，例如 `v0.2.8`。GitHub 正文仅展示英文发行说明，CNB 正文仅展示简体中文说明。经校验的内部产物与便携 ZIP 仍保留两个语言的 Markdown 说明；v0.2.8 起不再将它们作为独立公开附件。既有公开附件及签名更新元数据仍分别遵守其验证与不可变规则。
+
+如需明确修正当前签名授权版本在 CNB 上的展示，可在镜像工作流调用中加入 `-f refreshPresentation=true`，默认值为 false。该选项先核验准确标签／源码及每个不可变附件，再仅修改标题与中文正文，保留全部附件及发布标记。
+
+当前发行如需镜像维护而不重新构建，可使用 `gh workflow run cnb-release-mirror.yml --ref main -f tag=v0.2.7`；已经核验的镜像无需重复上传。维护工作流核对 GitHub 完整公开下载集、已合入主线的精确源码标签及当前签名授权版本，再发布并核验同一组 CNB 附件。历史版本保留七文件验证器；v0.2.8 起核验三个下载、精确 API 摘要、签名授权的 Setup 及准确提交中的中文说明，并使用外部验证记录，不能伪造内部元数据。它与发布和续期共用锁，最后把已核验镜像写入更新索引；不能切换到其他历史版本，也不能覆盖版本附件。权限失败时，为现有令牌补充 `repo-release` 读写权限，或配置 `CNB_RELEASE_TOKEN`；不要把令牌写入仓库文件或聊天。
 
 `v0.2.3-preview.1` 的七个 GitHub 下载附件均已核验。CNB 发布凭据未配置，二进制镜像实际跳过，因此不公告 CNB 二进制下载。
 

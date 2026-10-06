@@ -1,6 +1,8 @@
 [CmdletBinding(DefaultParameterSetName = 'Release')]
 param(
     [Parameter(Mandatory, ParameterSetName = 'Release')][string]$PackageDirectory,
+    [Parameter(ParameterSetName = 'Release')][string]$PublicReleaseVerificationPath,
+    [Parameter(ParameterSetName = 'Release')][string]$SourceRepositoryRoot = (Join-Path $PSScriptRoot '../..'),
     [Parameter(Mandatory, ParameterSetName = 'Refresh')][switch]$Refresh,
     [Parameter(ParameterSetName = 'Refresh')][switch]$SkipMissingFeed,
     [ValidateSet('preview', 'stable')][string]$Channel = 'preview',
@@ -16,7 +18,13 @@ Set-StrictMode -Version Latest
 $trust = Read-ProjectUpdateTrust $TrustPath
 $repository = $trust.githubRepository
 if (-not $Refresh) {
-    $metadata = & (Join-Path $PSScriptRoot '../windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $PackageDirectory
+    if ($PublicReleaseVerificationPath) {
+        if (-not $IncludeCnbMirror -or -not $RequireCurrentRelease) { throw 'Compact public maintenance must only add a mirror to the exact currently signed release.' }
+        . (Join-Path $PSScriptRoot 'PublicReleaseDownload.ps1')
+        $metadata = Read-WinUIPublicReleaseVerification -PackageDirectory $PackageDirectory -VerificationPath $PublicReleaseVerificationPath -TrustPath $TrustPath -RepositoryRoot $SourceRepositoryRoot
+    } else {
+        $metadata = & (Join-Path $PSScriptRoot '../windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $PackageDirectory
+    }
     if (-not $PSBoundParameters.ContainsKey('Channel')) { $Channel = $metadata.releaseChannel }
     if ($metadata.releaseChannel -cne $Channel -and -not ($metadata.releaseChannel -ceq 'stable' -and $Channel -ceq 'preview')) { throw 'Package and selected update channel differ.' }
 }

@@ -1,16 +1,18 @@
 [CmdletBinding()]
-param([string]$PackageDirectory, [switch]$Installable, [switch]$Preview)
+param([string]$PackageDirectory, [switch]$Installable, [switch]$Preview, [switch]$Compact)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $root = Join-Path $repoRoot ('target/github-publisher-tests/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root -Force | Out-Null
 if (-not $PackageDirectory) {
-    $tag = if ($Preview) { 'v0.2.0-rc.1' } else { 'v0.2.0' }
-    if ($Installable) {
+    $version = if ($Compact) { '0.2.8' } else { '0.2.0' }
+    $tag = if ($Preview) { "v$version-rc.1" } else { "v$version" }
+    if ($Installable -or $Compact) {
         . (Join-Path $repoRoot 'scripts/windows/WinUIInstallableRelease.TestFixtures.ps1')
+        . (Join-Path $repoRoot 'scripts/windows/WinUIInstallableRelease.ps1')
         $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package') -Tag $tag
-        $package = New-WinUIInstallableReleaseTestPackage $fixture
+        $package = if ($Compact) { New-WinUIInstallableReleasePackage -Tag $tag -Commit $fixture.Commit -RepositoryRoot $fixture.RepositoryRoot -PublishDirectory $fixture.PublishDirectory -InstallerDirectory $fixture.InstallerDirectory -OutputDirectory $fixture.OutputDirectory } else { New-WinUIInstallableReleaseTestPackage $fixture }
     } else {
         . (Join-Path $repoRoot 'scripts/windows/WinUIRelease.TestFixtures.ps1')
         $fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package') -Tag $tag
@@ -20,7 +22,8 @@ if (-not $PackageDirectory) {
 }
 $metadata = & (Join-Path $repoRoot 'scripts/windows/Test-WinUIReleasePackage.ps1') -PackageDirectory $PackageDirectory
 . (Join-Path $repoRoot 'scripts/windows/WinUIInstallableRelease.ps1')
-$names = @(Get-WinUIReleaseAssetNames $metadata)
+$names = @(Get-WinUIPublicReleaseAssetNames $metadata)
+if ($Compact -and ($metadata.schemaVersion -ne 3 -or $names.Count -ne 3)) { throw 'Compact publisher fixtures must select exactly three public assets.' }
 $mock = Join-Path $root 'gh-fixture.ps1'
 [IO.File]::WriteAllText($mock, @'
 $ErrorActionPreference = 'Stop'
@@ -55,6 +58,8 @@ switch ($arguments[1]) {
     }
     'create' {
         if ($arguments -notcontains '--draft' -or $arguments -notcontains ('--prerelease=' + $state.prerelease.ToString().ToLowerInvariant()) -or $arguments -notcontains '--latest=false' -or $arguments -notcontains '--verify-tag') { throw 'Unsafe fixture release creation flags.' }
+        $state.title = Option-Value '--title'
+        $state.notes = [IO.File]::ReadAllText((Option-Value '--notes-file'))
         $state.present = $true
         $state.draft = $true
         Save-State
@@ -124,6 +129,11 @@ try {
     $null = Invoke-FixturePublication
     $state = Read-FixtureState $path
     if ($state.draft -or $state.uploads -ne $names.Count -or @($state.requests | Where-Object { $_[1] -eq 'download' }).Count -ne $names.Count) { throw 'The complete draft/upload/download/publish sequence did not occur.' }
+    $presentationErrors = @()
+    if ($state.title -cne $metadata.tag) { $presentationErrors += 'GitHub release title must be exactly the version tag.' }
+    if ($state.notes -cne [IO.File]::ReadAllText((Join-Path $PackageDirectory "$($metadata.tag).en.md"))) { $presentationErrors += 'GitHub release body must contain only the English release notes.' }
+    if ($presentationErrors.Count) { throw ($presentationErrors -join ' ') }
+    Write-Output 'PASS: GitHub uses the tag as its title and only English notes as its body, retaining both internal localized notes.'
     Write-Output "PASS: a new $($metadata.releaseChannel) release verifies all $($names.Count) uploaded assets before publishing with the matching latest flag."
     $writes = @($state.requests | Where-Object { $_[1] -in @('create', 'upload', 'edit') }).Count
     $null = Invoke-FixturePublication
@@ -138,7 +148,7 @@ try {
     $state = Read-FixtureState $path
     if ($state.draft -or $state.uploads -ne $names.Count - 1) { throw 'A partial draft was not resumed using only missing assets.' }
     Write-Output 'PASS: a partial draft resumes without replacing its existing asset.'
-    $path = New-GhScenario 'duplicate' $true $false @($names[0], $names[0], $names[1], $names[2], $names[3])
+    $path = New-GhScenario 'duplicate' $true $false (@($names[0]) + $names)
     Assert-GhRejected 'duplicate published asset names are rejected' '*duplicate*'
     Assert-NoGhWrites (Read-FixtureState $path)
     $path = New-GhScenario 'corrupt-download' $true $false $names

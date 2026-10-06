@@ -3,8 +3,26 @@ name: WinUI Windows CI
 on:
   push:
     branches: ["main", "v2"]
+    paths: &winui_paths
+      - 'apps/**'
+      - 'crates/**'
+      - 'tests/**'
+      - 'scripts/windows/**'
+      - 'scripts/releases/**'
+      - 'packaging/windows/**'
+      - 'assets/brand/**'
+      - '.cargo/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'global.json'
+      - '.vsconfig'
+      - 'mise.toml'
+      - 'mise.lock'
+      - '.github/workflows/winui-windows.yml'
+      - '.github/workflows/winui-release.yml'
   pull_request:
     branches: ["main", "v2"]
+    paths: *winui_paths
   workflow_dispatch:
   workflow_call:
 
@@ -13,7 +31,7 @@ permissions:
 
 concurrency:
   group: winui-windows-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   winui:
@@ -38,10 +56,36 @@ jobs:
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
         with:
           version: "2026.9.1"
-          install_args: "dotnet rust powershell"
-          # Rust is delegated to rustup; avoid restoring an isolated mise cache
-          # whose referenced rustup toolchain may not exist on this fresh host.
-          cache: false
+          install_args: "dotnet powershell"
+          # Cache the SDK and PowerShell independently of rustup toolchains.
+          cache: true
+
+      - name: Setup pinned Rust
+        uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+        with:
+          toolchain: '1.98.1'
+
+      - name: Cache locked NuGet packages
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.nuget/packages
+          key: windows-nuget-${{ hashFiles('global.json', '**/packages.lock.json') }}
+          restore-keys: windows-nuget-
+
+      - name: Cache locked Cargo dependencies
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target/debug/.fingerprint
+            target/debug/build
+            target/debug/deps
+            target/release/.fingerprint
+            target/release/build
+            target/release/deps
+          key: windows-cargo-winui-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml', '.cargo/config.toml', 'mise.toml') }}
 
       - name: Verify native prerequisites and SDK pin
         run: |
@@ -53,53 +97,59 @@ jobs:
             throw 'The hosted image lacks the MSVC/Windows SDK components in .vsconfig; update the image or provision it non-interactively before running this workflow.'
           }
           $expectedSdk = (Get-Content -LiteralPath 'global.json' -Raw | ConvertFrom-Json).sdk.version
-          $actualSdk = & mise.exe exec -- dotnet --version
+          $actualSdk = & dotnet --version
           if ($LASTEXITCODE -ne 0 -or $actualSdk.Trim() -ne $expectedSdk) { throw 'The .NET SDK does not match global.json.' }
           Write-Output "Visual Studio: $installation"
           Write-Output ".NET SDK: $actualSdk"
 
       - name: Test C# configuration and Windows services
-        run: mise.exe run winui:test
+        run: pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Test
 
       - name: Verify Rust interoperability and real Runner consumption
-        run: mise.exe run winui:contracts
+        run: pwsh -NoProfile -File scripts/windows/Test-WinUIContracts.ps1
 
       - name: Test Runner dependency inspection tool versions
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-RunnerDependenciesScripts.ps1
+        run: pwsh -NoProfile -File scripts/windows/Test-RunnerDependenciesScripts.ps1
 
       - name: Compile the actual WinUI Manager and Runner resources
-        run: mise.exe run winui:build
+        run: pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Build
 
       # Hosted service sessions cannot establish native-window acceptance.
       # Compile the developer-only UIA client without opening it or publishing Setup.
       - name: Compile the developer native UI acceptance harness
         run: |
           $project = 'apps/manager-winui/SteamWrapper.NativeUi.Tests/SteamWrapper.NativeUi.Tests.csproj'
-          mise.exe exec -- dotnet restore $project --locked-mode
+          dotnet restore $project --locked-mode
           if ($LASTEXITCODE -ne 0) { throw 'Native UI harness locked restore failed.' }
-          mise.exe exec -- dotnet build $project --no-restore --configuration Release
+          dotnet build $project --no-restore --configuration Release
           if ($LASTEXITCODE -ne 0) { throw 'Native UI harness compilation failed.' }
 
       - name: Test publication replacement using disposable files
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
+        run: pwsh -NoProfile -File scripts/windows/Test-WinUIPublish.ps1 -SkipBuild
 
       - name: Test clean-client acceptance guards without launching Sandbox
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptanceScripts.ps1
+        run: pwsh -NoProfile -File scripts/windows/Test-CleanWindowsAcceptanceScripts.ps1
 
       - name: Test portable acceptance guards without running product binaries
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-PortableAcceptanceScripts.ps1
+        run: pwsh -NoProfile -File scripts/windows/Test-PortableAcceptanceScripts.ps1
 
       - name: Test standard-account acceptance guards without creating accounts
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-StandardUserAcceptanceScripts.ps1
+        run: pwsh -NoProfile -File scripts/windows/Test-StandardUserAcceptanceScripts.ps1
 
       - name: Test empty WinUI control guards without publishing or launching UI
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-StandardWinUiControlScripts.ps1
+        run: pwsh -NoProfile -File scripts/windows/Test-StandardWinUiControlScripts.ps1
 
       - name: Test public-update acceptance guards without networking or Sandbox
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-ProjectUpdateAcceptanceScripts.ps1
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($test in @('Test-ProjectUpdateAcceptanceScripts.ps1', 'Test-CompactProjectUpdateAcceptance.ps1', 'Test-CompactProjectUpdatePreparation.ps1')) {
+            $global:LASTEXITCODE = 0
+            & "./scripts/windows/$test"
+            if ($LASTEXITCODE -ne 0) { throw "Public-update acceptance regressions failed: $test" }
+          }
 
       - name: Test installer boundary guards without UI, registry changes or virtual disks
-        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-InstallerBoundaryAcceptanceScripts.ps1
+        run: pwsh -NoProfile -File scripts/windows/Test-InstallerBoundaryAcceptanceScripts.ps1
 
       - name: Compile read-only window diagnostics without observing a desktop
         run: |
@@ -126,40 +176,45 @@ jobs:
 
       - name: Test version validation and release packaging safeguards
         run: |
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIReleaseScripts.ps1
-          if ($LASTEXITCODE -ne 0) { throw 'Legacy portable release regressions failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIInstallableReleaseScripts.ps1
-          if ($LASTEXITCODE -ne 0) { throw 'Installable release regressions failed.' }
+          $ErrorActionPreference = 'Stop'
+          foreach ($test in @('Test-WinUIReleaseScripts.ps1', 'Test-WinUIInstallableReleaseScripts.ps1', 'Test-WinUICompactReleaseScripts.ps1')) {
+            $global:LASTEXITCODE = 0
+            & "./scripts/windows/$test"
+            if ($LASTEXITCODE -ne 0) { throw "Release packaging regressions failed: $test" }
+          }
 
       - name: Test deployment packaging and signing safeguards without producing an installer
         run: |
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerScripts.ps1
+          pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerScripts.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Installer script regressions failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WindowsSigning.ps1
+          pwsh -NoProfile -File scripts/windows/Test-WindowsSigning.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Signing policy regressions failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-RunnerSigningMetadata.ps1
+          pwsh -NoProfile -File scripts/windows/Test-RunnerSigningMetadata.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Runner product metadata is invalid.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-SignPathConfiguration.ps1
+          pwsh -NoProfile -File scripts/windows/Test-SignPathConfiguration.ps1
           if ($LASTEXITCODE -ne 0) { throw 'SignPath configuration safeguards failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-WinUIThirdPartyNotices.ps1
+          pwsh -NoProfile -File scripts/windows/Test-WinUIThirdPartyNotices.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Third-party notice publication safeguards failed.' }
 
       - name: Test GitHub and CNB publishers without network writes
         run: |
-          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-ProjectUpdates.ps1
-          if ($LASTEXITCODE -ne 0) { throw 'Project update signing and publishing regressions failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1
-          if ($LASTEXITCODE -ne 0) { throw 'GitHub publisher regressions failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1 -Installable
-          if ($LASTEXITCODE -ne 0) { throw 'Installable GitHub publisher regressions failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-GitHubRelease.ps1 -Installable -Preview
-          if ($LASTEXITCODE -ne 0) { throw 'Preview GitHub publisher regressions failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1
-          if ($LASTEXITCODE -ne 0) { throw 'CNB publisher regressions failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1 -Installable
-          if ($LASTEXITCODE -ne 0) { throw 'Installable CNB publisher regressions failed.' }
-          mise.exe exec -- pwsh -NoProfile -File scripts/releases/Test-CnbRelease.ps1 -Installable -Preview
-          if ($LASTEXITCODE -ne 0) { throw 'Preview CNB publisher regressions failed.' }
+          $ErrorActionPreference = 'Stop'
+          $forms = @(@{}, @{ Installable = $true }, @{ Installable = $true; Preview = $true }, @{ Compact = $true }, @{ Compact = $true; Preview = $true })
+          foreach ($test in @('Test-GitHubRelease.ps1', 'Test-CnbRelease.ps1')) {
+            foreach ($form in $forms) {
+              $global:LASTEXITCODE = 0
+              & "./scripts/releases/$test" @form
+              if ($LASTEXITCODE -ne 0) { throw "Publisher regressions failed: $test" }
+            }
+          }
+          foreach ($form in @(@{}, @{ Compact = $true })) {
+            $global:LASTEXITCODE = 0
+            & ./scripts/releases/Test-ProjectUpdates.ps1 @form
+            if ($LASTEXITCODE -ne 0) { throw 'Project update signing and publishing regressions failed.' }
+          }
+          $global:LASTEXITCODE = 0
+          & ./scripts/releases/Test-PublicReleaseDownload.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Public-release download and maintenance regressions failed.' }
 
       - name: Upload isolated contract evidence
         if: always()

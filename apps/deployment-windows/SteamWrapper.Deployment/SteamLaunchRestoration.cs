@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SteamWrapper.Deployment;
 
@@ -11,7 +12,8 @@ internal static class SteamLaunchRestoration
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private const int MaximumBytes = 32 * 1024 * 1024;
 
-    internal static SteamLaunchPlan Inspect(string steamRoot, string dataRoot)
+    internal static SteamLaunchPlan Inspect(string steamRoot, string dataRoot, string? selectedAppId = null,
+        CancellationToken cancellationToken = default, string? selectedProfileKey = null)
     {
         SafePaths.CheckAncestors(steamRoot);
         if (!Directory.Exists(Path.Combine(steamRoot, "steamapps")))
@@ -20,12 +22,14 @@ internal static class SteamLaunchRestoration
         SafePaths.CheckAncestors(userdata);
         var changes = new List<SteamLaunchChange>();
         var unknown = 0;
+        var selectedIdentifiers = new[] { selectedAppId, selectedProfileKey }.OfType<string>().Distinct(StringComparer.Ordinal).ToArray();
         if (!Directory.Exists(userdata)) return new(changes, unknown);
         var accounts = Directory.GetDirectories(userdata).Where(path =>
             Path.GetFileName(path).All(char.IsAsciiDigit)).Take(129).ToArray();
         if (accounts.Length > 128) throw new InvalidDataException("Steam account inventory exceeds its limit.");
         foreach (var account in accounts)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var path = Path.Combine(account, "config", "localconfig.vdf");
             SafePaths.CheckAncestors(path);
             if (!File.Exists(path)) continue;
@@ -39,6 +43,14 @@ internal static class SteamLaunchRestoration
             {
                 if (!entry.Value.Contains("SteamWrapperRunner", StringComparison.OrdinalIgnoreCase)) continue;
                 var names = entry.Keys;
+                // Removal also checks the profile's legacy key because Runner accepts either
+                // key or app_id. Restore callers supply only the selected canonical AppID.
+                var selectedPath = names.Length >= 6 && names.Take(5).SequenceEqual(
+                    new[] { "UserLocalConfigStore", "Software", "Valve", "Steam", "apps" }, StringComparer.OrdinalIgnoreCase)
+                    && selectedIdentifiers.Contains(names[5], StringComparer.Ordinal);
+                if (selectedAppId is not null && !selectedPath && !selectedIdentifiers.Any(identifier => Regex.IsMatch(entry.Value,
+                    "(?:^|\\s)\"?--appid\"?(?:\\s+|=)\"?" + Regex.Escape(identifier) + "\"?(?=\\s|$)",
+                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))) continue;
                 var correctPath = names.Length == 7 &&
                     names.Take(5).SequenceEqual(new[] { "UserLocalConfigStore", "Software", "Valve", "Steam", "apps" }, StringComparer.OrdinalIgnoreCase) &&
                     names[6].Equals("LaunchOptions", StringComparison.OrdinalIgnoreCase) &&

@@ -7,6 +7,10 @@ on:
         description: Published version tag currently authorized by its update feed
         type: string
         required: true
+      refreshPresentation:
+        description: Refresh only the verified CNB title and Chinese body
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -27,6 +31,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ inputs.tag }}
+      REFRESH_PRESENTATION: ${{ inputs.refreshPresentation }}
       CNB_GIT_TOKEN: ${{ secrets.CNB_GIT_TOKEN }}
       CNB_RELEASE_TOKEN: ${{ secrets.CNB_RELEASE_TOKEN || secrets.CNB_GIT_TOKEN }}
     steps:
@@ -35,7 +40,7 @@ jobs:
           ref: main
           fetch-depth: 0
           persist-credentials: false
-      - name: Download and inspect the exact published seven-asset release
+      - name: Verify the current signed release and its exact public downloads
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -53,44 +58,28 @@ jobs:
           $repository = 'YangYuS8/SteamWrapper'
           $private = & gh api "repos/$repository" --jq '.private'
           if ($LASTEXITCODE -ne 0 -or $private -cne 'false') { throw 'The source release repository must be public.' }
-          $remoteCommit = & gh api "repos/$repository/commits/$tag" --jq '.sha'
-          if ($LASTEXITCODE -ne 0 -or $remoteCommit -cne $commit) { throw 'The public source tag no longer matches the checked-out tag.' }
-          $json = & gh release view $tag --repo $repository --json tagName,isDraft,isPrerelease,assets
-          if ($LASTEXITCODE -ne 0) { throw 'The selected GitHub release is unavailable.' }
-          $release = ($json -join "`n") | ConvertFrom-Json
-          if ($release.tagName -cne $tag -or $release.isDraft -or $release.isPrerelease -ne $tagIdentity.Prerelease) { throw 'Only a published GitHub release in the tag-selected channel can be mirrored.' }
-          $names = @("SteamWrapper-$tag-win-x64.zip", "SteamWrapper-$tag-win-x64-setup.exe", "$tag.en.md", "$tag.zh-CN.md", 'release.json', 'portable-release.json', 'SHA256SUMS')
-          $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-          foreach ($asset in $release.assets) {
-            $limit = switch ($asset.name) { 'SHA256SUMS' { 16KB }; 'release.json' { 2MB }; 'portable-release.json' { 2MB }; "$tag.en.md" { 256KB }; "$tag.zh-CN.md" { 256KB }; "SteamWrapper-$tag-win-x64-setup.exe" { 512MB }; default { 1GB } }
-            if ($asset.name -cnotin $names -or -not $seen.Add($asset.name) -or $asset.size -lt 1 -or $asset.size -gt $limit -or $asset.digest -cnotmatch '^sha256:[a-f0-9]{64}$') { throw 'The GitHub release has unexpected, duplicate, unbounded or unhashed assets.' }
-          }
-          if ($seen.Count -ne 7) { throw 'The GitHub release must contain exactly seven immutable assets.' }
-          $directory = "target/cnb-release-mirror/$tag"
-          [IO.Directory]::CreateDirectory($directory) | Out-Null
-          foreach ($name in $names) {
-            & gh release download $tag --repo $repository --pattern $name --dir $directory
-            if ($LASTEXITCODE -ne 0) { throw "Cannot download the published asset: $name" }
-            $asset = @($release.assets | Where-Object name -CEQ $name)[0]
-            $path = Join-Path $directory $name
-            if ((Get-Item -LiteralPath $path).Length -ne $asset.size -or ('sha256:' + (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()) -cne $asset.digest) { throw 'Downloaded asset size or hash differs from the published release.' }
-          }
-          # Verifies all six checksummed assets, ZIP inventory, runtime/Runner
-          # contracts, Setup binding and the unmodified schema-2 descriptor.
-          $metadata = & ./scripts/windows/Test-WinUIReleasePackage.ps1 -PackageDirectory $directory
-          if ($metadata.schemaVersion -ne 2 -or $metadata.tag -cne $tag -or $metadata.commit -cne $commit) { throw 'Downloaded release identity differs from the exact source tag.' }
           . ./scripts/releases/ProjectUpdates.ps1
           $trustPath = 'packaging/windows/update-trust.json'
           $trust = Read-ProjectUpdateTrust $trustPath
           $feedDirectory = 'target/cnb-release-mirror/current-feed'
           [IO.Directory]::CreateDirectory($feedDirectory) | Out-Null
-          & gh release download ("update-" + $metadata.releaseChannel) --repo $repository --pattern SteamWrapper-update.json --dir $feedDirectory
+          & gh release download ("update-" + $tagIdentity.Channel) --repo $repository --pattern SteamWrapper-update.json --dir $feedDirectory
           if ($LASTEXITCODE -ne 0) { throw 'The previously signed channel feed is required.' }
-          $current = Read-ProjectUpdateEnvelope -Path (Join-Path $feedDirectory 'SteamWrapper-update.json') -TrustPath $trustPath -AllowExpired
+          $feedPath = Join-Path $feedDirectory 'SteamWrapper-update.json'
+          $current = Read-ProjectUpdateEnvelope -Path $feedPath -TrustPath $trustPath -AllowExpired
+          $directory = "target/cnb-release-mirror/$tag"
+          # Historical versions retain all seven files and their full validator.
+          # Compact downloads bind the three public files to signed Setup bytes
+          # and keep API/signature/source-note verification outside those files.
+          $metadata = & ./scripts/releases/Download-PublishedRelease.ps1 -Tag $tag -Commit $commit -PackageDirectory $directory -EnvelopePath $feedPath
           $candidate = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust $trust -IncludeCnbMirror
           Assert-ProjectUpdateCurrentRelease -Payload $candidate -ExistingPayload $current
-          Write-Output "Verified all seven published assets for $tag at $commit; the signed feed authorizes this exact release."
+          if ($metadata.schemaVersion -eq 3) {
+            "PUBLIC_RELEASE_VERIFICATION_PATH=$($metadata.verificationPath)" >> $env:GITHUB_ENV
+          }
+          Write-Output "Verified the complete public download set for $tag at $commit; the signed feed authorizes this exact release."
       - name: Push the matching source tag without rewriting history
+        if: ${{ !inputs.refreshPresentation }}
         shell: bash
         run: |
           set -euo pipefail
@@ -98,15 +87,27 @@ jobs:
           git -c credential.helper= -c "credential.helper=$helper" push https://cnb.cool/Nesoriel/SteamWrapper "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
       - name: Publish and download-verify identical CNB assets
         shell: pwsh
-        run: ./scripts/releases/Publish-CnbRelease.ps1 -PackageDirectory "target/cnb-release-mirror/$env:RELEASE_TAG" -Repository Nesoriel/SteamWrapper
+        run: |
+          $publication = @{ PackageDirectory = "target/cnb-release-mirror/$env:RELEASE_TAG"; Repository = 'Nesoriel/SteamWrapper' }
+          if ($env:PUBLIC_RELEASE_VERIFICATION_PATH) { $publication.PublicReleaseVerificationPath = $env:PUBLIC_RELEASE_VERIFICATION_PATH }
+          if ($env:REFRESH_PRESENTATION -eq 'true') { $publication.RefreshPresentation = $true }
+          ./scripts/releases/Publish-CnbRelease.ps1 @publication
       - name: Add the verified mirror to the same authorized update release
+        if: ${{ !inputs.refreshPresentation }}
         shell: pwsh
         env:
           STEAMWRAPPER_UPDATE_PRIVATE_KEY: ${{ secrets.STEAMWRAPPER_UPDATE_PRIVATE_KEY }}
         run: |
           $package = "target/cnb-release-mirror/$env:RELEASE_TAG"
-          ./scripts/releases/Publish-UpdateMetadata.ps1 -PackageDirectory $package -IncludeCnbMirror -RequireCurrentRelease
-          $metadata = & ./scripts/windows/Test-WinUIReleasePackage.ps1 -PackageDirectory $package
+          $publication = @{ PackageDirectory = $package }
+          if ($env:PUBLIC_RELEASE_VERIFICATION_PATH) {
+            $publication.PublicReleaseVerificationPath = $env:PUBLIC_RELEASE_VERIFICATION_PATH
+            . ./scripts/releases/PublicReleaseDownload.ps1
+            $metadata = Read-WinUIPublicReleaseVerification -PackageDirectory $package -VerificationPath $env:PUBLIC_RELEASE_VERIFICATION_PATH
+          } else {
+            $metadata = & ./scripts/windows/Test-WinUIReleasePackage.ps1 -PackageDirectory $package
+          }
+          ./scripts/releases/Publish-UpdateMetadata.ps1 @publication -IncludeCnbMirror -RequireCurrentRelease
           if ($metadata.releaseChannel -ceq 'stable') {
             . ./scripts/releases/ProjectUpdates.ps1
             $directory = 'target/cnb-release-mirror/preview-feed'
@@ -118,7 +119,7 @@ jobs:
               $candidate = New-ProjectUpdatePayload -ReleaseMetadata $metadata -Trust (Read-ProjectUpdateTrust $trustPath) -Channel preview -IncludeCnbMirror
               if ($current.release.tag -ceq $candidate.release.tag) {
                 Assert-ProjectUpdateCurrentRelease -Payload $candidate -ExistingPayload $current
-                ./scripts/releases/Publish-UpdateMetadata.ps1 -PackageDirectory $package -Channel preview -IncludeCnbMirror -RequireCurrentRelease
+                ./scripts/releases/Publish-UpdateMetadata.ps1 @publication -Channel preview -IncludeCnbMirror -RequireCurrentRelease
               }
             } else {
               # An absent preview feed need not block maintenance of stable.

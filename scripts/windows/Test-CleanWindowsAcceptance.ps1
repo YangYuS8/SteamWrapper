@@ -8,7 +8,9 @@ param(
     [string]$Tag = 'v0.2.5-preview.1',
     [string]$BaselineInstallerPath,
     [string]$InstallerPath,
-    [string]$CandidateInstallerDirectory
+    [string]$CandidateInstallerDirectory,
+    [string]$TrustPath = (Join-Path $PSScriptRoot '../../packaging/windows/update-trust.json'),
+    [string]$GhExecutable = 'gh'
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -31,11 +33,40 @@ function Resolve-AcceptanceRoot([string]$Value) {
     return $full
 }
 function Invoke-AcceptanceGh([string[]]$Arguments) {
-    $output = & gh @Arguments 2>&1 | Out-String
+    $global:LASTEXITCODE = 0
+    $output = & $GhExecutable @Arguments 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0) { throw ('GitHub acceptance command failed: ' + ($Arguments[0..1] -join ' ')) }
+    if ([Text.Encoding]::UTF8.GetByteCount($output) -gt 2MB) { throw 'Public acceptance API response exceeds its bounded limit.' }
     return $output.Trim()
 }
-function Get-PublicRelease([string]$ReleaseTag, [string]$Directory, [string]$CachedInstaller) {
+function Get-PublicRelease([string]$ReleaseTag, [string]$Directory, [string]$CachedInstaller, [switch]$BaselineOnly) {
+    $identity=Get-WinUIReleaseTag $ReleaseTag
+    if ([Version]$identity.Version -ge [Version]'0.2.8') {
+        $remoteCommit=Invoke-AcceptanceGh @('api', "repos/YangYuS8/SteamWrapper/commits/$ReleaseTag", '--jq', '.sha')
+        $stateText=Invoke-AcceptanceGh @('api', "repos/YangYuS8/SteamWrapper/releases/tags/$ReleaseTag", '--method', 'GET')
+        $state=ConvertFrom-WinUIInstallableJson $stateText
+        [IO.Directory]::CreateDirectory($Directory) | Out-Null
+        $options=@{ReleaseState=$state;Tag=$ReleaseTag;Commit=$remoteCommit}
+        if ($BaselineOnly) {$options.BaselineOnly=$true} else {
+            $envelope=Join-Path $Directory 'SteamWrapper-update.json'
+            $null=Invoke-AcceptanceGh @('release','download',('update-' + $identity.Channel),'--repo','YangYuS8/SteamWrapper','--pattern','SteamWrapper-update.json','--dir',$Directory)
+            $options.EnvelopePath=$envelope; $options.TrustPath=$TrustPath
+        }
+        $metadata=New-WinUIPublicInstallerDescriptor @options
+        $setupAsset=@($state.assets | Where-Object name -CEQ $metadata.installerAsset.fileName)[0]
+        $setupPath=Join-Path $Directory $setupAsset.name
+        if ($CachedInstaller) {
+            $cached=Get-Item -LiteralPath $CachedInstaller
+            if ($cached.PSIsContainer -or ($cached.Attributes -band [IO.FileAttributes]::ReparsePoint)) {throw 'A cached public installer must be a regular file.'}
+            Copy-Item -LiteralPath $cached.FullName -Destination $setupPath
+        } else {$null=Invoke-AcceptanceGh @('release','download',$ReleaseTag,'--repo','YangYuS8/SteamWrapper','--pattern',$setupAsset.name,'--dir',$Directory)}
+        Assert-CleanWindowsPreparedFile $setupPath $metadata.installerAsset.sha256 $metadata.installerAsset.bytes
+        if ((Invoke-AcceptanceGh @('api', "repos/YangYuS8/SteamWrapper/commits/$ReleaseTag", '--jq', '.sha')) -cne $remoteCommit) {throw 'Public acceptance tag moved during download.'}
+        $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $Directory 'public-installer.json') -Encoding utf8NoBOM
+        $stateText | Set-Content -LiteralPath (Join-Path $Directory 'public-api.json') -Encoding utf8NoBOM
+        $metadata | Add-Member acceptancePublicApi $state
+        return $metadata
+    }
     $state = Invoke-AcceptanceGh @('release', 'view', $ReleaseTag, '--repo', 'YangYuS8/SteamWrapper', '--json', 'tagName,isDraft,isPrerelease,assets') | ConvertFrom-Json
     Assert-CleanWindowsPublicRelease $state $ReleaseTag
     [IO.Directory]::CreateDirectory($Directory) | Out-Null
@@ -79,14 +110,10 @@ function Assert-PreparedInput([string]$Root, $Manifest) {
         foreach($key in @('fileName','bytes','sha256')) { if ($candidate.installerAsset.$key -cne $Manifest.target.$key) { throw 'Prepared candidate differs from its sealed installer build.' } }
     }
     if ((Get-CleanWindowsScenario $Manifest) -ceq 'CandidateUpgrade') {
-        Assert-CleanWindowsPreparedFile (Join-Path $Root 'input/baseline-release.json') $Manifest.baselinePublicReleaseSha256
-        Assert-CleanWindowsPreparedFile (Join-Path $Root 'input/baseline-api.json') $Manifest.baselinePublicApiSha256
-        $baselineMetadata=Get-Content -LiteralPath (Join-Path $Root 'input/baseline-release.json') -Raw | ConvertFrom-Json
-        $baselineApi=Get-Content -LiteralPath (Join-Path $Root 'input/baseline-api.json') -Raw | ConvertFrom-Json
-        Assert-CleanWindowsPublicRelease $baselineApi $Manifest.baseline.tag
-        $baselineAsset=@($baselineApi.assets | Where-Object name -CEQ $Manifest.baseline.fileName)[0]
-        Assert-CleanWindowsPublicInstaller $baselineMetadata $baselineAsset $Manifest.baseline.tag $Manifest.baseline.commit
-        if ($baselineMetadata.installerAsset.sha256 -cne $Manifest.baseline.sha256 -or $baselineMetadata.installerAsset.bytes -ne $Manifest.baseline.bytes) { throw 'Prepared public baseline differs from its pinned release descriptor.' }
+        Assert-CleanWindowsSealedPublicRecord -Root $Root -Manifest $Manifest -Role baseline -TrustPath $TrustPath
+    }
+    foreach($role in @('baseline','target')) {
+        if ($null -ne $Manifest.PSObject.Properties[$role + 'PublicAssetLayout'] -and -not ($role -ceq 'baseline' -and (Get-CleanWindowsScenario $Manifest) -ceq 'CandidateUpgrade')) {Assert-CleanWindowsSealedPublicRecord -Root $Root -Manifest $Manifest -Role $role -TrustPath $TrustPath}
     }
     $script = Join-Path $Root 'input/Invoke-CleanWindowsGuestAcceptance.ps1'
     Assert-CleanWindowsPreparedFile $script $Manifest.guestScriptSha256
@@ -132,12 +159,12 @@ if ($Action -eq 'Prepare') {
         $targetDirectory=$candidate.directory
         $target=[pscustomobject]@{tag=$Tag;version=$candidate.version;commit=$sourceHead;installerAsset=$candidate.installerAsset}
         if ($candidateUpgrade) {
-            $baseline=Get-PublicRelease $BaselineTag $baselineDirectory $BaselineInstallerPath
+            $baseline=Get-PublicRelease $BaselineTag $baselineDirectory $BaselineInstallerPath -BaselineOnly
         } else {
             $baselineDirectory=$candidate.directory; $BaselineTag=$Tag; $baseline=$target
         }
     } else {
-        $baseline = Get-PublicRelease $BaselineTag $baselineDirectory $BaselineInstallerPath
+        $baseline = Get-PublicRelease $BaselineTag $baselineDirectory $BaselineInstallerPath -BaselineOnly
         $target = Get-PublicRelease $Tag $targetDirectory $InstallerPath
         if ([Version]$target.version -le [Version]$baseline.version) { throw 'Acceptance requires a genuine newer numeric product version.' }
     }
@@ -163,10 +190,25 @@ if ($Action -eq 'Prepare') {
         $manifest.candidateBuildSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'installer-build.json')).Hash.ToLowerInvariant()
         $manifest.candidateDeploymentManifestSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'deployment-manifest.json')).Hash.ToLowerInvariant()
         if ($candidateUpgrade) {
-            Copy-Item -LiteralPath (Join-Path $baselineDirectory 'release.json') -Destination (Join-Path $inputRoot 'baseline-release.json')
-            $baseline.acceptancePublicApi | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $inputRoot 'baseline-api.json') -Encoding utf8
-            $manifest.baselinePublicReleaseSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'baseline-release.json')).Hash.ToLowerInvariant()
-            $manifest.baselinePublicApiSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'baseline-api.json')).Hash.ToLowerInvariant()
+            if ($null -eq $baseline.PSObject.Properties['publicAssetLayout']) {
+                Copy-Item -LiteralPath (Join-Path $baselineDirectory 'release.json') -Destination (Join-Path $inputRoot 'baseline-release.json')
+                $baseline.acceptancePublicApi | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $inputRoot 'baseline-api.json') -Encoding utf8
+                $manifest.baselinePublicReleaseSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'baseline-release.json')).Hash.ToLowerInvariant()
+                $manifest.baselinePublicApiSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'baseline-api.json')).Hash.ToLowerInvariant()
+            }
+        }
+    }
+    foreach($entry in @(@{role='baseline';metadata=$baseline;directory=$baselineDirectory},@{role='target';metadata=$target;directory=$targetDirectory})) {
+        if ($null -eq $entry.metadata.PSObject.Properties['publicAssetLayout']) {continue}
+        $role=$entry.role
+        $manifest[$role + 'PublicAssetLayout']=3
+        Copy-Item -LiteralPath (Join-Path $entry.directory 'public-installer.json') -Destination (Join-Path $inputRoot "$role-public-installer.json")
+        Copy-Item -LiteralPath (Join-Path $entry.directory 'public-api.json') -Destination (Join-Path $inputRoot "$role-api.json")
+        $manifest[$role + 'PublicReleaseSha256']=(Get-FileHash -LiteralPath (Join-Path $inputRoot "$role-public-installer.json")).Hash.ToLowerInvariant()
+        $manifest[$role + 'PublicApiSha256']=(Get-FileHash -LiteralPath (Join-Path $inputRoot "$role-api.json")).Hash.ToLowerInvariant()
+        if ($role -ceq 'target') {
+            Copy-Item -LiteralPath (Join-Path $entry.directory 'SteamWrapper-update.json') -Destination (Join-Path $inputRoot 'target-signed-update.json')
+            $manifest.targetPublicEnvelopeSha256=(Get-FileHash -LiteralPath (Join-Path $inputRoot 'target-signed-update.json')).Hash.ToLowerInvariant()
         }
     }
     New-CleanWindowsSandboxConfiguration $inputRoot $outputRoot $StartupMode | Set-Content -LiteralPath (Join-Path $root 'acceptance.wsb') -Encoding utf8

@@ -33,7 +33,7 @@ Steam 状态、时长、成就与云行为分别需要限定范围的验收。
 → 生成/复制启动项，由用户手动应用
 ```
 
-Manager 仍生成启动项，由用户手动应用。卸载提供独立、明确选择的功能：移除严格识别的 SteamWrapper 命令；它不能恢复未知的历史参数，也不是通用自动应用能力。限定范围的恢复和清理证据见[测试](/SteamWrapper/zh-cn/development/testing/)。
+Manager 仍生成启动项，由用户手动应用。当前源码另提供还原未保存编辑、明确恢复选中 AppID 的正常 Steam 启动，以及移除可编辑配置。恢复要求 Steam 正常退出，只清除精确识别、指向当前数据目录稳定 Runner 的命令，保留配置和无关设置。移除配置须完整扫描 Steam 账号文件，确认没有对该配置的残留引用。自定义命令保留，未知的历史参数无法重建。卸载继续提供独立恢复选择。通用自动应用及记录来源的历史参数恢复仍属后续工作，限定证据见[测试](/SteamWrapper/zh-cn/development/testing/)。
 
 ## Launch Options 合约
 
@@ -55,9 +55,11 @@ crates/runner                               # Steam 启动的 CLI 和进程生�
 crates/core                                 # 共享配置/路径契约
 ```
 
-`ProfileStore` 使用 Tomlyn 语法跨度只修改编辑字段，保留其他文本和未知数据。新 Windows 配置显式使用 `job`；旧配置省略 `wait_mode` 时仍为 `root`。保存采用协作锁、字节版本冲突检查、同目录刷新后的临时文件、原子替换和备份。内联／点号 profile 只读。非协作编辑器仍可能在最终检查与替换之间产生竞态。
+`ProfileStore` 使用 Tomlyn 语法跨度只修改编辑字段，保留其他文本和未知数据。新 Windows 配置显式使用 `job`；旧配置省略 `wait_mode` 时仍为 `root`。保存及删除一个受支持的显式 Windows 配置表采用协作锁、字节版本冲突检查、同目录刷新后的临时文件、原子替换和备份。删除保留全部无关 TOML，并在配置锁内、替换前再次核对 Steam 引用。内联／点号等不支持的布局保持只读。非协作编辑器仍可能在最终检查与替换之间产生竞态。
 
 `SteamScanner` 读取本地元数据／封面。`CoverService` 管理可选图片请求及有界缓存，WinUI 提供图片解码并异步更新可见行。`RunnerInstaller` 在报告就绪前检查摘要绑定的版本元数据与实际共享文件位置，使用稳定路径和原子替换，保留较新兼容版本，拒绝未知替换。GUI 不启动或等待游戏。跨语言测试和受控进程 fixture 验证实际 Rust 消费，不进入发布目录。
+
+Steam 游戏名由有界、只读解析器读取本地 `appcache/appinfo.vdf`，按当前支持的界面语言显示。元数据缺失、不可读或格式不支持时回退本地基础名称／manifest 名称，不发起联网请求。保存的名称匹配已知 Steam 默认名称时，可本地化其显示；自定义名称及保存的 TOML 不变。语言切换保留所选配置和未保存输入，选择器可按本地名称变体及 AppID 搜索。
 
 `ProfileSteamInstallation` 按 AppID 关联只读 Steam 路径用于显示，不序列化，也不覆盖 `game_dir`。后者是实际运行文件夹，可以位于 Steam 库外。详见[汉化目录分离](/SteamWrapper/zh-cn/guides/translated-games/)。
 
@@ -65,11 +67,13 @@ crates/core                                 # 共享配置/路径契约
 
 `apps/deployment-windows` 包含不依赖 GUI 的 C# 部署库和 NativeAOT `SteamWrapper.exe` 启动器／辅助程序。Manager 初始化前取得共享安装锁，保持到进程退出，健康确认绑定当前事务。Inno 和显式修复／回退／卸载共用独占锁及清单／日志引擎。首次安装可选择本地固定磁盘上经过验证的空目录；升级和修复使用已登记的程序位置，稳定数据目录仍独立存放。
 
-辅助程序启动 Manager 或经确认的 SteamWrapper 安装器，不启动游戏。卸载有一项严格限定的例外：按用户明确选择移除可识别的 SteamWrapper 启动选项和选定的自有数据。恢复启动命令或清理配置／Runner 前，Steam 必须退出；受影响账号文件先备份并保留其他字节。删除配置／Runner 还需确认没有残留 Runner 引用，且 Runner 字节匹配受支持元数据。默认卸载保留数据，所有路径都保留游戏、存档、Steam 恢复备份、更新信任状态及未知文件。详见[安装器所有权与恢复](/SteamWrapper/zh-cn/guides/installer-preview/)及[测试](/SteamWrapper/zh-cn/development/testing/)中的限定验收。
+辅助程序启动 Manager 或经确认的 SteamWrapper 安装器，不启动游戏。部署库的受保护 Steam 账号扫描／恢复逻辑供 Manager 明确选择 AppID 的操作共用；卸载另可移除已识别命令及选定的自有数据。恢复启动命令或清理配置／Runner 前，Steam 必须退出；受影响账号文件先备份并保留其他字节。删除配置／Runner 还需确认没有适用的残留 Runner 引用，且 Runner 字节匹配受支持元数据。默认卸载保留数据，所有路径都保留游戏、存档、Steam 恢复备份、更新信任状态及未知文件。详见[安装器所有权与恢复](/SteamWrapper/zh-cn/guides/installer-preview/)及[测试](/SteamWrapper/zh-cn/development/testing/)中的限定验收。
 
 `OfficialUpdateService` 使用内嵌公钥验证项目签名的发行元数据，检查有效期和防回退状态，再将受大小限制、通过摘要验证的安装包下载到 SteamWrapper 更新缓存。WinUI 提供手动检查、明确启用的启动检查、进度／取消和安装确认；便携版提供发布页下载入口。现有 NativeAOT 辅助程序等待 Manager 正常退出，复核下载文件后启动同一个 Inno 安装器，成功后重新打开 Manager，不终止游戏，也不替换稳定 Runner。
 
 公开的 `v0.2.7` 在 GitHub 和 CNB 上均有七个经过匿名下载核验的附件。两个来源的稳定／预览更新源均通过真实项目公钥签名、有效期及准确安装包绑定检查，每个通道的两站内容逐字节一致。GitHub 为主源，已验证的 CNB 可作为备用源；自动检查默认关闭。项目自有 PE 文件和 Setup 仍未使用 Authenticode 签名；Windows 代码签名为可选能力。这些发布检查没有执行公开 `v0.2.7` 安装器；此前真实公开网络安装流程验证的是 CNB `0.2.5` → `0.2.6`。各载荷和结果的准确范围见[测试](/SteamWrapper/zh-cn/development/testing/)。
+
+准备中的 `0.2.8` 打包采用内部第 3 版清单：仍校验完整七个包文件，版本发行仅公开 Setup、便携 ZIP 和 `SHA256SUMS`。历史七附件发行保持不可变。独立续期的项目签名更新源仍是必需部分，客户端载荷保留第 2 版格式、既有信任公钥及精确安装器绑定。Release 标题只含标签，GitHub 正文为英语，CNB 正文为简体中文。该源码变化不表示公开 `v0.2.8` 已交付。
 
 ### `crates/core`
 
@@ -124,7 +128,7 @@ WinUI 使用与 `profiles.toml` 同级的 `ui-settings.json`。没有 `language`
 
 ## 分发与稳定安装
 
-Windows 提供完整自包含布局、每用户 Inno 安装器及便携 ZIP。版本标签公开发布，手动工作流生成开发预览。日常 CI 只测试和编译，不打包应用。正式版支持范围为 Windows 11 24H2 x64，使用与 Steam 相同的 Windows 账户及普通权限。请从普通资源管理器或已安装快捷方式打开 Manager。通用自动写入 Steam 启动项尚未实现。当前下载见[安装指南](/SteamWrapper/zh-cn/guides/installation/)，准确触发方式见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
+Windows 提供完整自包含布局、每用户 Inno 安装器及便携 ZIP。版本标签公开发布，手动工作流生成开发预览。日常 CI 只测试和编译，不打包应用。相关路径过滤跳过无关检查，依赖缓存减少重复准备，一次捕获的 Runner 套件提供必需进程证据；版本标签仍须完整门禁通过。准备中改动的远程耗时尚未测定。正式版支持范围为 Windows 11 24H2 x64，使用与 Steam 相同的 Windows 账户及普通权限。请从普通资源管理器或已安装快捷方式打开 Manager。通用自动应用 Steam 启动项尚未实现；明确清除选中游戏命令属于上文的限定操作。当前下载见[安装指南](/SteamWrapper/zh-cn/guides/installation/)，准确触发方式见[分发说明](/SteamWrapper/zh-cn/development/distribution/)。
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\

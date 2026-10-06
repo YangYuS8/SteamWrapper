@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$Installable, [switch]$Preview)
+param([switch]$Installable, [switch]$Preview, [switch]$Compact)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $publisher = Join-Path $PSScriptRoot 'Publish-CnbRelease.ps1'
@@ -44,11 +44,13 @@ public sealed class CnbReleaseFixtureHandler : HttpMessageHandler {
 }
 $root = Join-Path ((Resolve-Path (Join-Path $PSScriptRoot '../..')).Path) ('target/cnb-release-tests/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root -Force | Out-Null
-$tag = if ($Preview) { 'v0.2.0-rc.1' } else { 'v0.2.0' }
-if ($Installable) {
+$version = if ($Compact) { '0.2.8' } else { '0.2.0' }
+$tag = if ($Preview) { "v$version-rc.1" } else { "v$version" }
+if ($Installable -or $Compact) {
     . (Join-Path $PSScriptRoot '../windows/WinUIInstallableRelease.TestFixtures.ps1')
+    . (Join-Path $PSScriptRoot '../windows/WinUIInstallableRelease.ps1')
     $fixture = New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'package') -Tag $tag
-    $package = New-WinUIInstallableReleaseTestPackage $fixture
+    $package = if ($Compact) { New-WinUIInstallableReleasePackage -Tag $tag -Commit $fixture.Commit -RepositoryRoot $fixture.RepositoryRoot -PublishDirectory $fixture.PublishDirectory -InstallerDirectory $fixture.InstallerDirectory -OutputDirectory $fixture.OutputDirectory } else { New-WinUIInstallableReleaseTestPackage $fixture }
 } else {
     . (Join-Path $PSScriptRoot '../windows/WinUIRelease.TestFixtures.ps1')
     $fixture = New-WinUIReleaseTestFixture -Root (Join-Path $root 'package') -Tag $tag
@@ -61,7 +63,8 @@ $tag = $metadata.tag
 $commit = $metadata.commit
 $archive = $metadata.archive.fileName
 $utf8 = [Text.UTF8Encoding]::new($false)
-$names = @(Get-WinUIReleaseAssetNames $metadata)
+$names = @(Get-WinUIPublicReleaseAssetNames $metadata)
+if ($Compact -and ($metadata.schemaVersion -ne 3 -or $names.Count -ne 3)) { throw 'Compact CNB publisher fixtures must select exactly three public assets.' }
 function New-FixtureClient {
     $handler = [CnbReleaseFixtureHandler]::new()
     @{ Handler = $handler; Client = [Net.Http.HttpClient]::new($handler) }
@@ -155,6 +158,13 @@ try {
         if ($fixture.Handler.Replies.Count -ne 0) { throw 'The release was not completely verified and published.' }
         $creation = $fixture.Handler.Bodies[2] | ConvertFrom-Json
         $publication = $fixture.Handler.Bodies[-2] | ConvertFrom-Json
+        foreach ($body in @($creation, $publication)) {
+            $presentationErrors = @()
+            if ($body.name -cne $tag) { $presentationErrors += 'CNB release title must be exactly the version tag.' }
+            if ($body.body -cne [IO.File]::ReadAllText((Join-Path $root "$tag.zh-CN.md"))) { $presentationErrors += 'CNB release body must contain only the Chinese release notes.' }
+            if ($presentationErrors.Count) { throw ($presentationErrors -join ' ') }
+        }
+        Write-Output 'PASS: CNB uses the tag as its title and only Chinese notes as its body, retaining both internal localized notes.'
         if (-not $creation.draft -or $creation.prerelease -ne $metadata.githubPrerelease -or $creation.make_latest -cne 'false' -or $publication.draft -or $publication.prerelease -ne $metadata.githubPrerelease -or $publication.make_latest -cne (-not $metadata.githubPrerelease).ToString().ToLowerInvariant()) { throw 'Release channel or latest flags were lost.' }
         for ($index = 0; $index -lt $fixture.Handler.Requests.Count; $index++) {
             if ($fixture.Handler.Requests[$index] -match '(uploads|downloads)\.example\.test' -and $fixture.Handler.Authenticated[$index]) { throw 'A CNB credential was forwarded to storage.' }
@@ -225,6 +235,39 @@ try {
         if (@($fixture.Handler.Requests | Where-Object { $_ -match '^(POST|PATCH|PUT) ' }).Count -ne 0) { throw 'An identical published release was mutated.' }
         Write-Output 'PASS: an identical published release is verified and reused without writes.'
     } finally { $fixture.Client.Dispose() }
+    $fixture = New-FixtureClient
+    try {
+        Add-TagReply $fixture.Handler
+        $fixture.Handler.Reply(200, (Get-FixtureRelease $false $names))
+        foreach ($name in $names) { Add-DownloadReply $fixture.Handler $name }
+        Add-TagReply $fixture.Handler
+        $fixture.Handler.Reply(200, '{}')
+        $presented = Get-FixtureRelease $false $names | ConvertFrom-Json -AsHashtable
+        $presented.name = $tag; $presented.body = [IO.File]::ReadAllText((Join-Path $root "$tag.zh-CN.md"))
+        $fixture.Handler.Reply(200, ($presented | ConvertTo-Json -Depth 8 -Compress))
+        $null = Invoke-CnbRelease -PackageDirectory $root -Client $fixture.Client -RefreshPresentation
+        $patches = @($fixture.Handler.Requests | Where-Object { $_ -match '^PATCH ' })
+        if ($patches.Count -ne 1 -or @($fixture.Handler.Requests | Where-Object { $_ -match '^(POST|PUT) ' }).Count) { throw 'Explicit presentation refresh changed release assets.' }
+        $index = [Array]::IndexOf($fixture.Handler.Requests.ToArray(), $patches[0])
+        $changed = $fixture.Handler.Bodies[$index] | ConvertFrom-Json -AsHashtable
+        if ($changed.Count -ne 2 -or $changed.name -cne $tag -or $changed.body -cne $presented.body) { throw 'Presentation refresh must patch only the tag title and exact Chinese body.' }
+        Write-Output 'PASS: explicit presentation refresh verifies published bytes and changes only the tag title and Chinese release body.'
+    } finally { $fixture.Client.Dispose() }
+    foreach ($scenario in @('missing', 'draft', 'moved-tag')) {
+        $fixture = New-FixtureClient
+        try {
+            Add-TagReply $fixture.Handler
+            if ($scenario -ceq 'missing') { $fixture.Handler.Reply(404, '{}') }
+            elseif ($scenario -ceq 'draft') { $fixture.Handler.Reply(200, (Get-FixtureRelease $true $names)) }
+            else {
+                $fixture.Handler.Reply(200, (Get-FixtureRelease $false $names))
+                foreach ($name in $names) { Add-DownloadReply $fixture.Handler $name }
+                Add-TagReply $fixture.Handler ('f' * 40)
+            }
+            Assert-Rejected "$scenario blocks explicit presentation refresh without writes" { Invoke-CnbRelease -PackageDirectory $root -Client $fixture.Client -RefreshPresentation } '*refresh*'
+            Assert-NoCnbWrites $fixture.Handler
+        } finally { $fixture.Client.Dispose() }
+    }
     $fixture = New-FixtureClient
     try {
         Add-TagReply $fixture.Handler ('0' * 40)

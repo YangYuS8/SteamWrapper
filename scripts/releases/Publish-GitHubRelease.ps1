@@ -15,7 +15,6 @@ $metadata = & (Join-Path $repoRoot 'scripts/windows/Test-WinUIReleasePackage.ps1
 $tag = $metadata.tag
 $prereleaseFlag = '--prerelease=' + $metadata.githubPrerelease.ToString().ToLowerInvariant()
 $latestFlag = '--latest=' + (-not $metadata.githubPrerelease).ToString().ToLowerInvariant()
-$releaseLabel = if ($metadata.githubPrerelease) { 'Windows preview' } else { 'Windows' }
 
 function Invoke-ReleaseGh([string[]]$Arguments, [switch]$AllowMissing) {
     $global:LASTEXITCODE = 0
@@ -37,7 +36,7 @@ function Get-ReleaseState {
 $remoteCommit = Invoke-ReleaseGh -Arguments @('api', "repos/$Repository/commits/$tag", '--jq', '.sha')
 if ($remoteCommit -ne $metadata.commit) { throw 'The remote GitHub tag no longer matches the built commit.' }
 $release = Get-ReleaseState
-$assetNames = @(Get-WinUIReleaseAssetNames $metadata)
+$assetNames = @(Get-WinUIPublicReleaseAssetNames $metadata)
 $verifyRoot = Join-Path $repoRoot ('target/github-release-verification/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $verifyRoot -Force | Out-Null
 
@@ -70,9 +69,9 @@ if ($null -ne $release) {
     }
 } else {
     $notesPath = Join-Path $verifyRoot 'release-notes.md'
-    $notes = [IO.File]::ReadAllText((Join-Path $package "$tag.en.md")) + "`n`n---`n`n" + [IO.File]::ReadAllText((Join-Path $package "$tag.zh-CN.md"))
+    $notes = [IO.File]::ReadAllText((Join-Path $package "$tag.en.md"))
     [IO.File]::WriteAllText($notesPath, $notes, [Text.UTF8Encoding]::new($false))
-    $null = Invoke-ReleaseGh -Arguments @('release', 'create', $tag, '--repo', $Repository, '--verify-tag', '--target', $metadata.commit, '--draft', $prereleaseFlag, '--latest=false', '--title', "SteamWrapper $tag ($releaseLabel)", '--notes-file', $notesPath)
+    $null = Invoke-ReleaseGh -Arguments @('release', 'create', $tag, '--repo', $Repository, '--verify-tag', '--target', $metadata.commit, '--draft', $prereleaseFlag, '--latest=false', '--title', $tag, '--notes-file', $notesPath)
     $release = Get-ReleaseState
     if ($null -eq $release -or $release.tagName -cne $tag -or -not $release.isDraft -or $release.isPrerelease -isnot [bool] -or $release.isPrerelease -ne $metadata.githubPrerelease -or $release.targetCommitish -ne $metadata.commit) { throw 'GitHub did not create the expected draft release.' }
 }

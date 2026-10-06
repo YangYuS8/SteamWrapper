@@ -29,6 +29,7 @@ internal sealed class AddGameDialog : ContentDialog
     public SteamGame? SelectedGame { get; private set; }
     public bool Manual { get; private set; }
     public IReadOnlyList<SteamGame> DiscoveredGames => scanned;
+    public string? DiscoveredSteamRoot { get; private set; }
 
     public AddGameDialog(Window owner, Localizer localizer, DataPaths paths, UiSettingsStore settings)
     {
@@ -204,6 +205,7 @@ internal sealed class AddGameDialog : ContentDialog
             var result = await new SteamScanner().ScanAsync(root, cancellation.Token);
             if (closed || cancellation.IsCancellationRequested) return;
             scanned = result.Games;
+            DiscoveredSteamRoot = result.SteamRoot;
             Filter();
             StartCovers(allowDownloads && !changingCoverPreference && downloadCovers.IsEnabled);
             notice.Text = result.Warnings.Count > 0 ? string.Join("\n", result.WarningTexts.Select(localizer.Format)) : scanned.Count == 0 ? localizer["NoGames"] : localizer.Format(Messages.Text("GamesFound", scanned.Count));
@@ -283,7 +285,11 @@ internal sealed class AddGameDialog : ContentDialog
         var selected = ((games.SelectedItem as ListViewItem)?.Tag as SteamGame)?.AppId;
         coverViews.Clear();
         games.Items.Clear();
-        foreach (var game in scanned.Where(g => g.Name.Contains(search.Text, StringComparison.CurrentCultureIgnoreCase) || g.AppId.Contains(search.Text, StringComparison.Ordinal)))
+        foreach (var game in scanned.Where(g => g.GetDisplayName(localizer.Language).Contains(search.Text, StringComparison.CurrentCultureIgnoreCase)
+            || g.Name.Contains(search.Text, StringComparison.CurrentCultureIgnoreCase)
+            || (g.MetadataName?.Contains(search.Text, StringComparison.CurrentCultureIgnoreCase) ?? false)
+            || g.LocalizedNames.Values.Any(name => name.Contains(search.Text, StringComparison.CurrentCultureIgnoreCase))
+            || g.AppId.Contains(search.Text, StringComparison.Ordinal)))
         {
             var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Padding = new Thickness(0, 4, 0, 4) };
             var cover = new Grid { Width = 40, Height = 56, CornerRadius = new CornerRadius(4), Background = (Microsoft.UI.Xaml.Media.Brush)Microsoft.UI.Xaml.Application.Current.Resources["CardBackgroundFillColorDefaultBrush"] };
@@ -292,11 +298,12 @@ internal sealed class AddGameDialog : ContentDialog
             if (resolvedCovers.TryGetValue(game.AppId, out var path)) ShowCover(cover, path);
             row.Children.Add(cover);
             var label = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 4, MaxWidth = 320 };
-            label.Children.Add(new TextBlock { Text = game.Name, TextWrapping = TextWrapping.Wrap, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+            var displayName = game.GetDisplayName(localizer.Language);
+            label.Children.Add(new TextBlock { Text = displayName, TextWrapping = TextWrapping.Wrap, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
             label.Children.Add(new TextBlock { Text = $"AppID {game.AppId}", FontSize = 12, Opacity = .65 });
             row.Children.Add(label);
             var item = new ListViewItem { Content = row, Tag = game };
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, game.Name);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, displayName);
             games.Items.Add(item);
             if (game.AppId == selected) games.SelectedItem = item;
         }

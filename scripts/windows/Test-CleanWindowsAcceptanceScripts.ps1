@@ -166,6 +166,23 @@ Assert-AcceptanceScriptReject { Assert-CleanWindowsPublicInstaller $metadata $se
 $metadata.releaseChannel='stable'
 Assert-AcceptanceScriptReject { Assert-CleanWindowsPublicInstaller $metadata $setupAsset 'v0.2.6' ('c' * 40) } 'Installer metadata from a different public commit was accepted.'
 
+$compactTag='v0.2.8'; $compactCommit='c' * 40
+$compactState=[pscustomobject]@{tag_name=$compactTag;target_commitish=$compactCommit;draft=$false;prerelease=$false;assets=@(
+    [pscustomobject]@{name="SteamWrapper-$compactTag-win-x64-setup.exe";size=$length;digest=('sha256:' + $hash);state='uploaded'},
+    [pscustomobject]@{name="SteamWrapper-$compactTag-win-x64.zip";size=10;digest=('sha256:' + ('d' * 64));state='uploaded'},
+    [pscustomobject]@{name='SHA256SUMS';size=100;digest=('sha256:' + ('e' * 64));state='uploaded'}
+)}
+. (Join-Path $PSScriptRoot '../releases/PublicReleaseDownload.ps1')
+$compactDescriptor=New-WinUIPublicInstallerDescriptor -ReleaseState $compactState -Tag $compactTag -Commit $compactCommit -BaselineOnly
+Assert-CleanWindowsPublicApiInstaller -Descriptor $compactDescriptor -ReleaseState $compactState -Tag $compactTag -Commit $compactCommit -BaselineOnly
+Assert-AcceptanceScript ($compactDescriptor.kind -ceq 'PublicApiInstaller' -and $compactDescriptor.baselineScope -and -not $compactDescriptor.signatureVerified) 'Compact acceptance baseline claimed signed target or internal build evidence.'
+$compactDescriptor.baselineScope=$false
+Assert-AcceptanceScriptReject { Assert-CleanWindowsPublicApiInstaller -Descriptor $compactDescriptor -ReleaseState $compactState -Tag $compactTag -Commit $compactCommit -BaselineOnly } 'Compact historical baseline lost its explicit API-only scope.'
+$compactDescriptor.baselineScope=$true
+$compactDescriptor.installerAsset.bytes++
+Assert-AcceptanceScriptReject { Assert-CleanWindowsPublicApiInstaller -Descriptor $compactDescriptor -ReleaseState $compactState -Tag $compactTag -Commit $compactCommit -BaselineOnly } 'Compact acceptance admitted an installer descriptor that differs from its API receipt.'
+$compactDescriptor.installerAsset.bytes--
+
 # Exercise the actual inbox-compatible guest asset parser without running its
 # guarded installer body. Only inert text fixtures are copied here.
 $parseTokens=$null
@@ -173,11 +190,81 @@ $parseErrors=$null
 $guestPath=Join-Path $PSScriptRoot 'Invoke-CleanWindowsGuestAcceptance.ps1'
 $guestAst=[Management.Automation.Language.Parser]::ParseFile($guestPath,[ref]$parseTokens,[ref]$parseErrors)
 Assert-AcceptanceScript ($parseErrors.Count -eq 0) 'Guest script parsing failed.'
-foreach($functionName in @('Assert-Acceptance','Read-AcceptanceAsset','Test-AcceptanceInboxRuntimePackage','Get-AcceptancePayloadRuntimeModules','Assert-AcceptanceManualAppIdAction','Get-AcceptanceExitDiagnostic','Read-AcceptanceBoundedDiagnosticFile','Get-AcceptanceNumericVersion','Get-AcceptanceScenario')) {
+foreach($functionName in @('Assert-Acceptance','Read-AcceptanceAsset','Test-AcceptanceInboxRuntimePackage','Get-AcceptancePayloadRuntimeModules','Assert-AcceptanceManualAppIdAction','Get-AcceptanceExitDiagnostic','Read-AcceptanceBoundedDiagnosticFile','Get-AcceptanceNumericVersion','Get-AcceptanceScenario','Get-AcceptancePublicRecordName','Read-AcceptancePublicSourceRecord')) {
     $definition=$guestAst.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -ceq $functionName},$true)
     Assert-AcceptanceScript ($null -ne $definition) ('Missing pure guest helper: ' + $functionName)
     . ([scriptblock]::Create($definition.Extent.Text))
 }
+$compactSealedRoot=Join-Path $root 'compact-sealed'; $compactSealedInput=Join-Path $compactSealedRoot 'input'
+[IO.Directory]::CreateDirectory($compactSealedInput) | Out-Null
+$compactDescriptor | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $compactSealedInput 'baseline-public-installer.json') -Encoding utf8NoBOM
+$compactState | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $compactSealedInput 'baseline-api.json') -Encoding utf8NoBOM
+$compactManifest=[pscustomobject]@{baseline=[pscustomobject]@{tag=$compactTag;commit=$compactCommit;fileName=$compactDescriptor.installerAsset.fileName;bytes=$compactDescriptor.installerAsset.bytes;sha256=$compactDescriptor.installerAsset.sha256};baselinePublicAssetLayout=3;baselinePublicReleaseSha256=(Get-FileHash -LiteralPath (Join-Path $compactSealedInput 'baseline-public-installer.json')).Hash.ToLowerInvariant();baselinePublicApiSha256=(Get-FileHash -LiteralPath (Join-Path $compactSealedInput 'baseline-api.json')).Hash.ToLowerInvariant()}
+Assert-CleanWindowsSealedPublicRecord -Root $compactSealedRoot -Manifest $compactManifest -Role baseline
+Assert-AcceptanceScript ((Get-AcceptancePublicRecordName $compactManifest baseline) -ceq 'baseline-public-installer.json') 'Guest compact baseline still required unavailable private release.json.'
+$guestCompactEvidence=Read-AcceptancePublicSourceRecord $compactManifest $compactSealedInput baseline
+Assert-AcceptanceScript ($guestCompactEvidence.baselineScope -and -not $guestCompactEvidence.signatureVerified) 'Guest compact baseline promoted unsigned API evidence into signature verification.'
+[IO.File]::AppendAllText((Join-Path $compactSealedInput 'baseline-public-installer.json'),' ')
+Assert-AcceptanceScriptReject { Assert-CleanWindowsSealedPublicRecord -Root $compactSealedRoot -Manifest $compactManifest -Role baseline } 'Host admitted a changed compact baseline descriptor seal.'
+Assert-AcceptanceScriptReject { Read-AcceptancePublicSourceRecord $compactManifest $compactSealedInput baseline } 'Guest admitted a changed compact baseline descriptor seal.'
+
+. (Join-Path $PSScriptRoot 'WinUIInstallableRelease.TestFixtures.ps1')
+$futureCandidate=New-WinUIInstallableReleaseTestFixture -Root (Join-Path $root 'future-candidate') -Tag 'v0.2.9'
+$publicFixtureKey=[Security.Cryptography.ECDsa]::Create([Security.Cryptography.ECCurve+NamedCurves]::nistP256)
+$previousPublicFixture=$env:STEAMWRAPPER_CLEAN_PUBLIC_FIXTURE
+try {
+    $futureState=ConvertFrom-WinUIInstallableJson ($compactState | ConvertTo-Json -Depth 8)
+    $futureState.tag_name='v0.2.9';$futureState.target_commitish='d' * 40
+    foreach($record in $futureState.assets) {$record.name=$record.name.Replace('v0.2.8','v0.2.9')}
+    $fixtureTrust=[pscustomobject]@{schemaVersion=1;keys=@([pscustomobject]@{keyId='fixture';subjectPublicKeyInfo=[Convert]::ToBase64String($publicFixtureKey.ExportSubjectPublicKeyInfo())});githubRepository='YangYuS8/SteamWrapper';cnbRepository='Nesoriel/SteamWrapper'}
+    $fixtureTrustPath=Join-Path $root 'public-trust.json';$fixtureTrust | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $fixtureTrustPath -Encoding utf8NoBOM
+    $authorizedMetadata=[pscustomobject]@{schemaVersion=2;tag='v0.2.9';version='0.2.9';commit=$futureState.target_commitish;minimumWindowsVersion='10.0.26100.0';releaseChannel='stable';installerAsset=[pscustomobject]@{fileName='SteamWrapper-v0.2.9-win-x64-setup.exe';bytes=$length;sha256=$hash}}
+    $fixtureEnvelopePath=Join-Path $root 'public-signed-update.json'
+    $fixturePayload=New-ProjectUpdatePayload -ReleaseMetadata $authorizedMetadata -Trust $fixtureTrust
+    Write-ProjectUpdateEnvelope -Payload $fixturePayload -Key $publicFixtureKey -KeyId fixture -Path $fixtureEnvelopePath
+    $fixtureStatePath=Join-Path $root 'public-fixture.json'
+    @{releases=@{'v0.2.8'=$compactState;'v0.2.9'=$futureState};installer=$fixture;envelope=$fixtureEnvelopePath} | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $fixtureStatePath -Encoding utf8NoBOM
+    $env:STEAMWRAPPER_CLEAN_PUBLIC_FIXTURE=$fixtureStatePath
+    $fixtureGh=Join-Path $root 'public-gh.ps1'
+    [IO.File]::WriteAllText($fixtureGh,@'
+$global:LASTEXITCODE=0
+$fixture=Get-Content -LiteralPath $env:STEAMWRAPPER_CLEAN_PUBLIC_FIXTURE -Raw | ConvertFrom-Json -AsHashtable
+$a=@($args)
+function Option([string]$Name) {$a[[Array]::IndexOf($a,$Name)+1]}
+if ($a[0] -ceq 'api') {
+    $tag=$a[1].Split('/')[-1]
+    if ($a[1] -like '*/commits/*') {$fixture.releases[$tag].target_commitish;return}
+    if ($a[1] -like '*/releases/tags/*') {$fixture.releases[$tag] | ConvertTo-Json -Depth 10 -Compress;return}
+}
+if ($a[0] -ceq 'release' -and $a[1] -ceq 'download') {
+    $name=Option '--pattern'
+    $source=if($name -ceq 'SteamWrapper-update.json'){$fixture.envelope}else{$fixture.installer}
+    Copy-Item -LiteralPath $source -Destination (Join-Path (Option '--dir') $name)
+    return
+}
+throw 'An acceptance fixture attempted an unexpected network/write command.'
+'@,[Text.UTF8Encoding]::new($false))
+    $futurePrepared=& $entry -Action Prepare -StartupMode AfterLogin -CandidateInstallerDirectory $futureCandidate.InstallerDirectory -BaselineTag v0.2.8 -Tag v0.2.9 -BaselineInstallerPath $fixture -GhExecutable $fixtureGh -TrustPath $fixtureTrustPath | Out-String
+    $futureRoot=($futurePrepared -split "`r?`n" | Where-Object {$_ -match '^Prepared CandidateUpgrade'} | Select-Object -First 1) -replace '^Prepared CandidateUpgrade installers and isolated Sandbox configuration: ',''
+    $futureManifest=Get-Content -LiteralPath (Join-Path $futureRoot 'input/acceptance-input.json') -Raw | ConvertFrom-Json
+    Assert-AcceptanceScript ($futureManifest.baselinePublicAssetLayout -eq 3 -and -not (Test-Path -LiteralPath (Join-Path $futureRoot 'input/baseline-release.json'))) 'CandidateUpgrade compact baseline still required or fabricated internal release.json.'
+    Assert-CleanWindowsSealedPublicRecord -Root $futureRoot -Manifest $futureManifest -Role baseline
+    $futureGuest=Read-AcceptancePublicSourceRecord $futureManifest (Join-Path $futureRoot 'input') baseline
+    Assert-AcceptanceScript ($futureGuest.baselineScope -and -not $futureGuest.signatureVerified) 'Prepared candidate upgrade lost API-only historical baseline scope.'
+    $publicPrepared=& $entry -Action Prepare -StartupMode AfterLogin -BaselineTag v0.2.8 -Tag v0.2.9 -BaselineInstallerPath $fixture -InstallerPath $fixture -GhExecutable $fixtureGh -TrustPath $fixtureTrustPath | Out-String
+    $publicRoot=($publicPrepared -split "`r?`n" | Where-Object {$_ -match '^Prepared PublicUpgrade'} | Select-Object -First 1) -replace '^Prepared PublicUpgrade installers and isolated Sandbox configuration: ',''
+    $publicManifest=Get-Content -LiteralPath (Join-Path $publicRoot 'input/acceptance-input.json') -Raw | ConvertFrom-Json
+    Assert-CleanWindowsSealedPublicRecord -Root $publicRoot -Manifest $publicManifest -Role target -TrustPath $fixtureTrustPath
+    $publicGuest=Read-AcceptancePublicSourceRecord $publicManifest (Join-Path $publicRoot 'input') target
+    Assert-AcceptanceScript ($publicManifest.baselinePublicAssetLayout -eq 3 -and $publicManifest.targetPublicAssetLayout -eq 3 -and $publicGuest.signatureVerified -and -not $publicGuest.baselineScope) 'PublicUpgrade compact target lost its required signed authorization.'
+    $publicEvidence=[pscustomobject]@{scenario='PublicUpgrade';localCandidate=$false;unpublishedCandidate=$false;numericUpgradeTested=$true;baselinePublicInstallerVerification=(Read-AcceptancePublicSourceRecord $publicManifest (Join-Path $publicRoot 'input') baseline);targetPublicInstallerVerification=$publicGuest}
+    Assert-CleanWindowsEvidenceScope $publicManifest $publicEvidence
+    $publicEvidence.baselinePublicInstallerVerification.signatureVerified=$true
+    Assert-AcceptanceScriptReject {Assert-CleanWindowsEvidenceScope $publicManifest $publicEvidence} 'Historical API-only baseline evidence claimed project-signature verification.'
+    $badEnvelope=ConvertFrom-WinUIInstallableJson ([IO.File]::ReadAllText($fixtureEnvelopePath));$badEnvelope.signature=[Convert]::ToBase64String([byte[]]::new(64))
+    $badEnvelope | ConvertTo-Json -Compress | Set-Content -LiteralPath $fixtureEnvelopePath -Encoding utf8NoBOM
+    Assert-AcceptanceScriptReject {& $entry -Action Prepare -StartupMode AfterLogin -BaselineTag v0.2.8 -Tag v0.2.9 -GhExecutable $fixtureGh -TrustPath $fixtureTrustPath} 'A bad current target signature silently fell back to API-only baseline verification.'
+} finally {$env:STEAMWRAPPER_CLEAN_PUBLIC_FIXTURE=$previousPublicFixture;$publicFixtureKey.Dispose()}
 Assert-AcceptanceScript ((Get-AcceptanceScenario $candidateInput) -ceq 'CandidateFirstInstall') 'Inbox-compatible guest scenario validation rejected a correctly marked candidate.'
 foreach($change in @(@{key='scenario';value='PublicUpgrade'},@{key='scenario';value='SomethingElse'},@{key='localCandidate';value=$false},@{key='workingCopyDirty';value='true'},@{key='sourceHeadCommit';value=('a' * 40)})) {
     $original=$candidateInput.($change.key)

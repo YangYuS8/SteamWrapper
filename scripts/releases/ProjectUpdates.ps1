@@ -40,7 +40,7 @@ function New-ProjectUpdatePayload {
     $metadata = $ReleaseMetadata
     $tagIdentity = Get-WinUIReleaseTag $metadata.tag
     if (-not $Channel) { $Channel = $metadata.releaseChannel }
-    if ($metadata.schemaVersion -ne 2 -or $metadata.releaseChannel -notin @('preview', 'stable') -or
+    if ($metadata.schemaVersion -notin @(2, 3) -or $metadata.releaseChannel -notin @('preview', 'stable') -or
         $metadata.releaseChannel -cne $tagIdentity.Channel -or $metadata.version -cne $tagIdentity.Version -or
         ($Channel -cne $metadata.releaseChannel -and -not ($metadata.releaseChannel -ceq 'stable' -and $Channel -ceq 'preview')) -or
         $metadata.commit -notmatch '^[a-f0-9]{40}$') { throw 'Project updates require a versioned installable release.' }

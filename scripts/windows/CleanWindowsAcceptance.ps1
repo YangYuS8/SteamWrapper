@@ -1,6 +1,7 @@
 # Host-only pure helpers. Importing this file does not launch Sandbox or Setup.
 . (Join-Path $PSScriptRoot 'WinUIRelease.ps1')
 . (Join-Path $PSScriptRoot 'WinUIInstallableRelease.ps1')
+. (Join-Path $PSScriptRoot '../releases/PublicReleaseDownload.ps1')
 
 function Get-CleanWindowsScenario($Manifest) {
     $property=$Manifest.PSObject.Properties['scenario']
@@ -47,6 +48,13 @@ function Assert-CleanWindowsEvidenceScope($Manifest, $Evidence) {
         $Evidence.stableRunnerUpdated -isnot [bool] -or -not $Evidence.stableRunnerUpdated -or
         $Evidence.baselineRunnerOperationalTested -isnot [bool] -or $Evidence.baselineRunnerOperationalTested)) {
         throw 'Candidate upgrade must verify the new stable Runner without claiming an operational baseline test.'
+    }
+    foreach($role in @('baseline','target')) {
+        if ($null -eq $Manifest.PSObject.Properties[$role + 'PublicAssetLayout']) {continue}
+        $proof=$Evidence.($role + 'PublicInstallerVerification');$baseline=$role -ceq 'baseline'
+        $expectedKind=if($baseline){'public-api-baseline'}else{'project-signature'}
+        if ($proof.publicAssetLayout -ne 3 -or $proof.verificationKind -cne $expectedKind -or $proof.baselineScope -isnot [bool] -or $proof.baselineScope -ne $baseline -or
+            $proof.signatureVerified -isnot [bool] -or $proof.signatureVerified -ne (-not $baseline) -or $proof.sourceCommit -cne $Manifest.$role.commit) {throw 'Guest compact public installer evidence lost its explicit baseline or signed-target scope.'}
     }
 }
 function Read-CleanWindowsCandidateInstaller([string]$Directory, [string]$Tag) {
@@ -111,6 +119,64 @@ function Assert-CleanWindowsPublicInstaller($Metadata, $SetupAsset, [string]$Tag
     foreach ($key in @('fileName', 'bytes', 'sha256')) {
         if ($Metadata.installerBuild.installer.$key -cne $Metadata.installerAsset.$key) { throw 'The sealed installer build differs from the public Setup asset.' }
     }
+}
+
+function Assert-CleanWindowsPublicApiInstaller {
+    [CmdletBinding(DefaultParameterSetName = 'Signed')]
+    param(
+        [Parameter(Mandatory)]$Descriptor, [Parameter(Mandatory)]$ReleaseState,
+        [Parameter(Mandatory)][string]$Tag, [Parameter(Mandatory)][string]$Commit,
+        [Parameter(Mandatory, ParameterSetName = 'Baseline')][switch]$BaselineOnly,
+        [Parameter(ParameterSetName = 'Signed')][string]$EnvelopePath,
+        [Parameter(ParameterSetName = 'Signed')][string]$TrustPath = (Join-Path $PSScriptRoot '../../packaging/windows/update-trust.json')
+    )
+    $options=@{ReleaseState=$ReleaseState;Tag=$Tag;Commit=$Commit}
+    if ($BaselineOnly) {$options.BaselineOnly=$true} else {$options.EnvelopePath=$EnvelopePath;$options.TrustPath=$TrustPath}
+    $expected=New-WinUIPublicInstallerDescriptor @options
+    Assert-WinUIInstallableFields $Descriptor @($expected.PSObject.Properties.Name)
+    foreach($field in @('schemaVersion','kind','publicAssetLayout','verificationKind','baselineScope','signatureVerified','tag','version','commit','releaseChannel')) {
+        $actual=$Descriptor.$field
+        $number=$field -cin @('schemaVersion','publicAssetLayout')
+        if ($actual -cne $expected.$field -or ($number -and $actual -isnot [int] -and $actual -isnot [long]) -or
+            (-not $number -and ($null -eq $actual -or $actual.GetType() -ne $expected.$field.GetType()))) { throw 'Compact acceptance descriptor differs from its explicit verified public installer scope.' }
+    }
+    foreach($name in @('archive','installerAsset')) {
+        Assert-WinUIInstallableFields $Descriptor.$name @('fileName','bytes','sha256')
+        foreach($field in @('fileName','bytes','sha256')) {
+            if ($Descriptor.$name.$field -cne $expected.$name.$field) { throw 'Compact acceptance descriptor differs from its complete public API receipt.' }
+        }
+    }
+}
+
+function Get-CleanWindowsPublicRecordName($Manifest, [ValidateSet('baseline','target')][string]$Role) {
+    $property=$Manifest.PSObject.Properties[$Role + 'PublicAssetLayout']
+    if ($null -eq $property) { return "$Role-release.json" }
+    if (($property.Value -isnot [int] -and $property.Value -isnot [long]) -or $property.Value -ne 3 -or [Version](Get-WinUIReleaseTag $Manifest.$Role.tag).Version -lt [Version]'0.2.8') { throw 'Unexpected sealed public asset layout.' }
+    return "$Role-public-installer.json"
+}
+
+function Assert-CleanWindowsSealedPublicRecord {
+    param([string]$Root, $Manifest, [ValidateSet('baseline','target')][string]$Role, [string]$TrustPath = (Join-Path $PSScriptRoot '../../packaging/windows/update-trust.json'))
+    $inputRoot=Join-Path $Root 'input'; $recordName=Get-CleanWindowsPublicRecordName $Manifest $Role
+    $recordPath=Join-Path $inputRoot $recordName; $apiPath=Join-Path $inputRoot "$Role-api.json"
+    Assert-CleanWindowsPreparedFile $recordPath $Manifest.($Role + 'PublicReleaseSha256')
+    Assert-CleanWindowsPreparedFile $apiPath $Manifest.($Role + 'PublicApiSha256')
+    $metadata=ConvertFrom-WinUIInstallableJson (Read-WinUIReleaseText $recordPath $inputRoot 2MB)
+    $state=ConvertFrom-WinUIInstallableJson (Read-WinUIReleaseText $apiPath $inputRoot 2MB)
+    if ($recordName -ceq "$Role-public-installer.json") {
+        $options=@{Descriptor=$metadata;ReleaseState=$state;Tag=$Manifest.$Role.tag;Commit=$Manifest.$Role.commit}
+        if ($Role -ceq 'baseline') {$options.BaselineOnly=$true} else {
+            $envelopePath=Join-Path $inputRoot 'target-signed-update.json'
+            Assert-CleanWindowsPreparedFile $envelopePath $Manifest.targetPublicEnvelopeSha256
+            $options.EnvelopePath=$envelopePath; $options.TrustPath=$TrustPath
+        }
+        Assert-CleanWindowsPublicApiInstaller @options
+    } else {
+        Assert-CleanWindowsPublicRelease $state $Manifest.$Role.tag
+        $asset=@($state.assets | Where-Object name -CEQ $Manifest.$Role.fileName)[0]
+        Assert-CleanWindowsPublicInstaller $metadata $asset $Manifest.$Role.tag $Manifest.$Role.commit
+    }
+    if ($metadata.installerAsset.sha256 -cne $Manifest.$Role.sha256 -or $metadata.installerAsset.bytes -ne $Manifest.$Role.bytes) { throw 'Prepared public installer differs from its sealed public descriptor.' }
 }
 
 function New-CleanWindowsSandboxConfiguration([string]$InputRoot, [string]$OutputRoot, [string]$StartupMode) {

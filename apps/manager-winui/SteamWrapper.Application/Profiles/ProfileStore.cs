@@ -18,6 +18,27 @@ public sealed class ProfileStore
 
     public ProfileStore(string path) => this.path = System.IO.Path.GetFullPath(path);
 
+    public Task<ProfileSnapshot> DeleteAsync(ProfileSnapshot snapshot, string key,
+        CancellationToken cancellationToken = default) => DeleteCoreAsync(snapshot, key, null, cancellationToken);
+
+    /// <summary>Rechecks a caller's removal prerequisites under the profile writer lease and before replacement.</summary>
+    public Task<ProfileSnapshot> DeleteAsync(ProfileSnapshot snapshot, string key,
+        Func<CancellationToken, Task> beforeDelete, CancellationToken cancellationToken = default)
+        => DeleteCoreAsync(snapshot, key, beforeDelete ?? throw new ArgumentNullException(nameof(beforeDelete)), cancellationToken);
+
+    public bool CanDelete(ProfileSnapshot snapshot, string key)
+    {
+        try { _ = RemoveProfile(snapshot, key); return true; }
+        catch (ProfileStoreException) { return false; }
+    }
+
+    private Task<ProfileSnapshot> DeleteCoreAsync(ProfileSnapshot snapshot, string key,
+        Func<CancellationToken, Task>? beforeDelete, CancellationToken cancellationToken)
+    {
+        var text = RemoveProfile(snapshot, key);
+        return CommitAsync(snapshot, text, beforeDelete, cancellationToken);
+    }
+
     public async Task<ProfileSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -50,19 +71,34 @@ public sealed class ProfileStore
             throw Messages.Profile("ProfileConflict");
 
         var text = Edit(snapshot.Source, existing, profile);
+        return await CommitAsync(snapshot, text, null, cancellationToken);
+    }
+
+    private async Task<ProfileSnapshot> CommitAsync(ProfileSnapshot snapshot, string text,
+        Func<CancellationToken, Task>? beforeWrite, CancellationToken cancellationToken)
+    {
         var output = Utf8.GetBytes(text);
         // Catch unsupported TOML layouts before creating backups or touching the original.
         var next = Snapshot(text, output);
         var writer = Writers.GetOrAdd(path, _ => new SemaphoreSlim(1, 1));
         await writer.WaitAsync(cancellationToken);
         string? temporary = null;
+        var prerequisiteFailed = false;
+        async Task CheckPrerequisiteAsync()
+        {
+            if (beforeWrite is null) return;
+            try { await beforeWrite(cancellationToken); }
+            catch { prerequisiteFailed = true; throw; }
+        }
         try
         {
             var directory = System.IO.Path.GetDirectoryName(path)!;
+            CheckWriteLocations();
             Directory.CreateDirectory(directory);
             await using var lease = OpenWriterLease();
             await VerifyRevisionAsync(snapshot, cancellationToken);
             if (snapshot.Bytes is not null && snapshot.Bytes.AsSpan().SequenceEqual(output)) return next;
+            await CheckPrerequisiteAsync();
 
             temporary = System.IO.Path.Combine(directory, $".{System.IO.Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
             await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write,
@@ -73,6 +109,8 @@ public sealed class ProfileStore
                 stream.Flush(flushToDisk: true);
             }
             cancellationToken.ThrowIfCancellationRequested();
+            await CheckPrerequisiteAsync();
+            CheckWriteLocations();
             await VerifyRevisionAsync(snapshot, cancellationToken);
             if (snapshot.Bytes is null)
             {
@@ -88,7 +126,7 @@ public sealed class ProfileStore
             temporary = null;
             return next;
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        catch (Exception error) when (!prerequisiteFailed && error is IOException or UnauthorizedAccessException)
         {
             throw Messages.Profile("ProfilesSave", error);
         }
@@ -102,6 +140,48 @@ public sealed class ProfileStore
             }
             writer.Release();
         }
+    }
+
+    private void CheckWriteLocations()
+    {
+        foreach (var candidate in new[] { path, path + ".lock", System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path)!, "backups") })
+        {
+            for (var current = candidate; current is not null; current = System.IO.Path.GetDirectoryName(current))
+                if (System.IO.Path.Exists(current) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                    throw Messages.Profile("ProfileUnsafePath");
+            if (File.Exists(candidate) && (File.GetAttributes(candidate) & FileAttributes.ReadOnly) != 0)
+                throw Messages.Profile("ProfileUnsafePath");
+        }
+    }
+
+    private string RemoveProfile(ProfileSnapshot snapshot, string key)
+    {
+        if (!StringComparer.OrdinalIgnoreCase.Equals(snapshot.Path, path)) throw Messages.Profile("SnapshotMismatch");
+        var profiles = ParseProfiles(snapshot.Source);
+        var profile = profiles.SingleOrDefault(item => item.Key == key) ?? throw Messages.Profile("ProfileMissing");
+        if (profile.Platform is not (null or "windows") || profile.WaitMode == "process_group")
+            throw Messages.Profile("ProfileDeleteUnsupported");
+        var id = profile.AppId ?? profile.Key;
+        if (profiles.Count(item => item.Key == id || item.AppId == id) != 1)
+            throw Messages.Profile("ProfileConflict");
+        var text = snapshot.Source!;
+        var bom = text.StartsWith('\uFEFF') ? 1 : 0;
+        var document = SyntaxParser.ParseStrict(text[bom..]);
+        var selectedKey = new[] { "profiles", key };
+        var table = document.Tables.OfType<TableSyntax>().SingleOrDefault(item => KeyParts(item.Name).SequenceEqual(selectedKey));
+        if (table is null || !table.Items.Any() || document.Tables.Any(item =>
+            KeyParts(item.Name) is var parts && parts.Length > 2 && parts.Take(2).SequenceEqual(selectedKey)))
+            throw Messages.Profile("ProfileLayout");
+
+        // Remove syntax tokens, preserving comments and whitespace even on the selected table's lines.
+        // Unknown keys within this table belong to the selected configuration; other tables stay byte-exact.
+        var removals = table.Items.Select(item => (Offset: item.Key!.Span.Offset + bom,
+            Length: item.Value!.Span.End.Offset - item.Key.Span.Offset + 1)).ToList();
+        removals.Add((table.OpenBracket!.Span.Offset + bom,
+            table.CloseBracket!.Span.End.Offset - table.OpenBracket.Span.Offset + 1));
+        foreach (var removal in removals.OrderByDescending(item => item.Offset))
+            text = text.Remove(removal.Offset, removal.Length);
+        return text;
     }
 
     private FileStream OpenWriterLease()

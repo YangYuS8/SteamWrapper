@@ -74,6 +74,11 @@
               </StackPanel>
               </ContentControl>
               <Button x:Name="SaveButton" Style="{StaticResource AccentButtonStyle}" Click="Save_Click" AutomationProperties.AutomationId="SaveProfile"/>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button x:Name="RevertEditsButton" Click="RevertEdits_Click" AutomationProperties.AutomationId="RevertProfileEdits"/>
+                <Button x:Name="RestoreSteamButton" Click="RestoreSteam_Click" AutomationProperties.AutomationId="RestoreSteamLaunch"/>
+                <Button x:Name="RemoveProfileButton" Click="RemoveProfile_Click" AutomationProperties.AutomationId="RemoveProfile"/>
+              </StackPanel>
               <StackPanel x:Name="LaunchPanel" Visibility="Collapsed" Spacing="12">
                 <TextBlock x:Name="LocalizedLaunchTitle" FontSize="20" FontWeight="SemiBold"/>
                 <TextBlock x:Name="LocalizedLaunchInstructions" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>

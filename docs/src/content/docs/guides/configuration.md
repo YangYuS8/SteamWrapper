@@ -98,6 +98,14 @@ When leaving an edited profile, reloading or closing Manager, use **Keep editing
 
 The editor preserves unedited TOML values and creates configuration backups when replacing an existing file. It rejects conflicting external changes, unsupported versions and layouts that it cannot safely edit. Do not respond to a conflict by overwriting the newer file blindly.
 
+## Revert, restore or remove a configuration
+
+**Revert edits** discards the current unsaved changes and returns an existing configuration to its last saved values. It does not write to Steam or game files.
+
+To stop redirecting a game through SteamWrapper, exit Steam normally and choose **Restore Steam launch**. This clears only that game's exact generated SteamWrapper command, backs up affected Steam account files and keeps your configuration. Custom or unrecognized launch options stay untouched. Old arguments were not recorded when you manually pasted the command, so unknown earlier arguments cannot be recovered automatically.
+
+**Remove configuration** removes only the selected saved configuration and keeps an exact backup. Exit Steam normally first. Removal is refused while any checked Steam account still references it; restore the Steam launch or review custom options before retrying. Game files, saves and the stable Runner remain untouched. Unsupported or readonly profile layouts cannot be removed through the editor. Hand-edited legacy configurations that cannot be safely checked are preserved with an inspection message.
+
 ## Copy the generated Steam command
 
 The command always uses the stable Runner:
@@ -113,6 +121,8 @@ Keep `%command%` in its final position after `--`. Current Runner receives and l
 ## Choose your language
 
 Use the sidebar's **Language** selector for **English** or **简体中文**. A successful change updates application-owned controls, validation and status messages immediately while retaining unsaved names, paths and arguments.
+
+For locally installed games, the sidebar and game picker also use Steam's locally cached official title for the chosen language. A missing or unsupported cache falls back to the installed manifest title; no store request is made. Names matching a known Steam title are localized for display, while your custom names and saved profile text are kept. Search accepts the original title, known localized titles and AppID.
 
 The preference is saved separately in `%LOCALAPPDATA%\SteamWrapper\ui-settings.json`. Without a `language` key, Manager follows the system UI language: `zh-CN`, `zh-SG` and explicitly simplified `zh-Hans` cultures use Simplified Chinese; unsupported languages, including Traditional Chinese, use English. A saved choice takes priority. Canonical values are `en-US` and `zh-CN`; `en`, `zh-SG` and `zh-Hans` are accepted aliases. Invalid explicit values and unreadable settings safely fall back to English. Merely opening Manager or saving cover preferences does not freeze the detected language. The preference never enters `profiles.toml` or changes the Runner CLI.
 

@@ -1,5 +1,5 @@
-# Explicit schema-2 installable releases. The historical five-asset schema-1
-# contract is validated unchanged; these helpers never sign or publish files.
+# Schema 2 retains the historical seven public assets. Schema 3 validates the
+# same internal bundle and publishes only Setup, portable ZIP and checksums.
 . (Join-Path $PSScriptRoot 'WinUIRelease.ps1')
 
 function Assert-WinUIInstallableFields($Object, [string[]]$Names) {
@@ -33,9 +33,14 @@ function ConvertFrom-WinUIInstallableJson([string]$Text) {
 
 function Get-WinUIReleaseAssetNames($Metadata) {
     $names = @($Metadata.archive.fileName, "$($Metadata.tag).en.md", "$($Metadata.tag).zh-CN.md", 'release.json', 'SHA256SUMS')
-    if ($Metadata.schemaVersion -eq 2) { $names += @('portable-release.json', $Metadata.installerAsset.fileName) }
+    if ($Metadata.schemaVersion -in @(2, 3)) { $names += @('portable-release.json', $Metadata.installerAsset.fileName) }
     elseif ($Metadata.schemaVersion -ne 1) { throw 'Unsupported release package schema.' }
     return $names
+}
+
+function Get-WinUIPublicReleaseAssetNames($Metadata) {
+    if ($Metadata.schemaVersion -eq 3) { return @($Metadata.archive.fileName, $Metadata.installerAsset.fileName, 'SHA256SUMS') }
+    return Get-WinUIReleaseAssetNames $Metadata
 }
 
 function Assert-WinUIInstallableAsset($Record, [string]$ExpectedName, [string]$Directory, [long]$MaximumBytes = 1GB, [switch]$BuildRecord) {
@@ -134,10 +139,13 @@ function Test-WinUIInstallableReleasePackageDirectory {
     }
     $metadataText = Read-WinUIReleaseText (Join-Path $package 'release.json') $package 2MB
     $metadata = ConvertFrom-WinUIInstallableJson $metadataText
-    Assert-WinUIInstallableFields $metadata @('schemaVersion', 'tag', 'version', 'commit', 'platform', 'minimumWindowsVersion', 'releaseChannel', 'tagPrerelease', 'githubPrerelease', 'signed', 'installer', 'portable', 'archive', 'portableMetadata', 'installerAsset', 'installerBuild', 'deploymentManifest')
+    $fields = @('schemaVersion', 'tag', 'version', 'commit', 'platform', 'minimumWindowsVersion', 'releaseChannel', 'tagPrerelease', 'githubPrerelease', 'signed', 'installer', 'portable', 'archive', 'portableMetadata', 'installerAsset', 'installerBuild', 'deploymentManifest')
+    if ($metadata.schemaVersion -eq 3) { $fields += 'releaseNotes' }
+    Assert-WinUIInstallableFields $metadata $fields
     if ($metadata.tag -isnot [string]) { throw 'Installable release tag must be a string.' }
     $tagVersion = Get-WinUIReleaseTag $metadata.tag
-    if (($metadata.schemaVersion -isnot [int] -and $metadata.schemaVersion -isnot [long]) -or $metadata.schemaVersion -ne 2 -or
+    if (($metadata.schemaVersion -isnot [int] -and $metadata.schemaVersion -isnot [long]) -or $metadata.schemaVersion -notin @(2, 3) -or
+        ($metadata.schemaVersion -eq 3 -and [Version]$tagVersion.Version -lt [Version]'0.2.8') -or
         $metadata.version -cne $tagVersion.Version -or $metadata.commit -isnot [string] -or $metadata.commit -cnotmatch '^[0-9a-f]{40}$' -or
         $metadata.platform -cne 'win-x64' -or $metadata.minimumWindowsVersion -cne '10.0.26100.0' -or $metadata.releaseChannel -cne $tagVersion.Channel -or
         $metadata.tagPrerelease -isnot [bool] -or $metadata.tagPrerelease -ne $tagVersion.Prerelease -or
@@ -153,17 +161,27 @@ function Test-WinUIInstallableReleasePackageDirectory {
     foreach ($language in @('en', 'zh-CN')) {
         if ((Get-Item -LiteralPath (Join-Path $package "$($metadata.tag).$language.md")).Length -gt 256KB) { throw 'Installable release notes exceed the bounded text limit.' }
     }
+    if ($metadata.schemaVersion -eq 3) {
+        if (@($metadata.releaseNotes).Count -ne 2) { throw 'Compact release must retain both internal localized notes.' }
+        foreach ($language in @('en', 'zh-CN')) {
+            $name = "$($metadata.tag).$language.md"
+            $records = @($metadata.releaseNotes | Where-Object fileName -CEQ $name)
+            if ($records.Count -ne 1) { throw 'Compact release has missing or duplicate internal notes.' }
+            Assert-WinUIInstallableAsset $records[0] $name $package 256KB
+        }
+    }
+    $checksumNames = @(Get-WinUIPublicReleaseAssetNames $metadata | Where-Object { $_ -cne 'SHA256SUMS' })
     $checksums = @{}
     $sums = Read-WinUIReleaseText (Join-Path $package 'SHA256SUMS') $package 16KB
     foreach ($line in @($sums -split '\r?\n' | Where-Object { $_ -ne '' })) {
         if ($line -cnotmatch '^(?<hash>[0-9a-f]{64})  (?<name>[A-Za-z0-9._-]+)$') { throw 'Installable release checksums contain an unsafe filename or invalid line.' }
         $name = $Matches['name']; $hash = $Matches['hash']
-        if ($name -ceq 'SHA256SUMS' -or $name -cnotin $expectedNames -or $checksums.ContainsKey($name)) { throw 'Installable release checksums contain a duplicate, self-reference or unexpected asset.' }
+        if ($name -ceq 'SHA256SUMS' -or $name -cnotin $checksumNames -or $checksums.ContainsKey($name)) { throw 'Installable release checksums contain a duplicate, self-reference or unexpected asset.' }
         $checksums[$name] = $hash
         if ($hash -cne (Get-FileHash -LiteralPath (Join-Path $package $name) -Algorithm SHA256).Hash.ToLowerInvariant()) { throw "Release asset checksum mismatch: $name" }
     }
-    if ($checksums.Count -ne 6) { throw 'Installable release checksums must cover exactly six payload/metadata assets.' }
-    foreach ($name in $expectedNames | Where-Object { $_ -cne 'SHA256SUMS' }) {
+    if ($checksums.Count -ne $checksumNames.Count) { throw 'Installable release checksums must cover exactly the selected public payload/metadata assets.' }
+    foreach ($name in $checksumNames) {
         if (-not $checksums.ContainsKey($name)) { throw "Installable release checksums are missing $name." }
     }
     Assert-WinUIInstallableAsset $metadata.archive "SteamWrapper-$($metadata.tag)-win-x64.zip" $package
@@ -197,6 +215,12 @@ function Test-WinUIInstallableReleasePackageDirectory {
             if ($portable.archive.$key -cne $metadata.archive.$key) { throw 'Installable and portable archive metadata differ.' }
         }
         Assert-WinUIInstallableBinding $metadata $portable
+        if ($metadata.schemaVersion -eq 3) {
+            foreach ($note in $metadata.releaseNotes) {
+                $records = @($portable.files | Where-Object path -CEQ "ReleaseNotes/$($note.fileName)")
+                if ($records.Count -ne 1 -or $records[0].bytes -ne $note.bytes -or $records[0].sha256 -cne $note.sha256) { throw 'Compact internal notes differ from their complete portable ZIP inventory.' }
+            }
+        }
     } finally {
         # Never recursively delete a computed tree or an unexpected file. If
         # something replaced a scratch entry, retain it for inspection.
@@ -218,7 +242,7 @@ function Test-WinUIReleaseArtifactDirectory {
     $directory = [IO.Path]::GetFullPath($PackageDirectory)
     $metadata = Read-WinUIReleaseText (Join-Path $directory 'release.json') $directory 2MB | ConvertFrom-Json
     if ($metadata.schemaVersion -eq 1) { return Test-WinUIReleasePackageDirectory -PackageDirectory $directory }
-    if ($metadata.schemaVersion -eq 2) { return Test-WinUIInstallableReleasePackageDirectory -PackageDirectory $directory }
+    if ($metadata.schemaVersion -in @(2, 3)) { return Test-WinUIInstallableReleasePackageDirectory -PackageDirectory $directory }
     throw 'Unsupported release package schema.'
 }
 
@@ -250,8 +274,9 @@ function New-WinUIInstallableReleasePackage {
     $portable = Test-WinUIReleasePackageDirectory -PackageDirectory $staging
     $portablePath = Join-Path $staging 'portable-release.json'
     [IO.File]::Move($legacy.Metadata, $portablePath)
+    $schema = if ([Version]$plan.Version -ge [Version]'0.2.8') { 3 } else { 2 }
     $metadata = [ordered]@{
-        schemaVersion = 2; tag = $Tag; version = $plan.Version; commit = $Commit; platform = 'win-x64'
+        schemaVersion = $schema; tag = $Tag; version = $plan.Version; commit = $Commit; platform = 'win-x64'
         minimumWindowsVersion = '10.0.26100.0'; releaseChannel = $plan.ReleaseChannel; tagPrerelease = $plan.TagPrerelease
         githubPrerelease = $plan.GitHubPrerelease; signed = $false; installer = $true; portable = $true; archive = $portable.archive
         portableMetadata = [ordered]@{ fileName = 'portable-release.json'; bytes = (Get-Item -LiteralPath $portablePath).Length; sha256 = (Get-FileHash -LiteralPath $portablePath).Hash.ToLowerInvariant() }
@@ -259,13 +284,20 @@ function New-WinUIInstallableReleasePackage {
         installerBuild = $build
         deploymentManifest = [ordered]@{ bytes = (Get-Item -LiteralPath $manifestPath).Length; sha256 = (Get-FileHash -LiteralPath $manifestPath).Hash.ToLowerInvariant(); json = $manifestText }
     }
+    if ($schema -eq 3) {
+        $metadata.releaseNotes = @($plan.Notes | ForEach-Object {
+            $path = Join-Path $staging $_.FileName
+            [ordered]@{ fileName = $_.FileName; bytes = (Get-Item -LiteralPath $path).Length; sha256 = (Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant() }
+        })
+    }
     # Validate the original build manifest against the actual portable bytes
     # before accepting/copying Setup; fixture EXEs are not PE/signature proof.
     $parsed = ConvertFrom-WinUIInstallableJson ($metadata | ConvertTo-Json -Depth 12)
     Assert-WinUIInstallableBinding $parsed $portable
     [IO.File]::Copy($setupPath, (Join-Path $staging $setupName), $false)
     $metadata | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $legacy.Metadata -Encoding utf8NoBOM
-    @(Get-ChildItem -LiteralPath $staging -File | Where-Object Name -ne 'SHA256SUMS' | Sort-Object Name | ForEach-Object {
+    $checksumNames = @(Get-WinUIPublicReleaseAssetNames $parsed | Where-Object { $_ -cne 'SHA256SUMS' })
+    @(Get-ChildItem -LiteralPath $staging -File | Where-Object { $_.Name -cin $checksumNames } | Sort-Object Name | ForEach-Object {
         "$((Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant())  $($_.Name)"
     }) | Set-Content -LiteralPath $legacy.Checksums -Encoding utf8NoBOM
     $null = Test-WinUIInstallableReleasePackageDirectory -PackageDirectory $staging
