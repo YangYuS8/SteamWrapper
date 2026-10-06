@@ -78,14 +78,32 @@ try {
     Assert-InstallerBoundary ($null -ne $image) 'Get-DiskImage did not return the newly created guest VHD.'
     $attached=[bool]$image.Attached
     Assert-InstallerBoundary ($createExitCode -eq 0 -and (Test-Path -LiteralPath ($letter + ':\'))) 'The bounded guest VHD could not be created; no physical disk was selected.'
-    # A newly attached VHD may not yet be present in Storage's cached CIM objects.
-    # Refresh only this disposable guest, then retain the actual image-to-disk binding.
+    # Sandbox may expose no MSFT_Disk objects, including its system disk. The
+    # legacy Win32 association chain still has to bind this exact own image.
     Update-HostStorageCache -ErrorAction Stop | Out-Null
     $report.storageEnumerationRefresh=$true
-    $binding=Wait-InstallerBoundaryVirtualDisk $vhd $letter {param($path) Get-DiskImage -ImagePath $path -ErrorAction Stop} {
-        param($inputImage) $inputImage | Get-Disk -ErrorAction Stop
-    } {param($driveLetter) Get-Partition -DriveLetter $driveLetter -ErrorAction Stop}
-    $report.storageBinding=[ordered]@{attempts=$binding.attempts;diskNumber=$binding.disk.Number;partitionDiskNumber=$binding.partition.DiskNumber;driveLetter=[string]$binding.partition.DriveLetter;capacityBytes=$binding.disk.Size}
+    Add-Type -TypeDefinition (Get-InstallerBoundaryDiskReaderSource)
+    $binding=Wait-InstallerBoundaryLegacyVirtualDisk $vhd $letter {
+        param($path)
+        $nodes=@();$current=$path
+        while($current){$item=Get-Item -LiteralPath $current -Force -ErrorAction Stop;$nodes+=[pscustomobject]@{FullName=$item.FullName;IsContainer=$item.PSIsContainer;Attributes=$item.Attributes};$current=[IO.Path]::GetDirectoryName($current)}
+        [pscustomobject]@{image=(Get-DiskImage -ImagePath $path -ErrorAction Stop);pathNodes=$nodes}
+    } {
+        param($inputImage) Get-CimInstance -ClassName Win32_DiskDrive -Filter ('Index='+$inputImage.Number) -ErrorAction Stop
+    } {
+        param($inputDrive) Get-CimAssociatedInstance -InputObject $inputDrive -Association Win32_DiskDriveToDiskPartition -ErrorAction Stop
+    } {
+        param($inputPartition) Get-CimAssociatedInstance -InputObject $inputPartition -Association Win32_LogicalDiskToPartition -ErrorAction Stop
+    } {
+        param($inputLogical) Get-CimInstance -ClassName Win32_Volume -Filter ("DriveLetter='"+$inputLogical.DeviceID+"'") -ErrorAction Stop
+    } {
+        param($inputImage) [SteamWrapperBoundaryDiskReader]::ReadLength($inputImage.ImagePath,$inputImage.DevicePath,[int]$inputImage.Number)
+    } {param($driveLetter) [SteamWrapperBoundaryDiskReader]::ReadVolumeGuid($driveLetter)}
+    $report.storageBinding=[ordered]@{provider=$binding.provider;attempts=$binding.attempts;imagePath=$binding.image.ImagePath;devicePath=$binding.image.DevicePath;diskNumber=$binding.disk.Index;
+        imageBytes=$binding.image.Size;geometryBytes=$binding.disk.Size;actualDeviceBytes=$binding.deviceLength;
+        partitionDevice=$binding.partition.DeviceID;partitionDiskNumber=$binding.partition.DiskIndex;partitionOffset=$binding.partition.StartingOffset;partitionBytes=$binding.partition.Size;
+        logicalDevice=$binding.logicalDisk.DeviceID;driveType=$binding.logicalDisk.DriveType;fileSystem=$binding.logicalDisk.FileSystem;logicalBytes=$binding.logicalDisk.Size;
+        volumeGuid=$binding.volumeGuid;volumeCapacity=$binding.volume.Capacity;reparseFreeImagePath=$true}
     $attached=$true; $report.newVirtualDiskVerified=$true
     $volumeRoot=$letter + ':\SteamWrapperInstallerBoundary-' + $run
     $program=Join-Path $volumeRoot 'program'; $local=Join-Path $volumeRoot 'data'; $data=Join-Path $local 'SteamWrapper'

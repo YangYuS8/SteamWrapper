@@ -20,6 +20,12 @@ function Get-AcceptanceAccountMode([string]$InputPath, [string]$OutputPath, [str
         Assert-Acceptance ($ProfilePath.TrimEnd('\') -ieq 'C:\Users\WDAGUtilityAccount') 'Unexpected Sandbox user profile.'
         return 'WDAG'
     }
+    if($InputPath -cmatch '^C:\\Users\\Public\\SteamWrapperPermissionAcceptance-(?<run>[a-f0-9]{32})\\input$') {
+        $run=[string]$Matches['run']
+        Assert-Acceptance ($OutputPath -ceq ('C:\Users\Public\SteamWrapperPermissionAcceptance-'+$run+'\evidence') -and
+            $UserName -ceq 'WDAGUtilityAccount' -and $ProfilePath.TrimEnd('\') -ieq 'C:\Users\WDAGUtilityAccount' -and $ScriptRoot -ieq $InputPath) 'The distinct permission lane requires its exact guest-local run and original WDAG native profile.'
+        return 'WDAGStandardPermission'
+    }
     Assert-Acceptance ($InputPath -cmatch '^C:\\Users\\Public\\SteamWrapperAcceptance-(?<run>[a-f0-9]{32})\\input$') 'Unexpected guest-local standard-account input.'
     $run=[string]$Matches['run']; $expectedName='SwAcc-' + $run.Substring(0,14)
     Assert-Acceptance ($OutputPath -ceq ('C:\Users\Public\SteamWrapperAcceptance-' + $run + '\evidence') -and
@@ -219,7 +225,8 @@ public static class SteamWrapperExitObservationFixture {
 # Fail closed before making any directory, changing registration or executing
 # product bytes. The two mapped folders alone are not proof of a clean guest.
 $accountMode=Get-AcceptanceAccountMode $InputDirectory $OutputDirectory $env:USERNAME $env:USERPROFILE $PSScriptRoot
-$standardAccount=$accountMode -ceq 'StandardUser'
+$permissionAccount=$accountMode -ceq 'WDAGStandardPermission'
+$standardAccount=$accountMode -cin @('StandardUser','WDAGStandardPermission')
 Assert-Acceptance ([Environment]::UserInteractive -and [Diagnostics.Process]::GetCurrentProcess().SessionId -ne 0) 'An interactive Sandbox desktop is required.'
 $manifestPath = Join-Path $InputDirectory 'acceptance-input.json'
 $inputManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -249,7 +256,7 @@ if ($standardAccount) {
     . $standardHelper.FullName -HelpersOnly
     $standardContext=Get-StandardAcceptanceContext
     $standardContext | Add-Member -NotePropertyName accountAdministratorMember -NotePropertyValue ([SteamWrapperStandardAcceptance.Native]::AccountIsAdministrator($env:USERNAME))
-    Assert-StandardAcceptanceChildContext $standardContext $inputManifest $InputDirectory $OutputDirectory
+    Assert-StandardAcceptanceScopedChildContext $standardContext $inputManifest $InputDirectory $OutputDirectory
     Assert-StandardAcceptanceRegularPath $InputDirectory $true
     Assert-StandardAcceptanceRegularPath $OutputDirectory $true
 }
@@ -281,7 +288,7 @@ if ($standardAccount) {
     Assert-Acceptance ($prelude.runId -ceq $runId -and $prelude.result -ceq 'passed' -and $prelude.standardAccount -is [bool] -and $prelude.standardAccount -and
         $prelude.desktop.windowStation -ceq 'WinSta0' -and $prelude.desktop.name -ceq 'Default' -and
         $prelude.desktop.inputDesktopReadable -is [bool] -and $prelude.desktop.inputDesktopReadable) 'The exact standard-account token/desktop prelude did not pass.'
-    Assert-StandardAcceptanceChildContext $prelude.context $inputManifest $InputDirectory $OutputDirectory
+    Assert-StandardAcceptanceScopedChildContext $prelude.context $inputManifest $InputDirectory $OutputDirectory
 }
 
 $taskRoot = Join-Path $env:TEMP ('SteamWrapperClean-' + $runId)
@@ -299,6 +306,7 @@ $evidence = [ordered]@{
     userName = [Security.Principal.WindowsIdentity]::GetCurrent().Name
     administrator = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     accountMode=$accountMode; standardAccount=$standardAccount; standardAccountContext=$standardContext
+    freshStandardAccount=($accountMode -ceq 'StandardUser'); permissionAccount=$permissionAccount; primaryStandardSignInTested=$false; twoUserGuiTested=$false
     uiCulture = [Globalization.CultureInfo]::CurrentUICulture.Name; powerShellVersion = $PSVersionTable.PSVersion.ToString()
     nativeDataRoot = $dataRoot; baseline = $inputManifest.baseline; target = $inputManifest.target
     runtimeInventoryBeforeInstallation = $null; externalSdkOrRuntimeInstalled = $false
@@ -323,6 +331,7 @@ function Get-AcceptanceProcessSecurity($Process) {
     if (-not $standardAccount) { return $null }
     $token=[SteamWrapperStandardAcceptance.Native]::GetToken($Process.Id)
     Assert-StandardAcceptanceProcessToken $token $inputManifest.expectedStandardUserSid
+    if($permissionAccount){Assert-StandardPermissionPrivileges $token}
     Assert-Acceptance ($token.sessionId -eq $standardContext.sessionId) 'A product process escaped the verified standard-account desktop session.'
     if($null -ne $inputManifest.PSObject.Properties['standardExpectedLogonSid']) {
         Assert-Acceptance ($token.logonSid -ceq $inputManifest.standardExpectedLogonSid) 'A product process escaped the exact verified standard-account logon.'
@@ -364,6 +373,19 @@ function Read-AcceptanceInstallation([string]$Program, [string]$Tag) {
     $registered = (Get-ItemProperty -LiteralPath $registration).InstallLocation.TrimEnd('\')
     Assert-Acceptance ($registered -ieq $Program) 'The per-user registered installation location is incorrect.'
     return $state
+}
+function Get-AcceptanceFirstInstallSize([string]$Program) {
+    $pending=New-Object 'Collections.Generic.Stack[IO.DirectoryInfo]'
+    $root=Get-Item -LiteralPath $Program -Force
+    Assert-Acceptance ($root -is [IO.DirectoryInfo] -and -not ($root.Attributes -band [IO.FileAttributes]::ReparsePoint)) 'The fresh installed size root is not a regular directory.'
+    $pending.Push($root);$count=0;$bytes=0L;$entries=0
+    while($pending.Count -gt 0) {
+        foreach($item in $pending.Pop().GetFileSystemInfos()) {
+            $entries++;Assert-Acceptance ($entries -le 5000 -and -not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) 'Refusing a linked or unbounded fresh installed-size tree.'
+            if($item -is [IO.DirectoryInfo]){$pending.Push($item)}else{$count++;$bytes+=$item.Length;Assert-Acceptance ($bytes -le 512MB) 'Fresh installed program size exceeded its bounded measurement.'}
+        }
+    }
+    return [ordered]@{installationRoot=$Program;fileCount=$count;bytes=$bytes;includesMaintenanceAndUninstaller=$true;freshBeforeUnknownFixtures=$true;dataRootIncluded=$false}
 }
 function Get-AcceptanceDataHashes {
     $hashes = [ordered]@{}
@@ -424,10 +446,19 @@ function Start-AcceptanceManager([string]$Program, [string]$Tag, [string]$Name) 
     $timer = [Diagnostics.Stopwatch]::StartNew()
     $shellSmoke=$standardAccount -and $Name -ceq 'baseline-manager-first-launch' -and
         $null -ne $inputManifest.PSObject.Properties['standardExplorerShortcut'] -and $inputManifest.standardExplorerShortcut -eq $true
+    $installedShortcutSmoke=$standardAccount -and $Name -ceq 'baseline-manager-first-launch' -and
+        $null -ne $inputManifest.PSObject.Properties['standardInstalledShortcut'] -and $inputManifest.standardInstalledShortcut -eq $true
+    Assert-Acceptance (-not ($shellSmoke -and $installedShortcutSmoke)) 'The separate shortcut and Explorer acceptance lanes cannot be combined.'
     if($shellSmoke) {
         $shellLaunch=Start-StandardAcceptanceExplorerManager $standardContext $inputManifest $Program $Tag
         $manager=$shellLaunch.Process
         $evidence['standardExplorerShortcut']=$shellLaunch.Observation
+        Write-AcceptanceEvidence
+    } elseif($installedShortcutSmoke) {
+        $shellLaunch=Start-StandardAcceptanceInstalledShortcutManager $standardContext $inputManifest $Program $Tag
+        $manager=$shellLaunch.Process
+        $evidence['standardInstalledShortcut']=$shellLaunch.Observation
+        $evidence['shellRoute']='standard-token installed shortcut';$evidence['ordinaryExplorerTested']=$false
         Write-AcceptanceEvidence
     } else {
         $launcherStart = New-Object Diagnostics.ProcessStartInfo
@@ -559,6 +590,8 @@ public static class SteamWrapperCleanFixture {
     # pretend it supports the target release's new directory picker.
     Invoke-AcceptanceInstaller $baselineSetup 'baseline-first-install' @('/TASKS="startmenuicon,desktopicon"')
     $null = Read-AcceptanceInstallation $defaultProgram $inputManifest.baseline.tag
+    $evidence['firstInstalledProgramSize']=Get-AcceptanceFirstInstallSize $defaultProgram
+    Write-AcceptanceEvidence
     Assert-AcceptanceShortcuts $defaultProgram $true
     $manager = Start-AcceptanceManager $defaultProgram $inputManifest.baseline.tag 'baseline-manager-first-launch'
     $window = $manager.Window

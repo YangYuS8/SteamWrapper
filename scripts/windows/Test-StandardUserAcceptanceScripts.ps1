@@ -34,12 +34,44 @@ foreach ($missing in @('baselinePublicReleaseSha256','baselinePublicApiSha256'))
     $broken.PSObject.Properties.Remove($missing)
     Assert-StandardTestReject { Get-StandardAcceptanceSealedInputs $broken ('2'*64) } 'CandidateUpgrade accepted unpinned public baseline provenance.'
 }
+$controlCandidate=$sealedCandidate | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+$controlCandidate | Add-Member -NotePropertyName winUiControl -NotePropertyValue ([pscustomobject]@{driverSha256=('3'*64);inventorySha256=('4'*64);sha256=('5'*64);bytes=80})
+$controlFiles=Get-StandardAcceptanceSealedInputs $controlCandidate ('2'*64)
+Assert-StandardTest ($controlFiles.Count -eq 12 -and @($controlFiles | Where-Object name -CEQ 'standard-winui-control.zip').Count -eq 1 -and
+    ($controlFiles | Where-Object name -CEQ 'standard-winui-control.zip').bytes -eq 80) 'The control ZIP, inventory or guest driver was omitted from the sealed standard handoff.'
+foreach($name in @('driverSha256','inventorySha256','sha256')) {
+    $broken=$controlCandidate | ConvertTo-Json -Depth 5 | ConvertFrom-Json;$broken.winUiControl.($name)=''
+    Assert-StandardTestReject {Get-StandardAcceptanceSealedInputs $broken ('2'*64)} 'An unpinned WinUI control dependency was accepted.'
+}
+$controlCandidate | Add-Member -NotePropertyName standardWinUiControl -NotePropertyValue $true
+Assert-StandardAcceptancePreparedControl $controlCandidate;$cases++
+foreach($value in @($false,'true',1)) {
+    $broken=$controlCandidate | ConvertTo-Json -Depth 5 | ConvertFrom-Json;$broken.standardWinUiControl=$value
+    Assert-StandardTestReject {Assert-StandardAcceptancePreparedControl $broken} 'A missing or nominal control route flag was accepted instead of the sealed boolean opt-in.'
+}
+$broken=$controlCandidate | ConvertTo-Json -Depth 5 | ConvertFrom-Json;$broken.PSObject.Properties.Remove('standardWinUiControl')
+Assert-StandardTestReject {Assert-StandardAcceptancePreparedControl $broken} 'The control route required only an in-memory flag despite a missing prepared disk flag.'
 Assert-StandardAcceptanceMode $false $true $true $false
 $cases++
 Assert-StandardAcceptanceMode $false $true $false $false $true
 $cases++
 Assert-StandardAcceptanceMode $false $false $false $false $true $true
 $cases++
+Assert-StandardAcceptanceMode $false $false $false $false $true $false $true
+$cases++
+Assert-StandardAcceptanceMode $false $true $false $false $true $false $false $true
+$cases++
+Assert-StandardAcceptanceMode $false $false $false $false $true $false $true $false $true
+$cases++
+foreach($mode in @(@($false,$false,$false,$false,$false,$false,$false,$false,$true),@($false,$true,$false,$false,$true,$false,$false,$false,$true),@($false,$false,$false,$false,$true,$true,$false,$false,$true))) {
+    Assert-StandardTestReject {Assert-StandardAcceptanceMode $mode[0] $mode[1] $mode[2] $mode[3] $mode[4] $mode[5] $mode[6] $mode[7] $mode[8]} 'The separate WDAG permission lane accepted an ungranted, diagnostic or Explorer route.'
+}
+foreach($mode in @(@($false,$false,$false,$false,$true,$false,$false,$true),@($false,$true,$false,$false,$false,$false,$false,$true),@($true,$true,$false,$false,$true,$false,$false,$true),@($false,$true,$true,$false,$false,$false,$false,$true),@($false,$true,$false,$true,$false,$false,$false,$true))) {
+    Assert-StandardTestReject {Assert-StandardAcceptanceMode $mode[0] $mode[1] $mode[2] $mode[3] $mode[4] $mode[5] $mode[6] $mode[7]} 'The WinUI control GUI probe was accepted outside its dedicated granted diagnostic controller.'
+}
+foreach($mode in @(@($false,$true,$false,$false,$true,$false,$true),@($false,$false,$false,$false,$false,$false,$true),@($false,$false,$false,$false,$true,$true,$true))) {
+    Assert-StandardTestReject {Assert-StandardAcceptanceMode $mode[0] $mode[1] $mode[2] $mode[3] $mode[4] $mode[5] $mode[6]} 'The separate installed-shortcut lane accepted a diagnostic, ungranted or Explorer-fallback route.'
+}
 foreach($mode in @(@($false,$true,$false,$false,$true,$true),@($false,$false,$false,$false,$false,$true),@($true,$false,$false,$false,$true,$true),@($false,$false,$false,$true,$true,$true))) {
     Assert-StandardTestReject {Assert-StandardAcceptanceMode $mode[0] $mode[1] $mode[2] $mode[3] $mode[4] $mode[5]} 'Explorer shortcut GUI was accepted in a diagnostic/helper/child or non-granted controller route.'
 }
@@ -82,6 +114,31 @@ $controller = [pscustomobject]@{
 }
 Assert-StandardAcceptanceControllerContext $controller $manifest 'C:\AcceptanceInput' 'C:\AcceptanceOutput'
 $cases++
+$permissionPaths=Get-StandardPermissionPaths $runId
+Assert-StandardTest ((Get-AcceptanceAccountMode $permissionPaths.input $permissionPaths.output 'WDAGUtilityAccount' 'C:\Users\WDAGUtilityAccount' $permissionPaths.input) -ceq 'WDAGStandardPermission') 'The independent WDAG permission handoff did not have its distinct bounded route.'
+Assert-StandardTestReject {Get-AcceptanceAccountMode $permissionPaths.input $paths.output 'WDAGUtilityAccount' 'C:\Users\WDAGUtilityAccount' $permissionPaths.input} 'The permission route accepted a fresh-account output directory.'
+Assert-StandardTestReject {Get-AcceptanceAccountMode $permissionPaths.input $permissionPaths.output $paths.userName ('C:\Users\'+$paths.userName) $permissionPaths.input} 'A different account was accepted as the primary WDAG permission route.'
+$permissionManifest=[pscustomobject]@{schemaVersion=1;sandboxOnly=$true;networkingDisabled=$true;runId=$runId;hostComputerName='HOST';accountMode='WDAGStandardPermission';wdagPermissionOptIn=$true;expectedStandardUserName='WDAGUtilityAccount';expectedStandardUserSid='S-1-5-21-111-222-333-504';permissionOriginalPrimarySid='S-1-5-21-111-222-333-504';standardInputDirectory=$permissionPaths.input;standardOutputDirectory=$permissionPaths.output;standardSessionId=1;standardExpectedLogonSid='S-1-5-5-0-124'}
+$permissionContext=$controller | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+$permissionContext.token=[pscustomobject]@{userSid=$permissionManifest.expectedStandardUserSid;logonSid=$permissionManifest.standardExpectedLogonSid;sessionId=1;elevated=$false;elevationType=1;integritySid='S-1-16-8192';administratorPresent=$false;administratorEnabled=$false;administratorDenyOnly=$false;usersPresent=$true;usersEnabled=$true;usersDenyOnly=$false;uiAccess=$false;appContainer=$false;type=1;privileges=@([pscustomobject]@{name='SeChangeNotifyPrivilege';enabled=$true;attributes=3})}
+$permissionContext | Add-Member -NotePropertyName accountAdministratorMember -NotePropertyValue $false
+$permissionContext | Add-Member -NotePropertyName accountUsersMember -NotePropertyValue $true
+Assert-StandardAcceptanceScopedChildContext $permissionContext $permissionManifest $permissionPaths.input $permissionPaths.output;$cases++
+$permissionFileAcl=New-StandardAcceptanceGuestAcl $permissionManifest.expectedStandardUserSid 'S-1-5-32-544' $false $false
+Assert-StandardTest ($permissionFileAcl -is [Security.AccessControl.FileSecurity] -and $permissionFileAcl.GetOwner([Security.Principal.SecurityIdentifier]).Value -ceq 'S-1-5-32-544') 'The same-SID sealed file retains a low-user owner or a directory-only descriptor.'
+$permissionFileRules=@($permissionFileAcl.GetAccessRules($true,$false,[Security.Principal.SecurityIdentifier]))
+$lowRules=@($permissionFileRules | Where-Object {$_.IdentityReference.Value -ceq $permissionManifest.expectedStandardUserSid})
+$allowedInputRights=[Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [Security.AccessControl.FileSystemRights]::Synchronize
+Assert-StandardTest ($lowRules.Count -eq 1 -and $lowRules[0].FileSystemRights -eq $allowedInputRights -and $lowRules[0].InheritanceFlags -eq [Security.AccessControl.InheritanceFlags]::None) 'The same-SID sealed file grants child write/owner/ACL rights or file inheritance.'
+Assert-StandardTestReject {Assert-StandardAcceptanceChildContext $permissionContext $permissionManifest $permissionPaths.input $permissionPaths.output} 'The original fresh-account guard was weakened to accept the WDAG role fixture.'
+foreach($mutation in @(@{name='wdagPermissionOptIn';value=$false},@{name='permissionOriginalPrimarySid';value='S-1-5-21-111-222-333-1000'},@{name='standardExpectedLogonSid';value='S-1-5-5-0-125'},@{name='accountMode';value='StandardUser'})) {
+    $copy=$permissionManifest | ConvertTo-Json -Depth 5 | ConvertFrom-Json;$copy.($mutation.name)=$mutation.value
+    Assert-StandardTestReject {Assert-StandardAcceptanceScopedChildContext $permissionContext $copy $permissionPaths.input $permissionPaths.output} 'A nominal opt-in, different primary SID/logon or misleading fresh-account mode was accepted.'
+}
+foreach($name in @('SeDebugPrivilege','SeBackupPrivilege','SeRestorePrivilege','SeTakeOwnershipPrivilege','SeLoadDriverPrivilege','SeTcbPrivilege','SeImpersonatePrivilege')) {
+    $copy=$permissionContext.token | ConvertTo-Json -Depth 5 | ConvertFrom-Json;$copy.privileges+=[pscustomobject]@{name=$name;enabled=$true;attributes=2}
+    Assert-StandardTestReject {Assert-StandardPermissionPrivileges $copy} 'The permission token retained an active administrative privilege.'
+}
 foreach ($mutation in @(
     @{name='computerName';value='HOST'}, @{name='userName';value='admin'}, @{name='profile';value='C:\Users\admin'},
     @{name='nativeLocalAppData';value='C:\private\LocalCache'}, @{name='interactive';value=$false}, @{name='sessionId';value=0},
@@ -128,6 +185,26 @@ $shell=[pscustomobject]@{
 }
 Assert-StandardAcceptanceShellProvenance $shell $child $manifest $shellProgram 'v0.2.7'
 $cases++
+$installed=[pscustomobject]@{shortcut=$shellShortcut;shellRoute='standard-token installed shortcut';ordinaryExplorerTested=$false;invokerProcessId=55;returnedLauncherProcessId=102;
+    launcher=$shell.launcher;manager=$shell.manager}
+$installed.launcher=$shell.launcher | ConvertTo-Json -Depth 4 | ConvertFrom-Json
+$installed.launcher.parentProcessId=55
+Assert-StandardAcceptanceInstalledShortcutProvenance $installed $child $manifest $shellProgram 'v0.2.7'
+$cases++
+foreach($change in @('foreignShortcut','otherUser','otherLogon','otherSession','launcherParent','managerParent','returnedOtherLauncher','claimedExplorer')) {
+    $wrongShortcut=$installed | ConvertTo-Json -Depth 6 | ConvertFrom-Json
+    switch($change) {
+        'foreignShortcut' {$wrongShortcut.shortcut='C:\Users\WDAGUtilityAccount\Desktop\SteamWrapper.lnk'}
+        'otherUser' {$wrongShortcut.launcher.token.userSid='S-1-5-21-111-222-333-1001'}
+        'otherLogon' {$wrongShortcut.manager.token.logonSid='S-1-5-5-0-999'}
+        'otherSession' {$wrongShortcut.manager.token.sessionId=2}
+        'launcherParent' {$wrongShortcut.launcher.parentProcessId=999}
+        'managerParent' {$wrongShortcut.manager.parentProcessId=999}
+        'returnedOtherLauncher' {$wrongShortcut.returnedLauncherProcessId=999}
+        'claimedExplorer' {$wrongShortcut.ordinaryExplorerTested=$true}
+    }
+    Assert-StandardTestReject {Assert-StandardAcceptanceInstalledShortcutProvenance $wrongShortcut $child $manifest $shellProgram 'v0.2.7'} ('The separate installed shortcut lane accepted missing/foreign provenance: '+$change)
+}
 foreach($change in @('launcherParent','managerParent','windowProcess','foreignProvider','otherUser','otherLogon','otherSession','admin','otherPath','noUi','otherFolder','searchAddress')) {
     $wrong=$shell | ConvertTo-Json -Depth 6 | ConvertFrom-Json
     switch($change) {
@@ -216,6 +293,10 @@ foreach($writable in @($false,$true)) {
 }
 $fixtureRoot=Join-Path ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))) ('target/winui/standard-user-script-tests-' + [guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
+$utf8Caption='Microsoft Windows 11 '+(-join @([char]0x4e13,[char]0x4e1a,[char]0x7248))
+[IO.File]::WriteAllText((Join-Path $fixtureRoot 'acceptance-input.json'),([ordered]@{caption=$utf8Caption;runId=$runId} | ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+$decoded=Read-StandardAcceptanceManifest $fixtureRoot
+Assert-StandardTest ($decoded.caption -ceq $utf8Caption -and $decoded.runId -ceq $runId) 'UTF8 without BOM lost a trailing Chinese character/quote in the actual persistent JSON reader.'
 $fixtureFile=Join-Path $fixtureRoot 'sealed.txt'
 [IO.File]::WriteAllText($fixtureFile,'standard-user sealed-input fixture')
 $hash=(Get-FileHash -LiteralPath $fixtureFile).Hash.ToLowerInvariant()
@@ -266,6 +347,12 @@ foreach ($isStation in @($true,$false)) {
 }
 Assert-StandardTest ([SteamWrapperStandardAcceptance.Native]::ProbeQueryOnlyAuthorization()) 'Read-only DACL authorization failed with a primary token opened for TOKEN_QUERY only, or granted rights that the fixture denies.'
 $observed=[SteamWrapperStandardAcceptance.Native]::GetToken(0)
+Assert-StandardTest ([SteamWrapperStandardAcceptance.Native]::PermissionGroupsEqual(@('S-1-5-32-544','S-1-5-32-545'),@('S-1-5-32-545','S-1-5-32-544'))) 'Exact membership CAS depends on enumeration order.'
+Assert-StandardTest (-not [SteamWrapperStandardAcceptance.Native]::PermissionGroupsEqual(@('S-1-5-32-545'),@('S-1-5-32-544','S-1-5-32-545'))) 'A concurrent group difference was accepted for exact restoration.'
+Assert-StandardTestReject {[SteamWrapperStandardAcceptance.Native]::PermissionGroupsEqual(@('S-1-5-32-545','S-1-5-32-545'),@('S-1-5-32-545'))} 'A duplicate direct membership snapshot was accepted.'
+Assert-StandardTestReject {[SteamWrapperStandardAcceptance.Native]::OpenGuestPermissionLease($observed.userSid)} 'Guest permission mutation did not refuse this development host before SAM operations.'
+Assert-StandardTest (@($observed.privileges).Count -gt 0 -and @($observed.privileges | Where-Object {$_.name -cnotmatch '^Se[A-Za-z]+Privilege$'}).Count -eq 0) 'The read-only actual token privilege enumeration failed.'
+Assert-StandardTest (@([SteamWrapperStandardAcceptance.Native]::DirectLocalGroups([Environment]::UserName)).Count -gt 0) 'The read-only direct local-group snapshot failed on actual localized builtin aliases.'
 Assert-StandardTest ([SteamWrapperStandardAcceptance.Native]::AccountIsAdministrator([Environment]::UserName) -eq $observed.administratorPresent) 'Read-only builtin Administrators alias membership did not match the current native token.'
 Assert-StandardTest ([SteamWrapperStandardAcceptance.Native]::AccountIsUsersMember([Environment]::UserName) -is [bool]) 'Read-only builtin Users alias membership lookup failed.'
 Assert-StandardTest ($observed.type -eq 1 -and $observed.userSid -match '^S-1-' -and $observed.integritySid -match '^S-1-16-' -and

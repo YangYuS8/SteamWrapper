@@ -92,6 +92,9 @@ jobs:
       - name: Test standard-account acceptance guards without creating accounts
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-StandardUserAcceptanceScripts.ps1
 
+      - name: Test empty WinUI control guards without publishing or launching UI
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-StandardWinUiControlScripts.ps1
+
       - name: Test public-update acceptance guards without networking or Sandbox
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-ProjectUpdateAcceptanceScripts.ps1
 

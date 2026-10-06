@@ -104,6 +104,118 @@ function Wait-InstallerBoundaryVirtualDisk([string]$VhdPath, [string]$DriveLette
     } while($timer.ElapsedMilliseconds -lt $TimeoutMilliseconds)
     throw ('The new VHD did not appear in the bounded Storage enumeration wait: ' + $lastFailure)
 }
+function Assert-InstallerBoundaryLegacyFact([bool]$Condition,[string]$Message) {
+    if(-not $Condition){throw [IO.InvalidDataException]::new($Message)}
+}
+function Wait-InstallerBoundaryLegacyVirtualDisk([string]$VhdPath,[string]$DriveLetter,
+    [scriptblock]$ReadImage,[scriptblock]$ReadDrives,[scriptblock]$ReadPartitions,[scriptblock]$ReadLogicalDisks,
+    [scriptblock]$ReadVolumes,[scriptblock]$ReadDeviceLength,[scriptblock]$ReadVolumeGuid,
+    [int]$TimeoutMilliseconds=30000,[int]$PollMilliseconds=250) {
+    Assert-InstallerBoundaryLegacyFact ($VhdPath -cmatch '^C:\\Users\\Public\\SteamWrapperInstallerBoundary-[a-f0-9]{32}\\failure\.vhd$' -and
+        $DriveLetter -cmatch '^[R-Z]$' -and $TimeoutMilliseconds -gt 0 -and $TimeoutMilliseconds -le 30000 -and
+        $PollMilliseconds -gt 0 -and $PollMilliseconds -le 1000) 'Only the bounded own guest image and drive may be probed.'
+    $timer=[Diagnostics.Stopwatch]::StartNew();$attempts=0;$lastFailure='No complete Win32 disk association chain.'
+    $readBinding={
+        $frames=@(& $ReadImage $VhdPath);if($frames.Count -eq 0){return $null}
+        Assert-InstallerBoundaryLegacyFact ($frames.Count -eq 1) 'The exact image query was ambiguous.'
+        $frame=$frames[0];$image=$frame.image
+        $expectedPath=$VhdPath;$nodes=@($frame.pathNodes)
+        foreach($node in $nodes){
+            Assert-InstallerBoundaryLegacyFact ($null -ne $expectedPath -and $node.FullName -ieq $expectedPath -and
+                $node.IsContainer -is [bool] -and $node.IsContainer -eq ($expectedPath -ine $VhdPath) -and
+                -not($node.Attributes -band [IO.FileAttributes]::ReparsePoint)) 'The actual image file/ancestor path is incomplete, redirected or not regular.'
+            $expectedPath=[IO.Path]::GetDirectoryName($expectedPath)
+        }
+        Assert-InstallerBoundaryLegacyFact ($nodes.Count -gt 1 -and $null -eq $expectedPath -and $image.ImagePath -ieq $VhdPath -and
+            $image.Attached -is [bool] -and $image.Attached -and $image.Size -eq 512MB -and
+            $image.DevicePath -imatch '^\\\\\.\\PHYSICALDRIVE(?<number>[1-9][0-9]{0,4})$') 'The exact mounted 512 MiB VHD did not identify a non-system physical device.'
+        $number=[int]$Matches['number']
+        Assert-InstallerBoundaryLegacyFact ($image.Number -eq $number) 'Image device path and actual image number differ.'
+        $drives=@(& $ReadDrives $image);if($drives.Count -eq 0){return $null}
+        Assert-InstallerBoundaryLegacyFact ($drives.Count -eq 1) 'The exact Win32 drive query was ambiguous.'
+        $disk=$drives[0]
+        Assert-InstallerBoundaryLegacyFact ($disk.DeviceID -ieq $image.DevicePath -and $disk.Index -eq $number -and
+            $disk.Index -gt 0 -and $disk.Size -ge 500MB -and $disk.Size -le 512MB) 'Win32 drive identity or bounded geometry differs from the own VHD.'
+        # Win32 Size is CHS geometry. Read the exact device length only after
+        # the sealed image and unique non-system drive identity have matched.
+        $lengths=@(& $ReadDeviceLength $image)
+        Assert-InstallerBoundaryLegacyFact ($lengths.Count -eq 1 -and $lengths[0] -eq 512MB) 'The actual read-only device length is not exactly 512 MiB.'
+        $partitions=@(& $ReadPartitions $disk);if($partitions.Count -eq 0){return $null}
+        Assert-InstallerBoundaryLegacyFact ($partitions.Count -eq 1) 'The actual drive-to-partition association was ambiguous.'
+        $partition=$partitions[0]
+        Assert-InstallerBoundaryLegacyFact ($partition.DiskIndex -eq $number -and $partition.Index -ge 0 -and
+            $partition.DeviceID -ceq ('Disk #'+$number+', Partition #'+$partition.Index) -and $partition.StartingOffset -ge 0 -and
+            $partition.Size -ge 500MB -and $partition.Size -le 512MB -and
+            [decimal]$partition.StartingOffset+[decimal]$partition.Size -le [decimal]$lengths[0]) 'The unique actual partition is outside the verified device.'
+        $logicalDisks=@(& $ReadLogicalDisks $partition);if($logicalDisks.Count -eq 0){return $null}
+        Assert-InstallerBoundaryLegacyFact ($logicalDisks.Count -eq 1) 'The actual partition-to-logical-disk association was ambiguous.'
+        $logical=$logicalDisks[0]
+        Assert-InstallerBoundaryLegacyFact ($logical.DeviceID -ceq ($DriveLetter+':') -and $logical.DriveType -eq 3 -and
+            $logical.FileSystem -ieq 'NTFS' -and $logical.Size -ge 500MB -and $logical.Size -le $partition.Size -and
+            $logical.FreeSpace -ge 0 -and $logical.FreeSpace -le $logical.Size) 'The actual associated logical disk is not the own bounded fixed NTFS volume.'
+        $volumes=@(& $ReadVolumes $logical);if($volumes.Count -eq 0){return $null}
+        Assert-InstallerBoundaryLegacyFact ($volumes.Count -eq 1) 'The exact Win32 volume query was ambiguous.'
+        $volume=$volumes[0];$guids=@(& $ReadVolumeGuid $DriveLetter)
+        Assert-InstallerBoundaryLegacyFact ($guids.Count -eq 1 -and $guids[0] -is [string] -and
+            $guids[0] -imatch '^\\\\\?\\Volume\{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\}\\$' -and
+            $volume.DeviceID -ieq $guids[0] -and $volume.DriveLetter -ceq $logical.DeviceID -and
+            $volume.FileSystem -ieq 'NTFS' -and $volume.Capacity -eq $logical.Size) 'Win32 volume identity/capacity does not match the actual mounted Volume GUID.'
+        return [pscustomobject]@{provider='Win32';image=$image;disk=$disk;partition=$partition;logicalDisk=$logical;volume=$volume;deviceLength=$lengths[0];volumeGuid=$guids[0]}
+    }
+    do {
+        $attempts++
+        try {$binding=& $readBinding;if($null -ne $binding){$binding|Add-Member -NotePropertyName attempts -NotePropertyValue $attempts;return $binding}}
+        catch {if($_.Exception.GetBaseException() -is [IO.InvalidDataException]){throw};$lastFailure=$_.Exception.GetBaseException().Message}
+        if($timer.ElapsedMilliseconds -ge $TimeoutMilliseconds){break};Start-Sleep -Milliseconds $PollMilliseconds
+    } while($timer.ElapsedMilliseconds -lt $TimeoutMilliseconds)
+    throw ('The bounded actual Win32 VHD association wait failed: '+$lastFailure)
+}
+function Get-InstallerBoundaryDiskReaderSource {
+    return @'
+using System;
+using System.ComponentModel;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
+using Microsoft.Win32.SafeHandles;
+public static class SteamWrapperBoundaryDiskReader {
+    [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)]
+    static extern SafeFileHandle CreateFileW(string name,uint access,uint share,IntPtr security,uint creation,uint flags,IntPtr template);
+    [DllImport("kernel32.dll",SetLastError=true)]
+    static extern bool DeviceIoControl(SafeFileHandle handle,uint code,IntPtr input,uint inputBytes,out long length,uint outputBytes,out uint returned,IntPtr overlapped);
+    [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)]
+    static extern bool GetVolumeNameForVolumeMountPointW(string mount,StringBuilder name,uint characters);
+    static void RequireGuest() {
+        if(!Environment.UserName.Equals("WDAGUtilityAccount",StringComparison.OrdinalIgnoreCase) ||
+            !Environment.GetFolderPath(Environment.SpecialFolder.UserProfile).Equals(@"C:\Users\WDAGUtilityAccount",StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Read-only virtual-device probes are refused outside the guest.");
+    }
+    public static long ReadLength(string imagePath,string devicePath,int number) {
+        RequireGuest();
+        if(!Regex.IsMatch(imagePath,@"^C:\\Users\\Public\\SteamWrapperInstallerBoundary-[a-f0-9]{32}\\failure\.vhd$") || number<=0 ||
+            !string.Equals(devicePath,@"\\.\PHYSICALDRIVE"+number.ToString(CultureInfo.InvariantCulture),StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Only an already bound non-system own VHD device may be read.");
+        // GENERIC_READ only; never request write access or enable privileges.
+        using(SafeFileHandle handle=CreateFileW(devicePath,0x80000000,3,IntPtr.Zero,3,0,IntPtr.Zero)) {
+            if(handle.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error(),"Opening the bound VHD for read-only length failed.");
+            long length;uint returned;
+            if(!DeviceIoControl(handle,0x7405c,IntPtr.Zero,0,out length,8,out returned,IntPtr.Zero) || returned!=8)
+                throw new Win32Exception(Marshal.GetLastWin32Error(),"Read-only IOCTL_DISK_GET_LENGTH_INFO failed.");
+            return length;
+        }
+    }
+    public static string ReadVolumeGuid(string letter) {
+        RequireGuest();
+        if(!Regex.IsMatch(letter,"^[R-Z]$")) throw new InvalidOperationException("Only the bound guest drive letter may be queried.");
+        StringBuilder name=new StringBuilder(128);
+        if(!GetVolumeNameForVolumeMountPointW(letter+@":\",name,128))
+            throw new Win32Exception(Marshal.GetLastWin32Error(),"Reading the actual own mount-point Volume GUID failed.");
+        return name.ToString();
+    }
+}
+'@
+}
 function Assert-InstallerBoundaryDiskFullResult($Facts) {
     foreach ($name in @('hostDigestVerified','newVirtualDiskVerified','journalWritten','stagingCopyObserved','stagingIncomplete','currentInstallationUnchanged','repairSucceeded','dataUnchanged')) {
         Assert-InstallerBoundary ($Facts.$name -is [bool] -and $Facts.$name) ('Disk-full evidence did not establish ' + $name + '.')

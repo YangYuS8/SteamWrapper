@@ -122,6 +122,76 @@ $oversizedDisk=[pscustomobject]@{Number=1;Size=1GB}
 Assert-BoundaryTestReject {Wait-InstallerBoundaryVirtualDisk $vhd 'R' {$expectedImage} {$oversizedDisk} {$expectedPartition} 1000 1} 'An oversized disk was accepted.'
 Assert-BoundaryTestReject {Wait-InstallerBoundaryVirtualDisk $vhd 'R' {([pscustomobject]@{Attached=$false})} {$expectedDisk} {$expectedPartition} 1000 1} 'A detached image was accepted.'
 Assert-BoundaryTestReject {Wait-InstallerBoundaryVirtualDisk $vhd 'R' {$expectedImage} {$expectedDisk} {$expectedPartition} 0 1} 'The Storage wait accepted an invalid timeout.'
+$legacyFrame=[pscustomobject]@{image=[pscustomobject]@{ImagePath=$vhd;DevicePath='\\.\PHYSICALDRIVE1';Number=1;Attached=$true;Size=512MB};pathNodes=@()}
+$nodePath=$vhd
+while($nodePath){$legacyFrame.pathNodes+=[pscustomobject]@{FullName=$nodePath;IsContainer=($nodePath -cne $vhd);Attributes=0};$nodePath=[IO.Path]::GetDirectoryName($nodePath)}
+$legacyDrive=[pscustomobject]@{DeviceID='\\.\PHYSICALDRIVE1';Index=1;Size=510MB}
+$legacyPartition=[pscustomobject]@{DeviceID='Disk #1, Partition #0';DiskIndex=1;Index=0;StartingOffset=1MB;Size=511MB}
+$legacyLogical=[pscustomobject]@{DeviceID='R:';DriveType=3;FileSystem='NTFS';Size=(511MB-4096);FreeSpace=500MB}
+$legacyGuid='\\?\Volume{11111111-2222-3333-4444-555555555555}\'
+$legacyVolume=[pscustomobject]@{DeviceID=$legacyGuid;DriveLetter='R:';FileSystem='NTFS';Capacity=$legacyLogical.Size}
+$legacyCallbacks=@{ReadImage={param($path) Assert-InstallerBoundary ($path -ceq $vhd) 'Another image was read.';return $legacyFrame};
+    ReadDrives={param($image) Assert-InstallerBoundary ([object]::ReferenceEquals($image,$legacyFrame.image)) 'The drive query lost the actual image.';return $legacyDrive};
+    ReadPartitions={param($drive) Assert-InstallerBoundary ([object]::ReferenceEquals($drive,$legacyDrive)) 'The first actual association lost its drive.';return $legacyPartition};
+    ReadLogicalDisks={param($partition) Assert-InstallerBoundary ([object]::ReferenceEquals($partition,$legacyPartition)) 'The second actual association lost its partition.';return $legacyLogical};
+    ReadVolumes={param($logical) Assert-InstallerBoundary ([object]::ReferenceEquals($logical,$legacyLogical)) 'The volume query lost its actual logical disk.';return $legacyVolume};
+    ReadDeviceLength={param($image) Assert-InstallerBoundary ($image.DevicePath -ceq $legacyDrive.DeviceID) 'The exact length probe was not bound.';return 512MB};
+    ReadVolumeGuid={param($letter) Assert-InstallerBoundary ($letter -ceq 'R') 'Another mount point was queried.';return $legacyGuid};TimeoutMilliseconds=1000;PollMilliseconds=1}
+$legacyBinding=Wait-InstallerBoundaryLegacyVirtualDisk $vhd 'R' @legacyCallbacks
+Assert-BoundaryTest ($legacyBinding.provider -ceq 'Win32' -and $legacyBinding.deviceLength -eq 512MB -and
+    [object]::ReferenceEquals($legacyBinding.disk,$legacyDrive) -and $legacyBinding.volume.DeviceID -ceq $legacyGuid) 'The actual callback chain did not establish the complete legacy VHD binding.'
+foreach($change in @('wrongImagePath','detached','systemDisk','wrongDevicePath','wrongImageSize','reparseFile','reparseParent','missingParent',
+    'wrongDriveIndex','wrongDriveDevice','wrongGeometrySize','wrongPartitionDisk','wrongPartitionIdentity','wrongPartitionBounds',
+    'wrongLogicalDrive','wrongDriveType','wrongFileSystem','wrongLogicalSize','wrongVolumeDrive','wrongVolumeCapacity','wrongVolumeGuid','malformedVolumeGuid')) {
+    $savedFrame=$legacyFrame;$savedDrive=$legacyDrive;$savedPartition=$legacyPartition;$savedLogical=$legacyLogical;$savedVolume=$legacyVolume
+    $legacyFrame=$savedFrame|ConvertTo-Json -Depth 5|ConvertFrom-Json;$legacyDrive=$savedDrive|ConvertTo-Json|ConvertFrom-Json
+    $legacyPartition=$savedPartition|ConvertTo-Json|ConvertFrom-Json;$legacyLogical=$savedLogical|ConvertTo-Json|ConvertFrom-Json;$legacyVolume=$savedVolume|ConvertTo-Json|ConvertFrom-Json
+    try {
+        switch($change){
+            'wrongImagePath' {$legacyFrame.image.ImagePath='C:\failure.vhd'}
+            'detached' {$legacyFrame.image.Attached=$false}
+            'systemDisk' {$legacyFrame.image.DevicePath='\\.\PHYSICALDRIVE0';$legacyFrame.image.Number=0}
+            'wrongDevicePath' {$legacyFrame.image.DevicePath='\\.\PHYSICALDRIVE2'}
+            'wrongImageSize' {$legacyFrame.image.Size=1GB}
+            'reparseFile' {$legacyFrame.pathNodes[0].Attributes=[int][IO.FileAttributes]::ReparsePoint}
+            'reparseParent' {$legacyFrame.pathNodes[1].Attributes=[int][IO.FileAttributes]::ReparsePoint}
+            'missingParent' {$legacyFrame.pathNodes=$legacyFrame.pathNodes[0]}
+            'wrongDriveIndex' {$legacyDrive.Index=2}
+            'wrongDriveDevice' {$legacyDrive.DeviceID='\\.\PHYSICALDRIVE2'}
+            'wrongGeometrySize' {$legacyDrive.Size=1GB}
+            'wrongPartitionDisk' {$legacyPartition.DiskIndex=2}
+            'wrongPartitionIdentity' {$legacyPartition.DeviceID='Disk #2, Partition #0'}
+            'wrongPartitionBounds' {$legacyPartition.StartingOffset=2MB;$legacyPartition.Size=512MB}
+            'wrongLogicalDrive' {$legacyLogical.DeviceID='C:'}
+            'wrongDriveType' {$legacyLogical.DriveType=2}
+            'wrongFileSystem' {$legacyLogical.FileSystem='FAT32'}
+            'wrongLogicalSize' {$legacyLogical.Size=1GB}
+            'wrongVolumeDrive' {$legacyVolume.DriveLetter='C:'}
+            'wrongVolumeCapacity' {$legacyVolume.Capacity++}
+            'wrongVolumeGuid' {$legacyVolume.DeviceID='\\?\Volume{aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee}\'}
+            'malformedVolumeGuid' {$legacyVolume.DeviceID='R:\'}
+        }
+        Assert-BoundaryTestReject {Wait-InstallerBoundaryLegacyVirtualDisk $vhd 'R' @legacyCallbacks} ('Unsafe legacy binding accepted: '+$change)
+    } finally {$legacyFrame=$savedFrame;$legacyDrive=$savedDrive;$legacyPartition=$savedPartition;$legacyLogical=$savedLogical;$legacyVolume=$savedVolume}
+}
+foreach($reader in @('ReadImage','ReadDrives','ReadPartitions','ReadLogicalDisks','ReadVolumes')) {
+    $wrongCallbacks=$legacyCallbacks.Clone();$originalReader=$legacyCallbacks[$reader]
+    $wrongCallbacks[$reader]={param($inputValue) $items=@(& $originalReader $inputValue);return @($items+$items)}.GetNewClosure()
+    Assert-BoundaryTestReject {Wait-InstallerBoundaryLegacyVirtualDisk $vhd 'R' @wrongCallbacks} ('Ambiguous legacy binding accepted at '+$reader)
+}
+$wrongCallbacks=$legacyCallbacks.Clone();$wrongCallbacks.ReadDeviceLength={513MB}
+Assert-BoundaryTestReject {Wait-InstallerBoundaryLegacyVirtualDisk $vhd 'R' @wrongCallbacks} 'Wrong actual device length was accepted.'
+$wrongCallbacks=$legacyCallbacks.Clone();$wrongCallbacks.ReadImage={$null};$wrongCallbacks.TimeoutMilliseconds=20
+Assert-BoundaryTestReject {Wait-InstallerBoundaryLegacyVirtualDisk $vhd 'R' @wrongCallbacks} 'Absent actual image exceeded the bounded wait or was accepted.'
+$legacyRace=[pscustomobject]@{reads=0}
+$raceCallbacks=$legacyCallbacks.Clone();$raceCallbacks.ReadDrives={param($image) $legacyRace.reads++;if($legacyRace.reads -lt 3){throw 'Win32 enumeration is not ready.'};return $legacyDrive}
+$legacyBinding=Wait-InstallerBoundaryLegacyVirtualDisk $vhd 'R' @raceCallbacks
+Assert-BoundaryTest ($legacyRace.reads -eq 3 -and $legacyBinding.attempts -eq 3) 'The complete actual legacy chain did not retry transient provider failures.'
+$wrongCallbacks=$legacyCallbacks.Clone();$wrongCallbacks.ReadVolumeGuid={'\\?\Volume{aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee}\'}
+Assert-BoundaryTestReject {Wait-InstallerBoundaryLegacyVirtualDisk $vhd 'R' @wrongCallbacks} 'Another actual mount-point GUID was accepted.'
+Add-Type -TypeDefinition (Get-InstallerBoundaryDiskReaderSource)
+Assert-BoundaryTestReject {[SteamWrapperBoundaryDiskReader]::ReadLength($vhd,'\\.\PHYSICALDRIVE1',1)} 'The actual read-only device API could run outside the guest.'
+Assert-BoundaryTestReject {[SteamWrapperBoundaryDiskReader]::ReadVolumeGuid('R')} 'The actual mount-point API could run outside the guest.'
 $facts = [pscustomobject]@{hostDigestVerified=$true;newVirtualDiskVerified=$true;journalWritten=$true;stagingCopyObserved=$true;stagingIncomplete=$true;hostExitCode=11;freeBytesAtFailure=0;currentInstallationUnchanged=$true;repairSucceeded=$true;dataUnchanged=$true}
 Assert-InstallerBoundaryDiskFullResult $facts
 $script:cases++

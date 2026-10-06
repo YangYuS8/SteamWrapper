@@ -7,6 +7,9 @@ param(
     [switch]$AccessCheckOnly,
     [switch]$GuestInteractiveLogon,
     [switch]$ExplorerShortcut,
+    [switch]$InstalledShortcut,
+    [switch]$WinUiControlProbe,
+    [switch]$WDAGPermission,
     [switch]$StandardChild,
     [string]$StandardInputDirectory = 'C:\AcceptanceInput',
     [string]$StandardOutputDirectory = 'C:\AcceptanceOutput'
@@ -20,10 +23,18 @@ function Assert-StandardAcceptance([bool]$Condition, [string]$Message) {
 function Write-StandardAcceptanceJson([string]$Path,$Value) {
     [IO.File]::WriteAllText($Path,($Value | ConvertTo-Json -Depth 15),(New-Object Text.UTF8Encoding($false)))
 }
-function Assert-StandardAcceptanceMode([bool]$Helpers, [bool]$Diagnostic, [bool]$AccessOnly, [bool]$Child, [bool]$GuestLogon=$false, [bool]$Explorer=$false) {
+function Assert-StandardAcceptanceMode([bool]$Helpers, [bool]$Diagnostic, [bool]$AccessOnly, [bool]$Child, [bool]$GuestLogon=$false, [bool]$Explorer=$false, [bool]$Installed=$false, [bool]$Control=$false, [bool]$Permission=$false) {
     Assert-StandardAcceptance (-not $AccessOnly -or ($Diagnostic -and -not $Helpers -and -not $Child)) 'AccessCheckOnly requires the dedicated DiagnosticOnly controller; it never executes a child script.'
     Assert-StandardAcceptance (-not $GuestLogon -or (-not $Helpers -and -not $AccessOnly -and -not $Child)) 'GuestInteractiveLogon is an opt-in disposable Sandbox controller action, never a helper/child/read-only action.'
     Assert-StandardAcceptance (-not $Explorer -or ($GuestLogon -and -not $Diagnostic -and -not $Helpers -and -not $AccessOnly -and -not $Child)) 'ExplorerShortcut requires the full disposable standard-user lifecycle with GuestInteractiveLogon.'
+    Assert-StandardAcceptance (-not $Installed -or ($GuestLogon -and -not $Explorer -and -not $Diagnostic -and -not $Helpers -and -not $AccessOnly -and -not $Child)) 'InstalledShortcut is a separate full standard-user lane, mutually exclusive with ExplorerShortcut and never a diagnostic or fallback.'
+    Assert-StandardAcceptance (-not $Control -or ($Diagnostic -and $GuestLogon -and -not $Helpers -and -not $AccessOnly -and -not $Child -and -not $Explorer -and -not $Installed)) 'WinUiControlProbe is an explicit granted diagnostic controller only; it never installs or falls back from a product test.'
+    Assert-StandardAcceptance (-not $Permission -or ($GuestLogon -and $Installed -and -not $Diagnostic -and -not $Helpers -and -not $AccessOnly -and -not $Child -and -not $Explorer -and -not $Control)) 'WDAGPermission is a separate granted installed-shortcut permission lane; it is never a fresh-account, primary-sign-in or Explorer test.'
+}
+function Assert-StandardAcceptancePreparedControl($Manifest) {
+    Assert-StandardAcceptance ($null -ne $Manifest.PSObject.Properties['standardWinUiControl'] -and
+        $Manifest.standardWinUiControl -is [bool] -and $Manifest.standardWinUiControl -and
+        $null -ne $Manifest.PSObject.Properties['winUiControl']) 'The dedicated control route must be explicitly sealed into its prepared manifest.'
 }
 function New-StandardAcceptanceAccessDiagnostic($Manifest, $Token, $Before, $Access, $After) {
     Assert-StandardAcceptanceProcessToken $Token $Manifest.expectedStandardUserSid
@@ -45,6 +56,39 @@ function Get-StandardAcceptancePaths([string]$RunId) {
     Assert-StandardAcceptance ($RunId -cmatch '^[a-f0-9]{32}$') 'Expected the exact prepared acceptance run ID.'
     $root = 'C:\Users\Public\SteamWrapperAcceptance-' + $RunId
     return [pscustomobject]@{ root=$root; input=$root + '\input'; output=$root + '\evidence'; userName='SwAcc-' + $RunId.Substring(0,14) }
+}
+function Get-StandardPermissionPaths([string]$RunId) {
+    $null=Get-StandardAcceptancePaths $RunId
+    $root='C:\Users\Public\SteamWrapperPermissionAcceptance-'+$RunId
+    return [pscustomobject]@{root=$root;input=$root+'\input';output=$root+'\evidence';userName='WDAGUtilityAccount'}
+}
+function Assert-StandardPermissionPrivileges($Token) {
+    Assert-StandardAcceptance ($null -ne $Token.PSObject.Properties['privileges'] -and @($Token.privileges).Count -le 128) 'Missing bounded actual token privilege observation.'
+    $seen=New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
+    foreach($privilege in @($Token.privileges)) {
+        Assert-StandardAcceptance ($privilege.name -cmatch '^Se[A-Za-z]+Privilege$' -and $privilege.enabled -is [bool] -and $seen.Add([string]$privilege.name)) 'Unexpected or duplicate privilege observation.'
+        if($privilege.name -cin @('SeDebugPrivilege','SeBackupPrivilege','SeRestorePrivilege','SeTakeOwnershipPrivilege','SeLoadDriverPrivilege','SeTcbPrivilege','SeImpersonatePrivilege')) {
+            Assert-StandardAcceptance (-not $privilege.enabled) 'The permission token retains an active administrative privilege.'
+        }
+    }
+}
+function Assert-StandardPermissionChildContext($Context,$Manifest,[string]$InputPath,[string]$OutputPath) {
+    Assert-StandardAcceptanceCommonContext $Context $Manifest
+    $paths=Get-StandardPermissionPaths $Manifest.runId
+    Assert-StandardAcceptance ($Manifest.accountMode -ceq 'WDAGStandardPermission' -and $Manifest.wdagPermissionOptIn -is [bool] -and $Manifest.wdagPermissionOptIn -and
+        $Manifest.expectedStandardUserName -ceq 'WDAGUtilityAccount' -and $Manifest.permissionOriginalPrimarySid -cmatch '^S-1-5-21-[0-9]+-[0-9]+-[0-9]+-504$' -and
+        $Manifest.expectedStandardUserSid -ceq $Manifest.permissionOriginalPrimarySid -and
+        $InputPath -ceq $paths.input -and $OutputPath -ceq $paths.output -and $Manifest.standardInputDirectory -ceq $paths.input -and $Manifest.standardOutputDirectory -ceq $paths.output -and
+        $Context.userName -ceq 'WDAGUtilityAccount' -and $Context.profile -ieq 'C:\Users\WDAGUtilityAccount' -and
+        $Context.sessionId -eq $Manifest.standardSessionId -and $Context.accountAdministratorMember -is [bool] -and -not $Context.accountAdministratorMember -and
+        $Context.accountUsersMember -is [bool] -and $Context.accountUsersMember -and
+        $Manifest.standardExpectedLogonSid -cmatch '^S-1-5-5-[0-9]+-[0-9]+$' -and $Context.token.logonSid -ceq $Manifest.standardExpectedLogonSid) 'The permission child is not the explicitly sealed original WDAG SID/native profile with a new ordinary logon.'
+    Assert-StandardAcceptanceProcessToken $Context.token $Manifest.expectedStandardUserSid
+    Assert-StandardPermissionPrivileges $Context.token
+}
+function Assert-StandardAcceptanceScopedChildContext($Context,$Manifest,[string]$InputPath,[string]$OutputPath) {
+    if($Manifest.accountMode -ceq 'WDAGStandardPermission'){Assert-StandardPermissionChildContext $Context $Manifest $InputPath $OutputPath}
+    else {Assert-StandardAcceptanceChildContext $Context $Manifest $InputPath $OutputPath}
 }
 function Quote-StandardAcceptanceArgument([string]$Value) {
     Assert-StandardAcceptance (-not [string]::IsNullOrWhiteSpace($Value) -and
@@ -143,6 +187,24 @@ function Assert-StandardAcceptanceShellProvenance($Observation,$Context,$Manifes
         $Observation.folder -ieq [IO.Path]::GetDirectoryName($shortcut) -and $Observation.shortcut -ieq $shortcut -and
         $Observation.invokedThroughUi -is [bool] -and $Observation.invokedThroughUi) 'The actual owned Explorer window/shortcut invocation and Explorer-to-Launcher-to-Manager ancestry were not all observed.'
 }
+function Assert-StandardAcceptanceInstalledShortcutProvenance($Observation,$Context,$Manifest,[string]$Program,[string]$Tag) {
+    Assert-StandardAcceptanceScopedChildContext $Context $Manifest $Manifest.standardInputDirectory $Manifest.standardOutputDirectory
+    Assert-StandardAcceptance ($Tag -cmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$' -and
+        $Program -ieq (Join-Path $Context.nativeLocalAppData 'Programs\SteamWrapper')) 'The installed-shortcut lane requires this exact standard profile first installation.'
+    $shortcut=Join-Path $Context.nativeProfile 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\SteamWrapper\SteamWrapper.lnk'
+    Assert-StandardAcceptance ($Observation.shortcut -ieq $shortcut -and $Observation.shellRoute -ceq 'standard-token installed shortcut' -and
+        $Observation.ordinaryExplorerTested -is [bool] -and -not $Observation.ordinaryExplorerTested) 'The separately requested native shortcut launch was missing or misrepresented as ordinary Explorer.'
+    foreach($record in @(@{kind='launcher';path=(Join-Path $Program 'SteamWrapper.exe')},@{kind='manager';path=(Join-Path $Program ('versions\'+$Tag+'\SteamWrapper.Manager.exe'))})) {
+        $process=$Observation.($record.kind)
+        Assert-StandardAcceptance ($process.processId -gt 0 -and $process.path -ieq $record.path) 'The shortcut-launched product process is outside the verified installation.'
+        Assert-StandardAcceptanceProcessToken $process.token $Manifest.expectedStandardUserSid
+        if($Manifest.accountMode -ceq 'WDAGStandardPermission'){Assert-StandardPermissionPrivileges $process.token}
+        Assert-StandardAcceptance ($process.token.sessionId -eq $Context.sessionId -and $process.token.logonSid -ceq $Manifest.standardExpectedLogonSid) 'The shortcut-launched product escaped its exact standard logon/session.'
+    }
+    Assert-StandardAcceptance ($Observation.invokerProcessId -gt 0 -and $Observation.returnedLauncherProcessId -eq $Observation.launcher.processId -and
+        $Observation.launcher.parentProcessId -eq $Observation.invokerProcessId -and $Observation.manager.parentProcessId -eq $Observation.launcher.processId -and
+        $Observation.manager.processId -ne $Observation.launcher.processId) 'The actual returned launcher and child Manager ancestry were not observed for the standard-token shortcut request.'
+}
 function Wait-StandardAcceptanceShell([scriptblock]$Condition,[string]$Description) {
     $timer=[Diagnostics.Stopwatch]::StartNew()
     while($timer.ElapsedMilliseconds -lt 60000) {
@@ -200,6 +262,51 @@ function Find-StandardAcceptanceExplorerWindow($Context,$Manifest,[string]$Folde
     }
     $Diagnostic['ownedWindows']=$observed.ToArray()
     return $null
+}
+function Start-StandardAcceptanceInstalledShortcutManager($Context,$Manifest,[string]$Program,[string]$Tag) {
+    Assert-StandardAcceptanceScopedChildContext $Context $Manifest $Manifest.standardInputDirectory $Manifest.standardOutputDirectory
+    Assert-StandardAcceptance ($Manifest.standardInstalledShortcut -is [bool] -and $Manifest.standardInstalledShortcut -and
+        -not $Manifest.standardExplorerShortcut -and $Manifest.scenario -ceq 'CandidateFirstInstall' -and
+        $Program -ieq (Join-Path $Context.nativeLocalAppData 'Programs\SteamWrapper')) 'The native shortcut helper requires its separate opted-in standard first-install lane.'
+    $shortcut=Join-Path $Context.nativeProfile 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\SteamWrapper\SteamWrapper.lnk'
+    Assert-StandardAcceptanceRegularPath $shortcut $false
+    $observer=New-Object SteamWrapperStandardAcceptance.LauncherObserver((Join-Path $Program 'SteamWrapper.exe'))
+    $launcher=$null;$manager=$null;$success=$false
+    $diagnostic=[ordered]@{shellRoute='standard-token installed shortcut';ordinaryExplorerTested=$false;shortcut=$shortcut;stage='ShellExecute installed Start-menu shortcut';failure=$null}
+    $diagnosticPath=Join-Path $Manifest.standardOutputDirectory 'standard-shortcut.log'
+    Write-StandardAcceptanceJson $diagnosticPath $diagnostic
+    try {
+        $start=New-Object Diagnostics.ProcessStartInfo
+        $start.FileName=$shortcut;$start.UseShellExecute=$true
+        $launcher=[Diagnostics.Process]::Start($start)
+        Assert-StandardAcceptance ($null -ne $launcher) 'The native installed shortcut did not return an actual new launcher process; no direct fallback was used.'
+        $launcherIdentity=Wait-StandardAcceptanceShell {$observer.snapshot} 'actual shortcut launcher token/parent'
+        $expected=Join-Path $Program ('versions\'+$Tag+'\SteamWrapper.Manager.exe')
+        $manager=Wait-StandardAcceptanceShell {
+            foreach($candidate in [Diagnostics.Process]::GetProcessesByName('SteamWrapper.Manager')) {
+                $keep=$false
+                try {
+                    $null=$candidate.Handle
+                    if($candidate.MainModule.FileName -ieq $expected -and $candidate.MainWindowHandle -ne [IntPtr]::Zero) {$keep=$true;return $candidate}
+                } catch { } finally {if(-not $keep) {$candidate.Dispose()}}
+            };return $null
+        } 'Manager created from the standard-token installed shortcut'
+        $observation=[ordered]@{shellRoute=$diagnostic.shellRoute;ordinaryExplorerTested=$false;shortcut=$shortcut;invokerProcessId=[Diagnostics.Process]::GetCurrentProcess().Id;
+            returnedLauncherProcessId=$launcher.Id;launcher=$launcherIdentity;manager=[SteamWrapperStandardAcceptance.Native]::ObserveProcess($manager.Id)}
+        Assert-StandardAcceptanceInstalledShortcutProvenance ([pscustomobject]$observation) $Context $Manifest $Program $Tag
+        $diagnostic.stage='Actual standard shortcut Launcher/Manager provenance observed';$diagnostic['provenance']=$observation
+        $success=$true
+        return [pscustomobject]@{Process=$manager;Observation=$observation}
+    } catch {
+        $diagnostic.failure=[ordered]@{type=$_.Exception.GetBaseException().GetType().FullName;message=$_.Exception.GetBaseException().Message;line=$_.InvocationInfo.ScriptLineNumber;stack=$_.ScriptStackTrace}
+        throw
+    } finally {
+        try {$observer.Dispose()} finally {
+            if($null -ne $launcher) {$launcher.Dispose()}
+            if(-not $success -and $null -ne $manager) {$manager.Dispose()}
+            Write-StandardAcceptanceJson $diagnosticPath $diagnostic
+        }
+    }
 }
 function Start-StandardAcceptanceExplorerManager($Context,$Manifest,[string]$Program,[string]$Tag) {
     Assert-StandardAcceptanceChildContext $Context $Manifest $Manifest.standardInputDirectory $Manifest.standardOutputDirectory
@@ -297,10 +404,14 @@ function Assert-StandardAcceptanceRegularPath([string]$Path, [bool]$Directory) {
     }
 }
 function Read-StandardAcceptanceManifest([string]$Directory) {
-    $path=Join-Path $Directory 'acceptance-input.json'
-    Assert-StandardAcceptanceRegularPath $path $false
-    Assert-StandardAcceptance ((Get-Item -LiteralPath $path).Length -le 2MB) 'The acceptance manifest exceeds its read limit.'
-    return Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+    return Read-StandardAcceptanceJson (Join-Path $Directory 'acceptance-input.json')
+}
+function Read-StandardAcceptanceJson([string]$Path) {
+    Assert-StandardAcceptanceRegularPath $Path $false
+    Assert-StandardAcceptance ((Get-Item -LiteralPath $Path).Length -le 2MB) 'The acceptance JSON exceeds its read limit.'
+    # Inbox PowerShell 5.1 otherwise interprets our UTF8-without-BOM output
+    # using ANSI, which can consume the quote after a trailing Chinese byte.
+    return [IO.File]::ReadAllText($Path,[Text.Encoding]::UTF8) | ConvertFrom-Json
 }
 function Assert-StandardAcceptanceSealedFile([string]$Path, [string]$Hash, [long]$Bytes=-1) {
     Assert-StandardAcceptanceRegularPath $Path $false
@@ -329,11 +440,17 @@ function Get-StandardAcceptanceSealedInputs($Manifest, [string]$ControllerHash) 
         $files += [pscustomobject]@{name='baseline-release.json';hash=$Manifest.baselinePublicReleaseSha256;bytes=-1}
         $files += [pscustomobject]@{name='baseline-api.json';hash=$Manifest.baselinePublicApiSha256;bytes=-1}
     }
+    if($null -ne $Manifest.PSObject.Properties['winUiControl']) {
+        Assert-StandardAcceptance ($Manifest.winUiControl.bytes -gt 0 -and $Manifest.winUiControl.bytes -le 256MB) 'The developer control payload exceeds its bound.'
+        $files += [pscustomobject]@{name='Invoke-StandardWinUiControlProbe.ps1';hash=$Manifest.winUiControl.driverSha256;bytes=-1}
+        $files += [pscustomobject]@{name='standard-winui-control.json';hash=$Manifest.winUiControl.inventorySha256;bytes=-1}
+        $files += [pscustomobject]@{name='standard-winui-control.zip';hash=$Manifest.winUiControl.sha256;bytes=$Manifest.winUiControl.bytes}
+    }
     foreach($file in $files) {Assert-StandardAcceptance ($file.hash -cmatch '^[a-f0-9]{64}$') 'A standard-account handoff dependency lacks its prepared hash.'}
     return @($files | Sort-Object -Property name -Unique)
 }
-function New-StandardAcceptanceGuestAcl([string]$UserSid, [string]$ControllerSid, [bool]$Writable) {
-    $acl=New-Object Security.AccessControl.DirectorySecurity
+function New-StandardAcceptanceGuestAcl([string]$UserSid, [string]$ControllerSid, [bool]$Writable, [bool]$Directory=$true) {
+    $acl=if($Directory){New-Object Security.AccessControl.DirectorySecurity}else{New-Object Security.AccessControl.FileSecurity}
     $acl.SetAccessRuleProtection($true,$false)
     $acl.SetOwner((New-Object Security.Principal.SecurityIdentifier($ControllerSid)))
     foreach($grant in @(
@@ -341,8 +458,9 @@ function New-StandardAcceptanceGuestAcl([string]$UserSid, [string]$ControllerSid
         @{sid='S-1-5-32-544';rights=[Security.AccessControl.FileSystemRights]::FullControl},
         @{sid=$UserSid;rights=$(if($Writable){[Security.AccessControl.FileSystemRights]::Modify}else{[Security.AccessControl.FileSystemRights]::ReadAndExecute})}
     )) {
+        $inheritance=if($Directory){[Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit}else{[Security.AccessControl.InheritanceFlags]::None}
         $rule=New-Object Security.AccessControl.FileSystemAccessRule((New-Object Security.Principal.SecurityIdentifier($grant.sid)), $grant.rights,
-            ([Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit),
+            $inheritance,
             [Security.AccessControl.PropagationFlags]::None, [Security.AccessControl.AccessControlType]::Allow)
         $acl.AddAccessRule($rule)
     }
@@ -368,7 +486,9 @@ public sealed class TokenSnapshot {
     public bool elevated, administratorPresent, administratorEnabled, administratorDenyOnly, uiAccess, appContainer;
     public bool usersPresent,usersEnabled,usersDenyOnly;
     public int elevationType, type, sessionId;
+    public PrivilegeSnapshot[] privileges;
 }
+public sealed class PrivilegeSnapshot {public string name;public uint attributes;public bool enabled;}
 public sealed class ProcessSnapshot {
     public int processId,parentProcessId;
     public string path;
@@ -524,6 +644,11 @@ public static class Native {
     [DllImport("netapi32.dll",CharSet=CharSet.Unicode)] static extern uint NetUserAdd(string server,uint level,ref UserInfo info,out uint parameter);
     [DllImport("netapi32.dll",CharSet=CharSet.Unicode)] static extern uint NetUserGetLocalGroups(string server,string user,uint level,uint flags,out IntPtr buffer,uint maximum,out uint count,out uint total);
     [DllImport("netapi32.dll",CharSet=CharSet.Unicode)] static extern uint NetLocalGroupAddMembers(string server,string group,uint level,ref IntPtr member,uint count);
+    [DllImport("netapi32.dll",CharSet=CharSet.Unicode)] static extern uint NetLocalGroupDelMembers(string server,string group,uint level,ref IntPtr member,uint count);
+    [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] struct PasswordInfo {[MarshalAs(UnmanagedType.LPWStr)]public string password;}
+    [DllImport("netapi32.dll",CharSet=CharSet.Unicode)] static extern uint NetUserSetInfo(string server,string user,uint level,ref PasswordInfo info,out uint parameter);
+    [StructLayout(LayoutKind.Sequential)] struct Luid {public uint low;public int high;}
+    [DllImport("advapi32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool LookupPrivilegeNameW(string system,ref Luid luid,StringBuilder name,ref uint length);
     [DllImport("netapi32.dll")] static extern uint NetApiBufferFree(IntPtr buffer);
     [DllImport("advapi32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool CreateProcessWithLogonW(
         string user,string domain,string password,uint logonFlags,string application,StringBuilder command,uint creationFlags,
@@ -576,6 +701,17 @@ public static class Native {
                     }
                 }
             } finally { Marshal.FreeHGlobal(groups); }
+            IntPtr privileges=Information(token,3);
+            try {
+                int count=Marshal.ReadInt32(privileges);if(count<0 || count>128)throw new InvalidOperationException("Unexpected token privilege count.");
+                value.privileges=new PrivilegeSnapshot[count];
+                for(int i=0;i<count;i++) {
+                    IntPtr entry=IntPtr.Add(privileges,4+i*12);Luid luid=new Luid();luid.low=unchecked((uint)Marshal.ReadInt32(entry));luid.high=Marshal.ReadInt32(entry,4);
+                    uint length=256;StringBuilder name=new StringBuilder((int)length);
+                    if(!LookupPrivilegeNameW(null,ref luid,name,ref length))throw new Win32Exception(Marshal.GetLastWin32Error(),"Read-only privilege name query failed.");
+                    PrivilegeSnapshot privilege=new PrivilegeSnapshot();privilege.name=name.ToString();privilege.attributes=unchecked((uint)Marshal.ReadInt32(entry,8));privilege.enabled=(privilege.attributes&2)!=0;value.privileges[i]=privilege;
+                }
+            } finally {Marshal.FreeHGlobal(privileges);}
             return value;
         } finally { if(token!=IntPtr.Zero) CloseHandle(token); if(processId!=0) CloseHandle(process); }
     }
@@ -585,6 +721,67 @@ public static class Native {
     public static bool AccountIsUsersMember(string name) {
         return AccountHasLocalGroup(name,"S-1-5-32-545");
     }
+    public static string[] DirectLocalGroups(string name) {
+        IntPtr buffer=IntPtr.Zero;uint count,total;uint status=NetUserGetLocalGroups(null,name,0,0,out buffer,0xffffffff,out count,out total);
+        try {
+            if(status!=0 || count!=total || count>64)throw new Win32Exception((int)status,"A complete direct local-group snapshot failed.");
+            List<string> groups=new List<string>();
+            for(int i=0;i<count;i++) {
+                string alias=Marshal.PtrToStringUni(Marshal.ReadIntPtr(buffer,i*IntPtr.Size));
+                SecurityIdentifier sid=(SecurityIdentifier)new NTAccount(alias).Translate(typeof(SecurityIdentifier));
+                string resolved=((NTAccount)sid.Translate(typeof(NTAccount))).Value;
+                if(!string.Equals(resolved.Substring(resolved.LastIndexOf('\\')+1),alias,StringComparison.OrdinalIgnoreCase) || groups.Contains(sid.Value))throw new InvalidOperationException("A direct alias did not round-trip uniquely.");
+                groups.Add(sid.Value);
+            }
+            groups.Sort(StringComparer.Ordinal);return groups.ToArray();
+        } finally {if(buffer!=IntPtr.Zero)NetApiBufferFree(buffer);}
+    }
+    public static bool PermissionGroupsEqual(string[] actual,string[] expected) {
+        if(actual==null || expected==null || actual.Length>64 || expected.Length>64)throw new InvalidOperationException("Unbounded direct-group snapshot.");
+        HashSet<string> a=new HashSet<string>(StringComparer.Ordinal),b=new HashSet<string>(StringComparer.Ordinal);
+        foreach(string sid in actual)if(!a.Add(new SecurityIdentifier(sid).Value))throw new InvalidOperationException("Duplicate direct group.");
+        foreach(string sid in expected)if(!b.Add(new SecurityIdentifier(sid).Value))throw new InvalidOperationException("Duplicate expected group.");
+        return a.SetEquals(b);
+    }
+    static void AssertWDAGPermissionController(string sid) {
+        if(Environment.UserName!="WDAGUtilityAccount" || !string.Equals(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),@"C:\Users\WDAGUtilityAccount",StringComparison.OrdinalIgnoreCase) ||
+            !Regex.IsMatch(sid,"^S-1-5-21-[0-9]+-[0-9]+-[0-9]+-504$") || GetToken(0).userSid!=sid || !GetToken(0).administratorEnabled ||
+            ((SecurityIdentifier)new NTAccount(Environment.MachineName,"WDAGUtilityAccount").Translate(typeof(SecurityIdentifier))).Value!=sid)
+            throw new InvalidOperationException("Guest-only permission scaffolding requires the original WDAG native SID/profile and retained administrator controller token.");
+    }
+    public sealed class GuestPermissionLease {
+        public string userSid;public string[] before,expected,restored;public bool groupsChanged,passwordChanged,restorationComplete;
+        internal GuestPermissionLease(string sid) {AssertWDAGPermissionController(sid);userSid=sid;before=DirectLocalGroups("WDAGUtilityAccount");expected=(string[])before.Clone();if(Array.IndexOf(before,"S-1-5-32-544")<0)throw new InvalidOperationException("The initial primary WDAG account is not an administrator.");}
+        void Change(string sid,bool add) {
+            if(!PermissionGroupsEqual(DirectLocalGroups("WDAGUtilityAccount"),expected))throw new InvalidOperationException("Concurrent guest membership change; refusing to overwrite it.");
+            string translated=((NTAccount)new SecurityIdentifier(sid).Translate(typeof(NTAccount))).Value;string alias=translated.Substring(translated.LastIndexOf('\\')+1);
+            byte[] bytes=new byte[new SecurityIdentifier(userSid).BinaryLength];new SecurityIdentifier(userSid).GetBinaryForm(bytes,0);GCHandle pinned=GCHandle.Alloc(bytes,GCHandleType.Pinned);
+            try {
+                IntPtr member=pinned.AddrOfPinnedObject();uint result=add?NetLocalGroupAddMembers(null,alias,0,ref member,1):NetLocalGroupDelMembers(null,alias,0,ref member,1);
+                if(result!=0)throw new Win32Exception((int)result,"A bounded guest membership operation failed.");
+                List<string> next=new List<string>(expected);if(add)next.Add(sid);else next.Remove(sid);next.Sort(StringComparer.Ordinal);expected=next.ToArray();groupsChanged=!PermissionGroupsEqual(expected,before);
+                if(!PermissionGroupsEqual(DirectLocalGroups("WDAGUtilityAccount"),expected))throw new InvalidOperationException("Guest membership changed concurrently after the operation.");
+            } finally {pinned.Free();}
+        }
+        public void Demote(string password) {
+            AssertWDAGPermissionController(userSid);if(passwordChanged || groupsChanged || string.IsNullOrEmpty(password))throw new InvalidOperationException("Permission lease is not fresh.");
+            PasswordInfo info=new PasswordInfo();info.password=password;uint parameter,status;
+            try {status=NetUserSetInfo(null,"WDAGUtilityAccount",1003,ref info,out parameter);}finally{info.password=null;}
+            if(status!=0)throw new Win32Exception((int)status,"The disposable guest password could not be set.");passwordChanged=true;
+            if(Array.IndexOf(expected,"S-1-5-32-545")<0)Change("S-1-5-32-545",true);
+            Change("S-1-5-32-544",false);
+            if(AccountIsAdministrator("WDAGUtilityAccount") || !AccountIsUsersMember("WDAGUtilityAccount"))throw new InvalidOperationException("The guest permission role is not an ordinary Users account.");
+        }
+        public void Restore() {
+            AssertWDAGPermissionController(userSid);
+            if(!PermissionGroupsEqual(DirectLocalGroups("WDAGUtilityAccount"),expected))throw new InvalidOperationException("Concurrent guest membership change; exact restoration refused.");
+            foreach(string sid in before)if(Array.IndexOf(expected,sid)<0)Change(sid,true);
+            foreach(string sid in (string[])expected.Clone())if(Array.IndexOf(before,sid)<0)Change(sid,false);
+            restored=DirectLocalGroups("WDAGUtilityAccount");restorationComplete=PermissionGroupsEqual(restored,before);groupsChanged=!restorationComplete;
+            if(!restorationComplete)throw new InvalidOperationException("Guest groups did not restore exactly.");
+        }
+    }
+    public static GuestPermissionLease OpenGuestPermissionLease(string sid){return new GuestPermissionLease(sid);}
     static bool AccountHasLocalGroup(string name,string expected) {
         // NetUserGetLocalGroups returns unqualified local alias names.
         // Builtin aliases belong to BUILTIN, not the computer's SAM domain.
@@ -905,7 +1102,7 @@ function Get-StandardAcceptanceContext {
         accountUsersMember=[SteamWrapperStandardAcceptance.Native]::AccountIsUsersMember($env:USERNAME)
     }
 }
-Assert-StandardAcceptanceMode $HelpersOnly $DiagnosticOnly $AccessCheckOnly $StandardChild $GuestInteractiveLogon $ExplorerShortcut
+Assert-StandardAcceptanceMode $HelpersOnly $DiagnosticOnly $AccessCheckOnly $StandardChild $GuestInteractiveLogon $ExplorerShortcut $InstalledShortcut $WinUiControlProbe $WDAGPermission
 if ($HelpersOnly) { return }
 
 # Refuse a development host before reading input, making a file or calling
@@ -916,16 +1113,17 @@ if (-not $StandardChild) {
         $StandardOutputDirectory -ceq 'C:\AcceptanceOutput') 'The standard-account controller may run only from the dedicated WDAG Sandbox input.'
 }
 $manifest=Read-StandardAcceptanceManifest $StandardInputDirectory
-$paths=Get-StandardAcceptancePaths $manifest.runId
+$permissionChild=[bool]$StandardChild -and $manifest.accountMode -ceq 'WDAGStandardPermission'
+$paths=if($WDAGPermission -or $permissionChild){Get-StandardPermissionPaths $manifest.runId}else{Get-StandardAcceptancePaths $manifest.runId}
 $context=Get-StandardAcceptanceContext
 $controllerHash=[string]$manifest.standardControllerSha256
 Assert-StandardAcceptanceSealedFile $PSCommandPath $controllerHash
 if ($StandardChild) {
     $context | Add-Member -NotePropertyName accountAdministratorMember -NotePropertyValue ([SteamWrapperStandardAcceptance.Native]::AccountIsAdministrator($env:USERNAME))
-    Assert-StandardAcceptanceChildContext $context $manifest $StandardInputDirectory $StandardOutputDirectory
+    Assert-StandardAcceptanceScopedChildContext $context $manifest $StandardInputDirectory $StandardOutputDirectory
     Assert-StandardAcceptanceRegularPath $StandardOutputDirectory $true
     Assert-StandardAcceptance (@(Get-ChildItem -LiteralPath $StandardOutputDirectory -Force).Count -eq 0) 'Standard-account diagnostic output is not fresh.'
-    $diagnostic=[ordered]@{schemaVersion=1;runId=$manifest.runId;result='running';standardAccount=$true;context=$context;desktop=$null;productionInstallerExecuted=$false}
+    $diagnostic=[ordered]@{schemaVersion=1;runId=$manifest.runId;result='running';standardAccount=$true;freshStandardAccount=(-not $permissionChild);primaryStandardSignInTested=$false;twoUserGuiTested=$false;permissionAccount=$permissionChild;context=$context;desktop=$null;productionInstallerExecuted=$false}
     $diagnosticPath=Join-Path $StandardOutputDirectory 'standard-user-diagnostic.json'
     try {
         $station=[SteamWrapperStandardAcceptance.Native]::WindowStationName()
@@ -934,7 +1132,10 @@ if ($StandardChild) {
         Assert-StandardAcceptance ($station -ceq 'WinSta0' -and $desktop -ceq 'Default') 'The standard account did not reach the exact connected acceptance desktop.'
         $diagnostic.desktop=[ordered]@{windowStation=$station;name=$desktop;inputDesktopReadable=$true}
         $diagnostic.result='passed'; Write-StandardAcceptanceJson $diagnosticPath $diagnostic
-        if (-not $DiagnosticOnly) {
+        if($null -ne $manifest.PSObject.Properties['standardWinUiControl'] -and $manifest.standardWinUiControl) {
+            Assert-StandardAcceptance ([bool]$DiagnosticOnly -and $manifest.standardWinUiControl -is [bool]) 'The control child must stay in its dedicated diagnostic mode.'
+            & (Join-Path $StandardInputDirectory 'Invoke-StandardWinUiControlProbe.ps1') -Role StandardUser -InputDirectory $StandardInputDirectory -OutputDirectory $StandardOutputDirectory
+        } elseif (-not $DiagnosticOnly) {
             Assert-StandardAcceptanceSealedFile (Join-Path $StandardInputDirectory 'Invoke-CleanWindowsGuestAcceptance.ps1') $manifest.guestScriptSha256
             & (Join-Path $StandardInputDirectory 'Invoke-CleanWindowsGuestAcceptance.ps1') -InputDirectory $StandardInputDirectory -OutputDirectory $StandardOutputDirectory *> (Join-Path $StandardOutputDirectory 'guest-launch.log')
         }
@@ -950,30 +1151,58 @@ if ($StandardChild) {
 Assert-StandardAcceptanceControllerContext $context $manifest $StandardInputDirectory $StandardOutputDirectory
 Assert-StandardAcceptanceRegularPath $StandardInputDirectory $true
 Assert-StandardAcceptanceRegularPath $StandardOutputDirectory $true
-Assert-StandardAcceptance (-not (Test-Path -LiteralPath $paths.root) -and -not (Test-Path -LiteralPath ('C:\Users\' + $paths.userName))) 'This run already has a guest handoff root or account profile; start a fresh Sandbox.'
+Assert-StandardAcceptance (-not (Test-Path -LiteralPath $paths.root) -and ($WDAGPermission -or -not (Test-Path -LiteralPath ('C:\Users\' + $paths.userName)))) 'This run already has a guest handoff root or fresh-account profile; start a fresh Sandbox.'
 Assert-StandardAcceptanceRegularPath 'C:\Users\Public' $true
 $existingOutput=@(Get-ChildItem -LiteralPath $StandardOutputDirectory -Force)
 Assert-StandardAcceptance (@($existingOutput | Where-Object { $_.PSIsContainer -or $_.Name -cne 'guest-launch.log' -or ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $_.Length -gt 16384 }).Count -eq 0) 'The standard-account controller requires fresh mapped output.'
 $sealedFiles=Get-StandardAcceptanceSealedInputs $manifest $controllerHash
 foreach($file in $sealedFiles) { Assert-StandardAcceptanceSealedFile (Join-Path $StandardInputDirectory $file.name) $file.hash $file.bytes }
-if($ExplorerShortcut) {Assert-StandardAcceptance ($manifest.scenario -ceq 'CandidateFirstInstall') 'The Explorer shortcut smoke requires the fresh first-install candidate scenario.'}
+if($WinUiControlProbe){Assert-StandardAcceptancePreparedControl $manifest}
+if($ExplorerShortcut -or $InstalledShortcut) {Assert-StandardAcceptance ($manifest.scenario -ceq 'CandidateFirstInstall') 'The shortcut smoke requires the fresh first-install candidate scenario.'}
 $isolationBefore=if(-not $DiagnosticOnly){Get-StandardAcceptanceControllerSeparation $context}else{$null}
 if(-not $DiagnosticOnly) {Assert-StandardAcceptanceControllerSeparation $isolationBefore $isolationBefore $context}
 $report=[ordered]@{schemaVersion=1;runId=$manifest.runId;result='running';mode=$(if($AccessCheckOnly){'AccessCheckOnly'}elseif($DiagnosticOnly){'DiagnosticOnly'}else{'Lifecycle'});environment='Windows Sandbox';controller=$context;accountCreated=$false;standardUserName=$paths.userName;standardUserSid=$null;childProcessId=$null;childResumed=$false;childExitCode=$null;childHexExitCode=$null;guestInteractiveLogon=[bool]$GuestInteractiveLogon;desktopAclChanged=$false;windowStationAclChanged=$false;desktopAclTemporarilyChanged=$false;mappedFolderAclChanged=$false;machinePolicyChanged=$false;productionInstallerExecuted=$(if($DiagnosticOnly){$false}else{$null});failure=$null}
 $report['explorerShortcutRequested']=[bool]$ExplorerShortcut
+$report['installedShortcutRequested']=[bool]$InstalledShortcut
+$report['winUiControlRequested']=[bool]$WinUiControlProbe
+$report['permissionAccountRequested']=[bool]$WDAGPermission
+$report['freshStandardAccount']=(-not [bool]$WDAGPermission)
+$report['primaryStandardSignInTested']=$false
+$report['twoUserGuiTested']=$false
+if($WDAGPermission){$report.mode='WDAGStandardPermission';$report['twoUserSeparationTested']=$false;$report['originalGuestPasswordRestored']=$false;$report['guestPasswordDisposalRequired']=$true}
+if($WinUiControlProbe){$report.mode='EmptyWinUiControl';Assert-StandardAcceptance ($null -ne $manifest.PSObject.Properties['winUiControl']) 'Missing sealed developer control fixture.'}
 $report['controllerSeparationBefore']=$isolationBefore
 $reportPath=Join-Path $StandardOutputDirectory 'standard-controller.json'
-$password=$null; $child=$null; $desktopLease=$null; $completionReady=$false
+$password=$null; $child=$null; $desktopLease=$null; $permissionLease=$null; $completionReady=$false
 try {
     Write-StandardAcceptanceJson $reportPath $report
+    if($WinUiControlProbe) {
+        $manifest | Add-Member -NotePropertyName standardWinUiControl -NotePropertyValue $true -Force
+        # The same sealed control must first succeed under the original WDAG
+        # identity. A failed control baseline cannot create a second account.
+        & (Join-Path $StandardInputDirectory 'Invoke-StandardWinUiControlProbe.ps1') -Role WDAG -InputDirectory $StandardInputDirectory -OutputDirectory $StandardOutputDirectory
+        $report['wdagControl']=Read-StandardAcceptanceJson (Join-Path $StandardOutputDirectory 'control-wdag.log')
+        Assert-StandardAcceptance ($report.wdagControl.result -ceq 'passed') 'The WDAG control baseline did not pass.'
+        Write-StandardAcceptanceJson $reportPath $report
+    }
     $random=New-Object byte[] 48; $rng=New-Object Security.Cryptography.RNGCryptoServiceProvider
     try {$rng.GetBytes($random); $password=[Convert]::ToBase64String($random) + 'aA1!'} finally {$rng.Dispose(); [Array]::Clear($random,0,$random.Length)}
-    $sid=[SteamWrapperStandardAcceptance.Native]::AddNormalUser($paths.userName,$password)
-    $report.accountCreated=$true; $report.standardUserSid=$sid
+    if($WDAGPermission) {
+        $sid=$context.token.userSid
+        $report['apiStage']='Snapshot original WDAG direct memberships';Write-StandardAcceptanceJson $reportPath $report
+        $permissionLease=[SteamWrapperStandardAcceptance.Native]::OpenGuestPermissionLease($sid)
+        $report['permissionScaffolding']=$permissionLease;$report.apiStage='Set disposable guest password and ordinary WDAG membership';Write-StandardAcceptanceJson $reportPath $report
+        $permissionLease.Demote($password)
+        $report.apiStage='Original WDAG SID now has an ordinary Users role';Write-StandardAcceptanceJson $reportPath $report
+    } else {
+        $sid=[SteamWrapperStandardAcceptance.Native]::AddNormalUser($paths.userName,$password)
+        $report.accountCreated=$true
+    }
+    $report.standardUserSid=$sid
     Assert-StandardAcceptance (-not [SteamWrapperStandardAcceptance.Native]::AccountIsAdministrator($paths.userName)) 'The new Sandbox account unexpectedly belongs to Administrators.'
-    $report['usersMembershipBefore']=[SteamWrapperStandardAcceptance.Native]::AccountIsUsersMember($paths.userName)
+    $report['usersMembershipBefore']=if($WDAGPermission){'S-1-5-32-545' -cin $permissionLease.before}else{[SteamWrapperStandardAcceptance.Native]::AccountIsUsersMember($paths.userName)}
     $report['usersMembershipAdded']=-not $report.usersMembershipBefore
-    if(-not $report.usersMembershipBefore) {[SteamWrapperStandardAcceptance.Native]::AddFreshAccountToUsers($paths.userName,$sid)}
+    if(-not $report.usersMembershipBefore -and -not $WDAGPermission) {[SteamWrapperStandardAcceptance.Native]::AddFreshAccountToUsers($paths.userName,$sid)}
     $report['usersMembershipAfter']=[SteamWrapperStandardAcceptance.Native]::AccountIsUsersMember($paths.userName)
     Assert-StandardAcceptance ($report.usersMembershipAfter -and -not [SteamWrapperStandardAcceptance.Native]::AccountIsAdministrator($paths.userName)) 'The fresh guest account is not an ordinary Users member without Administrator membership.'
     [IO.Directory]::CreateDirectory($paths.input) | Out-Null
@@ -981,20 +1210,34 @@ try {
     # Only this guest-local handoff tree receives the new account SID. The
     # optional desktop lease below uses its transient logon SID only.
     foreach($record in @(@{path=$paths.root;writable=$false},@{path=$paths.output;writable=$true})) {
-        Set-Acl -LiteralPath $record.path -AclObject (New-StandardAcceptanceGuestAcl $sid $context.token.userSid $record.writable)
+        $inputOwner=if($WDAGPermission){'S-1-5-32-544'}else{$context.token.userSid}
+        Set-Acl -LiteralPath $record.path -AclObject (New-StandardAcceptanceGuestAcl $sid $inputOwner $record.writable)
     }
+    if($WDAGPermission){Set-Acl -LiteralPath $paths.input -AclObject (New-StandardAcceptanceGuestAcl $sid 'S-1-5-32-544' $false)}
     foreach($file in $sealedFiles) {
         Copy-Item -LiteralPath (Join-Path $StandardInputDirectory $file.name) -Destination (Join-Path $paths.input $file.name)
         Assert-StandardAcceptanceSealedFile (Join-Path $paths.input $file.name) $file.hash $file.bytes
     }
-    $manifest | Add-Member -NotePropertyName accountMode -NotePropertyValue 'StandardUser' -Force
+    $manifest | Add-Member -NotePropertyName accountMode -NotePropertyValue $(if($WDAGPermission){'WDAGStandardPermission'}else{'StandardUser'}) -Force
+    if($WDAGPermission) {
+        $manifest | Add-Member -NotePropertyName wdagPermissionOptIn -NotePropertyValue $true -Force
+        $manifest | Add-Member -NotePropertyName permissionOriginalPrimarySid -NotePropertyValue $sid -Force
+    }
     $manifest | Add-Member -NotePropertyName expectedStandardUserName -NotePropertyValue $paths.userName -Force
     $manifest | Add-Member -NotePropertyName expectedStandardUserSid -NotePropertyValue $sid -Force
     $manifest | Add-Member -NotePropertyName standardInputDirectory -NotePropertyValue $paths.input -Force
     $manifest | Add-Member -NotePropertyName standardOutputDirectory -NotePropertyValue $paths.output -Force
     $manifest | Add-Member -NotePropertyName standardSessionId -NotePropertyValue $context.sessionId -Force
     $manifest | Add-Member -NotePropertyName standardExplorerShortcut -NotePropertyValue ([bool]$ExplorerShortcut) -Force
+    $manifest | Add-Member -NotePropertyName standardInstalledShortcut -NotePropertyValue ([bool]$InstalledShortcut) -Force
+    $manifest | Add-Member -NotePropertyName standardWinUiControl -NotePropertyValue ([bool]$WinUiControlProbe) -Force
     Write-StandardAcceptanceJson (Join-Path $paths.input 'acceptance-input.json') $manifest
+    if($WDAGPermission) {
+        # Same-SID controller/child need an administrator owner on every
+        # sealed file, including the newly written manifest; RX alone does
+        # not remove an owner's implicit ability to change its DACL.
+        foreach($file in Get-ChildItem -LiteralPath $paths.input -Force) {Set-Acl -LiteralPath $file.FullName -AclObject (New-StandardAcceptanceGuestAcl $sid 'S-1-5-32-544' $false $false)}
+    }
     foreach($file in Get-ChildItem -LiteralPath $paths.input -Force) { $file.Attributes=$file.Attributes -bor [IO.FileAttributes]::ReadOnly }
     $inboxPowerShell='C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
     $command=(Quote-StandardAcceptanceArgument $inboxPowerShell) + ' -NoLogo -NoProfile -MTA -ExecutionPolicy Bypass -File ' +
@@ -1026,6 +1269,7 @@ try {
         $report.apiStage='Verify suspended standard Users token'; Write-StandardAcceptanceJson $reportPath $report
         $token=[SteamWrapperStandardAcceptance.Native]::GetToken($child.ProcessId)
         Assert-StandardAcceptanceProcessToken $token $sid
+        if($WDAGPermission){Assert-StandardPermissionPrivileges $token}
         Assert-StandardAcceptance ($token.sessionId -eq $context.sessionId -and $token.logonSid -cmatch '^S-1-5-5-[0-9]+-[0-9]+$') 'The suspended child has no exact fresh logon SID in this guest session.'
         $report['childToken']=$token; $report.apiStage='Grant exact guest logon desktop ACE'; Write-StandardAcceptanceJson $reportPath $report
         $desktopLease=[SteamWrapperStandardAcceptance.Native]::OpenGuestDesktopLease($before)
@@ -1057,10 +1301,14 @@ try {
         Copy-Item -LiteralPath $file.FullName -Destination $destination
     }
     Assert-StandardAcceptance ($report.childExitCode -eq 0) 'The real standard-account child failed; inspect its retained diagnostics and guest scaffolding. No host account or machine policy was changed.'
-    $diagnostic=Get-Content -LiteralPath (Join-Path $paths.output 'standard-user-diagnostic.json') -Raw | ConvertFrom-Json
+    $diagnostic=Read-StandardAcceptanceJson (Join-Path $paths.output 'standard-user-diagnostic.json')
+    if($WinUiControlProbe) {
+        $report['standardControl']=Read-StandardAcceptanceJson (Join-Path $paths.output 'control-standarduser.log')
+        Assert-StandardAcceptance ($report.standardControl.result -ceq 'passed' -and $report.standardControl.productionInstallerExecuted -eq $false) 'The true standard-account empty control did not complete normally.'
+    }
     Assert-StandardAcceptance ($diagnostic.runId -ceq $manifest.runId -and $diagnostic.result -ceq 'passed' -and $diagnostic.standardAccount -eq $true) 'The standard-account token/desktop diagnostic did not pass.'
     if(-not $DiagnosticOnly) {
-        $finished=Get-Content -LiteralPath (Join-Path $paths.output 'evidence.json') -Raw | ConvertFrom-Json
+        $finished=Read-StandardAcceptanceJson (Join-Path $paths.output 'evidence.json')
         Assert-StandardAcceptance ($finished.runId -ceq $manifest.runId -and $finished.result -ceq 'passed') 'The real standard-account lifecycle did not finish.'
         if($ExplorerShortcut) {
             Assert-StandardAcceptance ($finished.standardExplorerShortcut.explorerNormalCloseRequested -is [bool] -and
@@ -1068,12 +1316,15 @@ try {
                 $finished.standardExplorerShortcut.explorerWindowClosed) 'The genuine standard-token Explorer shortcut smoke did not complete and close normally.'
             Assert-StandardAcceptanceShellProvenance $finished.standardExplorerShortcut $diagnostic.context $manifest $finished.installationLocations[0] $manifest.baseline.tag
         }
+        if($InstalledShortcut) {
+            Assert-StandardAcceptanceInstalledShortcutProvenance $finished.standardInstalledShortcut $diagnostic.context $manifest $finished.installationLocations[0] $manifest.baseline.tag
+        }
         $report.productionInstallerExecuted=$true
     }
     $completionReady=$true; Write-StandardAcceptanceJson $reportPath $report
 } catch {
     $base=$_.Exception.GetBaseException()
-    $report.result='failed'; $report.failure=[ordered]@{type=$base.GetType().FullName;message=$base.Message;win32Error=$(if($base -is [ComponentModel.Win32Exception]){$base.NativeErrorCode}else{$null})}
+    $report.result='failed'; $report.failure=[ordered]@{type=$base.GetType().FullName;message=$base.Message;win32Error=$(if($base -is [ComponentModel.Win32Exception]){$base.NativeErrorCode}else{$null});apiStage=$(if($null -ne $report['apiStage']){$report.apiStage}else{$null});script=$_.InvocationInfo.ScriptName;line=$_.InvocationInfo.ScriptLineNumber}
     Write-StandardAcceptanceJson $reportPath $report
     throw
 } finally {
@@ -1097,7 +1348,7 @@ try {
         }
     } finally {
         try {
-            if(-not $DiagnosticOnly) {
+            if(-not $DiagnosticOnly -and -not $WDAGPermission) {
                 $report['controllerSeparationAfter']=Get-StandardAcceptanceControllerSeparation $context
                 try {
                     Assert-StandardAcceptanceControllerSeparation $isolationBefore $report.controllerSeparationAfter $context
@@ -1105,11 +1356,20 @@ try {
                 } catch {$report.result='failed';$report['twoUserSeparationPassed']=$false;throw}
                 finally {Write-StandardAcceptanceJson $reportPath $report}
             }
-        } finally {if($null -ne $child) {$child.Dispose()}}
+        } finally {
+            try {
+                if($null -ne $permissionLease) {
+                    try {$permissionLease.Restore();$report['guestGroupsRestoredExactly']=$permissionLease.restorationComplete}
+                    catch {$report.result='failed';$report['guestGroupsRestoredExactly']=$false;$report['guestGroupsRestorationFailure']=$_.Exception.GetBaseException().Message;throw}
+                    finally {Write-StandardAcceptanceJson $reportPath $report}
+                }
+            } finally {if($null -ne $child) {$child.Dispose()}}
+        }
     }
 }
 if($completionReady) {
     if($GuestInteractiveLogon) {Assert-StandardAcceptance $desktopLease.restorationComplete 'The guest desktop lease did not restore exactly.'}
+    if($WDAGPermission){Assert-StandardAcceptance $permissionLease.restorationComplete 'The guest permission membership lease did not restore exactly.'}
     $report.result='passed'; Write-StandardAcceptanceJson $reportPath $report
     Write-Output ('Standard-account ' + $report.mode + ' passed; inspect the retained Sandbox evidence and exact desktop restoration. The disposable account/profile disappear when this Sandbox stops.')
 }
