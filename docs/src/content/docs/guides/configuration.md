@@ -38,7 +38,7 @@ Choosing a program fills the runtime folder automatically only when that field i
 
 ## Executable and working-directory paths
 
-The runtime folder must exist and use a full path. The WinUI preview accepts an existing `.exe` as its target.
+The runtime folder must exist and use a full path. WinUI Manager accepts an existing `.exe` as its target.
 
 A target can be an absolute path or a path relative to the runtime folder. For example:
 

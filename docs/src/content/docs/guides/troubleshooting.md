@@ -9,9 +9,9 @@ For the expected setup sequence, see [getting started](/SteamWrapper/guides/gett
 
 ## Manager does not open
 
-Confirm that you extracted the **complete WinUI preview** and are running `SteamWrapper.Manager.exe` from ordinary File Explorer on Windows 11 24H2 x64.
+On Windows 11 24H2 x64, use the same Windows account as Steam with ordinary permissions. For an **installed copy**, open its Start menu or desktop shortcut, or `SteamWrapper.exe` in your chosen installation folder. For a **portable ZIP**, open `SteamWrapper.Manager.exe` from the complete extracted folder in ordinary File Explorer.
 
-Do not run it from inside a ZIP or move the EXE away from its DLLs, native resources, `Assets`, `Runner` and language resources. An old `SteamWrapperManager.exe` belongs to the retired implementation; a test-evidence artifact is not the WinUI application.
+For a portable ZIP, do not run it from inside the archive or move the EXE away from its DLLs, native resources, `Assets`, `Runner` and language resources. An old `SteamWrapperManager.exe` belongs to the retired implementation; a test-evidence artifact is not the WinUI application.
 
 If present, inspect:
 
@@ -19,7 +19,7 @@ If present, inspect:
 %LOCALAPPDATA%\SteamWrapper\logs\manager-startup.log
 ```
 
-The self-contained directory bundles runtime files, but clean-system acceptance and a new WinUI installer are not complete. Re-extract a complete artifact rather than assembling a working directory from unrelated package versions. See [installation](/SteamWrapper/guides/installation/).
+Setup and the complete ZIP include the required runtime files. For an installed copy, follow the [repair guidance](/SteamWrapper/guides/installer-preview/#repair-and-rollback). For a portable copy, extract a complete matching ZIP into a new folder. Do not combine unrelated package versions. See [installation](/SteamWrapper/guides/installation/).
 
 ## Steam games or installation locations are missing
 
@@ -60,11 +60,11 @@ Profile saving can succeed before Runner installation or verification fails. Fol
 
 | Message or symptom | Next step |
 | --- | --- |
-| Bundled files or manifest cannot be verified | Re-extract a complete matching preview |
+| Bundled files or manifest cannot be verified | Follow the installed-copy repair guidance, or extract a complete matching portable ZIP |
 | Runner is in use | Exit the game and its launcher normally, then retry saving |
 | Installed version is unknown or same-version contents differ | Keep the existing file and use a matching package; do not force a replacement by deleting metadata |
 | A newer compatible Runner is retained | This is expected downgrade protection |
-| Shared location cannot be confirmed | Reopen Manager from ordinary File Explorer as described below |
+| Shared location cannot be confirmed | Reopen Manager through its installed shortcut or ordinary File Explorer as described below |
 
 WinUI prepares and checks the stable Runner when saving a profile.
 
@@ -72,7 +72,7 @@ WinUI prepares and checks the stable Runner when saving a profile.
 
 Some development or packaged host environments can redirect literal AppData paths into a private file view. A file existing there does not prove that ordinary Steam can see it.
 
-Close Manager. Open the complete preview directory through **ordinary Windows File Explorer**, then double-click Manager and save the profile again. Use the stable shared Runner path in the newly generated command.
+Close Manager. For an **installed copy**, open its installed shortcut from the normal Windows desktop, or open the chosen installation folder in **ordinary File Explorer** and double-click `SteamWrapper.exe`. For a **portable ZIP**, open its complete extracted folder in ordinary File Explorer and double-click `SteamWrapper.Manager.exe`. Use the same Windows account as Steam, save the profile again, and keep the stable shared Runner path in the newly generated command.
 
 Do not solve this warning by putting a host's private cache path into Steam Launch Options. The application checks final file-handle locations before reporting Runner ready.
 

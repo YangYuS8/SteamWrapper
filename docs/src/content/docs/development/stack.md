@@ -9,7 +9,7 @@ description: "The WinUI/C# Manager, independent Rust Runner, and Windows-first d
 
 ## Target design
 
-**C#/XAML WinUI 3 is the sole Manager**, backed by independently testable C# Application services and an independent Rust Runner. The Windows configuration preview and self-contained directory build are implemented. Dioxus, its Rust Manager service layer, Native E2E, and GUI release workflow are removed; their historical results do not define the current product. See the [Windows design](/SteamWrapper/project/design/windows-v2/) and [WinUI assessment](/SteamWrapper/project/decisions/winui3/).
+**C#/XAML WinUI 3 is the sole Manager**, backed by independently testable C# Application services and an independent Rust Runner. The stable Windows product ships a complete self-contained layout through per-user Setup and a portable ZIP. Dioxus, its Rust Manager service layer, Native E2E, and GUI release workflow are removed; their historical results do not define the current product. See the [Windows design](/SteamWrapper/project/design/windows-v2/) and [WinUI assessment](/SteamWrapper/project/decisions/winui3/).
 
 | Area | Current choice | Boundary |
 | --- | --- | --- |
@@ -18,8 +18,8 @@ description: "The WinUI/C# Manager, independent Rust Runner, and Windows-first d
 | Daily runtime | Independent Rust Runner | Existing CLI and process lifecycle; Manager closed during play |
 | Configuration | `profiles.toml` v2 | C# edits preserve unknown/unedited data; actual Rust consumption is tested |
 | Covers | Custom/local Steam images, optional official Steam CDN fallback and placeholders | Offline by default; bounded requests and SteamWrapper cache |
-| Delivery | Unpackaged self-contained Windows layout; version-tag portable ZIP or manual preview artifact | Unsigned prereleases; per-user installer, signing and updater remain unfinished |
-| Platform | Windows 11 24H2 x64 preview | Existing Linux Runner compatibility/CI only; no Linux GUI |
+| Delivery | Unpackaged self-contained Windows layout; per-user Inno Setup and portable ZIP | Project-signed official updates; Windows Authenticode remains absent and optional; portable replacement stays manual |
+| Platform | Windows 11 24H2 x64, same Windows account as Steam with ordinary permissions | Other Windows environments remain unverified; existing Linux Runner compatibility/CI only, no Linux GUI |
 
 C# uses Tomlyn 2.10.1 syntax trees and field spans rather than whole-model serialization. It generates a Rust-readable TOML 1.0 string subset and preserves other source text. Fields, defaults, legacy aliases, paths and arguments are constrained by cross-language and real Runner tests. [Tomlyn package](https://www.nuget.org/packages/Tomlyn/2.10.1), [syntax API](https://github.com/xoofx/Tomlyn/blob/2.10.1/site/docs/low-level.md)
 
@@ -33,6 +33,7 @@ Runner remains Rust. The earlier NativeAOT alternative is an archived assessment
 apps/manager-winui/SteamWrapper.Manager             # WinUI UI
 apps/manager-winui/SteamWrapper.Application         # C# configuration services
 apps/manager-winui/SteamWrapper.Application.Tests   # MSTest
+apps/deployment-windows                            # shared deployment and NativeAOT Manager launcher/helper
 crates/core                                       # Rust configuration/path contracts
 crates/runner                                     # headless runtime called by Steam
 tests/contracts                                   # C# / Rust contracts and driver
@@ -69,14 +70,14 @@ Manager uses the Windows App SDK 2.4.0 component set, directly pinning `Microsof
 
 Selective component references are an officially supported self-contained deployment method. Manager omits unused AI, ML, Search, Widgets and DWrite components through project references, never manual removal of published DLLs. The 2026-09-07 component-reduction record measured about **171 MiB, 457 files** uncompressed. Earlier **226.23 MiB** startup/memory results remain historical and were not rerun for that smaller output. Later artifacts have their own inventories; these numbers are not a promise about every current build. [Official component guidance](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/release-notes/windows-app-sdk-1-8#version-180-18250907003), [comparison record](/SteamWrapper/project/decisions/manager-comparison/), [preview record](/SteamWrapper/project/validation/winui/)
 
-The preview targets Windows 11 24H2 (26100) x64, self-contained with trimming disabled. Services use net10.0; tests use MSTest 4.4.0 / Test SDK 18.9.0, with NuGet lockfiles. The Manager project is maintained directly, without alpha templates or a WinApp MSIX debug identity package. Publishing builds and validates a fresh directory before replacing old output. See [Windows development](/SteamWrapper/development/windows/) for commands and publish regressions.
+The supported Windows release targets Windows 11 24H2 (26100) x64, self-contained with trimming disabled. Services use net10.0; tests use MSTest 4.4.0 / Test SDK 18.9.0, with NuGet lockfiles. The Manager project is maintained directly, without alpha templates or a WinApp MSIX debug identity package. Publishing builds and validates a fresh directory before replacing old output. See [Windows development](/SteamWrapper/development/windows/) for commands and publish regressions.
 
 Node/pnpm serve brand generation and the static docs site, not desktop runtime. `pnpm brand:generate` / `pnpm brand:check` use development-only `@resvg/resvg-js` for canonical SVG/PNG/ICO assets. The `docs/` workspace uses Astro 7.3.1 / Starlight 0.42.0; see [documentation maintenance](/SteamWrapper/development/documentation/).
 
-Daily Windows CI tests/contracts and compiles the actual Manager without packaging it. The version-tag/manual release workflow produces the complete layout with `Runner/SteamWrapperRunner.exe` and version/hash metadata; tags add a portable ZIP, bilingual notes and checksums for an unsigned prerelease. Rust CI preserves Linux process compatibility. A WinUI installer, signing, updater and automatic Steam Launch Options writes remain [roadmap](/SteamWrapper/project/roadmap/) work; no Linux GUI package is advertised. See [distribution](/SteamWrapper/development/distribution/) for release preparation.
+Daily Windows CI tests/contracts and compiles the actual Manager without packaging it. Version tags publish seven immutable assets: Setup, portable ZIP, two release descriptors, checksums and bilingual notes; manual workflow runs produce development previews. The public `v0.2.7` assets and signed stable/preview feeds were verified on GitHub and CNB. Project-owned PE files and Setup remain Authenticode-unsigned, with Windows code signing optional; automatic Steam Launch Options writes remain [roadmap](/SteamWrapper/project/roadmap/) work. Rust CI preserves Linux process compatibility, without a Linux GUI package. See [installation](/SteamWrapper/guides/installation/) for downloads and [distribution](/SteamWrapper/development/distribution/) for release preparation and scoped evidence.
 
 <a id="不选的方向"></a>
 
 ## Rejected directions
 
-The current product does not retain Dioxus or restore Tauri/React, Electron, a Node UI runtime, or Python runtime components. It adds no C ABI, management helper, or all-C# Runner rewrite. Windows 10, ARM64, MSIX, Linux GUI and SteamOS/Proton expansion require separate decisions and evidence; Windows x64 preview results do not establish them.
+The current product does not retain Dioxus or restore Tauri/React, Electron, a Node UI runtime, or Python runtime components. It adds no C ABI, management helper, or all-C# Runner rewrite. Windows 10, ARM64, MSIX, Linux GUI and SteamOS/Proton expansion require separate decisions and evidence; the Windows 11 24H2 x64 release does not establish them.

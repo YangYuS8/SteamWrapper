@@ -11,21 +11,23 @@ description: "Windows 产品需求、配置保真、架构与实施阶段。"
 
 **2026-10-02 实现更新：**WinUI 现为唯一 Manager。按用户要求，已移除 Dioxus 应用、Rust `manager-core`、Dioxus Native E2E 和旧 UI 发布链，历史源码仍可在 `ca6a09e` 查阅。这取代最初的分阶段退役决定，不改写九月的测量结果，也不完成剩余 Windows 验收门槛。主线集成仍是预览，不是稳定发布。当前优先级见[路线图](/SteamWrapper/zh-cn/project/roadmap/)。
 
-## 当前验收（2026-10-06）
+<a id="当前验收2026-10-06"></a>
 
-上方九月状态保留为历史记录。有界 P0／P1 核心已具备 **Windows 11 x64、当前 Windows／Steam 账户**的首个稳定版交付条件，并已实际以普通权限执行产品。准确标签的正常 CI、发布检查及公开下载核验仍不可省略。最新公开版本仍为 **[v0.2.6-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1)**，提供相同的 [CNB 附件](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.6-preview.1)；**实际发布成功之前，0.2.7 仍为私有候选**。[运行 37462977733](https://github.com/YangYuS8/SteamWrapper/actions/runs/37462977733) 发布两个公开预览来源及签名索引，两个来源的全部七附件通过独立匿名长度／摘要、标签提交和包内清单核验；该检查没有执行 Setup。
+## 当前验收（2026-10-07）
 
-当前源码通过 178 项 Application、37 项 Windows、160 项 Deployment 测试，有一项条件式跨卷跳过，Runner 契约通过。真实隔离 0.2.6 → 0.2.7 安装／回滚／再升级通过 13 个结果。私有便携候选通过十项无 SDK、构建 26100 步骤，包含中文目录配置、Manager 移动及独立 Runner 使用；五项实际 NativeAOT Host 语言用例另行通过。已记录的 16 项双语原生用例、物理拼音输入及活动显示器 DPI 切片建立核心 UI 范围，同时保留对应实际载荷与夹具／客体边界。这些检查不代表 0.2.7 已发布或所有账户／硬件组合通过。
+上方九月状态保留为历史记录。首个 Windows 稳定版本现为 **[v0.2.7](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7)**，提供相同的 [CNB 附件](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.7)，有界核心范围为 **Windows 11 24H2 x64、当前 Windows／Steam 账户**。[运行 37500459000](https://github.com/YangYuS8/SteamWrapper/actions/runs/37500459000) 全部九个 job 通过，发布标签提交 `0987802b86460eff711c6cf694015cdbf086bbb2`。两个来源的全部七附件通过独立匿名长度／摘要、标签提交及第 2 版清单核验。两站稳定与预览更新源均通过项目签名、时效及准确安装器验证，同一频道的两站字节一致。此公开核验没有执行 Setup；未来发布仍须通过准确标签的 CI 和实际交付核验。
+
+发布前记录的源码通过 178 项 Application、37 项 Windows、160 项 Deployment 测试，有一项条件式跨卷跳过，Runner 契约通过。真实隔离 0.2.6 → 0.2.7 安装／回滚／再升级通过 13 个结果。私有便携候选通过十项无 SDK、构建 26100 步骤，包含中文目录配置、Manager 移动及独立 Runner 使用；五项实际 NativeAOT Host 语言用例另行通过。已记录的 16 项双语原生用例、物理拼音输入及活动显示器 DPI 切片建立核心 UI 范围，同时保留对应实际载荷与夹具／客体边界。私有无 SDK 生命周期载荷早于最后 Runner 进程名修复，不是后来公开的 v0.2.7 字节；这些检查也不代表所有账户／硬件组合通过。
 
 真实 CNB 公开 0.2.5 → 0.2.6 手动更新通过全部 12 项原生／安装器步骤：签名更新源、未映射目标 Setup 的准确网络下载、旧 Manager 正常退出、实际 Setup、自动健康重启、配置／偏好／信任状态保持原字节、明确保存配置以安装修正 Runner、独立运行及默认卸载保留。Manager 替换期间保留旧 Runner，没有运行它。另一次明确选择 GitHub 的下载按未改变的产品策略超时，未执行目标安装器，原安装／数据保持不变；其失败记录继续记为失败。两个结果都不覆盖启用启动检查或所有网络。
 
-实际生产安装身份 0.2.7 Setup（SHA-256 `5c9ab6482f67711bc61813563e687cf13c2f10b79f47a1930127502e3b4a6b5f`）在全新离线、构建 26100 客体通过全部 **14 项产品生命周期步骤**，没有 SDK 或预先准备的运行时。当前主 SID 的新 Users／Medium 主令牌没有 Administrators SID 或启用的关键管理员特权。Manager 加载自己的 .NET／XAML 模块、保存配置并安装 Runner；修复、默认卸载、中文目录重装及卸载／移动后的独立 Runner 通过。两次 Manager、三次 Runner 退出均实际观察为 0，临时 WinSta0／Default 安全描述符及原始 544／545／555 组成员关系精确还原。这是真实普通权限产品执行，`freshStandardAccount=false`、`primaryStandardSignInTested=false`、`twoUserGuiTested=false`，不是控制器单独通过。
+实际生产安装身份的私有 0.2.7 Setup（SHA-256 `5c9ab6482f67711bc61813563e687cf13c2f10b79f47a1930127502e3b4a6b5f`）在全新离线、构建 26100 客体通过全部 **14 项产品生命周期步骤**，没有 SDK 或预先准备的运行时。当前主 SID 的新 Users／Medium 主令牌没有 Administrators SID 或启用的关键管理员特权。Manager 加载自己的 .NET／XAML 模块、保存配置并安装 Runner；修复、默认卸载、中文目录重装及卸载／移动后的独立 Runner 通过。两次 Manager、三次 Runner 退出均实际观察为 0，临时 WinSta0／Default 安全描述符及原始 544／545／555 组成员关系精确还原。这是真实普通权限产品执行，`freshStandardAccount=false`、`primaryStandardSignInTested=false`、`twoUserGuiTested=false`，不是控制器单独通过。
 
 先前新 SwAcc 跨用户二次登录试验安装 Setup 后，在 WinUI `Application.Start` 发生 `0x8000FFFF`；同 SDK 空控件也在回调前失败。未精确确定原因，失败记录保留。在其他账户的既有桌面上跨用户 RunAs 不属于首个版本的当前账户流程。同 SID 通过不证明其根因、新普通账户主登录或双用户 GUI 使用通过。
 
 实际 NativeAOT 0.2.5 → 0.2.7 复制／恢复在自有 512 MiB 客体 VHD 通过，使用本地重建清单，`actualInno=false`。辅助程序写入安装事务日志及 26,424 字节部分载荷，在剩余 4,096 字节时退出 11；原安装与数据保持不变。只移除自有填充文件后，修复退出 0，VHD 正常分离。先前测试工具失败继续保留。此结果证明该复制中途磁盘满／恢复流程，不代表 Inno 故障、系统盘耗尽或断电恢复通过。
 
-先前微软拼音组合／提交／取消及保留其他字节的保存通过；修正候选窗口在活动显示器以 96／144／192 DPI 实测，宿主还原 125%，28 项放置回归通过。这些观察不证明多屏硬件或后续载荷的所有对话框／语言／缩放组合通过。[测试](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-06)记录准确产物及保留的失败；[路线图](/SteamWrapper/zh-cn/project/roadmap/)分别记录核心就绪、剩余发布门槛与后续扩展。
+先前微软拼音组合／提交／取消及保留其他字节的保存通过；修正候选窗口在活动显示器以 96／144／192 DPI 实测，宿主还原 125%，28 项放置回归通过。这些观察不证明多屏硬件或后续载荷的所有对话框／语言／缩放组合通过。[测试](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-06)记录准确产物及保留的失败；[路线图](/SteamWrapper/zh-cn/project/roadmap/)分别记录核心验收、核验后的公开交付与后续扩展。
 
 ## 1. 回到最初要解决的问题
 

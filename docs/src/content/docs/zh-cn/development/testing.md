@@ -7,16 +7,18 @@ description: "选择相关的服务、原生界面、Runner、包体和 Steam �
 
 SteamWrapper 分别验证跨 Windows/Linux 的 Rust core 与独立 Runner，以及 WinUI Manager 的 C# 服务、跨语言契约、自包含发布和本地交互原生 UI 回归切片。Dioxus、其 Rust 管理服务、Native E2E 与旧打包流程已退役。Windows 最终交付仍按 [阶段门槛](/SteamWrapper/zh-cn/project/design/windows-v2/#8-实施顺序与停止条件)验收。
 
-## 当前验收（2026-10-06）
+<a id="当前验收2026-10-06"></a>
 
-最新公开版本为 **[v0.2.6-preview.1](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.6-preview.1)**，另有 [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.6-preview.1)。协调的 **0.2.7 候选已通过核心验收，等待最终 CI 与版本标签发布**；下列结果不代表稳定版已公开。较早的日期记录只适用于各自的历史载荷。
+## 当前验收（2026-10-07）
+
+最新公开版本为 **[v0.2.7](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7)**，即首个 Windows 稳定版，另有 [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.7)。准确主线标签的工作流九项任务全部通过，两个站点各七附件的独立匿名核验通过，两个签名更新渠道均通过真实公钥／时效／精确安装包绑定校验。下方私有客户端及历史日期记录保留原始载荷范围；公开下载检查没有执行 Setup。
 
 | 范围 | 当前结果 |
 | --- | --- |
-| 公开预览交付 | [发布运行 37462977733](https://github.com/YangYuS8/SteamWrapper/actions/runs/37462977733)通过 GitHub／CNB 发布及签名预览索引发布。另行匿名下载两站各七个附件，对照 API 摘要、长度、标签提交和第 2 版清单核验；该检查没有执行安装器。 |
+| 公开稳定交付 | [发布运行 37500459000](https://github.com/YangYuS8/SteamWrapper/actions/runs/37500459000)在 `v0.2.7`／提交 `0987802b86460eff711c6cf694015cdbf086bbb2` 上九项任务全部通过：完整 Rust／WinUI／文档、自包含发布、安装器／打包、GitHub、CNB 及两个签名更新渠道。四份更新源另经真实公钥核验，每份绑定精确的公开 Setup，各渠道两站字节相同。该检查没有执行公开安装器。 |
 | 当前 C# 与 Runner 契约 | 178 项 Application、37 项 Windows、160 项 Deployment 通过，另有一项有条件的跨盘跳过。跨语言 Runner 契约通过，输出为 `target/winui-contracts/ef24ca53d4b24fd1a7f2051fea869138/results`。这是源码／服务／进程结果。 |
 | 旧 Runner 启动提示 | 聚焦原生 `runner-update` 回归先按预期失败，修复后通过；聚焦 Runner／本地化服务另通过 11 项。新增的是可见提示，保留旧 Runner，不自动替换。 |
-| 指定进程名观察修正（2026-10-07） | 实际 Windows CI 的发现失败与确定性隔离 CLI 复现揭示：目标比启动器先结束时会被漏过。在启动器运行期间观察后，两项新原生回归通过，Windows Runner 十项测试全部通过。保留基线排除、启动器状态及原有发现／空档／最长等待规则；最终 CI 还须验证 Linux。 |
+| 指定进程名观察修正（2026-10-07） | 实际 Windows CI 失败及确定性隔离 CLI 失败揭示：目标比启动器先结束时会被漏过。修正后两项原生回归、Windows Runner 十项套件及全新发布 CLI 复测通过；PR、主线和发布标签的 Linux／Windows CI 也全部通过。保留基线排除、启动器状态与发现／空档／最长等待规则。 |
 | 准备中的稳定版界面文案 | 0.2.7 发布目录的聚焦原生更新用例在两种语言中通过，夹具管理器正常退出。界面文案不代表稳定版本已公开或公网更新安装通过。 |
 | 真实隔离 0.2.6 → 0.2.7 安装 | 13 个符合预期的 Inno／maintenance 结果全部通过，包括实际回滚／再升级与六个数据夹具保留。使用隔离安装身份，`cleanVm=false`。 |
 | 原生清理与系统集成恢复 | 冻结的 0.2.6 安装器逻辑通过九项真实夹具清理选择。快捷方式与注册信息恢复分别记录通过部分，原始合并运行没有整体通过。这是宿主侧隔离夹具，不代表生产 0.2.7 的全部语言／失败组合。 |
@@ -27,7 +29,7 @@ SteamWrapper 分别验证跨 Windows/Linux 的 Rust core 与独立 Runner，以�
 | 真实普通权限生命周期 | **产品十四步和最终控制器整体通过。** 为客体主账户 SID 重新认证，得到真实 Users／Medium、未提升、不含 Administrators 或启用的高危权限的 token。实际 0.2.7 Setup、安装快捷方式 Launcher → Manager、原生保存、修复、三次无界面 Runner、默认卸载和中文目录迁移通过；两次 Manager 关闭及三次 Runner 退出均为 0。客体桌面权限和原始组成员精确还原，再通过官方命令销毁 VM。这是同主 SID 普通权限路径，不代表新普通账户完整登录或双用户 GUI；独立跨 SID 的 Manager 和空对照失败仍保留。 |
 | 磁盘满／VHD 验收 | **实际复制失败与恢复通过。** 在完整唯一绑定的客体专用 512 MiB VHD 上运行真实 0.2.5 → 0.2.7 NativeAOT 复制路径。日志和部分载荷已写入后，剩余空间达到 4 KiB，复制退出 11；旧安装／启动器／数据未变。释放自有填充文件后，修复退出 0，虚拟盘正常分离。这是重建清单的本地载荷夹具，`actualInno=false`。 |
 
-公开附件检查为 `target/winui/public-assets-effbde03ba68438ca6e0adbcaf066aa9/summary.json`，绑定提交 `6d0acffd2b609cc7c95a0c1bf7dbd53d0a903a70`。Setup 为 49,913,873 字节，SHA-256 `0f09539dcdf735a10eb64caee3c105481011df6241bd54f0d9480458f2858293`；ZIP 为 73,826,444 字节，SHA-256 `eb904fee536243cb0db0633a125ee60e7ddf8bf4a8724a1238cc14c93a688b61`。
+稳定版公开附件检查为 `target/winui/public-assets-5df2dc455a594974a11d1352abdeda7f/summary.json`。Setup 为 49,928,653 字节，SHA-256 `ac08f321a607ea1e806c146f7d9bdcb1de7df29a72bb7d7e37c5675911e627c5`；ZIP 为 73,815,118 字节，SHA-256 `4ee9ed5b68955c60a86292a518a9ef1a4faf95d3805990f1046cf2c6e6604906`。四份更新源记录为 `target/winui/public-inspection-tools/feed-inspection-772449c90fda475d90ede0af81bf8b66/summary.json`：稳定序列 `1791307275359`、预览序列 `1791307303009`，检查时均有效至 2026-11-03。此前 0.2.6 的检查仍保留在 `target/winui/public-assets-effbde03ba68438ca6e0adbcaf066aa9/summary.json`，其字节属于独立历史。
 
 聚焦原生证据分别为 Runner 提示的 `target/winui/native-ui/中文 空格 ' f1ab49725af841a48eefe4a703623271/evidence.json`，以及准备中的稳定更新文案的 `target/winui/native-ui/中文 空格 ' df4fa286212c4b76bc592f01ae138416/evidence.json`。真实隔离升级证据为 `target/winui/installer acceptance 中文 ' 55db4ccdc734444e91f95790325f3c6d/evidence.json`：实际 maintenance 从 `0.2.7` 回滚到 `0.2.6`，保留 1,204 个自有版本文件哈希，再由 Setup 升级；`numericUpgradeUsesSyntheticMetadataFixture=false`。这不替代生产安装身份或公网更新验收。
 
@@ -35,7 +37,7 @@ GitHub 失败记录为 `target/winui/public-update-760a6966b3574e0b95a961c6e1f66
 
 CNB 实际更新记录为 `target/winui/public-update-ba2b49e8c41b48f78233113b885c4a59/evidence/evidence.json`，已通过 `ReadEvidence`。接受序列 `1791290631286`、载荷 SHA-256 `65a110fc710ab9eea330fd8b222fa7b11fed6c97ec6cb45aca95e356847f49b2` 后，下载精确的公开 Setup，目标安装器没有预先映射。下载后、点击安装前记录的信任状态 SHA-256 `b33b20b8f56bc66dde08c2a50acedc46975db5034d33e27c830a6300dc0cbd98`，在健康重启及默认卸载后逐字节相同。升级 Manager 时保留已识别的旧 Runner，只有明确保存配置后才替换；历史 0.2.5 Runner 没有被执行。这证明手动 CNB 下载至安装流程，不代表启用启动检查、普通账户、独立 ISO 或所有网络。
 
-私有 0.2.7 便携记录为 `target/winui/portable-stable-d6181d592f7e46d79f46cf8ad69c0bc7/evidence/evidence.json`，ZIP SHA-256 `acdaaa2ee2f5872f3a7858b448f2ce9d9ae3662de6ea72c19605d2f6ba631763`（73,814,387 字节）。实际 Host 语言证据为 `target/winui/host-language-acceptance/5f376bd25edd4a10aa00635bd044e440/evidence.json`。这是候选／原生 Host 结果，不是即将发布的公开 0.2.7 附件。
+私有 0.2.7 便携记录为 `target/winui/portable-stable-d6181d592f7e46d79f46cf8ad69c0bc7/evidence/evidence.json`，ZIP SHA-256 `acdaaa2ee2f5872f3a7858b448f2ce9d9ae3662de6ea72c19605d2f6ba631763`（73,814,387 字节）。实际 Host 语言证据为 `target/winui/host-language-acceptance/5f376bd25edd4a10aa00635bd044e440/evidence.json`。这是候选／原生 Host 结果，不是之后公开的 v0.2.7 附件。
 
 普通快捷方式启动失败保留在 `target/winui/clean-windows-bec5481432e7447b94401feb351cc916/evidence/standard-product-diagnostic.json`，同目录还记录真实 Launcher／Manager token 和父链。控制器精确还原了临时桌面权限，并验证 WDAG 隔离。同 SDK 的空 WinUI 对照程序在 `target/winui/clean-windows-5d2c82239591409d8812bfd1271c6413/evidence/control-standarduser.log` 中，于 Start 回调之前复现 `0x8000FFFF`，没有构造 App 或执行产品代码；其 WDAG 基线二十阶段通过并正常退出 0。这将对照失败定位在共同运行库／第二用户登录路径，不能确定底层原因或替代产品验收。
 
@@ -43,15 +45,15 @@ CNB 实际更新记录为 `target/winui/public-update-ba2b49e8c41b48f78233113b88
 
 最终普通权限证据为 `target/winui/clean-windows-96b6b0f4f1eb4fea8cf129ea7101969a/evidence/evidence.json` 和 `standard-controller.json`。实际 Setup 的 SHA-256 为 `5c9ab6482f67711bc61813563e687cf13c2f10b79f47a1930127502e3b4a6b5f`，子进程及整体控制器均成功退出。只有 `SeChangeNotifyPrivilege` 启用；原始 `544/545/555` 组，以及 WinSta0／Default 的 owner、group、DACL、mandatory label 全部字节均精确还原。客体内测试准备没有修改宿主账户或机器策略；仅存内存的客体密码由官方停止沙盒销毁。`freshStandardAccount`、`primaryStandardSignInTested` 和 `twoUserGuiTested` 仍为 false。此前 `8994…` 的产品十四步成功、父控制器失败记录保留：Windows 自带 PowerShell 5.1 用 ANSI 错读 UTF-8 中文系统名称。真实中文无 BOM UTF-8 回归先复现，再修正工具为明确 UTF-8 读取，随后用全新客体完成整体重跑。
 
-私有 0.2.7 安装包为 47.63 MiB，ZIP 为 70.39 MiB。实际首次安装程序文件共 203,401,695 字节（193.98 MiB），含维护程序／卸载器，不含独立数据目录或保留旧版本。最终软件渲染沙盒中，从启动器到可操作的首次启动为 10,403 ms，迁移后为 6,334 ms；工作集分别为 161,820,672、165,781,504 字节。这是单次客体观测，不保证宿主性能，也不是后续 CI 公开产物的精确大小。
+私有 0.2.7 安装包为 47.63 MiB，ZIP 为 70.39 MiB。实际首次安装程序文件共 203,401,695 字节（193.98 MiB），含维护程序／卸载器，不含独立数据目录或保留旧版本。最终软件渲染沙盒中，从启动器到可操作的首次启动为 10,403 ms，迁移后为 6,334 ms；工作集分别为 161,820,672、165,781,504 字节。这是单次客体观测，不保证宿主性能，也不是 CI 已公开 v0.2.7 包的精确大小或性能测量。
 
-Windows 11 x64 核心交付已有原生配置、已记录输入法／缩放、真实普通进程权限、干净自包含安装／便携使用及有界恢复证据。全新账户完整主登录、双用户 GUI 和多显示器硬件矩阵仍未验证。Windows Authenticode 可选，项目签名更新元数据是独立来源认证要求；CNB 手动公网更新已在上述范围内通过，GitHub 超时另行保留。通用 Steam 启动项自动应用继续暂缓。具备发布条件与已公开发布是两件事；正式公告下载前仍需核验最终标签工作流和公开附件。
+Windows 11 x64 核心交付已有原生配置、已记录输入法／缩放、真实普通进程权限、干净自包含安装／便携使用及有界恢复证据。全新账户完整主登录、双用户 GUI 和多显示器硬件矩阵仍未验证。Windows Authenticode 可选，项目签名更新元数据是独立来源认证要求；CNB 手动公网更新已在上述范围内通过，GitHub 超时另行保留。通用 Steam 启动项自动应用继续暂缓。v0.2.7 标签工作流与公开附件／更新源现已核验，限定的当前账户支持范围和未覆盖的更广矩阵不变。
 
 [Manager 实测比较](/SteamWrapper/zh-cn/project/decisions/manager-comparison/)是选型的归档证据；[测量脚本](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/scripts/windows/Measure-ManagerComparison.ps1)与 Dioxus 源码固定在提交 `ca6a09e`，不再是当前开发前置条件。
 
 九项原生清理选择记录于 `target/winui/installer-options-ui-1609bfeae1ce48e8a04407f34e61a766` 和 `target/winui/installer-options-ui-cc094df9824a486f8e997fc31ebfcd05`。`target/winui/installer-options-ui-3ccb704b3d354d9fa98c09367ea842ee/shell-recovery-evidence.json` 的快捷方式部分通过，随后注册信息部分失败，不能称为整次通过。独立的 `target/winui/installer-options-ui-92ede02f27214ef7b5f784e65f297155/shell-recovery-evidence.json` 记录修正工具精确注册键权限还原后的注册信息单独续跑恢复。这些夹具保留未选数据、未知文件与还原备份，没有使用真实 Steam 或游戏文件。
 
-Windows [Rust 运行 37494490736](https://github.com/YangYuS8/SteamWrapper/actions/runs/37494490736)在 PR 提交 `0ee7be09b20670511b967c246bf552d3a15118bb` 的指定进程名用例失败，WinUI 和文档检查分别通过。确定性 CLI 失败记录为 `target/winui/process-name-race-e51e8fa3cfcd4cb5b67df963a5fa47b7/result.json`：唯一命名的无害子进程实际运行 400 毫秒并结束，启动器再等待 1,200 毫秒后退出；旧 Runner 却在原有 30 秒发现超时后返回 1。新增聚焦源码回归也先复现失败。Runner 现会在启动器退出前观察名称；真实进程回归覆盖子进程先结束及启动器本身就是匹配进程，并检查完成标记和实际启动器状态 7。原 Windows 指定名称用例改用唯一命名的测试 EXE 副本与完成标记，避免误匹配并行测试。七项名称过滤测试与十项 Windows Runner 套件本机通过，其中包含带保护的夹具入口，并非七个独立游戏场景；没有使用真实游戏或玩家数据。上方私有 0.2.7 安装器／便携证据仍绑定原始 Runner 字节，最终标签工作流须编译并验证修正后的 Runner。
+Windows [Rust 运行 37494490736](https://github.com/YangYuS8/SteamWrapper/actions/runs/37494490736)在 PR 提交 `0ee7be09b20670511b967c246bf552d3a15118bb` 的指定进程名用例失败，WinUI 和文档检查分别通过。确定性 CLI 失败记录为 `target/winui/process-name-race-e51e8fa3cfcd4cb5b67df963a5fa47b7/result.json`：唯一命名的无害子进程实际运行 400 毫秒并结束，启动器再等待 1,200 毫秒后退出；旧 Runner 却在原有 30 秒发现超时后返回 1。新增聚焦源码回归也先复现失败。Runner 现会在启动器退出前观察名称；真实进程回归覆盖子进程先结束及启动器本身就是匹配进程，并检查完成标记和实际启动器状态 7。原 Windows 指定名称用例改用唯一命名的测试 EXE 副本与完成标记，避免误匹配并行测试。七项名称过滤测试与十项 Windows Runner 套件本机通过，其中包含带保护的夹具入口，并非七个独立游戏场景；没有使用真实游戏或玩家数据。全新修正发布 CLI 记录为 `target/winui/process-name-race-5b26778900214ff182e5ade8c1488617/result.json`，5,347 毫秒内返回实际启动器状态 7；C#/Rust 契约重跑记录为 `target/winui-contracts/cf9ac5f2f2204b10ac1567fd021e2638/results`。上方私有 0.2.7 安装器／便携记录仍绑定原始 Runner 字节，成功的 v0.2.7 标签工作流另行编译并验证修正后的 Runner。
 
 ## 按改动选择验证
 
@@ -236,7 +238,7 @@ pwsh -NoProfile -File scripts/windows/Read-WinUIWindowMetrics.ps1 -ProcessId $fi
 
 此前 `0.2.6` 源码快照的 `Invoke-WinUI.ps1 -Action Test` 通过 **178 项 Application、九项 Windows 解码器和 160 项 Deployment**，另跳过依赖环境的跨盘 Deployment 用例；`Test-WinUIContracts.ps1` 单独通过。`target/winui/stable-readiness-cli-gates/summary.json` 记录两条命令的退出码、跳过用例、命令日志及 `target/winui-contracts/63e2434c8acd46c1b183886db8db5601/results`；actionlint 1.7.12 通过，检查后未改工作流。这是 CLI／契约结果，不代表原生或干净客户端验收。
 
-协调的源码／产品版本现为 `0.2.7`，正在验收。最新公开版本为 `v0.2.6-preview.1`，尚非稳定版。上方此前的 CLI 与私有候选结果继续保留为历史证据；实际发布与未完成门槛见[当前验收摘要](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-06)。Authenticode 可选。
+协调的源码／产品版本 `0.2.7` 现已成为首个 Windows 稳定版。上方此前的 CLI 与私有候选结果继续保留为历史证据；已核验的公开附件、更新源和剩余平台限制见[当前验收摘要](/SteamWrapper/zh-cn/development/testing/#当前验收2026-10-07)。Authenticode 可选。
 
 ## 干净 Windows Sandbox 验收
 
@@ -387,7 +389,7 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 
 `winui-release.yml` 在版本标签或明确请求的手动预览中重新执行完整门禁，再发布自包含应用，运行全部发布／恢复回归并检查完整布局。版本标签运行先验证源码／标签／版本和双语说明，再生成明确的 schema 2 包：Setup、portable ZIP、两份本地化说明、旧 portable 描述符、安装版描述符及校验和。纯版本标签发布稳定版，预发布后缀发布预览版；稳定发布把两个签名更新源推进到同一个新安装包。手动运行只上传预览产物。发布边界和可选 CNB 镜像见[发布准备](/SteamWrapper/zh-cn/development/distribution/)。
 
-旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；手动发布工作流预览运行真实隔离安装器进程，本地原生 UI 自动化现有首个回归切片。完整原生验收、干净客户端交付和启用更新后的验收仍属于路线图。
+旧 Dioxus Native E2E、AppImage job 与 NSIS release 链已移除。工作流声明不等于最新运行通过，须另行核验；手动发布工作流预览运行真实隔离安装器进程。首个稳定版已通过上方限定范围的客户端／原生门槛；更广硬件／账户矩阵与启用启动更新检查后的验收仍属于路线图。
 
 聚焦的原生 `runner-update` 回归首先因启动时隐藏了可识别旧 Runner 的升级提示而失败；管理器显示该信息状态并说明保存一个游戏配置即可更新 Runner 后，通过了实测。英中切换保留了夹具 Runner 和全部原有偏好值，测试没有执行用于模拟旧 Runner 的非可执行哨兵文件。证据：`target/winui/native-ui/中文 空格 ' f1ab49725af841a48eefe4a703623271/evidence.json`。聚焦 Runner／本地化服务门槛通过 11 项。这增加的是启动提示，不是自动替换 Runner 或干净客户端证据。
 
@@ -396,5 +398,5 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 - C# 服务/契约和发布检查不能证明原生 UI、可访问性或干净 Windows 安装；原生 UI 工具仅证明在交互桌面实际执行的夹具用例，不等于整个 W1 门槛通过。
 - 常规自动化不操作真实 Steam；真实验收需要授权、记录原启动项、保护存档、校验文件并恢复。一键应用/恢复 Launch Options 仍是后续功能。
 - Runner 进程 fixture 仅证明对应平台和已测生命周期场景，不证明真实 Proton、breakaway、Unix daemonize/新 session 或 Steam Deck 兼容性。
-- 当前预览包含完整的 Windows 自包含目录和单独的未签名安装器；隔离安装／卸载测试不能证明干净 Windows VM、原生向导或经过认证的更新验收。
+- 稳定版包含完整的 Windows 自包含目录和单独的未签名安装器；上方分别记录实际执行的客户端、向导与认证更新路径，本机隔离或公开下载检查本身不能证明更广泛的干净客户端矩阵。
 - 上述 2026-09-07–09-08 Dioxus 记录是归档历史结果，不是当前 WinUI 证据。

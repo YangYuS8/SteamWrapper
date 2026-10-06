@@ -7,7 +7,7 @@ description: "可选 Windows 代码签名、项目签名更新与保留的 SignP
 
 **维护者于 2026-10-05 报告 SignPath Foundation 申请被拒绝。**申请于 2026-10-04 提交，本文不记录或猜测拒绝原因；尚未获得服务订阅、项目证书或生产签名批准。Authenticode 签名改为可选交付改进，不再作为稳定发布或应用更新的前置条件。未签名发行仍需如实标识。
 
-应用更新使用独立的项目密钥：发行工作流签署更新清单，Manager 验证签名及安装包的准确长度和 SHA-256 后才提供安装入口。真实公钥已嵌入，对应 GitHub 发行 secret 已配置；公开发布和端到端验收仍是独立门槛。CNB 尚无公开二进制镜像，也未配置发行凭据。这种验证不提供 Windows 发布者身份，也不会消除 Windows 下载警告。详见[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)。
+应用更新使用独立的项目密钥：发行工作流签署更新清单，Manager 验证签名及安装包的准确长度和 SHA-256 后才提供安装入口。真实公钥已嵌入，对应 GitHub 发行 secret 已配置。[v0.2.7](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.7) 已在 GitHub／CNB 各发布七个相同附件，稳定与预览更新源均通过独立匿名下载、真实公钥签名、时效及精确安装包绑定校验。此前公开 0.2.5 → 0.2.6 的 CNB 下载／安装生命周期另行通过；公开 0.2.7 附件／更新源核验不代表在该检查中执行了安装器。这种验证不提供 Windows 发布者身份，也不会消除 Windows 下载警告。详见[交付方案](/SteamWrapper/zh-cn/project/design/windows-delivery/)。
 
 仓库保留 Windows 签名验证、签后 Runner 清单生成、MSVC Runner PE 资源、产物配置草案、依赖／许可清单工具及服务方前置校验器，供未来可能的 Authenticode 签名使用。它们未接入 SignPath，也不向其提交文件。[申请材料](/SteamWrapper/zh-cn/project/design/signing-application/)保留此前提交的软件事实。以下章节描述可选服务方路线，不作为项目签名更新的门槛。
 

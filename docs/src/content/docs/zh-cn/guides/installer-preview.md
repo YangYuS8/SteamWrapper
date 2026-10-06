@@ -1,13 +1,13 @@
 ---
-title: "Windows 安装器预览"
+title: "Windows 安装器"
 description: "选择安装位置，更新或修复管理器，并只删除自己选中的数据。"
 ---
 
 ## 当前边界
 
-SteamWrapper 的 Windows 安装器目前是技术预览，支持 **Windows 11 24H2 或更新版本、x64**。它按当前 Windows 用户安装，包含运行管理器所需的文件；您不需要开发 SDK，也不需要另行安装 .NET。
+SteamWrapper **v0.2.7** 是首个 Windows 稳定版本，已在 **Windows 11 24H2 x64** 验证，其他 Windows 版本尚未验证。它按当前 Windows 用户安装，包含运行管理器所需的文件；您不需要开发 SDK，也不需要另行安装 .NET。请使用平时运行 Steam 的同一个 Windows 账户。
 
-当前公开下载见[安装指南](/SteamWrapper/zh-cn/guides/installation/)。预览版没有 Windows Authenticode 签名。[下文](#签名与更新)介绍更新功能使用的项目签名；它不等于 Windows 发布者证书。
+公开下载见[安装指南](/SteamWrapper/zh-cn/guides/installation/)。本版本没有 Windows Authenticode 签名。[下文](#签名与更新)介绍更新功能使用的项目签名；它不等于 Windows 发布者证书。
 
 ## 安装与日常使用
 
@@ -67,11 +67,11 @@ SteamWrapper 的 Windows 安装器目前是技术预览，支持 **Windows 11 24
 
 ## 签名与更新
 
-Windows Authenticode 签名是可选能力，当前预览版尚未提供，因此 Windows 可能显示未知发布者提示。请只使用[安装指南](/SteamWrapper/zh-cn/guides/installation/)列出的下载来源，并保持正常的 Windows 防护。
+Windows Authenticode 签名是可选能力，当前版本尚未提供，因此 Windows 可能显示未知发布者提示。请只使用[安装指南](/SteamWrapper/zh-cn/guides/installation/)列出的下载来源，并保持正常的 Windows 防护。
 
 管理器更新使用独立的**项目签名**验证更新信息，再检查安装包的准确大小和摘要，通过后才提供安装。玩家不需要安装证书或生成签名密钥。
 
-在管理器中使用**检查更新**，下载提供的新版本，再确认安装。自动检查默认关闭。安装版沿用已登记的位置更新，配置和稳定 Runner 仍独立保存。没有更新界面的旧版需要先手动运行一次安装包。公开可用性取决于实际发布的版本和更新源，本指南不代表已发布稳定版。
+在管理器中使用**检查更新**，下载提供的新版本，再确认安装。自动检查默认关闭。安装版沿用已登记的位置更新，配置和稳定 Runner 仍独立保存。没有更新界面的旧版需要先手动运行一次安装包。公开的稳定与预览更新频道目前均提供 v0.2.7。
 
 对于**便携 ZIP**，请下载更新的完整 ZIP，解压到新文件夹，关闭旧管理器，再从文件资源管理器打开新副本。更新功能不会覆盖任意便携目录。已有配置和稳定 Runner 仍在同一个 Windows 数据目录中，因此移动管理器无需更改 Steam 启动选项。删除旧便携版程序目录不会删除这些独立数据。
 

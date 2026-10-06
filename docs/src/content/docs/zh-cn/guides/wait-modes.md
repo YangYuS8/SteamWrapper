@@ -70,7 +70,7 @@ Runner 启动所选程序，并等待这个直接进程退出。
 
 `process_group` 是保留的类 Unix 实现。当前 Windows Runner 会拒绝它，WinUI 也会对 Windows 配置禁用此选项。
 
-明确标为 Linux 或 SteamOS 的配置可以在 Windows 预览版中查看，但不能编辑。这个选项不会提供 Windows 进程组，也不能证明 Proton 或 Steam Deck 兼容。新的 Linux/SteamOS 扩展仍然暂缓。
+明确标为 Linux 或 SteamOS 的配置可以在 Windows Manager 中查看，但不能编辑。这个选项不会提供 Windows 进程组，也不能证明 Proton 或 Steam Deck 兼容。新的 Linux/SteamOS 扩展仍然暂缓。
 
 ## 验证修改后的模式
 

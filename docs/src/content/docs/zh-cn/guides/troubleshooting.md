@@ -9,9 +9,9 @@ description: 排查配置、Runner、Steam 状态、汉化和语言问题，同�
 
 ## Manager 无法打开
 
-确认已经**完整解压 WinUI 预览版**，并在 Windows 11 24H2 x64 的普通文件资源管理器中运行 `SteamWrapper.Manager.exe`。
+在 Windows 11 24H2 x64 上，使用与 Steam 相同的 Windows 账户及普通权限。**安装版**通过开始菜单或桌面快捷方式打开，也可运行所选安装目录中的 `SteamWrapper.exe`。**便携 ZIP**则在普通文件资源管理器中打开完整解压目录，运行 `SteamWrapper.Manager.exe`。
 
-不要从 ZIP 内启动，也不要把 EXE 与 DLL、原生资源、`Assets`、`Runner` 和语言资源分开。旧 `SteamWrapperManager.exe` 属于已退役实现；测试证据产物也不是 WinUI 应用。
+便携 ZIP 不要从压缩包内启动，也不要把 EXE 与 DLL、原生资源、`Assets`、`Runner` 和语言资源分开。旧 `SteamWrapperManager.exe` 属于已退役实现；测试证据产物也不是 WinUI 应用。
 
 如果存在，可以查看：
 
@@ -19,7 +19,7 @@ description: 排查配置、Runner、Steam 状态、汉化和语言问题，同�
 %LOCALAPPDATA%\SteamWrapper\logs\manager-startup.log
 ```
 
-自包含目录包含运行时文件，但干净系统验收和新的 WinUI 安装器尚未完成。请重新解压完整产物，不要把不同版本的包拼在同一个目录里。详见[安装指南](/SteamWrapper/zh-cn/guides/installation/)。
+Setup 和完整 ZIP 都包含所需运行时文件。安装版请按[修复指引](/SteamWrapper/zh-cn/guides/installer-preview/#修复与回退)处理；便携版将完整且匹配的 ZIP 解压到新目录。不要混用不同版本的包。详见[安装指南](/SteamWrapper/zh-cn/guides/installation/)。
 
 ## 没有找到 Steam 游戏或安装位置
 
@@ -60,11 +60,11 @@ description: 排查配置、Runner、Steam 状态、汉化和语言问题，同�
 
 | 消息或症状 | 下一步 |
 | --- | --- |
-| 随包文件或清单无法通过校验 | 重新解压完整且匹配的预览包 |
+| 随包文件或清单无法通过校验 | 按安装版修复指引处理，或完整解压匹配的便携 ZIP |
 | Runner 文件仍在使用 | 正常退出游戏和启动器，再重试保存 |
 | 已安装版本未知，或同版本内容不同 | 保留现有文件，使用匹配的包；不要删除元数据来强行替换 |
 | 已保留较新的兼容 Runner | 这是预期的防降级行为 |
-| 无法确认共享位置 | 按下一节说明，从普通文件资源管理器重新打开 Manager |
+| 无法确认共享位置 | 按下一节说明，通过安装的快捷方式或普通文件资源管理器重新打开 Manager |
 
 WinUI 在保存配置时准备并检查稳定 Runner。
 
@@ -72,7 +72,7 @@ WinUI 在保存配置时准备并检查稳定 Runner。
 
 某些开发环境或带包身份的宿主环境，可能把字面上的 AppData 路径重定向到私有文件视图。该视图中存在文件，并不能证明普通 Steam 能访问它。
 
-关闭 Manager，通过**普通 Windows 文件资源管理器**打开完整预览目录，再双击 Manager 并重新保存配置。使用新生成命令中的稳定共享 Runner 路径。
+关闭 Manager。**安装版**从正常 Windows 桌面打开已安装的快捷方式，或在**普通文件资源管理器**中进入所选安装目录，双击 `SteamWrapper.exe`。**便携 ZIP**在普通文件资源管理器中进入完整解压目录，双击 `SteamWrapper.Manager.exe`。使用与 Steam 相同的 Windows 账户，重新保存配置，并保留新生成命令中的稳定共享 Runner 路径。
 
 不要把宿主的私有缓存路径填写到 Steam 启动项中来绕过警告。应用会在报告 Runner 就绪前检查文件句柄的最终位置。
 
