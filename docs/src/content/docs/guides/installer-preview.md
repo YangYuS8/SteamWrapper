@@ -1,126 +1,80 @@
 ---
 title: "Windows installer preview"
-description: "Build, try, repair and remove the unsigned per-user installer, with explicit preview limits."
+description: "Choose an installation folder, update or repair Manager, and remove only the data you select."
 ---
 
 ## Current boundary
 
-The Inno Setup installer and C# deployment component are implemented for **Windows 11 24H2 or newer, x64**, as a **technical preview without Windows Authenticode signing**. They include the complete self-contained WinUI layout, both languages and the independent Runner. Normal branch CI tests and compiles source; it does not produce a setup executable. Explicit manual runs build preview artifacts only. Version-tag delivery packages Setup and portable ZIP using the explicit schema-2 contract, retaining the original portable validator. Authenticode is optional; the stable-delivery gates in the [execution queue](/SteamWrapper/project/roadmap/#execution-queue-2026-10-03) remain open.
+SteamWrapper's Windows installer is a technical preview for **Windows 11 24H2 or newer, x64**. It installs for the current Windows user and includes the files needed to run Manager; you do not need a developer SDK or a separate .NET installation.
 
-This is not an Authenticode-signed or stable release. Isolated process tests on a development machine or hosted Windows Server do not establish clean Windows 11 acceptance. The remaining clean-client, normal-protection download, multi-user, scaling and real Steam delivery gates are recorded in the [delivery plan](/SteamWrapper/project/design/windows-delivery/). Do not disable Windows protection to run the preview.
-
-[v0.2.5-preview.1 is publicly available](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.5-preview.1) as a GitHub prerelease, published on 2026-10-05 in China (2026-10-04 20:57:52 UTC). Its seven assets include Setup (49,901,116 bytes), portable ZIP (73,765,434 bytes) and bilingual notes. The [release workflow](https://github.com/YangYuS8/SteamWrapper/actions/runs/37232987692) passed the final installer/options gates. Use the [Setup-first installation guide](/SteamWrapper/guides/installation/). A CNB binary mirror is advertised only after its upload and download verification succeeds.
-
-## Build a preview
-
-With the documented Windows development tools installed, run from the repository root:
-
-```powershell
-pwsh -NoProfile -File scripts/windows/Invoke-WinUI.ps1 -Action Publish
-pwsh -NoProfile -File scripts/windows/Install-WinUIInstallerToolchain.ps1
-pwsh -NoProfile -File scripts/windows/New-WinUIInstaller.ps1 -Tag v0.2.5-preview.1
-```
-
-The last command produces `target/winui/installers/v0.2.5-preview.1/SteamWrapper-v0.2.5-preview.1-win-x64-setup.exe` and inspection metadata for the current `0.2.5` source. The tag must match the numeric source version. It labels a local artifact; the command does not create a Git tag or publish a Release. Do not reuse a public version for changed bytes. Earlier artifacts and genuine numeric upgrade/rollback results remain dated historical evidence.
-
-Changing only the prerelease suffix does not provide an upgrade path: the deployment manifest changes while the numeric version remains the same, and installation rejects different content at the same base. New installable payloads need a new coordinated three-part source/product version; retry an existing build with its exact immutable files. See [release version rules](/SteamWrapper/development/distribution/#prepare-and-trigger-a-release).
-
-Inno Setup 7.1.0 x64 is downloaded only from the official site, with the pinned SHA-256 and publisher signature verified. It is installed under `target/toolchain`; contributors may also supply a matching verified compiler using `-Compiler`. mise aliases are optional conveniences. Developer SDKs and Inno are build tools, not player requirements.
-
-For disposable acceptance:
-
-```powershell
-pwsh -NoProfile -File scripts/windows/Test-WinUIHostLanguage.ps1
-pwsh -NoProfile -File scripts/windows/Test-WinUIInstallerScripts.ps1
-pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1
-```
-
-The Host-language command runs five real final NativeAOT maintenance processes under a fresh `target/winui/host-language-acceptance/<id>` fixture. Without a CLI language override, it checks the actual Windows UI language for missing or language-less preferences, explicit English/Chinese choices and malformed-settings fallback, preserving fixture bytes and the published Host. It reads no real user preferences. The 2026-10-03 local run passed on `zh-CN` Windows; this is not acceptance on every system language or a clean client.
-
-The latter runs real setup, compatible maintenance rollback and uninstall processes under a fresh repository `target` root, with a distinct test AppId and shortcuts redirected to a disposable fixture directory. Its default synthetic next-version bundle tests the deployment transaction only; it is not a real next-version build or signing evidence. It never uses the real game library. The script reports the isolated directory containing its logs and `evidence.json`; its path includes Chinese text, spaces and an apostrophe to test path handling.
-
-For genuine numeric-version upgrade acceptance, freeze the complete old portable publication before replacing it, reject reparse/private inputs, and record source/copy hashes. Build the new coordinated source/product version normally; changing the old Runner manifest or PE metadata does not create a new-version binary. The following historical `0.2.3` → `0.2.4` example requires those exact frozen publications; replace `REPLACE_WITH_ID` with the recorded baseline directory name and choose the actual coordinated versions for a new run:
-
-```powershell
-$baseline = 'target/winui/upgrade-baselines/REPLACE_WITH_ID/v0.2.3'
-pwsh -NoProfile -File scripts/windows/Test-WinUIInstaller.ps1 `
-  -PublishDirectory $baseline `
-  -UpgradePublishDirectory target/winui/publish `
-  -Tag v0.2.3-installertest.1 `
-  -UpgradeTag v0.2.4-installertest.1
-```
-
-When an upgrade publication is supplied, the script checks all seven own PE product/version fields in both layouts before invoking the compiler or installer. The expected successful evidence includes `numericUpgradeUsesSyntheticMetadataFixture=false` and a compatible rollback executed by the actual maintenance process, followed by reactivation through the real upgraded installer. Inspect the recorded tags, versions, owned-file preservation and user-data hashes. This command uses the isolated test root, not the production installation. Local success still does not establish clean Windows, native wizard/Explorer, multi-user or every interruption/registry/shortcut failure gate. No clean VM was available for the local 2026-10-03 preparation.
-
-The completed `0.2.3` local run on 2026-10-03 used frozen `0.2.2` and genuinely compiled `0.2.3`, with **13 expected real process steps**. Actual maintenance rollback to `0.2.2` preserved 1,066 owned version files and maintenance/uninstaller/shortcut state before Inno re-upgraded. Locked-owned and unknown-file removals were refused as expected; normal uninstall, reinstall and the final uninstall succeeded. Six separate data fixtures retained their hashes. Its evidence records `numericUpgradeUsesSyntheticMetadataFixture=false`, `unsigned=true` and `cleanVm=false`. The earlier `0.2.1` → `0.2.2` result remains separate dated evidence in [Testing](/SteamWrapper/development/testing/).
-
-The later frozen `0.2.3` → genuinely compiled `0.2.4` run on 2026-10-03 also passed **13 expected real process steps**. Actual maintenance rollback `0.2.4 → 0.2.3` preserved 1,204 owned version files and maintenance/uninstaller/shortcut state, followed by Inno re-upgrade. Late owned-file locks and unknown files correctly blocked uninstall; subsequent normal uninstall/reinstall passed. Six data fixtures retained their hashes. Evidence is `target/winui/installer acceptance 中文 ' f9b299a94e654ab78a528bd1ea227c37/evidence.json`, again genuine, unsigned and `cleanVm=false`. This local result does not complete clean-client, retention or real signing gates.
+See the [installation guide](/SteamWrapper/guides/installation/) for currently published downloads. The preview does not have Windows Authenticode signing. Project signatures used by the update feature are explained [below](#signing-and-updates); they do not provide a Windows publisher certificate.
 
 ## Installation and daily use
 
-The `0.2.5` implementation includes the following installation and removal choices. See [Testing](/SteamWrapper/development/testing/) for the separately recorded service, native-window and installer results; earlier dated installer runs do not establish these new options.
+1. Download the Setup executable linked in the installation guide, then open it from File Explorer.
+2. Choose English or 简体中文.
+3. Choose an **empty folder on a fixed local drive**. The default is `%LOCALAPPDATA%\Programs\SteamWrapper`. A network share, removable drive or an existing folder containing other files is not supported.
+4. Choose your shortcuts. The **Start menu shortcut is selected by default**; the **desktop shortcut is off by default**.
+5. Finish installation. You can choose to open Manager immediately.
 
-Choose English or 简体中文 in setup. Installation is per user, with no routine elevation. First installation can use an empty directory on a fixed local drive; the default layout is:
+Setup normally does not require administrator elevation. Close all Manager windows normally before installing, updating, repairing or uninstalling. If files are in use, close the reported program and retry; the installer does not force-close Manager, Runner or a game.
 
-```text
-%LOCALAPPDATA%\Programs\SteamWrapper\
-  SteamWrapper.exe
-  installation.json
-  versions\<tag>\
-  maintenance\SteamWrapper.Deployment.exe
-```
+Open Manager to configure a game, then close it and launch the game from Steam as usual. Steam's launch command uses the independent Runner at `%LOCALAPPDATA%\SteamWrapper\bin\SteamWrapperRunner.exe`. Manager's installation folder and shortcuts are only for opening its configuration interface.
 
-The Start menu shortcut is selected by default; the desktop shortcut is off by default. Setup also offers opening Manager when installation finishes. Shortcuts target the stable `SteamWrapper.exe` launcher, which starts Manager only. Steam continues to call `%LOCALAPPDATA%\SteamWrapper\bin\SteamWrapperRunner.exe`; do not paste a Manager, deployment helper or version-directory path into Steam Launch Options.
+The following data stays separate from the Manager program folder, under `%LOCALAPPDATA%\SteamWrapper\`:
 
-Updates and repairs use the registered installation directory. To change location, uninstall Manager while keeping its data, then install into the new empty directory. The installer does not move an existing installation or its data tree.
+- Saved game configurations and Manager settings.
+- The stable Runner used by Steam.
+- Configuration backups, diagnostic logs and downloaded caches.
 
-Installing Manager does not modify Steam options, games or the stable Runner. Manager's existing Runner install/repair action remains separate. Profiles, UI preferences, profile backups, logs and caches stay under `%LOCALAPPDATA%\SteamWrapper\`. Uninstall restoration can also retain a recovery backup beside Steam's account file, as described below. Portable users can keep their existing data and install Manager without copying game files.
+Installing Manager does not change Steam Launch Options, game files or the stable Runner. Saving a profile in Manager prepares or updates Runner separately when safe. If Manager reports that Runner needs attention, follow the message before using the generated Steam launch command.
 
-Close all Manager windows normally before install, repair, rollback or uninstall. The deployment lease blocks changes while Manager is running and blocks new Manager starts during activation. Busy operations fail with retry guidance; they do not terminate Manager, Runner or games. A locked launcher is not forcibly replaced at reboot.
+Updates and repairs keep the registered installation location. To move an installed Manager to another drive or folder, **uninstall Manager with all optional cleanup choices left off**, then install into the new empty folder. Your separate data and stable Runner remain available; there is no need to copy your games.
 
 ## Repair and rollback
 
-Re-run the matching verified setup to restore a missing stable Manager launcher at its registered location. Alternatively, with Manager closed, use the installed maintenance helper. These commands show the default directory; substitute your chosen program directory when needed:
+If Manager's launcher is missing or installation was interrupted, close Manager and run the matching verified Setup again. Repair uses the registered folder and preserves your separate game configurations and Runner.
 
-```powershell
-& "$env:LOCALAPPDATA\Programs\SteamWrapper\maintenance\SteamWrapper.Deployment.exe" --repair --language en
-& "$env:LOCALAPPDATA\Programs\SteamWrapper\maintenance\SteamWrapper.Deployment.exe" --rollback --language zh-CN
-```
+If repair reports unknown or changed files, keep those files and the diagnostic message for investigation. Repair does not overwrite uncertain files or provide a general repair of arbitrary damaged application files. Recovery folders left by an interrupted operation are retained for review rather than deleted automatically.
 
-Repair resolves a supported interrupted deployment journal and restores a missing launcher from its verified version. It refuses unknown or altered files rather than overwriting them. It is not a general repair of corrupted runtime files. Rollback selects the retained compatible previous version after verifying its complete manifest; it does not roll back profiles or stable Runner.
-
-If a staging copy is incomplete, repair preserves every uncertain byte in `.recovery-<transaction>` under the program root, with a recovery receipt. This directory is not launched or automatically cleared, and does not prevent use of the restored valid version. Retain it for diagnosis and review it manually before removing it. Uninstall also leaves it intact. Old complete versions currently remain available; automatic pruning and a retained-version disk quota are not implemented. Installation now admits a new payload only when reported free space covers its complete staged files and manifest, an atomic launcher copy, bounded state/journal writes and a 16 MiB reserve. This is an admission check, not a reservation against other disk writers.
-
-Isolated deployment tests stop real compiled fixture processes without unwinding at five installation and two recovery-rename checkpoints. They verify durable journals, released leases, complete-version repair and preservation of unknown partial bytes. Controlled free-space tests verify refusal before a new deployment journal or version is created. These tests do not fill the real system disk or simulate registry/shortcut failure or full-machine power loss. See [Testing](/SteamWrapper/development/testing/) for the exact evidence scope.
-
-An additional focused 14-case uninstall slice passed at six journal/isolation/deactivation/cleanup checkpoints using only the fixture process's own exit; the existing seven installation/recovery cases also passed separately. This does not extend the earlier complete 99-case suite into a claimed new full-suite run.
-
-A transaction-bound acknowledgment is written only after Manager initializes. An unhealthy/slow startup does not trigger forced shutdown or unattended rollback. Manual recovery is the current boundary. File-state journal recovery does not promise an atomic transaction across Windows registry, shortcuts and every power-loss point.
+Returning to a retained, compatible previous Manager is a maintenance operation. It does not roll back profiles or the stable Runner, and it is not an automatic response to a slow startup. Technical recovery and rollback details are in [Distribution](/SteamWrapper/development/distribution/#windows).
 
 ## Uninstall
 
-Use Windows installed-app settings or the installed uninstaller, with Manager closed. Uninstall removes manifest-owned Manager versions, stable Manager launcher, setup registration and shortcuts. Unknown or altered installation files reject the operation before ordinary owned-file deletion; preserve the diagnostic and investigate before retrying.
+Close Manager, then use **Windows Settings → Apps → Installed apps → SteamWrapper → Uninstall**, or the installed uninstaller. The default removes Manager's owned program files, shortcuts and installation registration. **Your game configurations, Runner and other separate data are kept.**
 
-An interrupted removal uses a separate uninstall journal and an isolated `.removal-<transaction>` tree. Deactivated or partly removed files are never treated as a launchable version. After the reported file occupation ends, repeat uninstall or use the same verified installer (or a newer numeric release) to recover. Unknown bytes remain preserved. These file-level recovery tests do not establish recovery of every Windows registry or shortcut failure.
+The uninstaller offers seven independent choices, all **off by default**:
 
-By default, uninstall keeps all separate player data. Seven additional choices are independent and off by default:
+| Choice | What it removes |
+| --- | --- |
+| Restore normal game launches from Steam | Exact recognized SteamWrapper commands in Steam Launch Options, after backing up the affected account files. |
+| Delete saved game configurations | SteamWrapper's `profiles.toml`; these are launch configurations, not game saves. |
+| Delete game configuration backups | Recognized SteamWrapper profile backups; Steam restoration backups are kept. |
+| Remove Runner | The verified stable Runner and its matching metadata. |
+| Reset Manager settings | Manager preferences, including the saved language choice. |
+| Delete downloaded covers and update installers | Recognized files in SteamWrapper's downloaded-cover and update caches; custom Steam art and Steam's own cache are kept. |
+| Delete diagnostic logs | Recognized Manager, Runner and update-installation logs. |
 
-- Remove recognized SteamWrapper Launch Options.
-- Delete downloaded cover and update caches.
-- Delete SteamWrapper logs.
-- Reset Manager preferences.
-- Delete game profiles.
-- Delete recognized profile backups.
-- Delete the verified stable Runner and its matching metadata.
+**No choice deletes game files or saves.** Choose only the categories you want to remove. For a temporary removal or a change of installation location, leave every choice off.
 
-Removing Launch Options requires Steam to be closed normally. Each affected account file is backed up first. Only an exact standard command generated for this data root's stable Runner and the matching AppID is cleared; custom commands and other file contents are preserved. Because manually copied commands did not record earlier arguments, this cannot restore an unknown previous value. Profiles and Runner can be deleted only after Steam is closed and scanning all local accounts finds no remaining references to that Runner. Unrecognized references must be reviewed manually.
+Before removing Steam launch commands, game configurations or Runner, **exit Steam normally**. The uninstaller clears only the exact generated command for this data folder's stable Runner and matching AppID. It preserves customized commands and every other part of the account file. Earlier manually overwritten arguments were not recorded, so it cannot reconstruct an unknown historical value.
 
-Restoration first keeps the file replaced by the atomic operation beside the Steam account file as `localconfig.vdf.steamwrapper-backup-<guid>`, then verifies and copies it to SteamWrapper's data backup directory. This works when Steam and AppData are on different drives. The adjacent backup is removed only after success; a concurrent edit or interruption leaves it for recovery and blocks profile/Runner deletion. Keep Steam closed, preserve both the current file and any backups, and review them before retrying. Do not overwrite the current file or delete the adjacent backup blindly.
+Deleting profiles or Runner also requires a complete scan of the local Steam accounts with no remaining Runner references or unresolved restoration backups. If a customized launch command still uses Runner, review it in Steam before retrying. Keeping profiles and Runner is safe when you are unsure.
 
-Cleanup selects known files only and preserves busy or unrecognized files and unverified Runner bytes. Profile-backup cleanup does not delete Steam restoration backups. Update trust state is always retained. No option deletes games or saves, follows a filesystem link, or recursively clears a folder. A partial-cleanup message means the retained files need your review.
+If restoration is interrupted, a backup may remain beside Steam's account file as `localconfig.vdf.steamwrapper-backup-<guid>`. Keep Steam closed and preserve both the current file and the backup for review. Do not overwrite the current file or delete the backup blindly. Steam restoration backups and update verification history are always kept, even if you select every cleanup choice.
+
+Busy, unknown or unverified files are preserved. The uninstaller does not follow filesystem links or recursively empty a data folder. A message saying that some files were kept means those files need your review. If Manager itself could not be removed safely, resolve the reported occupation or file problem and retry uninstall; do not manually clear the installation folder.
 
 ## Signing and updates
 
-The [code-signing policy](/SteamWrapper/project/design/code-signing/) makes Windows Authenticode an optional improvement after the declined Foundation application. No Windows publisher certificate is claimed. Application updates use a separate project signing key; checksums and PE product metadata alone are not signatures. Each changed installable payload uses a new coordinated numeric version and preserves third-party licenses/notices and upstream signatures.
+Windows Authenticode signing is optional and is not present in the current preview. Windows may therefore show an unknown-publisher warning. Download only from the sources linked in the [installation guide](/SteamWrapper/guides/installation/), and keep normal Windows protection enabled.
 
-The `0.2.5` release includes manual update checks, optional startup checks, verified downloads and confirmed installation. Its public GitHub preview feed and exact Setup download have passed service-level signature, size and hash verification; the public downloaded installer was not executed in that check. Metadata renewal also passed without rebuilding software or changing version assets. The genuine isolated installation handoff is separate evidence, and clean-client/public download-to-install acceptance remains open. Earlier versions without the update interface require one manual installation. See [Testing](/SteamWrapper/development/testing/#project-update-checks-and-installation) for the scope and [distribution](/SteamWrapper/development/distribution/) for the release contract. Daily game launch remains independent of Manager and network access.
+Manager's update feature uses a separate **project signature** to verify update information, then checks the exact installer size and hash before offering installation. It does not require players to install a certificate or create a signing key.
+
+Use **Check for updates** in Manager, download an offered version, then confirm installation. Automatic checks are off by default. Installed copies update at their registered location; your profiles and stable Runner remain separate. A version without the update interface needs one manual Setup installation first. Public availability depends on the published release and its update feed; this guide does not announce a stable release.
+
+For a **portable ZIP**, download a newer complete ZIP and extract it into a new folder. Close the old Manager, then open the new copy from File Explorer. The update feature does not install over an arbitrary portable folder. Your existing profiles and stable Runner stay in the same Windows data folder, so moving Manager does not require changing Steam Launch Options. Removing the old portable application folder does not remove that separate data.
+
+## Build a preview
+
+Contributors can find build and release instructions in [Distribution](/SteamWrapper/development/distribution/) and the verification commands and recorded limits in [Testing](/SteamWrapper/development/testing/). Those development tools are not needed to install or use SteamWrapper.

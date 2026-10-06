@@ -269,6 +269,9 @@ internal static class Program
         window.Invoke("Updates");
         NativeWindow.Wait(() => window.ById("AutomaticUpdateChecks").Current.IsEnabled, "update preferences loaded");
         Assert(window.ById("InstalledUpdateVersion").Current.Name.StartsWith("Installed version: ", StringComparison.Ordinal), "Update dialog did not identify the installed version.");
+        var installedLabel = window.ById("InstalledUpdateVersion").Current.Name;
+        if (installedLabel.StartsWith("Installed version: v", StringComparison.Ordinal))
+            Equal("SteamWrapper · " + (installedLabel.Contains('-') ? "Windows preview" : "Windows"), window.Root.Current.Name);
         Assert(((TogglePattern)window.ById("AutomaticUpdateChecks").GetCurrentPattern(TogglePattern.Pattern)).Current.ToggleState == ToggleState.Off,
             "Opening Updates enabled automatic checks without consent.");
         ((ExpandCollapsePattern)window.ById("UpdateSourceOptions").GetCurrentPattern(ExpandCollapsePattern.Pattern)).Expand();

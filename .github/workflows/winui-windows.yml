@@ -92,6 +92,12 @@ jobs:
       - name: Test standard-account acceptance guards without creating accounts
         run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-StandardUserAcceptanceScripts.ps1
 
+      - name: Test public-update acceptance guards without networking or Sandbox
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-ProjectUpdateAcceptanceScripts.ps1
+
+      - name: Test installer boundary guards without UI, registry changes or virtual disks
+        run: mise.exe exec -- pwsh -NoProfile -File scripts/windows/Test-InstallerBoundaryAcceptanceScripts.ps1
+
       - name: Compile read-only window diagnostics without observing a desktop
         run: |
           $validation = {

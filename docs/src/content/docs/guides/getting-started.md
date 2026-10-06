@@ -5,7 +5,7 @@ description: Configure a Windows game once, then launch it from its normal Steam
 
 SteamWrapper lets Steam launch the game executable or launcher you choose. **Manager is for configuration; the independent Runner handles daily launches.** Once setup is complete, Manager can stay closed.
 
-This guide uses the **WinUI Windows preview**. It currently targets Windows 11 24H2 x64. WinUI is the only Manager; version-tag packages are unsigned prereleases and its installer remains unfinished. Start with [installation](/SteamWrapper/guides/installation/) if you do not yet have the complete preview directory.
+This guide uses the **WinUI Windows Manager** for Windows 11 24H2 x64. Start with [installation](/SteamWrapper/guides/installation/) to get Setup or the complete portable ZIP. Windows packages do not have an Authenticode publisher certificate; the official release identifies their version and known limits.
 
 ## Before configuring a game
 
@@ -15,7 +15,7 @@ Keep the official Steam installation and a complete third-party translation in s
 
 ## 1. Open Manager
 
-Extract the entire preview and double-click **`SteamWrapper.Manager.exe` in File Explorer**. Do not copy the EXE out of its directory or run it inside the downloaded ZIP.
+For an installed copy, use the Start menu or desktop shortcut. For the portable copy, extract the entire ZIP and double-click **`SteamWrapper.Manager.exe` in File Explorer**. Do not copy the EXE out of its directory or run it inside the downloaded ZIP.
 
 With no saved language preference, the interface follows the supported system UI language. Simplified Chinese systems use Chinese; unsupported languages use English. The sidebar's **Language** selector offers **English / 简体中文**. A successful manual selection is saved and takes priority on later launches.
 
@@ -65,7 +65,7 @@ The generated command has this shape; use Manager's actual output rather than th
 
 Keep the quotes, `--appid`, the separate `--`, and final `%command%` exactly as generated. Do not replace Runner with the Manager EXE or a file inside a temporary extraction directory.
 
-**Copying does not apply settings to Steam.** The preview uses this manual paste step. Runner receives and logs Steam's expanded original command, but currently launches the profile's own target and arguments; it does not automatically append the original command to the game.
+**Copying does not apply settings to Steam.** Use this manual paste step. Runner receives and logs Steam's expanded original command, but currently launches the profile's own target and arguments; it does not automatically append the original command to the game.
 
 ## 6. Launch and exit normally
 

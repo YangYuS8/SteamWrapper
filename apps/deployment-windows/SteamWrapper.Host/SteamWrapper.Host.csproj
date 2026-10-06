@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>SteamWrapper</AssemblyName>
-    <Version>0.2.6</Version>
+    <Version>0.2.7</Version>
     <Product>SteamWrapper</Product>
     <ApplicationIcon>../../../assets/brand/steamwrapper.ico</ApplicationIcon>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>

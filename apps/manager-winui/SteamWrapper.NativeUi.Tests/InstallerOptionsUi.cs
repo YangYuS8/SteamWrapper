@@ -19,7 +19,7 @@ internal static class InstallerOptionsUi
     {
         try
         {
-            if (args.Length != 4 || !Environment.UserInteractive) throw new ArgumentException("Expected fixture-root, executable, language, and setup/cancel/cache mode on an interactive desktop.");
+            if (args.Length != 4 || !Environment.UserInteractive) throw new ArgumentException("Expected fixture-root, executable, language, and a reviewed installer action on an interactive desktop.");
             evidence = Path.GetFullPath(args[0]);
             language = args[2]; action = args[3];
             var exe = Path.GetFullPath(args[1]);
@@ -28,7 +28,9 @@ internal static class InstallerOptionsUi
                 || !exe.StartsWith(evidence + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
                 || Environment.GetEnvironmentVariable("STEAMWRAPPER_DEPLOYMENT_TEST") != "1"
                 || Path.GetFullPath(Environment.GetEnvironmentVariable("STEAMWRAPPER_E2E_ROOT") ?? "") != evidence
-                || language is not ("english" or "chinesesimplified") || action is not ("setup" or "cancel" or "cache" or "dismiss"))
+                || language is not ("english" or "chinesesimplified") || action is not ("setup" or "cancel" or "cache" or "dismiss"
+                    or "cleanup-restore" or "cleanup-profiles" or "cleanup-backups" or "cleanup-runner" or "cleanup-settings"
+                    or "cleanup-cache" or "cleanup-logs" or "cleanup-sensitive" or "cleanup-all"))
                 throw new ArgumentException("Interactive installer acceptance requires its own isolated executable and data root.");
             for (var parent = new DirectoryInfo(evidence); parent is not null; parent = parent.Parent)
                 if (parent.Attributes.HasFlag(FileAttributes.ReparsePoint)) throw new IOException("Fixture ancestors cannot redirect outside the isolated root.");
@@ -38,6 +40,7 @@ internal static class InstallerOptionsUi
                 {
                     using (owned) if (string.Equals(owned.MainModule?.FileName, exe, StringComparison.OrdinalIgnoreCase)) OwnedProcesses.Add(owned.Id);
                 }
+                FindOwnedTemporaryUninstallers(exe);
                 for (var attempt = 0; attempt < 6; attempt++)
                 {
                     var cancel = Windows().SelectMany(Elements).FirstOrDefault(item => item.Current.ControlType == ControlType.Button && item.Current.IsEnabled
@@ -61,7 +64,8 @@ internal static class InstallerOptionsUi
             {
                 if (action == "setup") CheckSetup(); else CheckUninstall();
                 if (!process.WaitForExit(120000)) throw new TimeoutException("Fixture installer did not exit; it was not killed.");
-                if (action == "cache" && process.ExitCode != 0) throw new IOException($"Selected cleanup failed with exit code {process.ExitCode}.");
+                if ((action == "cache" || action.StartsWith("cleanup-", StringComparison.Ordinal)) && process.ExitCode != 0)
+                    throw new IOException($"Selected cleanup failed with exit code {process.ExitCode}.");
                 File.WriteAllText(Path.Combine(evidence, $"{action}-{language}.json"), JsonSerializer.Serialize(new
                 { passed = true, action, language, processId = process.Id, exitCode = process.ExitCode }, new JsonSerializerOptions { WriteIndented = true }));
                 Console.WriteLine($"Passed interactive installer: {action}, {language}.");
@@ -147,11 +151,33 @@ internal static class InstallerOptionsUi
         if (action == "cancel") Click(window, "Cancel", "取消");
         else
         {
-            var cache = checkboxes.Single(item => Name(item).Contains(language == "english" ? "downloaded covers" : "下载的封面", StringComparison.OrdinalIgnoreCase));
-            if (cache.TryGetCurrentPattern(TogglePattern.Pattern, out var pattern)) ((TogglePattern)pattern).Toggle();
-            else Invoke(cache);
-            if (!Checked(cache) || checkboxes.Where(item => !ReferenceEquals(item, cache)).Any(Checked)) throw new IOException("Cache-only selection changed another cleanup choice.");
-            Capture(window, "uninstall-cache-only");
+            var labels = language == "english"
+                ? new Dictionary<string, string>(StringComparer.Ordinal) {
+                    ["restore"] = "Restore normal game launches from Steam", ["profiles"] = "Delete saved game configurations",
+                    ["backups"] = "Delete game configuration backups", ["runner"] = "Remove Runner (used when launching games from Steam)",
+                    ["settings"] = "Reset Manager settings, including language preferences", ["cache"] = "Delete downloaded covers and update installers",
+                    ["logs"] = "Delete diagnostic logs" }
+                : new Dictionary<string, string>(StringComparer.Ordinal) {
+                    ["restore"] = "恢复从 Steam 正常启动游戏", ["profiles"] = "删除保存的游戏配置", ["backups"] = "删除游戏配置备份",
+                    ["runner"] = "删除 Runner（从 Steam 启动游戏时使用）", ["settings"] = "清除管理器设置（包括语言偏好）",
+                    ["cache"] = "删除下载的封面和更新安装包", ["logs"] = "删除诊断日志" };
+            var selected = action switch {
+                "cache" or "cleanup-cache" => new[] { "cache" },
+                "cleanup-sensitive" => ["restore", "profiles", "runner"],
+                "cleanup-all" => labels.Keys.ToArray(),
+                _ => [action["cleanup-".Length..]] };
+            var selectedElements = selected.Select(key => checkboxes.Single(item => Name(item).Equals(labels[key], StringComparison.Ordinal))).ToArray();
+            foreach (var item in selectedElements)
+            {
+                if (item.TryGetCurrentPattern(TogglePattern.Pattern, out var pattern)) ((TogglePattern)pattern).Toggle();
+                else Invoke(item);
+            }
+            if (checkboxes.Any(item => Checked(item) != selectedElements.Any(selectedElement => Automation.Compare(item, selectedElement))))
+                throw new IOException("The exact reviewed cleanup selection changed another choice.");
+            File.WriteAllText(Path.Combine(evidence, $"selection-{action}-{language}.json"), JsonSerializer.Serialize(new {
+                action, language, controls = checkboxes.Select(item => new { name = Name(item), checkedState = Checked(item) }).ToArray(),
+                selected, defaultOff = true, actualNativeWindow = true }, new JsonSerializerOptions { WriteIndented = true }));
+            Capture(window, "uninstall-" + action);
             Click(window, "Uninstall selected items", "卸载并清理所选内容");
             AnswerStandardDialogs();
         }
@@ -169,21 +195,62 @@ internal static class InstallerOptionsUi
         var emptySince = Stopwatch.StartNew();
         while (clock.Elapsed < TimeSpan.FromSeconds(90))
         {
-            var windows = Windows();
-            if (windows.Length == 0) { if (emptySince.Elapsed > TimeSpan.FromSeconds(2)) return; }
-            else
+            try
             {
-                emptySince.Restart();
-                foreach (var window in windows)
+                var windows = Windows();
+                if (windows.Length == 0) { if (emptySince.Elapsed > TimeSpan.FromSeconds(2)) return; }
+                else
                 {
-                    var button = Elements(window).FirstOrDefault(item => item.Current.ControlType == ControlType.Button && item.Current.IsEnabled
-                        && new[] { "Yes", "是(Y)", "是", "OK", "确定" }.Contains(Name(item), StringComparer.OrdinalIgnoreCase));
-                    if (button is not null) { Invoke(button); Thread.Sleep(250); }
+                    emptySince.Restart();
+                    foreach (var window in windows)
+                    {
+                        var button = Elements(window).FirstOrDefault(item => item.Current.ControlType == ControlType.Button && item.Current.IsEnabled
+                            && new[] { "Yes", "是(Y)", "是", "OK", "确定" }.Contains(Name(item), StringComparer.OrdinalIgnoreCase));
+                        if (button is not null) { Invoke(button); Thread.Sleep(250); }
+                    }
                 }
             }
+            catch (ElementNotAvailableException) { /* An owned completion window closed between UIA reads. */ }
             Thread.Sleep(150);
         }
         throw new TimeoutException("Installer completion dialog did not settle; no process was killed.");
+    }
+
+    private static void FindOwnedTemporaryUninstallers(string executable)
+    {
+        // Inno can leave its final notification in a temporary second-phase
+        // process after the original executable has gone. Identify only the
+        // exact isolated command, current session and matching live image.
+        if (Path.GetFileName(executable) != "unins000.exe") return;
+        var expected = "/SECONDPHASE=\"" + executable + "\"";
+        dynamic? locator = null;
+        dynamic? service = null;
+        dynamic? rows = null;
+        try
+        {
+            locator = Activator.CreateInstance(Type.GetTypeFromProgID("WbemScripting.SWbemLocator")!);
+            service = locator!.ConnectServer(".", "root\\cimv2");
+            rows = service.ExecQuery("SELECT ProcessId, ExecutablePath, CommandLine FROM Win32_Process WHERE Name LIKE '%unins%'");
+            foreach (dynamic row in rows)
+            {
+                try
+                {
+                    string command = row.CommandLine ?? "";
+                    string image = row.ExecutablePath ?? "";
+                    if (!command.Contains(expected, StringComparison.OrdinalIgnoreCase) || image.Length == 0) continue;
+                    using var process = Process.GetProcessById((int)(uint)row.ProcessId);
+                    if (process.SessionId == Process.GetCurrentProcess().SessionId
+                        && string.Equals(process.MainModule?.FileName, image, StringComparison.OrdinalIgnoreCase)) OwnedProcesses.Add(process.Id);
+                }
+                finally { Marshal.FinalReleaseComObject(row); }
+            }
+        }
+        finally
+        {
+            if (rows is not null) Marshal.FinalReleaseComObject(rows);
+            if (service is not null) Marshal.FinalReleaseComObject(service);
+            if (locator is not null) Marshal.FinalReleaseComObject(locator);
+        }
     }
 
     private static AutomationElement WaitWindow()

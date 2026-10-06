@@ -5,7 +5,7 @@ description: 在 Windows 上配置一次，以后仍从原来的 Steam 游戏库
 
 SteamWrapper 可以让 Steam 启动你选择的游戏程序或启动器。**Manager 负责配置，独立的 Runner 负责日常启动。** 完成设置后，Manager 可以一直保持关闭。
 
-本指南使用 **WinUI Windows 预览版**，当前面向 Windows 11 24H2 x64。WinUI 是唯一的 Manager；版本标签包为未签名预发布，安装器仍待完成。如果还没有完整的预览版目录，请先阅读[安装指南](/SteamWrapper/zh-cn/guides/installation/)。
+本指南使用面向 Windows 11 24H2 x64 的 **WinUI Windows Manager**。请先阅读[安装指南](/SteamWrapper/zh-cn/guides/installation/)，获取 Setup 或完整便携 ZIP。Windows 程序没有 Authenticode 发布者证书，官方发布页会标明版本和已知限制。
 
 ## 配置前准备
 
@@ -15,7 +15,7 @@ SteamWrapper 可以让 Steam 启动你选择的游戏程序或启动器。**Mana
 
 ## 1. 打开 Manager
 
-完整解压预览版，在**文件资源管理器中双击 `SteamWrapper.Manager.exe`**。不要把 EXE 单独拷出目录，也不要直接在下载的 ZIP 中运行它。
+安装版使用开始菜单或桌面快捷方式。便携版完整解压 ZIP 后，在**文件资源管理器中双击 `SteamWrapper.Manager.exe`**。不要把 EXE 单独拷出目录，也不要直接在下载的 ZIP 中运行它。
 
 没有已保存的语言偏好时，界面跟随已支持的系统界面语言。简体中文系统显示中文，不支持的语言显示英语。侧栏语言选择器提供 **English / 简体中文**。成功手动切换后，偏好会保存并在后续启动时优先使用。
 
@@ -65,7 +65,7 @@ SteamWrapper 可以让 Steam 启动你选择的游戏程序或启动器。**Mana
 
 保留生成的引号、`--appid`、独立的 `--` 和末尾的 `%command%`。不要把 Runner 换成 Manager EXE，也不要改成临时解压目录中的文件。
 
-**复制不会自动应用到 Steam。** 当前预览版需要手动完成粘贴。Runner 会接收并记录 Steam 展开的原始命令，但实际启动配置中的目标程序和参数，不会自动把原命令追加给游戏。
+**复制不会自动应用到 Steam。** 请完成手动粘贴步骤。Runner 会接收并记录 Steam 展开的原始命令，但实际启动配置中的目标程序和参数，不会自动把原命令追加给游戏。
 
 ## 6. 正常启动与退出
 
