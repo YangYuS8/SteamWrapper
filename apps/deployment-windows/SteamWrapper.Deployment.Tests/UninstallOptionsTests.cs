@@ -23,6 +23,67 @@ public sealed class UninstallOptionsTests
     }
 
     [TestMethod]
+    [DataRow("profiles")]
+    [DataRow("runner")]
+    public void BusyDataLeaseStopsSteamRestorationBeforeUninstall(string selected)
+    {
+        using var f = new UninstallFixture();
+        using var dataLease = new FileStream(Path.Combine(f.DataRoot, "profiles.toml.lock"), FileMode.OpenOrCreate,
+            FileAccess.ReadWrite, FileShare.None);
+        var steam = File.ReadAllBytes(f.SteamConfig);
+        var result = f.Run("--restore-steam", "--cleanup", selected);
+        Assert.AreEqual(11, result.ExitCode, result.Error);
+        f.AssertInstalled();
+        CollectionAssert.AreEqual(steam, File.ReadAllBytes(f.SteamConfig));
+        Assert.IsTrue(File.Exists(f.Profiles));
+        Assert.IsTrue(File.Exists(f.Runner));
+    }
+
+    [TestMethod]
+    public void ExplicitUninstallRestoresRecordedNonemptyOptionsAndPreservesRecoveryCopies()
+    {
+        using var f = new UninstallFixture();
+        f.WriteSteamConfig("-original-option \"中文 空格\"");
+        var original = File.ReadAllBytes(f.SteamConfig);
+        using (var lease = SteamLaunchIntegration.AcquireDataLease(f.DataRoot))
+        {
+            var preview = SteamLaunchIntegration.InspectLocked(f.DataRoot, f.SteamRoot, "123456", "123",
+                DeploymentManifest.Hash(f.Profiles), DeploymentManifest.Hash(f.Runner), () => false);
+            Assert.AreEqual(SteamLaunchIntegrationStatus.Applied, SteamLaunchIntegration.ApplyLocked(preview, () => false).Status);
+        }
+        var result = f.Run("--restore-steam", "--cleanup", "profiles,runner");
+        Assert.AreEqual(0, result.ExitCode, result.Error);
+        CollectionAssert.AreEqual(original, File.ReadAllBytes(f.SteamConfig));
+        Assert.IsFalse(File.Exists(f.Profiles));
+        Assert.IsFalse(File.Exists(f.Runner));
+        var records = Directory.GetFiles(Path.Combine(f.DataRoot, "backups", "steam-launch-options"), "operation.json", SearchOption.AllDirectories);
+        Assert.HasCount(1, records);
+        StringAssert.Contains(File.ReadAllText(records[0]), "restored");
+        Assert.IsTrue(File.Exists(Path.Combine(Path.GetDirectoryName(records[0])!, "original.vdf")));
+    }
+
+    [TestMethod]
+    public void ExternallyEditedRecordedTargetStopsUninstallWithoutOverwritingIt()
+    {
+        using var f = new UninstallFixture();
+        f.WriteSteamConfig("-first-value");
+        using (var lease = SteamLaunchIntegration.AcquireDataLease(f.DataRoot))
+        {
+            var preview = SteamLaunchIntegration.InspectLocked(f.DataRoot, f.SteamRoot, "123456", "123",
+                DeploymentManifest.Hash(f.Profiles), DeploymentManifest.Hash(f.Runner), () => false);
+            Assert.AreEqual(SteamLaunchIntegrationStatus.Applied, SteamLaunchIntegration.ApplyLocked(preview, () => false).Status);
+        }
+        f.WriteSteamConfig("-later-external-value");
+        var before = File.ReadAllBytes(f.SteamConfig);
+        var result = f.Run("--restore-steam", "--cleanup", "profiles,runner");
+        Assert.AreEqual(11, result.ExitCode, result.Error);
+        f.AssertInstalled();
+        CollectionAssert.AreEqual(before, File.ReadAllBytes(f.SteamConfig));
+        Assert.IsTrue(File.Exists(f.Profiles));
+        Assert.IsTrue(File.Exists(f.Runner));
+    }
+
+    [TestMethod]
     public void CacheOnlyCleanupDoesNotInspectSteamOrSelectOtherData()
     {
         if (!OperatingSystem.IsWindows()) Assert.Inconclusive("Windows data cleanup uses native file handles.");
@@ -141,6 +202,7 @@ public sealed class UninstallOptionsTests
             ProfileBackup = Path.Combine(DataRoot, "backups", "profiles-20261005T1234561234567Z-" + new string('a', 32) + ".toml");
             Write(ProfileBackup, "profile backup");
             Write(Path.Combine(DataRoot, "updates", "trust-state.json"), "retained update trust state");
+            Write(Path.Combine(DataRoot, "profiles.toml.lock"), "");
             Directory.CreateDirectory(Path.Combine(SteamRoot, "steamapps"));
             WriteSteamConfig(Command);
         }
@@ -155,9 +217,14 @@ public sealed class UninstallOptionsTests
         internal (int ExitCode, string Error) Run(params string[] options) => RunWithSteam(SteamRoot, options);
         internal (int ExitCode, string Error) RunWithSteam(string steamRoot, params string[] options)
         {
-            var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
+            var nativeHost = Environment.GetEnvironmentVariable("STEAMWRAPPER_TEST_NATIVE_HOST");
+            if (!string.IsNullOrEmpty(nativeHost) && (!Path.IsPathFullyQualified(nativeHost)
+                || !string.Equals(Path.GetExtension(nativeHost), ".exe", StringComparison.OrdinalIgnoreCase) || !File.Exists(nativeHost)))
+                throw new InvalidOperationException("STEAMWRAPPER_TEST_NATIVE_HOST must name an existing absolute .exe path.");
+            var start = new ProcessStartInfo(string.IsNullOrEmpty(nativeHost) ? "dotnet" : nativeHost) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
                 StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8 };
-            start.ArgumentList.Add(Inner.AssemblyPath("SteamWrapper.Host", "SteamWrapper"));
+            // Explicit native-host verification uses the published helper with the same isolated fixture arguments.
+            if (string.IsNullOrEmpty(nativeHost)) start.ArgumentList.Add(Inner.AssemblyPath("SteamWrapper.Host", "SteamWrapper"));
             foreach (var argument in new[] { "--uninstall", "--root", Inner.Root, "--test-root", "--language", "en" }.Concat(options)) start.ArgumentList.Add(argument);
             start.Environment["STEAMWRAPPER_DEPLOYMENT_TEST"] = "1";
             start.Environment["STEAMWRAPPER_E2E_ROOT"] = Inner.Directory;

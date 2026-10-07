@@ -246,6 +246,8 @@ public sealed partial class DeploymentEngine
     private void CleanupRemoval(RemovalJournal journal)
     {
         var directory = RemovalPath(journal);
+        // A validated completed receipt with no isolated tree needs no further mutation.
+        if (journal.Phase == "Removed" && !Directory.Exists(directory)) return;
         if (Directory.Exists(directory))
         {
             using (var files = AcquireRemovalFiles(directory, RemovalRecords(journal), requireComplete: false))
@@ -270,6 +272,13 @@ public sealed partial class DeploymentEngine
         var bytes = JsonSerializer.SerializeToUtf8Bytes(journal, DeploymentJson.Default.RemovalJournal);
         if (bytes.Length > 32 * 1024 * 1024) throw new InvalidDataException("Uninstall ownership inventory exceeds its bounded journal limit.");
         AtomicWrite(RemovalJournalPath, bytes);
+    }
+
+    internal static FileStream CreateOwnedRemovalStream(SafeFileHandle native, Func<SafeFileHandle, FileStream>? createStream = null)
+    {
+        // Keep native ownership until stream construction succeeds; failure must release immediately.
+        try { return createStream is null ? new FileStream(native, FileAccess.Read) : createStream(native); }
+        catch { native.Dispose(); throw; }
     }
 
     private sealed class DeleteHandles : IDisposable
@@ -297,7 +306,7 @@ public sealed partial class DeploymentEngine
                     ? @"\\?\UNC\" + fullPath[2..] : @"\\?\" + fullPath;
             var native = CreateFileW(nativePath, 0x80000000u | 0x00010000u, 1u | 4u, IntPtr.Zero, 3u, 0x00200000u, IntPtr.Zero);
             if (native.IsInvalid) { var error = Marshal.GetLastWin32Error(); native.Dispose(); ThrowNative(error); }
-            var stream = new FileStream(native, FileAccess.Read);
+            var stream = CreateOwnedRemovalStream(native);
             try
             {
                 if (!GetFileInformationByHandleEx(native, 9, out var attributes, 8)) ThrowNative(Marshal.GetLastWin32Error());

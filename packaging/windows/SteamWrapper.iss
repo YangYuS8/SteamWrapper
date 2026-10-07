@@ -307,8 +307,9 @@ end;
 
 function WaitForDeployment: String;
 var
-  Attempt: Integer;
-  Receipt: AnsiString;
+  Attempt, DiagnosticIndex: Integer;
+  Receipt, Diagnostic: AnsiString;
+  DiagnosticSafe: Boolean;
 begin
   Result := CustomMessage('DeploymentTimeout');
   for Attempt := 1 to 600 do
@@ -320,6 +321,15 @@ begin
     end;
     if LoadStringFromFile(SessionDir + '\error.txt', Receipt) then
     begin
+      Log('Deployment session error code: ' + String(Copy(Receipt, 1, 64)));
+      if LoadStringFromFile(SessionDir + '\diagnostic.txt', Diagnostic) then
+      begin
+        DiagnosticSafe := (Length(Diagnostic) <= 512) and (Copy(Diagnostic, 1, 3) = 'v1' + #10);
+        for DiagnosticIndex := 1 to Length(Diagnostic) do
+          if Pos(Diagnostic[DiagnosticIndex], 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 =-' + #10) = 0 then
+            DiagnosticSafe := False;
+        if DiagnosticSafe then Log('Deployment session diagnostic: ' + String(Diagnostic));
+      end;
       if String(Receipt) = 'Busy' then Result := FmtMessage(CustomMessage('DeploymentFailure'), ['10'])
       else if String(Receipt) = 'SteamBusy' then Result := CustomMessage('SteamBusy')
       else if String(Receipt) = 'SteamRestore' then Result := CustomMessage('SteamRestore')

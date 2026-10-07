@@ -9,6 +9,26 @@ namespace SteamWrapper.Deployment.Tests;
 public sealed class ManagerDataCleanupTests
 {
     [TestMethod]
+    public void RunnerCleanupPreservesDataWhileProfileMutationLeaseIsBusy()
+    {
+        if (!OperatingSystem.IsWindows()) Assert.Inconclusive("Windows file lease semantics are required.");
+        using var fixture = new Fixture();
+        var root = Path.Combine(fixture.Directory, "data");
+        var profile = Write(root, "profiles.toml");
+        var runner = Write(root, "bin/SteamWrapperRunner.exe");
+        var hash = DeploymentManifest.Hash(runner);
+        var manifest = WriteRunnerManifest(root, "bin/runner-manifest.json", hash);
+        using var lease = new FileStream(Path.Combine(root, "profiles.toml.lock"), FileMode.OpenOrCreate,
+            FileAccess.ReadWrite, FileShare.None);
+        var result = ManagerDataCleanup.CleanupAt(root, ManagerDataCleanupOptions.Runner, runtimeRemovalAllowed: true);
+        Assert.IsTrue(result.HasRetainedFiles);
+        Assert.AreEqual(0, result.DeletedFiles);
+        Assert.IsTrue(File.Exists(profile));
+        Assert.IsTrue(File.Exists(runner));
+        Assert.IsTrue(File.Exists(manifest));
+    }
+
+    [TestMethod]
     public void RuntimeRemovalNeedsTheExplicitGuardAndUsesVerifiedRunnerMetadata()
     {
         if (!OperatingSystem.IsWindows()) return;

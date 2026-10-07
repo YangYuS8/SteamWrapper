@@ -3,7 +3,7 @@ title: Troubleshooting
 description: Diagnose configuration, Runner, Steam status, translation and language problems without overwriting game progress.
 ---
 
-Start with the message shown by Manager and the most recent Runner log. Configuration saving, Runner readiness, game launch and Steam status are different stages; identify which one failed before changing another part of the setup.
+Start with the message shown by Manager and the most recent Runner log. Configuration saving, Runner readiness, writing a Steam setting, game launch and Steam status are separate results; identify which one failed before changing another part of the setup.
 
 For the expected setup sequence, see [getting started](/SteamWrapper/guides/getting-started/).
 
@@ -67,6 +67,28 @@ Profile saving can succeed before Runner installation or verification fails. Fol
 | Shared location cannot be confirmed | Reopen Manager through its installed shortcut or ordinary File Explorer as described below |
 
 WinUI prepares and checks the stable Runner when saving a profile.
+
+<a id="steam-launch-options-were-not-applied-or-restored"></a>
+
+## Steam settings were not applied or restored
+
+The automatic apply and recorded restoration flow is implemented in the **v0.2.9 candidate**; candidate validation, real Steam acceptance and release checks are pending. Public v0.2.8 uses manual copying and cannot recover arguments overwritten by manual pasting.
+
+| Message or situation | What to do |
+| --- | --- |
+| Configuration saved; Steam settings were not applied | The profile is available. Check the account and Runner message, then review a fresh confirmation or use **Save only → Copy launch options**. |
+| Steam is running | Exit Steam normally, then choose **Check again**. Review any changed current value before continuing; Manager will not close Steam or games. |
+| No readable account | Open Steam and sign in once, then reload Manager. You can also copy the command manually. |
+| Several local accounts | Choose the intended account explicitly. Check the setting in Steam under that same account. |
+| Local installation cannot be identified unambiguously | Check the AppID and Steam folder. Keep the manual copy option if the installation remains unknown or ambiguous. |
+| Configuration or Runner changed after saving | Save again, prepare Runner and review a new confirmation. |
+| Application or restoration could not be confirmed | A Steam change may have occurred. Keep recovery copies and inspect the current setting before retrying or restoring. |
+| Current setting or recovery information conflicts | Automatic writes stop to preserve the existing information. Review the current value; do not overwrite it or delete recovery copies to dismiss the message. |
+| Recognized command with no previous-value record | **Restore normal Steam launch** can clear the exact command for one selected account. Restore older arguments yourself from the value you kept before manual pasting. |
+
+**Launch Options written** verifies the selected account's disk value. Use **Open Steam** to open the client and check the same game's Properties; it does not launch the game. Successful configuration, copying or a disk write does not establish Steam's in-memory value, playtime or achievement behavior. Reopening Manager or selecting a configuration rereads the current disk setting rather than relying on an old applied label.
+
+Recorded **Restore previous Launch Options** restores only while this game's current value exactly matches the recorded applied command. Later edits to other games are preserved. If this game's value changed, keep it and resolve the conflict before restoring. Configuration backups and Steam recovery copies are not backups of game saves.
 
 ## Manager asks you to reopen it from File Explorer
 
@@ -144,4 +166,4 @@ Include the Manager variant and revision, Windows version, AppID, selected targe
 
 Review any paths and logs before sharing them: they can contain user names and original launch arguments. Do not attach credentials, your full Steam account configuration, game files or saves by default.
 
-Restore the Steam Launch Options value you kept before setup if you need to undo the test. Keep naturally updated saves unless you have a separate, deliberate recovery plan.
+If you need to undo the test, use the recorded v0.2.9 candidate restoration flow or restore the complete Steam Launch Options value you kept before manual setup. Review conflicts before either action. Keep naturally updated saves unless you have a separate, deliberate recovery plan.

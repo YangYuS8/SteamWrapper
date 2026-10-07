@@ -82,6 +82,9 @@ public sealed partial class MainWindow
             }
             ProcessNameInput.Header = localizer["ProcessName"];
             SaveButton.Content = localizer["Save"];
+            ApplyButton.Content = localizer["SaveApplySteam"];
+            OpenSteamButton.Content = localizer["OpenSteam"];
+            RefreshIntegrationLabels();
             RevertEditsButton.Content = localizer["RevertEdits"];
             RestoreSteamButton.Content = localizer["RestoreSteamLaunch"];
             RemoveProfileButton.Content = localizer["RemoveProfile"];

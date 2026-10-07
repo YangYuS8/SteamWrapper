@@ -74,7 +74,7 @@ A profile explicitly marked for Linux or SteamOS is viewable but not editable in
 
 ## Check a changed mode
 
-Save the profile, preserve the previous Steam Launch Options, and use the generated command from the same Steam library entry. Close Manager before the test.
+Save the profile and use the generated command from the same Steam library entry. The v0.2.9 candidate can retain the previous Launch Options through an explicit account-specific application; its candidate validation and real Steam acceptance are pending. With manual copying, keep the complete previous value yourself. See [configuration](/SteamWrapper/guides/configuration/) for apply and restoration steps. Close Manager before the test.
 
 Observe the actual game opening, whether a launcher exits first, and whether Steam returns to its stopped state after normal game exit. If Steam stays running, inspect the remaining processes before ending anything; a launcher may keep a helper alive. Avoid terminating an active game with unsaved progress just to clear a status indicator.
 

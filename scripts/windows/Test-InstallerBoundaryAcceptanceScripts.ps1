@@ -41,7 +41,7 @@ foreach ($name in $selections) {
     Assert-BoundaryTest ($plan.action -ceq ('cleanup-' + $name)) 'A cleanup action did not identify exactly its selected controls.'
     $before = [ordered]@{}
     foreach ($path in (Get-InstallerBoundaryOwnedDataFiles)) { $before[$path] = 'a' * 64 }
-    foreach ($path in @('updates/trust-state.json','backups/steam-launch-options/retained.vdf','cache/covers/player-art.cover','logs/player-notes.txt','games/save.dat')) { $before[$path] = 'b' * 64 }
+    foreach ($path in @('updates/trust-state.json','backups/retained.vdf',('backups/steam-launch-options/' + $run + '/123456-localconfig.vdf'),'cache/covers/player-art.cover','logs/player-notes.txt','games/save.dat')) { $before[$path] = 'b' * 64 }
     $after = [ordered]@{}
     foreach ($path in $before.Keys) { if ($path -cnotin $plan.removedData) { $after[$path] = $before[$path] } }
     Assert-InstallerBoundaryDataResult $plan $before $after

@@ -29,11 +29,43 @@ public static class ManagerDataCleanup
     // cannot choose a filesystem root. Invoke after removal while holding its program lease.
     internal static ManagerDataCleanupResult CleanupAt(string validatedDataRoot, ManagerDataCleanupOptions options, bool runtimeRemovalAllowed = false)
     {
+        Validate(validatedDataRoot, options);
+        const ManagerDataCleanupOptions protectedOptions = ManagerDataCleanupOptions.Profiles | ManagerDataCleanupOptions.Runner | ManagerDataCleanupOptions.ProfileBackups;
+        if ((options & protectedOptions) == 0) return CleanupCore(validatedDataRoot, options, runtimeRemovalAllowed, false, null);
+        try
+        {
+            using var dataLease = SteamLaunchIntegration.AcquireDataLease(validatedDataRoot);
+            return CleanupCore(validatedDataRoot, options, runtimeRemovalAllowed, true, null);
+        }
+        catch (Exception error) when (Recoverable(error))
+        {
+            var independent = CleanupCore(validatedDataRoot, options & ~protectedOptions, false, false, null);
+            return independent with { RetainedEntries = independent.RetainedEntries + 1 };
+        }
+    }
+
+    internal static ManagerDataCleanupResult CleanupAtUnderDataLease(string validatedDataRoot, ManagerDataCleanupOptions options,
+        FileStream dataLease, bool runtimeRemovalAllowed, Func<bool>? recheckRuntimeRemoval = null)
+    {
+        Validate(validatedDataRoot, options);
+        if (!dataLease.CanWrite || !Path.GetFullPath(dataLease.Name).Equals(
+            Path.Combine(Path.GetFullPath(validatedDataRoot), "profiles.toml.lock"), StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Cleanup requires the caller's matching data lease.", nameof(dataLease));
+        return CleanupCore(validatedDataRoot, options, runtimeRemovalAllowed, true, recheckRuntimeRemoval);
+    }
+
+    private static void Validate(string validatedDataRoot, ManagerDataCleanupOptions options)
+    {
         if ((options & ~Supported) != 0) throw new ArgumentOutOfRangeException(nameof(options));
-        if (options == ManagerDataCleanupOptions.None) return new(0, 0);
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Manager data cleanup requires Windows file handle semantics.");
         if (!Path.IsPathFullyQualified(validatedDataRoot) || validatedDataRoot.StartsWith(@"\\", StringComparison.Ordinal))
             throw new ArgumentException("Cleanup needs a validated local data root.", nameof(validatedDataRoot));
+    }
+
+    private static ManagerDataCleanupResult CleanupCore(string validatedDataRoot, ManagerDataCleanupOptions options,
+        bool runtimeRemovalAllowed, bool dataLeaseHeld, Func<bool>? recheckRuntimeRemoval)
+    {
+        if (options == ManagerDataCleanupOptions.None) return new(0, 0);
         var cleaner = new Cleaner(Path.GetFullPath(validatedDataRoot));
         if (options.HasFlag(ManagerDataCleanupOptions.DownloadedCache))
         {
@@ -46,13 +78,21 @@ public static class ManagerDataCleanup
             cleaner.CleanLockedFile("cache/updates/installation.log", "cache/updates/.download.lock");
         }
         if (options.HasFlag(ManagerDataCleanupOptions.Preferences)) cleaner.CleanLockedFile("ui-settings.json", "ui-settings.json.lock");
-        if (options.HasFlag(ManagerDataCleanupOptions.ProfileBackups)) cleaner.CleanBackups();
+        if (options.HasFlag(ManagerDataCleanupOptions.ProfileBackups)) cleaner.CleanBackups(dataLeaseHeld);
         if ((options & (ManagerDataCleanupOptions.Profiles | ManagerDataCleanupOptions.Runner)) != 0 && !runtimeRemovalAllowed)
             cleaner.Retain();
         else
         {
-            if (options.HasFlag(ManagerDataCleanupOptions.Profiles)) cleaner.CleanLockedFile("profiles.toml", "profiles.toml.lock");
-            if (options.HasFlag(ManagerDataCleanupOptions.Runner)) cleaner.CleanRunner();
+            if (options.HasFlag(ManagerDataCleanupOptions.Profiles))
+            {
+                if (recheckRuntimeRemoval?.Invoke() is false) cleaner.Retain();
+                else cleaner.CleanLockedFile("profiles.toml", "profiles.toml.lock", dataLeaseHeld);
+            }
+            if (options.HasFlag(ManagerDataCleanupOptions.Runner))
+            {
+                if (recheckRuntimeRemoval?.Invoke() is false) cleaner.Retain();
+                else cleaner.CleanRunner();
+            }
         }
         return new(cleaner.Deleted, cleaner.Retained);
     }
@@ -100,26 +140,26 @@ public static class ManagerDataCleanup
             catch (Exception error) when (Recoverable(error)) { Retained++; }
         }
 
-        internal void CleanLockedFile(string relative, string lockRelative)
+        internal void CleanLockedFile(string relative, string lockRelative, bool lockAlreadyHeld = false)
         {
             var path = Path.Combine(root, relative);
             try
             {
                 SafePaths.CheckAncestors(path);
                 if (!File.Exists(path)) return;
-                using var lease = AcquireLock(Path.Combine(root, lockRelative));
+                using var lease = lockAlreadyHeld ? null : AcquireLock(Path.Combine(root, lockRelative));
                 DeleteOwned(path);
             }
             catch (Exception error) when (Recoverable(error)) { Retained++; }
         }
 
-        internal void CleanBackups()
+        internal void CleanBackups(bool dataLeaseHeld = false)
         {
             try
             {
                 SafePaths.CheckAncestors(root);
                 if (!Directory.Exists(Path.Combine(root, "backups"))) return;
-                using var lease = AcquireLock(Path.Combine(root, "profiles.toml.lock"));
+                using var lease = dataLeaseHeld ? null : AcquireLock(Path.Combine(root, "profiles.toml.lock"));
                 CleanDirectory("backups", IsProfileBackup);
             }
             catch (Exception error) when (Recoverable(error)) { Retained++; }

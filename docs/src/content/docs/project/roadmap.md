@@ -215,16 +215,16 @@ The [tag-release workflow and maintainer steps](/SteamWrapper/development/distri
 
 **Deliverable:** an optional, reviewable write to the selected Steam user's selected game, with a safe restore path.
 
-The [2026-10-07 implementation plan](/SteamWrapper/project/design/steam-launch-options/) sequences account inspection, durable apply/restore, a simple native confirmation, shared cleanup and actual Steam persistence/launch acceptance. It is planning evidence, not implemented behavior; the following gates remain unchecked until their scoped results exist.
+The [2026-10-07 implementation](/SteamWrapper/project/design/steam-launch-options/) in candidate `v0.2.9` includes account inspection, durable apply/restore, native confirmation and shared cleanup. Source regressions, bilingual native fixtures and the scoped Episode 1 application/persistence/play/restoration session passed; [Testing](/SteamWrapper/development/testing/#steam-integration-029-2026-10-07) records their exact scope. Final installer/clean-client and public delivery gates remain separate.
 
 Released `0.2.8` implements the narrower existing-command path: Manager can revert unsaved edits, clear the exact recognized generated command for one selected AppID after Steam exits normally, and remove an editable profile only after a complete account scan finds no remaining references to the profile Key or AppID. It preserves custom commands, unrelated TOML and games; unknown old arguments cannot be reconstructed. [Testing](/SteamWrapper/development/testing/#player-refinements-source-028-2026-10-07) preserves the service/native fixture and private isolated upgrade checks, including the final reference-guard fix; those are not execution of the public `v0.2.8` installer or authorized live-library restoration. The unchecked gates below concern general application and provenance-based restoration.
 
-- [ ] Identify local Steam, the game and multiple users without guessing an account. Show exact previous/proposed Launch Options and require an explicit target choice.
-- [ ] Block writes while Steam is running and recheck immediately before mutation. Preserve unrelated data, stable Runner references and the existing `%command%` position.
-- [ ] Back up original values/files before mutation; replace atomically, read back and recover after interruption. Record enough provenance to restore only this change.
-- [ ] Detect external edits before apply and restore. Surface conflicts, preserving current data and backups rather than overwriting a later user value or another game's settings.
-- [ ] Test no/one/multiple users, nonempty old options, Steam starting during the operation, malformed/read-only/locked files, failed writes, interrupted recovery, later edits and repeated restore.
-- [ ] Verify authorized live selected-game sessions, restoration and file/save integrity. Do not expand wait-mode or achievement claims from successful configuration writes.
+- [x] Identify local Steam, the game and multiple users without guessing an account. Show exact previous/proposed Launch Options and require an explicit target choice.
+- [x] Block writes while Steam is running and recheck immediately before mutation. Preserve unrelated data, stable Runner references and the existing `%command%` position.
+- [x] Back up original values/files before mutation; use guarded replacement, read back and recover recorded interrupted cases. Record provenance to restore only this change; replacement is not atomic compare-and-swap or a physical power-loss guarantee.
+- [x] Detect external edits before apply and restore. Surface conflicts, preserving current data and backups rather than overwriting a later user value or another game's settings.
+- [x] Test no/one/multiple users, nonempty old options, Steam starting during the operation, malformed/read-only/locked files, failed writes, interrupted recovery, later edits and repeated restore.
+- [x] Verify the authorized Episode 1 session, restoration, unchanged non-save files and retained save checkpoints. Do not expand wait-mode, save-cloud or achievement claims from this result.
 - [ ] Make one-click apply the default flow only after these gates pass; keep manual copy/restore available.
 
 **Acceptance:** success means the selected setting was written and verified. Failure preserves the previous usable state or provides a specific recovery path. Unresolved save/cloud conflicts stop live acceptance rather than selecting progress to overwrite. P4 precedes new Linux/SteamOS/Proton work but does not require the optional updater to ship first.

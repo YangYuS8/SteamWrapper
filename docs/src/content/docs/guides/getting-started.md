@@ -7,6 +7,8 @@ SteamWrapper lets Steam launch the game executable or launcher you choose. **Man
 
 This guide uses the **WinUI Windows Manager** for Windows 11 24H2 x64. Start with [installation](/SteamWrapper/guides/installation/) to get Setup or the complete portable ZIP. Windows packages do not have an Authenticode publisher certificate; the official release identifies their version and known limits.
 
+**The apply and original-value restoration steps describe the v0.2.9 candidate.** Candidate validation, real Steam acceptance and release checks are still pending; no v0.2.9 public download is claimed here. With public v0.2.8, use its save action and the manual copy alternative below.
+
 ## Before configuring a game
 
 Have the game installed in Steam and identify the executable you actually want to run. For a translation or alternate build, first confirm that its complete directory launches correctly through ordinary File Explorer.
@@ -44,15 +46,29 @@ For example, the official installation may stay inside a Steam library while **G
 
 Leave the advanced working directory empty unless the game or launcher needs a different one. New Windows profiles use **Wait for the program and its children (recommended)**. See [configuration](/SteamWrapper/guides/configuration/) and [wait modes](/SteamWrapper/guides/wait-modes/) for exceptions.
 
-## 4. Save and prepare Runner
+<a id="4-save-and-prepare-runner"></a>
 
-Select **Save and generate launch options**. Manager saves the profile, checks the bundled Runner, and installs or updates it in SteamWrapper's stable user-data directory when possible.
+## 4. Save and apply to Steam
 
-Continue when the success message says Runner is ready and the launch-options text is visible. A message that the profile was saved but Runner is not ready means configuration succeeded while runtime preparation still needs attention. Follow [troubleshooting](/SteamWrapper/guides/troubleshooting/) before changing Steam.
+Select **Save and apply to Steam** in the v0.2.9 candidate. Manager saves the profile and prepares or verifies Runner in its stable user-data directory before showing the proposed Steam change.
 
-## 5. Copy the launch options into Steam
+1. Review the game name, AppID, Steam account, current Launch Options and new command. A sole readable account is displayed; multiple accounts require an explicit choice.
+2. If Steam is running, exit it normally and select **Check again**. Manager rereads the setting, so review any changed value before continuing.
+3. Select **Apply to Steam**. Nonempty previous options are replaced and retained for restoration. Canceling keeps your saved configuration and makes no Steam change.
 
-1. In Steam, right-click the same game and open **Properties → General → Launch Options**.
+A profile-save success does not establish Runner readiness or a Steam write. Follow the displayed Runner message if preparation failed. If the AppID does not match one unambiguous local installation, or no readable account is available, use manual copying below. For a missing account, open Steam and sign in once, then reload Manager.
+
+<a id="5-copy-the-launch-options-into-steam"></a>
+
+## 5. Check Steam, or copy manually
+
+After **Configuration saved; Launch Options written**, choose **Open Steam** and check the same game's **Properties → General → Launch Options** under the account shown in the confirmation. Open Steam opens the client; it does not start the game. Manager has checked the disk value, so confirm the setting in Steam itself before playing.
+
+If application could not be confirmed or a conflict needs review, preserve the current setting and recovery copies. Check [troubleshooting](/SteamWrapper/guides/troubleshooting/#steam-launch-options-were-not-applied-or-restored) before retrying.
+
+For manual setup, use **Save only**, then the separate **Copy launch options** button. Public v0.2.8 calls its save action **Save and generate launch options**. Continue after Runner is ready:
+
+1. In Steam, use the intended account, right-click the same game and open **Properties → General → Launch Options**.
 2. Copy and keep the complete previous value somewhere you can retrieve it. Record an empty value as empty.
 3. In Manager, select **Copy launch options**.
 4. Paste the generated text into Steam's Launch Options.
@@ -65,7 +81,7 @@ The generated command has this shape; use Manager's actual output rather than th
 
 Keep the quotes, `--appid`, the separate `--`, and final `%command%` exactly as generated. Do not replace Runner with the Manager EXE or a file inside a temporary extraction directory.
 
-**Copying does not apply settings to Steam.** Use this manual paste step. Runner receives and logs Steam's expanded original command, but currently launches the profile's own target and arguments; it does not automatically append the original command to the game.
+**Saving alone and copying do not apply settings to Steam.** Manual pasting does not create a previous-value record in Manager. Runner receives and logs Steam's expanded original command, but currently launches the profile's own target and arguments; it does not automatically append the original command to the game.
 
 ## 6. Launch and exit normally
 
@@ -77,7 +93,9 @@ For subsequent play, use Steam normally. Open Manager again only when changing c
 
 ## Undo a game's setup
 
-Restore the launch-options value you recorded before setup. If it was empty, clear the field. This removes that Steam entry's reference to Runner; it does not move game files or restore game progress.
+For an application recorded by the v0.2.9 candidate, choose **Restore Steam launch**, select the same account and review **Restore previous Launch Options**. Exit Steam normally and use **Check again** when prompted. Restoration proceeds only while the current options still match the applied command; later edits to that game's options require review.
+
+For a manually pasted command with no recorded original, **Restore normal Steam launch** clears only the selected account's exact recognized command. To recover earlier arguments, paste back the complete value you kept yourself; Manager cannot reconstruct it. If that value was empty, clear the field. These operations keep your configuration and do not move game files or restore game progress. See [configuration](/SteamWrapper/guides/configuration/#revert-restore-or-remove-a-configuration) for the boundaries.
 
 If you were only testing, restore the previous options afterward and keep any naturally updated saves unless you deliberately choose a separate save-recovery plan. Stop on a cloud-save conflict instead of guessing which progress to overwrite.
 

@@ -1,3 +1,6 @@
+using System.ComponentModel;
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SteamWrapper.Deployment;
@@ -47,8 +50,40 @@ public static class DeploymentHostSession
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
         {
+            // Do not retain exception messages: they can contain user paths or data.
+            // This optional receipt must never replace the existing failure protocol.
+            try { File.WriteAllText(Path.Combine(directory, "diagnostic.txt"), FailureDiagnostic(error), Encoding.ASCII); }
+            catch (Exception diagnosticError) when (diagnosticError is IOException or UnauthorizedAccessException) { }
             File.WriteAllText(Path.Combine(directory, "error.txt"), error is DeploymentException deployment ? deployment.Code : "DeploymentFailed");
             return error is DeploymentException { Code: "Busy" } ? 10 : 11;
         }
+    }
+
+    private static string FailureDiagnostic(Exception error)
+    {
+        var result = new StringBuilder("v1\n");
+        for (var depth = 0; depth < 4 && error is not null; depth++, error = error.InnerException!)
+        {
+            // Known labels also keep custom exception type names out of the receipt.
+            var kind = error switch
+            {
+                DeploymentException => nameof(DeploymentException),
+                Win32Exception => nameof(Win32Exception),
+                FileNotFoundException => nameof(FileNotFoundException),
+                DirectoryNotFoundException => nameof(DirectoryNotFoundException),
+                PathTooLongException => nameof(PathTooLongException),
+                EndOfStreamException => nameof(EndOfStreamException),
+                InvalidDataException => nameof(InvalidDataException),
+                IOException => nameof(IOException),
+                UnauthorizedAccessException => nameof(UnauthorizedAccessException),
+                System.Text.Json.JsonException => nameof(System.Text.Json.JsonException),
+                _ => nameof(Exception)
+            };
+            result.Append(kind).Append(" HResult=0x").Append(error.HResult.ToString("X8", CultureInfo.InvariantCulture));
+            if (error is Win32Exception native)
+                result.Append(" NativeErrorCode=").Append(native.NativeErrorCode.ToString(CultureInfo.InvariantCulture));
+            result.Append('\n');
+        }
+        return result.ToString();
     }
 }

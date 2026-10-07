@@ -12,7 +12,7 @@
   <data name="WelcomeDescription" xml:space="preserve"><value>Choose the translated game or launcher that Steam should run. After setup, start your game from Steam as usual.</value></data>
   <data name="WelcomeSteps" xml:space="preserve"><value>1  Add a Steam game
 2  Choose the program to run
-3  Save and copy launch options to Steam</value></data>
+3  Save and apply to Steam</value></data>
   <data name="GameProfile" xml:space="preserve"><value>Game profile</value></data>
   <data name="EditorDescription" xml:space="preserve"><value>Choose the program to run when you start this game from Steam.</value></data>
   <data name="GameName" xml:space="preserve"><value>Game name</value></data>
@@ -38,9 +38,9 @@
   <data name="WaitNone" xml:space="preserve"><value>Finish immediately after launch</value></data>
   <data name="WaitProcessGroup" xml:space="preserve"><value>Process group (Linux / SteamOS)</value></data>
   <data name="ProcessName" xml:space="preserve"><value>Process name (required when waiting for a named process)</value></data>
-  <data name="Save" xml:space="preserve"><value>Save and generate launch options</value></data>
-  <data name="LaunchTitle" xml:space="preserve"><value>One last step: paste into Steam</value></data>
-  <data name="LaunchInstructions" xml:space="preserve"><value>In Steam, right-click the game → Properties → General → Launch Options, then paste the text below.</value></data>
+  <data name="Save" xml:space="preserve"><value>Save only</value></data>
+  <data name="LaunchTitle" xml:space="preserve"><value>Manual setup</value></data>
+  <data name="LaunchInstructions" xml:space="preserve"><value>If you choose manual setup, copy the text below to Steam → game Properties → General → Launch Options. No paste is needed after a successful automatic application.</value></data>
   <data name="LaunchBackup" xml:space="preserve"><value>First copy and keep the original launch options. To restore them later, paste the original value back into Steam.</value></data>
   <data name="Copy" xml:space="preserve"><value>Copy launch options</value></data>
   <data name="LaunchDone" xml:space="preserve"><value>Once pasted, you can close SteamWrapper and launch the game from Steam.</value></data>
@@ -59,7 +59,7 @@
   <data name="InvalidTarget" xml:space="preserve"><value>Choose an existing .exe program.</value></data>
   <data name="InvalidWorkingDirectory" xml:space="preserve"><value>The working directory does not exist. Check the advanced settings.</value></data>
   <data name="SavedWithStatus" xml:space="preserve"><value>Profile saved. {0}</value></data>
-  <data name="SavedReady" xml:space="preserve"><value>Profile saved and Runner is ready. Copy the launch options to Steam.</value></data>
+  <data name="SavedReady" xml:space="preserve"><value>Profile saved and the launch component is ready.</value></data>
   <data name="SavedRunnerFailed" xml:space="preserve"><value>Profile saved, but Runner is not ready. {0}</value></data>
   <data name="SaveFailed" xml:space="preserve"><value>Not saved. {0}</value></data>
   <data name="Copied" xml:space="preserve"><value>Copied. Paste into Steam's Launch Options; copying does not change Steam automatically.</value></data>
@@ -216,4 +216,54 @@
   <data name="ProfileDataBusy" xml:space="preserve"><value>The configuration is busy in another operation. Let it finish, then retry.</value></data>
   <data name="ProfileDeleteUnsupported" xml:space="preserve"><value>This profile cannot be removed safely by the Windows editor. Use an editable explicit Windows [profiles.ID] table; the file was preserved.</value></data>
   <data name="ProfileUnsafePath" xml:space="preserve"><value>The profiles file, lock, or backup location is readonly or uses a reparse point. The file was preserved.</value></data>
+  <data name="SaveApplySteam" xml:space="preserve"><value>Save and apply to Steam</value></data>
+  <data name="OpenSteam" xml:space="preserve"><value>Open Steam</value></data>
+  <data name="SteamAccount" xml:space="preserve"><value>Steam account</value></data>
+  <data name="ChooseSteamAccount" xml:space="preserve"><value>Choose an account</value></data>
+  <data name="SteamAccountDisplay" xml:space="preserve"><value>Steam account: {0}</value></data>
+  <data name="SteamCurrentOptions" xml:space="preserve"><value>Current Launch Options</value></data>
+  <data name="SteamProposedOptions" xml:space="preserve"><value>New Launch Options</value></data>
+  <data name="SteamRestoreOptions" xml:space="preserve"><value>Launch Options after restoration</value></data>
+  <data name="SteamOptionsAbsent" xml:space="preserve"><value>No Launch Options are set.</value></data>
+  <data name="SteamLegacyRestoreValue" xml:space="preserve"><value>Empty Launch Options</value></data>
+  <data name="SteamRecordedRestoreValue" xml:space="preserve"><value>The previous Launch Options retained when applying</value></data>
+  <data name="SteamApplyConfirmTitle" xml:space="preserve"><value>Apply Launch Options to Steam?</value></data>
+  <data name="SteamRestoreConfirmTitle" xml:space="preserve"><value>Restore Steam Launch Options?</value></data>
+  <data name="SteamApplyAction" xml:space="preserve"><value>Apply to Steam</value></data>
+  <data name="SteamRestorePrevious" xml:space="preserve"><value>Restore previous Launch Options</value></data>
+  <data name="SteamRestoreNormal" xml:space="preserve"><value>Restore normal Steam launch</value></data>
+  <data name="SteamCheckAgain" xml:space="preserve"><value>Check again</value></data>
+  <data name="SteamApplyExplanation" xml:space="preserve"><value>This writes the shown Launch Options for this game and account. Your current setting is retained for restoration.</value></data>
+  <data name="SteamReplaceExplanation" xml:space="preserve"><value>The existing Launch Options will be replaced and retained for restoration. They will not be added to the program arguments.</value></data>
+  <data name="SteamRestoreExplanation" xml:space="preserve"><value>Restore this account's previous Launch Options only if the current setting still matches the applied command. Other games keep their current settings.</value></data>
+  <data name="SteamNoRestoration" xml:space="preserve"><value>No applied command or previous Launch Options record was found for this game and account. The current setting is preserved.</value></data>
+  <data name="SteamLegacyRestoreExplanation" xml:space="preserve"><value>This command was entered without a recorded original setting. Restore normal Steam launch clears only this recognized command for this account; previous arguments cannot be reconstructed.</value></data>
+  <data name="SteamExitNormally" xml:space="preserve"><value>Exit Steam normally, then choose Check again. Steam and games will not be closed by Manager.</value></data>
+  <data name="SteamOptionsChanged" xml:space="preserve"><value>The setting changed since the last check. Review the current and new values again before continuing.</value></data>
+  <data name="SteamApplyWritten" xml:space="preserve"><value>Configuration saved; Launch Options written and checked on disk. Open Steam and check this game's Properties using the account shown in the confirmation. Manager can be closed for normal play.</value></data>
+  <data name="SteamApplyNotWritten" xml:space="preserve"><value>Configuration saved; Steam settings were not applied. Check account access and try again, or copy the Launch Options manually.</value></data>
+  <data name="SteamRestoreNotWritten" xml:space="preserve"><value>Steam settings were not restored. Check account access, reload the current setting and try again.</value></data>
+  <data name="SteamApplyReadinessChanged" xml:space="preserve"><value>Configuration saved; the saved configuration or launch component changed before application. Save and prepare it again before applying to Steam.</value></data>
+  <data name="SteamIntegrationBusy" xml:space="preserve"><value>Another configuration or launch-component operation is running. Wait for it to finish, then try again.</value></data>
+  <data name="SteamIntegrationReviewRequired" xml:space="preserve"><value>Steam recovery information needs review. Automatic writes have stopped and existing files were retained. Review the current Steam setting before continuing.</value></data>
+  <data name="SteamApplyUnconfirmed" xml:space="preserve"><value>Application could not be confirmed; recovery copies were retained. Review the current Steam setting before retrying or restoring.</value></data>
+  <data name="SteamRestoreUnconfirmed" xml:space="preserve"><value>Restoration could not be confirmed; recovery copies were retained. Review the current Steam setting before retrying.</value></data>
+  <data name="SteamApplyCanceled" xml:space="preserve"><value>Configuration saved. Application was canceled; Steam settings were not changed.</value></data>
+  <data name="SteamRestoreCanceled" xml:space="preserve"><value>Restoration was canceled; Steam settings were not changed.</value></data>
+  <data name="SteamApplyManualOnly" xml:space="preserve"><value>Configuration saved. Automatic application requires one matching local Steam installation and a verified launch component. Copy the Launch Options manually for this game.</value></data>
+  <data name="SteamPreviousRestored" xml:space="preserve"><value>The previous Launch Options were restored and checked on disk for the selected Steam account.</value></data>
+  <data name="SteamIntegrationConflict" xml:space="preserve"><value>The Steam setting or recovery information changed. Automatic application and restoration stopped to preserve those changes. Review the current setting before continuing.</value></data>
+  <data name="SteamIntegrationUnsaved" xml:space="preserve"><value>Save this configuration before applying it to Steam.</value></data>
+  <data name="SteamIntegrationChecking" xml:space="preserve"><value>Checking the current Steam setting…</value></data>
+  <data name="SteamIntegrationNoAccounts" xml:space="preserve"><value>No readable local Steam account settings were found. Open Steam and sign in once, then reload Manager; you can also copy Launch Options manually.</value></data>
+  <data name="SteamIntegrationChooseAccount" xml:space="preserve"><value>Several local Steam accounts are available. Choose an account explicitly when applying or restoring.</value></data>
+  <data name="SteamIntegrationAccountsReview" xml:space="preserve"><value>Settings or recovery copies need review for these accounts: {0}. Choose an account explicitly before continuing.</value></data>
+  <data name="SteamIntegrationReadFailed" xml:space="preserve"><value>The current Steam setting could not be checked safely. Check access, then try again. Manual copying remains available.</value></data>
+  <data name="SteamIntegrationAppliedState" xml:space="preserve"><value>Launch Options currently match the applied command on disk for {0}.</value></data>
+  <data name="SteamIntegrationManualState" xml:space="preserve"><value>The recognized command is present for {0}, but no previous Launch Options were recorded.</value></data>
+  <data name="SteamIntegrationPendingState" xml:space="preserve"><value>An application or restoration for {0} needs review. Recovery copies are retained.</value></data>
+  <data name="SteamIntegrationConflictState" xml:space="preserve"><value>The setting or recovery information for {0} changed. Automatic writes are blocked until reviewed.</value></data>
+  <data name="SteamIntegrationRestoredState" xml:space="preserve"><value>The previous Launch Options currently match the restored setting for {0}.</value></data>
+  <data name="SteamIntegrationReadyState" xml:space="preserve"><value>Steam settings can be reviewed for {0} before applying.</value></data>
+  <data name="SteamOpenFailed" xml:space="preserve"><value>Steam could not be opened. Open the Steam client normally and check this game's Properties.</value></data>
 </root>

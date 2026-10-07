@@ -12,7 +12,7 @@
   <data name="WelcomeDescription" xml:space="preserve"><value>让 Steam 启动你选择的汉化程序或启动器。配置完成后，直接从 Steam 开始游戏即可。</value></data>
   <data name="WelcomeSteps" xml:space="preserve"><value>1  添加 Steam 游戏
 2  选择要运行的程序
-3  保存并复制启动项到 Steam</value></data>
+3  保存并应用到 Steam</value></data>
   <data name="GameProfile" xml:space="preserve"><value>游戏配置</value></data>
   <data name="EditorDescription" xml:space="preserve"><value>选择 Steam 启动时实际运行的程序。</value></data>
   <data name="GameName" xml:space="preserve"><value>游戏名称</value></data>
@@ -38,9 +38,9 @@
   <data name="WaitNone" xml:space="preserve"><value>启动后立即结束</value></data>
   <data name="WaitProcessGroup" xml:space="preserve"><value>进程组（Linux / SteamOS）</value></data>
   <data name="ProcessName" xml:space="preserve"><value>进程名称（按进程名等待时必填）</value></data>
-  <data name="Save" xml:space="preserve"><value>保存并生成启动项</value></data>
-  <data name="LaunchTitle" xml:space="preserve"><value>最后一步：粘贴到 Steam</value></data>
-  <data name="LaunchInstructions" xml:space="preserve"><value>在 Steam 中右键该游戏 → 属性 → 通用 → 启动选项，粘贴下面的内容。</value></data>
+  <data name="Save" xml:space="preserve"><value>仅保存</value></data>
+  <data name="LaunchTitle" xml:space="preserve"><value>手动设置</value></data>
+  <data name="LaunchInstructions" xml:space="preserve"><value>选择手动设置时，可将下面的内容复制到 Steam → 游戏属性 → 通用 → 启动选项。自动应用成功后无需再粘贴。</value></data>
   <data name="LaunchBackup" xml:space="preserve"><value>粘贴前请先复制并保留原来的启动选项；需要恢复时，将原值粘贴回 Steam。</value></data>
   <data name="Copy" xml:space="preserve"><value>复制启动项</value></data>
   <data name="LaunchDone" xml:space="preserve"><value>粘贴完成后，可关闭 SteamWrapper，直接从 Steam 启动游戏。</value></data>
@@ -59,7 +59,7 @@
   <data name="InvalidTarget" xml:space="preserve"><value>请选择已存在的 .exe 程序。</value></data>
   <data name="InvalidWorkingDirectory" xml:space="preserve"><value>工作目录不存在，请检查高级设置。</value></data>
   <data name="SavedWithStatus" xml:space="preserve"><value>配置已保存。{0}</value></data>
-  <data name="SavedReady" xml:space="preserve"><value>配置已保存，启动程序已就绪。请复制启动项到 Steam。</value></data>
+  <data name="SavedReady" xml:space="preserve"><value>配置已保存，启动组件已就绪。</value></data>
   <data name="SavedRunnerFailed" xml:space="preserve"><value>配置已保存，但启动程序尚未就绪。{0}</value></data>
   <data name="SaveFailed" xml:space="preserve"><value>未保存。{0}</value></data>
   <data name="Copied" xml:space="preserve"><value>已复制。请粘贴到 Steam 的启动选项；复制不会自动修改 Steam。</value></data>
@@ -216,4 +216,54 @@
   <data name="ProfileDataBusy" xml:space="preserve"><value>其他操作正在使用配置，请等待完成后重试。</value></data>
   <data name="ProfileDeleteUnsupported" xml:space="preserve"><value>Windows 编辑器无法安全移除这份配置，只支持可编辑的显式 Windows [profiles.ID] 表；文件已保留。</value></data>
   <data name="ProfileUnsafePath" xml:space="preserve"><value>配置文件、锁或备份位置为只读，或使用了重解析点；文件已保留。</value></data>
+  <data name="SaveApplySteam" xml:space="preserve"><value>保存并应用到 Steam</value></data>
+  <data name="OpenSteam" xml:space="preserve"><value>打开 Steam</value></data>
+  <data name="SteamAccount" xml:space="preserve"><value>Steam 账户</value></data>
+  <data name="ChooseSteamAccount" xml:space="preserve"><value>选择一个账户</value></data>
+  <data name="SteamAccountDisplay" xml:space="preserve"><value>Steam 账户：{0}</value></data>
+  <data name="SteamCurrentOptions" xml:space="preserve"><value>当前启动选项</value></data>
+  <data name="SteamProposedOptions" xml:space="preserve"><value>新的启动选项</value></data>
+  <data name="SteamRestoreOptions" xml:space="preserve"><value>恢复后的启动选项</value></data>
+  <data name="SteamOptionsAbsent" xml:space="preserve"><value>尚未设置启动选项。</value></data>
+  <data name="SteamLegacyRestoreValue" xml:space="preserve"><value>空启动选项</value></data>
+  <data name="SteamRecordedRestoreValue" xml:space="preserve"><value>应用时保留的原启动选项</value></data>
+  <data name="SteamApplyConfirmTitle" xml:space="preserve"><value>将启动选项应用到 Steam？</value></data>
+  <data name="SteamRestoreConfirmTitle" xml:space="preserve"><value>恢复 Steam 启动选项？</value></data>
+  <data name="SteamApplyAction" xml:space="preserve"><value>应用到 Steam</value></data>
+  <data name="SteamRestorePrevious" xml:space="preserve"><value>恢复原启动选项</value></data>
+  <data name="SteamRestoreNormal" xml:space="preserve"><value>恢复正常 Steam 启动</value></data>
+  <data name="SteamCheckAgain" xml:space="preserve"><value>重新检查</value></data>
+  <data name="SteamApplyExplanation" xml:space="preserve"><value>将为此游戏和账户写入显示的启动选项。当前设置会保留，以便恢复。</value></data>
+  <data name="SteamReplaceExplanation" xml:space="preserve"><value>现有启动选项将被替换并保留，以便恢复。不会将原值追加到程序参数中。</value></data>
+  <data name="SteamRestoreExplanation" xml:space="preserve"><value>仅在当前设置仍与已应用的命令一致时，恢复此账户原来的启动选项。其他游戏保留其当前设置。</value></data>
+  <data name="SteamNoRestoration" xml:space="preserve"><value>此游戏和账户没有已应用的命令或原启动选项记录。当前设置将保留。</value></data>
+  <data name="SteamLegacyRestoreExplanation" xml:space="preserve"><value>此命令没有对应的原设置记录。“恢复正常 Steam 启动”仅清除此账户的这条已识别命令，无法重建未知的历史参数。</value></data>
+  <data name="SteamExitNormally" xml:space="preserve"><value>请正常退出 Steam，然后选择“重新检查”。Manager 不会关闭 Steam 或游戏。</value></data>
+  <data name="SteamOptionsChanged" xml:space="preserve"><value>设置自上次检查后发生了变化。继续前，请重新核对当前值与新值。</value></data>
+  <data name="SteamApplyWritten" xml:space="preserve"><value>配置已保存；启动选项已写入并在磁盘上核对。打开 Steam，使用确认中显示的账户检查此游戏的属性。正常游玩时可关闭 Manager。</value></data>
+  <data name="SteamApplyNotWritten" xml:space="preserve"><value>配置已保存；Steam 设置未应用。请检查账户访问权限后重试，或手动复制启动选项。</value></data>
+  <data name="SteamRestoreNotWritten" xml:space="preserve"><value>Steam 设置未恢复。请检查账户访问权限，重新加载当前设置后再重试。</value></data>
+  <data name="SteamApplyReadinessChanged" xml:space="preserve"><value>配置已保存；应用前，已保存的配置或启动组件发生了变化。请重新保存并准备组件，再应用到 Steam。</value></data>
+  <data name="SteamIntegrationBusy" xml:space="preserve"><value>另一个配置或启动组件操作正在进行。请等待其完成后再重试。</value></data>
+  <data name="SteamIntegrationReviewRequired" xml:space="preserve"><value>Steam 恢复信息需要核对。自动写入已停止，现有文件已保留。继续前，请检查当前 Steam 设置。</value></data>
+  <data name="SteamApplyUnconfirmed" xml:space="preserve"><value>无法确认应用结果；恢复副本已保留。请检查当前 Steam 设置，再决定重试或恢复。</value></data>
+  <data name="SteamRestoreUnconfirmed" xml:space="preserve"><value>无法确认恢复结果；恢复副本已保留。请检查当前 Steam 设置后再重试。</value></data>
+  <data name="SteamApplyCanceled" xml:space="preserve"><value>配置已保存。应用已取消；Steam 设置未改变。</value></data>
+  <data name="SteamRestoreCanceled" xml:space="preserve"><value>恢复已取消；Steam 设置未改变。</value></data>
+  <data name="SteamApplyManualOnly" xml:space="preserve"><value>配置已保存。自动应用需要唯一匹配的本地 Steam 安装和已验证的启动组件。请为此游戏手动复制启动选项。</value></data>
+  <data name="SteamPreviousRestored" xml:space="preserve"><value>所选 Steam 账户原来的启动选项已恢复，并已在磁盘上核对。</value></data>
+  <data name="SteamIntegrationConflict" xml:space="preserve"><value>Steam 设置或恢复信息发生了变化。自动应用与恢复已停止，以保留这些变化。请核对当前设置后再继续。</value></data>
+  <data name="SteamIntegrationUnsaved" xml:space="preserve"><value>应用到 Steam 前，请先保存此配置。</value></data>
+  <data name="SteamIntegrationChecking" xml:space="preserve"><value>正在检查当前 Steam 设置…</value></data>
+  <data name="SteamIntegrationNoAccounts" xml:space="preserve"><value>未找到可读取的本地 Steam 账户设置。请打开 Steam 并登录一次，然后重新加载 Manager；也可以手动复制启动选项。</value></data>
+  <data name="SteamIntegrationChooseAccount" xml:space="preserve"><value>找到多个本地 Steam 账户。应用或恢复时，请明确选择一个账户。</value></data>
+  <data name="SteamIntegrationAccountsReview" xml:space="preserve"><value>以下账户的设置或恢复副本需要核对：{0}。继续前，请明确选择一个账户。</value></data>
+  <data name="SteamIntegrationReadFailed" xml:space="preserve"><value>无法安全核对当前 Steam 设置。请检查访问权限后重试。仍可手动复制启动选项。</value></data>
+  <data name="SteamIntegrationAppliedState" xml:space="preserve"><value>{0} 的磁盘启动选项目前与已应用命令一致。</value></data>
+  <data name="SteamIntegrationManualState" xml:space="preserve"><value>{0} 存在已识别命令，但未记录原启动选项。</value></data>
+  <data name="SteamIntegrationPendingState" xml:space="preserve"><value>{0} 的应用或恢复需要检查。恢复副本已保留。</value></data>
+  <data name="SteamIntegrationConflictState" xml:space="preserve"><value>{0} 的设置或恢复信息发生变化。核对前已阻止自动写入。</value></data>
+  <data name="SteamIntegrationRestoredState" xml:space="preserve"><value>{0} 当前的启动选项与已恢复的原设置一致。</value></data>
+  <data name="SteamIntegrationReadyState" xml:space="preserve"><value>应用前可核对 {0} 的 Steam 设置。</value></data>
+  <data name="SteamOpenFailed" xml:space="preserve"><value>无法打开 Steam。请正常打开 Steam 客户端并检查此游戏的属性。</value></data>
 </root>

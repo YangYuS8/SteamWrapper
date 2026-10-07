@@ -52,16 +52,27 @@ public sealed partial class MainWindow
         if (busy || editing is null || isNew || !await CanLeaveAsync()) return;
         var profile = editing;
         if (dirty) Edit(profile, false);
-        if (!await ConfirmProfileActionAsync("RestoreSteamTitle", Messages.Text("RestoreSteamBody", DisplayProfileName(profile)), "RestoreSteamLaunch")) return;
         SetBusy(true);
+        var mutationStarted = false;
+        var legacyRestore = false;
         try
         {
-            var result = await SteamProfileLaunchOptions.RestoreSelectedAsync(paths.Root, RequireSteamRoot(), profile.AppId ?? profile.Key);
+            var preview = await ConfirmSteamChangeAsync(profile, restore: true);
+            if (preview is null) return;
+            mutationStarted = true;
+            if (preview.State == SteamLaunchIntegrationState.UnknownOriginal)
+            {
+                legacyRestore = true;
+                var legacy = await SteamProfileLaunchOptions.RestoreSelectedAccountAsync(paths.Root, preview.SteamRoot,
+                    preview.AccountId, preview.AppId);
+                ShowStatus(Messages.Text(legacy.RemainingReferences > 0 ? "SteamLaunchCustom" : legacy.ClearedCommands > 0 ? "SteamLaunchRestored" : "SteamLaunchUnchanged"),
+                    legacy.RemainingReferences > 0 ? InfoBarSeverity.Warning : InfoBarSeverity.Success);
+            }
+            else ShowIntegrationResult(await SteamLaunchIntegration.RestoreAsync(preview), restore: true);
             LaunchPanel.Visibility = Visibility.Collapsed;
-            ShowStatus(Messages.Text(result.RemainingReferences > 0 ? "SteamLaunchCustom" : result.ClearedCommands > 0 ? "SteamLaunchRestored" : "SteamLaunchUnchanged"),
-                result.RemainingReferences > 0 ? InfoBarSeverity.Warning : InfoBarSeverity.Success);
+            await RefreshIntegrationStatusAsync(profile, false);
         }
-        catch (Exception error) { ShowStatus(Messages.Text("SteamRestoreFailed", ProfileActionError(error)), InfoBarSeverity.Error); }
+        catch (Exception error) { ShowIntegrationFailure(error, restore: true, mutationStarted, legacyRestore); }
         finally { SetBusy(false); }
     }
 

@@ -30,8 +30,13 @@ if ($LASTEXITCODE) { throw 'Native installer harness locked restore failed.' }
 if ($LASTEXITCODE) { throw 'Native installer harness build failed.' }
 $harness=Join-Path (Split-Path $project) 'bin/Release/net10.0-windows10.0.26100.0/SteamWrapper.NativeUi.Tests.dll'
 $saved=@{}; $records=[Collections.Generic.List[object]]::new(); $passed=$false
-foreach ($name in @('LOCALAPPDATA','STEAMWRAPPER_DEPLOYMENT_TEST','STEAMWRAPPER_E2E_ROOT','STEAM_DIR')) { $saved[$name]=[Environment]::GetEnvironmentVariable($name,'Process') }
+$legacySteamBackup='backups/steam-launch-options/' + [Guid]::NewGuid().ToString('N') + '/123456-localconfig.vdf'
+$processTemp=Join-Path $root 'process-temp'
+[IO.Directory]::CreateDirectory($processTemp) | Out-Null
+Assert-InstallerBoundary (-not ((Get-Item -LiteralPath $processTemp -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) 'Isolated process temporary files must not follow links.'
+foreach ($name in @('LOCALAPPDATA','STEAMWRAPPER_DEPLOYMENT_TEST','STEAMWRAPPER_E2E_ROOT','STEAM_DIR','TEMP','TMP')) { $saved[$name]=[Environment]::GetEnvironmentVariable($name,'Process') }
 $env:LOCALAPPDATA=Join-Path $root 'data'; $env:STEAMWRAPPER_DEPLOYMENT_TEST='1'; $env:STEAMWRAPPER_E2E_ROOT=$root; $env:STEAM_DIR=$steam
+$env:TEMP=$processTemp; $env:TMP=$processTemp
 function Write-CleanupFixture([string]$Relative, [string]$Text) {
     $path=Join-Path $data $Relative
     [IO.Directory]::CreateDirectory((Split-Path $path)) | Out-Null
@@ -59,7 +64,7 @@ try {
         [IO.Directory]::CreateDirectory((Join-Path $data 'bin')) | Out-Null
         Copy-Item -LiteralPath (Join-Path $publish 'Runner/SteamWrapperRunner.exe') -Destination (Join-Path $data 'bin/SteamWrapperRunner.exe') -Force
         Copy-Item -LiteralPath (Join-Path $publish 'Runner/runner-manifest.json') -Destination (Join-Path $data 'bin/runner-manifest.json') -Force
-        foreach ($relative in @('updates/trust-state.json','backups/steam-launch-options/retained.vdf','cache/covers/player-art.cover','logs/player-notes.txt','games/save.dat')) {
+        foreach ($relative in @('updates/trust-state.json','backups/retained.vdf','cache/covers/player-art.cover','logs/player-notes.txt','games/save.dat')) {
             Write-CleanupFixture $relative ('Must retain fixture: ' + $relative)
         }
         [IO.Directory]::CreateDirectory((Join-Path $steam 'steamapps')) | Out-Null
@@ -73,12 +78,25 @@ try {
             $beforeSteam[$path]=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
             $expectedSteam[$path]=if ($plan.restoreSteam) { $text.Replace('"LaunchOptions" "' + $escaped + '"','"LaunchOptions" ""') } else { $text }
         }
+        # Unknown backups belong outside the protected operation inventory. A
+        # historical numeric-account snapshot remains a recognized retained backup.
+        if (-not (Test-Path -LiteralPath (Join-Path $data $legacySteamBackup))) {
+            $historicalAccount=Join-Path $steam 'userdata/123456/config/localconfig.vdf'
+            Write-CleanupFixture $legacySteamBackup ([IO.File]::ReadAllText($historicalAccount,[Text.Encoding]::UTF8))
+        }
         $before=Read-CleanupFixtureHashes
         Invoke-CleanupSilent $setup ('install-' + $plan.name)
         $uninstaller=Join-Path $program 'unins000.exe'
         Assert-InstallerBoundary (Test-Path -LiteralPath $uninstaller -PathType Leaf) 'The isolated setup did not produce an uninstaller.'
         & dotnet $harness --installer-options-ui $root $uninstaller $Language $plan.action
         Assert-InstallerBoundary ($LASTEXITCODE -eq 0) ('Native cleanup selection failed: ' + $plan.name + '. Its window was not killed.')
+        $uninstallLog=Join-Path $root ($plan.action + '-' + $Language + '.log')
+        $temporaryImages=[regex]::Matches([IO.File]::ReadAllText($uninstallLog),'(?m)Current Uninstall EXE: (?<path>[^\r\n]+)')
+        Assert-InstallerBoundary ($temporaryImages.Count -gt 0) 'The actual uninstaller did not report its second-phase image location.'
+        foreach ($image in $temporaryImages) {
+            $actual=[IO.Path]::GetFullPath($image.Groups['path'].Value.Trim())
+            Assert-InstallerBoundary ($actual.StartsWith($processTemp + [IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) 'The actual second-phase uninstaller escaped its owned temporary root.'
+        }
         $after=Read-CleanupFixtureHashes
         Assert-InstallerBoundaryDataResult $plan $before $after
         foreach ($path in $expectedSteam.Keys) {
@@ -99,11 +117,11 @@ try {
         $deadline=[DateTime]::UtcNow.AddSeconds(15)
         while ((Test-Path -LiteralPath $uninstaller) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 100 }
         Assert-InstallerBoundary (-not (Test-Path -LiteralPath $uninstaller)) 'The uninstaller did not finish normally; it was not killed.'
-        $records.Add([ordered]@{name=$plan.name;language=$Language;actualInnoCheckboxes=$true;selectedRemoval=$plan.removedData;restoreSteam=$plan.restoreSteam;twoAccountBackupsVerified=$plan.restoreSteam;protectedAndUnselectedHashesUnchanged=$true;managerRemoved=$true})
+        $records.Add([ordered]@{name=$plan.name;language=$Language;actualInnoCheckboxes=$true;selectedRemoval=$plan.removedData;restoreSteam=$plan.restoreSteam;twoAccountBackupsVerified=$plan.restoreSteam;protectedAndUnselectedHashesUnchanged=$true;historicalSteamBackupRetained=$true;temporaryProcessLocationVerified=$true;managerRemoved=$true})
     }
     $passed=$true
 } finally {
     foreach ($item in $saved.GetEnumerator()) { [Environment]::SetEnvironmentVariable($item.Key,$item.Value,'Process') }
-    [IO.File]::WriteAllText((Join-Path $root 'cleanup-evidence.json'),([ordered]@{schemaVersion=1;result=$(if($passed){'passed'}else{'failed'});fixtureRoot=$root;isolated=$true;cleanVm=$false;tag=$Tag;setupSha256=$build.installer.sha256;cases=$records.ToArray();noGamesLaunched=$true;noProcessesKilled=$true} | ConvertTo-Json -Depth 8),[Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText((Join-Path $root 'cleanup-evidence.json'),([ordered]@{schemaVersion=1;result=$(if($passed){'passed'}else{'failed'});fixtureRoot=$root;processTemporaryRoot=$processTemp;isolated=$true;cleanVm=$false;tag=$Tag;setupSha256=$build.installer.sha256;cases=$records.ToArray();noGamesLaunched=$true;noProcessesKilled=$true} | ConvertTo-Json -Depth 8),[Text.UTF8Encoding]::new($false))
 }
 Write-Output "Actual Inno cleanup mapping passed: $root"

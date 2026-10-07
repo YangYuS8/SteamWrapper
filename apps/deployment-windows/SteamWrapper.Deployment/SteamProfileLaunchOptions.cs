@@ -13,6 +13,37 @@ public sealed record SteamProfileLaunchRestoreResult(int ClearedCommands, int Re
 /// <summary>Selected-game removal of recognized integration, without reconstructing unknown historical arguments.</summary>
 public static class SteamProfileLaunchOptions
 {
+    public static Task<SteamProfileLaunchRestoreResult> RestoreSelectedAccountAsync(string dataRoot, string steamRoot, string accountId,
+        string appId, CancellationToken cancellationToken = default) => RestoreSelectedAccountAsync(dataRoot, steamRoot, accountId,
+            appId, IsSteamRunning, cancellationToken: cancellationToken);
+
+    internal static Task<SteamProfileLaunchRestoreResult> RestoreSelectedAccountAsync(string dataRoot, string steamRoot, string accountId,
+        string appId, Func<bool> steamRunning, Action<string>? beforeReplace = null, CancellationToken cancellationToken = default)
+        => RunAsync(() =>
+        {
+            Validate(dataRoot, steamRoot, appId);
+            if (!uint.TryParse(accountId, NumberStyles.None, CultureInfo.InvariantCulture, out var account) || account == 0 ||
+                account.ToString(CultureInfo.InvariantCulture) != accountId)
+                throw new InvalidDataException("Select one unambiguous Steam account before clearing launch integration.");
+            RequireSteamStopped(steamRunning);
+            using var lease = SteamLaunchIntegration.AcquireDataLease(dataRoot);
+            var inspected = SteamLaunchIntegration.InspectLocked(dataRoot, steamRoot, accountId, appId, steamRunning: steamRunning,
+                cancellationToken: cancellationToken);
+            SteamLaunchIntegration.EnsureNoPendingOtherGame(inspected, cancellationToken);
+            if (inspected.State is SteamLaunchIntegrationState.Applied or SteamLaunchIntegrationState.Pending or SteamLaunchIntegrationState.Conflict)
+                throw new DeploymentException("SteamRecords", "Recorded launch integration must be restored through its original-value recovery flow.");
+            var plan = SteamLaunchRestoration.Inspect(steamRoot, dataRoot, appId, cancellationToken, selectedAccountId: accountId);
+            RequireSteamStopped(steamRunning);
+            var cleared = SteamLaunchRestoration.Restore(plan, dataRoot, steamRunning, path =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                RequireSteamStopped(steamRunning);
+                beforeReplace?.Invoke(path);
+            });
+            return VerifyRestore(cleared, steamRunning, () =>
+                SteamLaunchRestoration.Inspect(steamRoot, dataRoot, appId, cancellationToken, selectedAccountId: accountId));
+        }, cancellationToken);
+
     public static Task<SteamProfileLaunchInspection> InspectSelectedAsync(string dataRoot, string steamRoot, string appId,
         CancellationToken cancellationToken = default) => RunAsync(() =>
         {
@@ -40,6 +71,7 @@ public static class SteamProfileLaunchOptions
             if (string.IsNullOrEmpty(profileKey) || profileKey.Any(character => character is '\\' or '"' || char.IsControl(character)))
                 throw new InvalidDataException("The profile key cannot be safely checked for escaped Runner references; the profile was preserved.");
             RequireSteamStopped(steamRunning);
+            SteamLaunchIntegration.EnsureNoBlockingRecordsLocked(dataRoot, steamRoot, appId, profileKey);
             var inspection = Inspection(SteamLaunchRestoration.Inspect(steamRoot, dataRoot, appId, cancellationToken, profileKey));
             RequireSteamStopped(steamRunning);
             if (inspection.HasReferences)
@@ -53,7 +85,8 @@ public static class SteamProfileLaunchOptions
         {
             Validate(dataRoot, steamRoot, appId);
             RequireSteamStopped(steamRunning);
-            using var lease = AcquireDataLease(dataRoot);
+            using var lease = SteamLaunchIntegration.AcquireDataLease(dataRoot);
+            SteamLaunchIntegration.EnsureNoBlockingRecordsLocked(dataRoot, steamRoot, appId);
             var plan = SteamLaunchRestoration.Inspect(steamRoot, dataRoot, appId, cancellationToken);
             RequireSteamStopped(steamRunning);
             cancellationToken.ThrowIfCancellationRequested();
@@ -63,8 +96,8 @@ public static class SteamProfileLaunchOptions
                 RequireSteamStopped(steamRunning);
                 beforeReplace?.Invoke(path);
             });
-            var after = Inspection(SteamLaunchRestoration.Inspect(steamRoot, dataRoot, appId, cancellationToken));
-            return new SteamProfileLaunchRestoreResult(cleared, after.RecognizedCommands + after.UnrecognizedReferences);
+            return VerifyRestore(cleared, steamRunning, () =>
+                SteamLaunchRestoration.Inspect(steamRoot, dataRoot, appId, cancellationToken));
         }, cancellationToken);
 
     internal static Task EnsureRemovalAllowedAsync(string dataRoot, string steamRoot, string appId, Func<bool> steamRunning,
@@ -72,6 +105,22 @@ public static class SteamProfileLaunchOptions
 
     private static SteamProfileLaunchInspection Inspection(SteamLaunchPlan plan) =>
         new(plan.Changes.Sum(change => change.Count), plan.UnrecognizedReferences);
+
+    internal static SteamProfileLaunchRestoreResult VerifyRestore(int cleared, Func<bool> steamRunning, Func<SteamLaunchPlan> inspect)
+    {
+        try
+        {
+            RequireSteamStopped(steamRunning);
+            var after = Inspection(inspect());
+            RequireSteamStopped(steamRunning);
+            return new(cleared, after.RecognizedCommands + after.UnrecognizedReferences);
+        }
+        catch (Exception error) when (cleared > 0 &&
+            error is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.DecoderFallbackException or OperationCanceledException)
+        {
+            throw SteamLaunchRestoration.Unconfirmed(error);
+        }
+    }
 
     private static void Validate(string dataRoot, string steamRoot, string appId)
     {
@@ -85,15 +134,6 @@ public static class SteamProfileLaunchOptions
                 throw new InvalidDataException("Launch-option restoration requires fully qualified local data and Steam paths.");
             SafePaths.CheckAncestors(path);
         }
-    }
-
-    private static FileStream AcquireDataLease(string dataRoot)
-    {
-        var path = Path.Combine(dataRoot, "profiles.toml.lock");
-        SafePaths.CheckAncestors(path);
-        Directory.CreateDirectory(dataRoot);
-        try { return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
-        catch (IOException error) { throw new DeploymentException("SteamDataBusy", "Configuration data is busy. Wait for another save or restoration to finish, then retry.", error); }
     }
 
     private static void RequireSteamStopped(Func<bool> steamRunning)

@@ -159,12 +159,27 @@ internal sealed class NativeUiFixture
         // Neither condition may make local discovery or row selection unusable.
         CreateDirectory(Path.Combine(SteamRoot, "appcache", "librarycache"));
         WriteText(Path.Combine(SteamRoot, "appcache", "librarycache", "482_library_600x900.jpg"), "Corrupt native cover fixture; deliberately not an image.\n");
+        CreateDirectory(Path.Combine(SteamRoot, "userdata", "7", "config"));
+        WriteText(Path.Combine(SteamRoot, "userdata", "7", "config", "localconfig.vdf"), SteamAccountSettings("--original-option"));
+        CreateDirectory(Path.Combine(SteamRoot, "config"));
+        WriteText(Path.Combine(SteamRoot, "config", "loginusers.vdf"), "\"users\" { \"76561197960265735\" { \"PersonaName\" \"Fixture account\" \"MostRecent\" \"1\" } }\n");
         if (unknownRunner)
         {
             CreateDirectory(Path.Combine(DataRoot, "bin"));
             WriteText(Path.Combine(DataRoot, "bin", "SteamWrapperRunner.exe"), "Unrecognized fixture Runner; never execute.\n");
         }
     }
+
+    internal string SteamAccountPath(string accountId = "7") => Path.Combine(SteamRoot, "userdata", accountId, "config", "localconfig.vdf");
+
+    internal void AddSecondSteamAccount()
+    {
+        CreateDirectory(Path.Combine(SteamRoot, "userdata", "42", "config"));
+        WriteText(SteamAccountPath("42"), SteamAccountSettings("--second-account-option"));
+    }
+
+    private static string SteamAccountSettings(string options) =>
+        "// Native fixture Steam setting; unrelated comments must survive.\n\"UserLocalConfigStore\" { \"Software\" { \"Valve\" { \"Steam\" { \"apps\" { \"480\" { \"LaunchOptions\" \"" + options + "\" \"fixture\" \"keep\" } \"481\" { \"LaunchOptions\" \"--unrelated\" } } } } } }\n";
 
     private void CreateDirectory(string path)
     {
