@@ -72,7 +72,7 @@ WinUI prepares and checks the stable Runner when saving a profile.
 
 ## Steam settings were not applied or restored
 
-The automatic apply and recorded restoration flow is implemented in the **v0.2.9 candidate**; candidate validation, real Steam acceptance and release checks are pending. Public v0.2.8 uses manual copying and cannot recover arguments overwritten by manual pasting.
+The automatic apply and recorded restoration flow is available in **v0.2.9**. Older v0.2.8 uses manual copying and cannot recover arguments overwritten by manual pasting.
 
 | Message or situation | What to do |
 | --- | --- |
@@ -166,4 +166,4 @@ Include the Manager variant and revision, Windows version, AppID, selected targe
 
 Review any paths and logs before sharing them: they can contain user names and original launch arguments. Do not attach credentials, your full Steam account configuration, game files or saves by default.
 
-If you need to undo the test, use the recorded v0.2.9 candidate restoration flow or restore the complete Steam Launch Options value you kept before manual setup. Review conflicts before either action. Keep naturally updated saves unless you have a separate, deliberate recovery plan.
+If you need to undo the test, use the recorded restoration flow or restore the complete Steam Launch Options value you kept before manual setup. Review conflicts before either action. Keep naturally updated saves unless you have a separate, deliberate recovery plan.

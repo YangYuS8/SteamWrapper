@@ -5,9 +5,9 @@ description: 安装或使用完整的 Windows 发行版，保留游戏配置，�
 
 **Windows 11 24H2 x64** 用户建议使用 **Setup 安装包**。它包含运行 Manager 所需的文件，无需开发工具或单独安装运行时。其他 Windows 版本尚未验证。
 
-**[下载安装包 — v0.2.8](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.8/SteamWrapper-v0.2.8-win-x64-setup.exe)** · [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.8/SteamWrapper-v0.2.8-win-x64-setup.exe) · [发布说明与其他下载](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8)
+**[下载安装包 — v0.2.9](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.9/SteamWrapper-v0.2.9-win-x64-setup.exe)** · [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.9/SteamWrapper-v0.2.9-win-x64-setup.exe) · [发布说明与其他下载](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.9)
 
-GitHub 和 CNB 提供相同且已核验的安装包，对应 **v0.2.8，最新稳定版**。发行版有三个下载附件：Setup、便携 ZIP 和 `SHA256SUMS`。它没有 Windows Authenticode 签名，因此 Windows 可能显示未知发布者提示。请使用上面的官方下载，并保持正常 Windows 防护开启。
+GitHub 和 CNB 提供相同且已核验的安装包，对应 **v0.2.9，最新稳定版**。发行版有三个下载附件：Setup、便携 ZIP 和 `SHA256SUMS`。它没有 Windows Authenticode 签名，因此 Windows 可能显示未知发布者提示。请使用上面的官方下载，并保持正常 Windows 防护开启。
 
 <a id="获取带版本的预览包"></a>
 <a id="打开完整应用"></a>
@@ -27,7 +27,7 @@ GitHub 和 CNB 提供相同且已核验的安装包，对应 **v0.2.8，最新�
 
 ## 使用便携 ZIP
 
-如果不想安装 Manager，请从[同一发布页](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8)下载 **`SteamWrapper-v0.2.8-win-x64.zip`**。将**完整 ZIP** 解压到准备保留的目录，再通过文件资源管理器打开 `SteamWrapper.Manager.exe`。
+如果不想安装 Manager，请从[同一发布页](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.9)下载 **`SteamWrapper-v0.2.9-win-x64.zip`**。将**完整 ZIP** 解压到准备保留的目录，再通过文件资源管理器打开 `SteamWrapper.Manager.exe`。
 
 请保留全部配套文件。不要在 ZIP 内运行 EXE，也不要只复制 EXE。移动完整目录前先关闭 Manager。单独存放的游戏配置和稳定 Runner 仍在原来的位置，因此移动 Manager 不需要修改 Steam 启动项。
 
@@ -43,7 +43,7 @@ GitHub 和 CNB 提供相同且已核验的安装包，对应 **v0.2.8，最新�
 
 安装版选择“**下载更新**”，完成后选择“**安装更新**”并确认。先保存或放弃未保存的修改。Manager 会正常退出以便安装，并在成功后重新打开。更新和修复保留已注册的安装目录及独立数据。连接或验证失败时，可以继续使用当前版本，稍后重试。
 
-更新 Manager 不会替换 Steam 使用的稳定 Runner。保存配置时才会在安全条件满足后检查并准备 Runner。公开的 v0.2.8 将此操作标为**保存并生成启动项**。v0.2.9 候选版本提供**仅保存**和**保存并应用到 Steam**；只有应用流程会在确认后写入所选 Steam 设置。候选验证、真实 Steam 验收与发布检查仍待完成，详见[配置说明](/SteamWrapper/zh-cn/guides/configuration/)。如果 Runner 正被占用，请让游戏正常结束后重试。使用新启动命令前，请先处理界面显示的 Runner 提示，详见 [Runner 排错](/SteamWrapper/zh-cn/guides/troubleshooting/)。
+更新 Manager 不会替换 Steam 使用的稳定 Runner。保存配置时才会在安全条件满足后检查并准备 Runner。选择**仅保存**可以保留配置而不改变 Steam；选择**保存并应用到 Steam**可以核对并确认写入所选账户的设置，详见[配置说明](/SteamWrapper/zh-cn/guides/configuration/)。如果 Runner 正被占用，请让游戏正常结束后重试。使用新启动命令前，请先处理界面显示的 Runner 提示，详见 [Runner 排错](/SteamWrapper/zh-cn/guides/troubleshooting/)。
 
 <a id="manager-与-runner-的数据位置"></a>
 
