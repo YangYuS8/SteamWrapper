@@ -1,11 +1,13 @@
 ---
 title: Configure a game
-description: Understand game directories, executable paths, launch arguments, saving and language preferences in the WinUI Manager.
+description: Configure game paths and arguments, apply or restore Steam Launch Options, and choose Manager preferences.
 ---
 
 Use a profile to associate one Steam AppID with the program you want Runner to launch. Manager edits this configuration; it does not need to remain open during play.
 
-Start with [getting started](/SteamWrapper/guides/getting-started/) for the complete Steam paste-and-launch sequence.
+Start with [getting started](/SteamWrapper/guides/getting-started/) for the complete setup and launch sequence.
+
+**Version boundary:** the apply and original-value restoration flow below is implemented in the **v0.2.9 candidate**. Candidate validation, real Steam acceptance and release checks are still pending; this is not a published download announcement. Public v0.2.8 uses saving and manual copying.
 
 ## Pick the right Steam entry
 
@@ -88,7 +90,7 @@ A profile explicitly marked for another platform can be viewed in WinUI but cann
 
 ## Save without losing your changes
 
-Select **Save and generate launch options**.
+In the v0.2.9 candidate, select **Save and apply to Steam** to save and then review the Steam change. Select **Save only** to save without applying; the separate **Copy launch options** button remains available after Runner is ready. Public v0.2.8 labels its save action **Save and generate launch options**.
 
 Manager validates the paths and AppID, saves the profile, then prepares stable Runner. Profile saving and Runner readiness are separate results. If only the profile succeeds, follow the displayed Runner message; launch options are shown as ready only when Runner is ready.
 
@@ -98,11 +100,27 @@ When leaving an edited profile, reloading or closing Manager, use **Keep editing
 
 The editor preserves unedited TOML values and creates configuration backups when replacing an existing file. It rejects conflicting external changes, unsupported versions and layouts that it cannot safely edit. Do not respond to a conflict by overwriting the newer file blindly.
 
+## Apply Launch Options to one Steam account
+
+**Save and apply to Steam** first saves the configuration and prepares or verifies stable Runner. The confirmation shows the game name and AppID, Steam account, current Launch Options and proposed command. A sole readable local account is displayed; if several accounts are available, choose one explicitly. Use the account you intend to play with. Local installation discovery does not establish ownership for every account.
+
+Review the old and new values before choosing **Apply to Steam**. Nonempty old options are replaced and retained for restoration; they are not added to the program's arguments. Canceling leaves the saved configuration available and makes no Steam change.
+
+If Steam is running, exit it normally and select **Check again**. Manager does not terminate Steam or games. The setting is reread after every check; if it changed, review the updated values before continuing. No readable account means automatic application is unavailable: open Steam and sign in once, then reload Manager, or use manual copying. A manually entered AppID must match one unambiguous local installation for automatic application.
+
+**Configuration saved; Launch Options written** means the selected account's disk setting was written and checked. Choose **Open Steam**, which opens the client, then check the same game's **Properties → General → Launch Options** under that account. The disk check does not verify Steam's in-memory setting or a game launch. Reopening Manager or selecting a configuration reads the current setting again.
+
+If only saving succeeded, Manager says the Steam setting was not applied. An unconfirmed application or recovery conflict needs review: preserve the current setting and recovery copies before retrying. See [Steam setting troubleshooting](/SteamWrapper/guides/troubleshooting/#steam-launch-options-were-not-applied-or-restored).
+
 ## Revert, restore or remove a configuration
 
 **Revert edits** discards the current unsaved changes and returns an existing configuration to its last saved values. It does not write to Steam or game files.
 
-To stop redirecting a game through SteamWrapper, exit Steam normally and choose **Restore Steam launch**. This clears only that game's exact generated SteamWrapper command, backs up affected Steam account files and keeps your configuration. Custom or unrecognized launch options stay untouched. Old arguments were not recorded when you manually pasted the command, so unknown earlier arguments cannot be recovered automatically.
+In the v0.2.9 candidate, choose **Restore Steam launch** and review the game, account, current options and proposed restoration. Multiple accounts require an explicit choice. Exit Steam normally when prompted and use **Check again**.
+
+For a recorded application, **Restore previous Launch Options** restores the retained original value only while the current target still exactly matches the applied command. It preserves later edits to other games and keeps your configuration. An originally absent setting is restored as absent; an explicitly empty value remains empty. A later edit to this game's options stops automatic restoration for review.
+
+For a manually pasted recognized command without a previous-value record, the confirmation instead offers **Restore normal Steam launch**. This clears only that selected account's exact recognized command; it cannot reconstruct unknown historical arguments. Custom or unrecognized options remain untouched. Public v0.2.8's restoration action is this legacy clearing behavior across local accounts, not original-value restoration.
 
 **Remove configuration** removes only the selected saved configuration and keeps an exact backup. Exit Steam normally first. Removal is refused while any checked Steam account still references it; restore the Steam launch or review custom options before retrying. Game files, saves and the stable Runner remain untouched. Unsupported or readonly profile layouts cannot be removed through the editor. Hand-edited legacy configurations that cannot be safely checked are preserved with an inspection message.
 
@@ -114,7 +132,7 @@ The command always uses the stable Runner:
 "<stable-runner-path>" --appid "<appid>" -- %command%
 ```
 
-Use **Copy launch options**, retain the game's previous Steam value, and paste the generated command into **Steam → Properties → General → Launch Options**. Copying does not modify Steam automatically.
+In the v0.2.9 candidate, use **Save only**, then **Copy launch options**. Retain the game's complete previous Steam value yourself and paste the generated command into **Steam → Properties → General → Launch Options** for the intended account. Saving alone and copying do not modify Steam. Manual pasting does not create an original-value restoration record, even if the pasted command matches Manager's output.
 
 Keep `%command%` in its final position after `--`. Current Runner receives and logs Steam's expanded command but launches the profile's target and arguments instead. It does not also launch the official EXE or automatically fall back to it.
 

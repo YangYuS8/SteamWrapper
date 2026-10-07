@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Windows.Automation;
 
 namespace SteamWrapper.NativeUi.Tests;
 
@@ -35,7 +36,16 @@ internal static partial class Program
                     foreach (var action in new[] { "RemoveProfile", "RestoreSteamLaunch" })
                     {
                         window.Invoke(action);
-                        Assert(window.HasId("ConfirmProfileAction"), "The profile action has no confirmation dialog.");
+                        // Restoration reads the account and setting asynchronously before opening.
+                        NativeWindow.Wait(() => window.HasId("ConfirmProfileAction"), $"{action} confirmation dialog");
+                        if (action == "RestoreSteamLaunch")
+                        {
+                            NativeWindow.Wait(() => window.HasId("SteamCurrentOptions") && window.Value("SteamCurrentOptions") == "--original-option", "readable account current Launch Options");
+                            Assert(window.HasName(language == "zh-CN" ? "Steam 账户：Fixture account (7)" : "Steam account: Fixture account (7)", ControlType.Text), "Restoration did not identify the sole readable account.");
+                            Assert(!window.HasId("SteamAccount"), "A sole readable account required an unnecessary choice.");
+                            Assert(!window.ByName(language == "zh-CN" ? "恢复原启动选项" : "Restore previous Launch Options", ControlType.Button).Current.IsEnabled,
+                                "Custom options without a recorded application enabled original-value restoration.");
+                        }
                         window.InvokeName(language == "zh-CN" ? "取消" : "Cancel");
                         Equal("2", ProfileCount(window).ToString(CultureInfo.InvariantCulture));
                         Equal(oldName, window.Value("ProfileName"));

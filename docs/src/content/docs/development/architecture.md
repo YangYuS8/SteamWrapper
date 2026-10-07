@@ -1,6 +1,6 @@
 ---
 title: "SteamWrapper v2 architecture"
-description: "WinUI Manager, C# application services, independent Rust Runner, and stable contracts."
+description: "WinUI Manager, C# configuration and Steam setting services, independent Rust Runner, and stable contracts."
 ---
 
 <a id="steamwrapper-v2-architecture"></a>
@@ -11,7 +11,7 @@ description: "WinUI Manager, C# application services, independent Rust Runner, a
 
 **WinUI 3 is the only Manager implementation.** The Windows Manager in `apps/manager-winui` uses C#/XAML and C# application services. Steam launches the independent Rust Runner through the existing TOML/CLI contracts. There is no Rust FFI, management helper, or background service. See the [Windows design](/SteamWrapper/project/design/windows-v2/).
 
-Configure a game once, then click Play in Steam with Manager closed. The latest [v0.2.8 stable release](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8) provides Setup and a portable ZIP. Linux retains Rust Runner compatibility and process CI; there is no Linux GUI, and new SteamOS/Proton work is deferred.
+Configure a game once, then click Play in Steam with Manager closed. The public [v0.2.8 stable release](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8) provides Setup and a portable ZIP. The current `v0.2.9` candidate adds explicit application of Launch Options to one local Steam account and restoration of its recorded original setting; actual Steam-client acceptance and publication remain separate gates. Linux retains Rust Runner compatibility and process CI; there is no Linux GUI, and new SteamOS/Proton work is deferred.
 
 <a id="运行流程"></a>
 
@@ -34,10 +34,14 @@ Open WinUI Manager
 → show custom/local art, optional cached/CDN fallback, or a friendly placeholder
 → select the actual executable/launcher and preserve advanced settings
 → save the profile and install/check stable Runner
-→ generate/copy Launch Options for manual application
+→ choose/confirm a local Steam account and review current/proposed Launch Options
+→ after Steam exits normally, back up, apply and read back the selected setting
+→ retain manual copying as an alternative
 ```
 
-Manager still generates Launch Options for manual application. The current source also offers Revert for unsaved edits, explicit restoration of normal Steam launch for the selected AppID, and removal of an editable profile. Restoration clears only the exact recognized command for this data root's stable Runner after Steam exits normally, retaining the profile and unrelated settings. Removal requires a complete Steam account scan with no remaining references to that profile. Custom commands are preserved, and unknown earlier arguments cannot be reconstructed. Uninstall retains its separate restoration choice. General automatic application and provenance-based restoration remain future work; scoped evidence is recorded in [Testing](/SteamWrapper/development/testing/).
+In the candidate, **Save and apply to Steam** saves configuration and prepares Runner before requesting confirmation of one account, AppID, and old/new setting. Multiple accounts require an explicit choice; no readable account leaves the manual-copy alternative. Steam must exit normally, and a retry inspects the setting again. A verified disk write is reported separately from configuration saving and does not prove that the Steam client retained the value. Manager can explicitly open Steam without launching a game.
+
+**Restore previous Launch Options** uses the original setting recorded by a successful application, including whether the key was absent or empty. It restores only while the selected account/AppID still holds the recorded applied command, preserving later changes to other games. A manually pasted recognized command without a recovery record has an unknown original; the separately labeled **Restore normal Steam launch** action clears only that exact command and does not reconstruct earlier arguments. Revert retains its unsaved-edit role. Removing one editable profile requires a complete account/reference scan and no blocking recovery records, while preserving unrelated TOML, backups and games. See the [implementation plan](/SteamWrapper/project/design/steam-launch-options/) and scoped evidence in [Testing](/SteamWrapper/development/testing/).
 
 <a id="launch-options-合约"></a>
 
@@ -61,6 +65,10 @@ apps/manager-winui/SteamWrapper.Application   # profiles, local Steam, logs, Run
 crates/runner                               # Steam-started CLI and process lifecycle
                  ↓ Rust calls
 crates/core                                 # shared configuration/path contracts
+
+WinUI Manager / uninstall Host
+                 ↓ C# calls
+apps/deployment-windows/SteamWrapper.Deployment # guarded Steam settings and recovery; deployment
 ```
 
 `ProfileStore` uses Tomlyn syntax spans to edit only changed fields, preserving other text and unknown data. New Windows profiles explicitly use `job`; omitted legacy `wait_mode` remains `root`. Saves and deletion of one supported explicit Windows profile table use a cooperative lock, byte-version conflict checks, a flushed same-directory temporary file, atomic replacement, and backup. Deletion preserves all unrelated TOML and rechecks Steam references under the profile lock before replacement. Inline/dotted or otherwise unsupported layouts remain read-only. Non-cooperating editors can still race between the final check and replacement.
@@ -71,11 +79,19 @@ Steam titles are read from the local `appcache/appinfo.vdf` through a bounded, r
 
 `ProfileSteamInstallation` associates a read-only Steam path by AppID for display. It is not serialized and never overwrites `game_dir`, the actual runtime folder, which may be outside Steam. See [translated-game directories](/SteamWrapper/guides/translated-games/).
 
+`SteamAccountScanner` discovers at most 128 canonical positive numeric `userdata` accounts with existing readable `config/localconfig.vdf` files. It reads bounded, optional `config/loginusers.vdf` metadata only for `PersonaName`, validating the public individual SteamID64/account-directory mapping and falling back to numeric account labels. It does not choose a user from recent-login flags, expose login fields, create settings files or query an account service. Reparse paths and scans outside an active fixture scope are rejected; an oversized inventory returns no partial choice. `SteamIntegrationReadiness` binds the saved profile revision and verified shared Runner bytes to one unambiguous AppID/local installation before offering automatic application.
+
+`SteamLaunchIntegration` in Deployment owns selected-setting inspection, byte-preserving VDF editing, application and recorded-original restoration. It changes only `UserLocalConfigStore/Software/Valve/Steam/apps/<appid>/LaunchOptions`, inserting a missing game or key only inside an existing supported `apps` hierarchy. Comments, encoding/BOM, whitespace, unknown fields and unrelated bytes remain intact. Ambiguous structure, unsafe paths, read-only/locked targets, changed previews and unsupported recovery data stop writes.
+
+Recovery records and verified snapshots stay in `backups/steam-launch-options/<operation-id>/`. The record retains account/AppID/data-root identity, original key/value/token, saved profile/Runner hashes and operation phase. Reapplication preserves the first active original; an identical manually pasted command does not gain invented provenance. Pending work is inspected without Steam mutation, and further changes in the same account file stop until unresolved recovery is addressed. Explicit recovery uses exact before/after snapshots and actual replaced-file evidence; inconsistent bytes remain a conflict for review.
+
+Application and restoration hold `profiles.toml.lock`; application also holds the Runner installation lock in data-then-Runner order and rechecks readiness immediately before replacement. Confirmation and normal-exit waiting hold no mutation lock. Opened handles must resolve to the expected physical paths, including under development-host AppData redirection. Flushed temporary and adjacent replacement-backup files share Steam's volume; verified archival copies can live in LocalAppData on another volume. The service verifies both actual replaced bytes and the written target before committing the record, and retains recovery copies after uncertain replacement. These checks narrow concurrent rename/Steam-start races; ordinary `File.Replace` is not conditional compare-and-swap or a guarantee against power loss.
+
 ### Manager deployment
 
 `apps/deployment-windows` contains a GUI-independent C# deployment library and NativeAOT `SteamWrapper.exe` launcher/helper. Manager acquires a shared installation lease before initialization and keeps it until process exit; its health acknowledgment binds the current transaction. Inno and explicit repair/rollback/uninstall use the same exclusive lease and manifest/journal engine. First installation may choose a validated empty directory on a fixed local drive; updates and repairs use the registered root. The stable data directory stays separate.
 
-The helper launches Manager or a confirmed SteamWrapper installer and never launches games. The deployment library shares its guarded Steam account inspection/restoration with Manager's explicit selected-AppID action; uninstall can also remove recognized commands and selected owned data. Steam must be stopped for restoration or profiles/Runner cleanup; affected account files are backed up and unrelated bytes preserved. Profiles/Runner removal also requires no remaining applicable Runner references, and Runner bytes must match supported metadata. Default uninstall preserves data, and every path preserves games, saves, Steam restoration backups, update trust state and unknown files. See [installer ownership and recovery](/SteamWrapper/guides/installer-preview/) and the scoped acceptance in [Testing](/SteamWrapper/development/testing/).
+The helper launches Manager or a confirmed SteamWrapper installer and never launches games. Manager and the explicit uninstall restoration choice share Deployment's recorded-original restoration rules, with legacy exact-command clearing retained for commands without known originals. Uninstall holds its installation lease and a continuous data lock across restoration, final reference checks and selected profile/Runner cleanup; it rechecks references before deleting each protected file. Steam must be stopped, blocking/unknown recovery material is retained, and Runner bytes must match supported metadata. Default uninstall preserves data, and every path preserves games, saves, Steam restoration backups, update trust state and unknown files. See [installer ownership and recovery](/SteamWrapper/guides/installer-preview/) and the scoped acceptance in [Testing](/SteamWrapper/development/testing/).
 
 `OfficialUpdateService` verifies project-signed release metadata with an embedded public key, checks freshness and rollback state, then downloads a bounded, digest-verified installer into SteamWrapper's update cache. WinUI supplies manual checking, opt-in startup checks, progress/cancellation and installation confirmation; a portable copy links to release downloads. The existing NativeAOT helper waits for Manager to exit normally, rechecks the downloaded file and opens the same Inno installer, then reopens Manager after success. It does not terminate games or replace the stable Runner.
 
@@ -144,7 +160,7 @@ Missing legacy `wait_mode` always parses as `root`. No Linux Manager currently c
 
 ## Distribution and stable installation
 
-Windows uses a complete self-contained layout, a per-user Inno installer and a portable ZIP. Version tags publish releases; manual workflow runs produce development previews. Daily CI tests and compiles without packaging the application. Relevant-path filters skip unrelated checks, dependency caches avoid repeated setup and one captured Runner suite supplies the required process evidence; full version-tag gates remain required. Cold/warm CI observations are recorded in [Testing](/SteamWrapper/development/testing/#public-028-and-ci-observations-2026-10-07), without a speed guarantee. The supported release scope is Windows 11 24H2 x64, using the same Windows account as Steam with ordinary permissions. Open Manager from ordinary File Explorer or its installed shortcut. General automatic Steam Launch Options application remains unimplemented; explicit selected-game clearing is the narrower action described above. See [installation](/SteamWrapper/guides/installation/) for current downloads and [distribution](/SteamWrapper/development/distribution/) for the exact triggers.
+Windows uses a complete self-contained layout, a per-user Inno installer and a portable ZIP. Version tags publish releases; manual workflow runs produce development previews. Daily CI tests and compiles without packaging the application. Relevant-path filters skip unrelated checks, dependency caches avoid repeated setup and one captured Runner suite supplies the required process evidence; full version-tag gates remain required. Cold/warm CI observations are recorded in [Testing](/SteamWrapper/development/testing/#public-028-and-ci-observations-2026-10-07), without a speed guarantee. The supported release scope is Windows 11 24H2 x64, using the same Windows account as Steam with ordinary permissions. Open Manager from ordinary File Explorer or its installed shortcut. The `v0.2.9` candidate's account-specific apply/restore implementation does not establish Steam Properties persistence, live game behavior, exact-tag delivery or verified public downloads; each needs its own evidence. See [installation](/SteamWrapper/guides/installation/) for current downloads and [distribution](/SteamWrapper/development/distribution/) for the exact triggers.
 
 ```text
 %LOCALAPPDATA%\SteamWrapper\
@@ -172,7 +188,7 @@ Official Steam CDN fallback is an explicit preference, disabled by default and l
 
 Only downloaded covers are managed under `%LOCALAPPDATA%\SteamWrapper\cache\covers\`: a 32 MiB/64-file quota, thirty-day expiry, eviction and a clear action. Cache changes use an exclusive cross-process file lease; an in-use cache leaves a placeholder or a recoverable clear error. Cleanup does not touch custom art, Steam cache files, games, profiles, Runner or other SteamWrapper data. See [cover settings](/SteamWrapper/guides/configuration/#cover-settings) and scoped [native acceptance](/SteamWrapper/development/testing/).
 
-SteamWrapper does not inject DLLs, patch Steam/game files, bypass DRM, or upload user data. Unresolved save/cloud conflicts stop live acceptance.
+Steam setting writes are limited to the confirmed Launch Options operations above. SteamWrapper does not inject DLLs, patch Steam/game binaries, bypass DRM, or upload user data. Unresolved save/cloud conflicts stop live acceptance.
 
 <a id="manager-技术边界"></a>
 

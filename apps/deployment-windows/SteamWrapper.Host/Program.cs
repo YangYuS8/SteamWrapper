@@ -109,6 +109,11 @@ static void Uninstall(DeploymentEngine engine, bool test, bool restoreSteam, str
     var removeRuntime = (cleanup & (ManagerDataCleanupOptions.Profiles | ManagerDataCleanupOptions.Runner)) != 0;
     var runtimeRemovalAllowed = false;
     var retained = false;
+    if ((restoreSteam || removeRuntime) && SteamRunning())
+        throw new DeploymentException("SteamBusy", "Steam must exit normally before removing launch integration.");
+    using var dataLease = restoreSteam || removeRuntime || cleanup.HasFlag(ManagerDataCleanupOptions.ProfileBackups)
+        ? SteamLaunchIntegration.AcquireDataLease(dataRoot) : null;
+    string? inspectedSteamRoot = null;
     bool SteamRunning()
     {
         if (test) return File.Exists(Path.Combine(Environment.GetEnvironmentVariable("STEAMWRAPPER_E2E_ROOT")!, "steam-running"));
@@ -137,6 +142,9 @@ static void Uninstall(DeploymentEngine engine, bool test, bool restoreSteam, str
                     .Select(path => Path.Combine(path, "Steam")).FirstOrDefault(Directory.Exists);
             }
             if (string.IsNullOrWhiteSpace(steamRoot)) throw new InvalidDataException("Steam could not be located.");
+            inspectedSteamRoot = steamRoot;
+            if (restoreSteam) SteamLaunchIntegration.RestoreAllRecordedLocked(dataRoot, steamRoot, SteamRunning);
+            SteamLaunchIntegration.EnsureNoBlockingRecordsLocked(dataRoot, steamRoot);
             var plan = SteamLaunchRestoration.Inspect(steamRoot, dataRoot);
             if (removeRuntime && (plan.UnrecognizedReferences != 0 || !restoreSteam && plan.Changes.Count != 0))
                 throw new InvalidDataException("Some Steam launch options still depend on Runner or are customized.");
@@ -151,7 +159,21 @@ static void Uninstall(DeploymentEngine engine, bool test, bool restoreSteam, str
     }
     engine.UninstallUnderLease();
     if (removeRuntime && SteamRunning()) runtimeRemovalAllowed = false;
-    var result = ManagerDataCleanup.CleanupAt(dataRoot, cleanup, runtimeRemovalAllowed);
+    bool RecheckRuntimeRemoval()
+    {
+        if (SteamRunning() || inspectedSteamRoot is null) return false;
+        try
+        {
+            SteamLaunchIntegration.EnsureNoBlockingRecordsLocked(dataRoot, inspectedSteamRoot);
+            var current = SteamLaunchRestoration.Inspect(inspectedSteamRoot, dataRoot);
+            return !SteamRunning() && current.Changes.Count == 0 && current.UnrecognizedReferences == 0;
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
+        { return false; }
+    }
+    var result = dataLease is not null
+        ? ManagerDataCleanup.CleanupAtUnderDataLease(dataRoot, cleanup, dataLease, runtimeRemovalAllowed, RecheckRuntimeRemoval)
+        : ManagerDataCleanup.CleanupAt(dataRoot, cleanup, runtimeRemovalAllowed);
     retained |= result.HasRetainedFiles;
     if (session is not null)
         File.WriteAllText(Path.Combine(session, "cleanup-result.txt"), retained ? "retained" : "complete");

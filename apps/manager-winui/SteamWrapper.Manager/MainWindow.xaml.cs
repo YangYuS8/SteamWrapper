@@ -166,6 +166,7 @@ public sealed partial class MainWindow : Window
             mode.IsEnabled = foreign || (string)mode.Tag != "process_group";
         FormFields.IsEnabled = !foreign;
         SaveButton.IsEnabled = !foreign;
+        ApplyButton.IsEnabled = !foreign;
         EditorHeading.Text = create ? localizer["NewProfile"] : DisplayProfileName(profile);
         WelcomePanel.Visibility = Visibility.Collapsed;
         EditorPanel.Visibility = Visibility.Visible;
@@ -179,6 +180,7 @@ public sealed partial class MainWindow : Window
         loading = false;
         dirty = false;
         RefreshProfileActions();
+        _ = RefreshIntegrationStatusAsync(profile, create);
     }
 
     private async void AddGame_Click(object sender, RoutedEventArgs e)
@@ -296,7 +298,12 @@ public sealed partial class MainWindow : Window
 
     private async void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (snapshot is null || editing is null) return;
+        _ = await SaveAndPrepareAsync();
+    }
+
+    private async Task<bool> SaveAndPrepareAsync()
+    {
+        if (snapshot is null || editing is null) return false;
         SetBusy(true);
         var saved = false;
         try
@@ -339,14 +346,17 @@ public sealed partial class MainWindow : Window
             EditorHeading.Text = DisplayProfileName(editing);
             RefreshProfiles();
             var status = await runner.InstallOrRepairAsync();
-            if (!status.IsReady) { ShowStatus(Messages.Text("SavedWithStatus", status.Text), InfoBarSeverity.Warning); return; }
+            if (!status.IsReady) { ShowStatus(Messages.Text("SavedWithStatus", status.Text), InfoBarSeverity.Warning); return false; }
             LaunchOptionsText.Text = LaunchOptions.Build(paths.RunnerPath, appId);
             LaunchPanel.Visibility = Visibility.Visible;
             ShowStatus(Messages.Text("SavedReady"), InfoBarSeverity.Success);
+            _ = RefreshIntegrationStatusAsync(editing, false);
+            return true;
         }
         catch (Exception ex)
         {
             ShowStatus(Messages.Text(saved ? "SavedRunnerFailed" : "SaveFailed", ex), InfoBarSeverity.Error);
+            return false;
         }
         finally { SetBusy(false); }
     }

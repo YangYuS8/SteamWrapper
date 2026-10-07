@@ -43,7 +43,7 @@ GitHub 和 CNB 提供相同且已核验的安装包，对应 **v0.2.8，最新�
 
 安装版选择“**下载更新**”，完成后选择“**安装更新**”并确认。先保存或放弃未保存的修改。Manager 会正常退出以便安装，并在成功后重新打开。更新和修复保留已注册的安装目录及独立数据。连接或验证失败时，可以继续使用当前版本，稍后重试。
 
-更新 Manager 不会替换 Steam 使用的稳定 Runner。之后明确选择“**保存并生成启动项**”才会在安全时检查并准备 Runner。如果 Runner 正被占用，请让游戏正常结束后重试；SteamWrapper 不会强制关闭游戏。使用新启动命令前，请先处理界面显示的 Runner 提示，详见 [Runner 排错](/SteamWrapper/zh-cn/guides/troubleshooting/)。
+更新 Manager 不会替换 Steam 使用的稳定 Runner。保存配置时才会在安全条件满足后检查并准备 Runner。公开的 v0.2.8 将此操作标为**保存并生成启动项**。v0.2.9 候选版本提供**仅保存**和**保存并应用到 Steam**；只有应用流程会在确认后写入所选 Steam 设置。候选验证、真实 Steam 验收与发布检查仍待完成，详见[配置说明](/SteamWrapper/zh-cn/guides/configuration/)。如果 Runner 正被占用，请让游戏正常结束后重试。使用新启动命令前，请先处理界面显示的 Runner 提示，详见 [Runner 排错](/SteamWrapper/zh-cn/guides/troubleshooting/)。
 
 <a id="manager-与-runner-的数据位置"></a>
 

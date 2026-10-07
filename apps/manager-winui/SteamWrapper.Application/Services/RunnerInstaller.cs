@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace SteamWrapper.Application.Services;
 
-public sealed record RunnerStatus(bool IsReady, bool CanInstall, LocalMessage Text, string? InstalledVersion = null, string? BundledVersion = null)
+public sealed record RunnerStatus(bool IsReady, bool CanInstall, LocalMessage Text, string? InstalledVersion = null, string? BundledVersion = null, string? VerifiedSha256 = null)
 {
     public string Message => Text.ToString();
 }
@@ -27,6 +27,7 @@ public sealed class RunnerInstaller
 
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(StringComparer.OrdinalIgnoreCase);
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    private const int MaximumManifestBytes = 16 * 1024;
     private string Stable => Path.GetFullPath(paths.RunnerPath);
     private string Bin => Path.GetDirectoryName(Stable)!;
     private string Bundled => Path.Combine(bundledDirectory, "SteamWrapperRunner.exe");
@@ -56,7 +57,7 @@ public sealed class RunnerInstaller
                 return new(new(false, true, Messages.Text("RunnerMissing"), BundledVersion: bundle.Version), bundle);
             var currentHash = Hash(Stable, verifyLocation: true);
             if (currentHash.Equals(bundle.Sha256, StringComparison.OrdinalIgnoreCase))
-                return new(new(true, false, Messages.Text("RunnerReady"), bundle.Version, bundle.Version), bundle, bundle, currentHash);
+                return new(new(true, false, Messages.Text("RunnerReady"), bundle.Version, bundle.Version, currentHash), bundle, bundle, currentHash);
 
             var installed = FindInstalledManifest(currentHash);
             if (installed is null)
@@ -65,10 +66,10 @@ public sealed class RunnerInstaller
                 return new(new(false, false, Messages.Text("RunnerContract"), installed.Version, bundle.Version), bundle, installed, currentHash);
             var comparison = Version.Parse(installed.Version).CompareTo(Version.Parse(bundle.Version));
             if (comparison > 0)
-                return new(new(true, false, Messages.Text("RunnerNewer"), installed.Version, bundle.Version), bundle, installed, currentHash);
+                return new(new(true, false, Messages.Text("RunnerNewer"), installed.Version, bundle.Version, currentHash), bundle, installed, currentHash);
             if (comparison == 0)
                 return new(new(false, false, Messages.Text("RunnerSameVersion"), installed.Version, bundle.Version), bundle, installed, currentHash);
-            return new(new(true, true, Messages.Text("RunnerUpdate"), installed.Version, bundle.Version), bundle, installed, currentHash);
+            return new(new(true, true, Messages.Text("RunnerUpdate"), installed.Version, bundle.Version, currentHash), bundle, installed, currentHash);
         }
         catch (Exception ex) when (IsFileError(ex))
         {
@@ -125,7 +126,7 @@ public sealed class RunnerInstaller
                 throw Messages.Io("RunnerInstalledHash");
             VerifyProfilesLocation();
             DeleteIfPresent(backup);
-            return new(true, false, Messages.Text("RunnerInstalled"), bundle.Version, bundle.Version);
+            return new(true, false, Messages.Text("RunnerInstalled"), bundle.Version, bundle.Version, bundle.Sha256);
         }
         catch (Exception ex) when (IsFileError(ex))
         {
@@ -165,7 +166,7 @@ public sealed class RunnerInstaller
 
     private static RunnerManifest ReadManifest(string path)
     {
-        if (new FileInfo(path).Length > 16 * 1024) throw Messages.Format("RunnerManifestLarge");
+        if (new FileInfo(path).Length > MaximumManifestBytes) throw Messages.Format("RunnerManifestLarge");
         var manifest = JsonSerializer.Deserialize<RunnerManifest>(File.ReadAllBytes(path), JsonOptions)
             ?? throw Messages.Format("RunnerManifestEmpty");
         if (manifest.SchemaVersion != 1 || manifest.Version is null || !Version.TryParse(manifest.Version, out var version) || version.Build < 0 ||
@@ -190,6 +191,16 @@ public sealed class RunnerInstaller
 
     private static void WriteAtomically(string path, byte[] bytes)
     {
+        if (File.Exists(path))
+        {
+            using var existing = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (existing.Length > MaximumManifestBytes) throw Messages.Format("RunnerManifestLarge");
+            var current = new byte[(int)existing.Length];
+            existing.ReadExactly(current);
+            // Repeated preparation need not replace verified, identical metadata
+            // while another reader legitimately holds it without delete sharing.
+            if (current.AsSpan().SequenceEqual(bytes)) return;
+        }
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temporary = path + $".tmp-{Guid.NewGuid():N}";
         try

@@ -46,6 +46,10 @@ public static class DeploymentMessages
         var code = error is DeploymentException deployment ? deployment.Code : error is InvalidDataException or System.Text.Json.JsonException ? "Invalid" : "Io";
         return (code, chinese) switch
         {
+            ("SteamDataBusy", false) => "Game configuration is busy. Wait for saving or restoration to finish, then retry. Your installation and recovery copies have been kept.",
+            ("SteamDataBusy", true) => "游戏配置正在使用中。请等待保存或恢复完成后重试；安装和恢复资料已保留。",
+            ("SteamRecords" or "SteamRecovery", false) => "Steam launch recovery needs review. Keep the current configuration and Runner, open SteamWrapper to check the selected account, and restore only after resolving the conflict. Recovery copies have been kept.",
+            ("SteamRecords" or "SteamRecovery", true) => "Steam 启动恢复需要检查。请保留当前配置和 Runner，打开 SteamWrapper 核对所选账号，解决冲突后再恢复；恢复资料已保留。",
             ("SteamBusy", false) => "Close Steam normally before restoring launch options or removing game profiles and Runner. No application was closed and your files were kept.",
             ("SteamBusy", true) => "请正常退出 Steam，再恢复启动选项或删除游戏配置和 Runner。没有关闭任何应用，您的文件已保留。",
             ("SteamRestore", false) => "Steam launch options could not be safely restored. Keep game profiles and Runner, restore customized launch options in Steam, then retry. Any restoration backups have been kept.",

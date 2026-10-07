@@ -13,6 +13,26 @@ namespace SteamWrapper.Application.Tests;
 public sealed class LocalizationTests
 {
     [TestMethod]
+    public void SteamIntegrationMessagesSeparateSaveWriteAndUncertainRecoveryInBothLanguages()
+    {
+        foreach (var (language, saved, written, recovery) in new[]
+        {
+            ("en-US", "Configuration saved", "Launch Options written", "recovery copies were retained"),
+            ("zh-CN", "配置已保存", "启动选项已写入", "恢复副本已保留")
+        })
+        {
+            var localizer = new Localizer(language);
+            StringAssert.Contains(localizer["SteamApplyCanceled"], saved);
+            StringAssert.Contains(localizer["SteamApplyNotWritten"], saved);
+            StringAssert.Contains(localizer["SteamApplyWritten"], written);
+            StringAssert.Contains(localizer["SteamApplyUnconfirmed"], recovery);
+            const string supplied = "用户 {0} Steam account (42)";
+            StringAssert.Contains(localizer.Format(Messages.Text("SteamAccountDisplay", supplied)), supplied);
+            StringAssert.Contains(localizer.Format(Messages.Text("SteamIntegrationAppliedState", supplied)), supplied);
+        }
+    }
+
+    [TestMethod]
     public void InstallationFailuresUseTheSelectedLanguageAndPreserveDiagnostics()
     {
         var diagnostic = new IOException("Busy: C:\\测试 {0}\\installation.json");

@@ -13,7 +13,7 @@ internal static class SteamLaunchRestoration
     private const int MaximumBytes = 32 * 1024 * 1024;
 
     internal static SteamLaunchPlan Inspect(string steamRoot, string dataRoot, string? selectedAppId = null,
-        CancellationToken cancellationToken = default, string? selectedProfileKey = null)
+        CancellationToken cancellationToken = default, string? selectedProfileKey = null, string? selectedAccountId = null)
     {
         SafePaths.CheckAncestors(steamRoot);
         if (!Directory.Exists(Path.Combine(steamRoot, "steamapps")))
@@ -29,6 +29,7 @@ internal static class SteamLaunchRestoration
         if (accounts.Length > 128) throw new InvalidDataException("Steam account inventory exceeds its limit.");
         foreach (var account in accounts)
         {
+            if (selectedAccountId is not null && Path.GetFileName(account) != selectedAccountId) continue;
             cancellationToken.ThrowIfCancellationRequested();
             var path = Path.Combine(account, "config", "localconfig.vdf");
             SafePaths.CheckAncestors(path);
@@ -74,6 +75,7 @@ internal static class SteamLaunchRestoration
         if (steamRunning()) throw new IOException("Close Steam normally before restoring launch options.");
         if (plan.Changes.Count == 0) return 0;
         var reserved = new List<FileStream>();
+        var replacementAttempted = false;
         try
         {
             // Reserve every snapshot before changing any account. Never overwrite a later edit.
@@ -112,6 +114,8 @@ internal static class SteamLaunchRestoration
                     // LocalAppData often live on different drives; archive after replacement.
                     var replaced = change.Path + ".steamwrapper-backup-" + Guid.NewGuid().ToString("N");
                     beforeReplace?.Invoke(change.Path);
+                    // A failed replacement or any later account failure cannot prove no file changed.
+                    replacementAttempted = true;
                     File.Replace(temporary, change.Path, replaced);
                     var replacedBytes = ReadBounded(replaced);
                     var archived = Path.Combine(backup, account + "-replaced.vdf");
@@ -129,8 +133,16 @@ internal static class SteamLaunchRestoration
             }
             return count;
         }
+        catch (Exception error) when (replacementAttempted &&
+            error is IOException or UnauthorizedAccessException or InvalidDataException or OperationCanceledException)
+        {
+            throw Unconfirmed(error);
+        }
         finally { foreach (var stream in reserved) stream.Dispose(); }
     }
+
+    internal static DeploymentException Unconfirmed(Exception error) => new("SteamUnconfirmed",
+        "Restoration could not be confirmed. Recovery copies were retained; review the current Steam setting before retrying.", error);
 
     private static byte[] ReadBounded(string path)
     {

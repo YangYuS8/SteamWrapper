@@ -43,7 +43,7 @@ The default **Download source** is **Automatic**, which tries GitHub first and c
 
 For an installed copy, select **Download update**, then **Install update** and confirm. Finish or discard unsaved edits first. Manager closes normally for installation and reopens after success. Updates and repairs keep your registered installation folder and preserve separate data. If a connection or verification fails, keep using the current version and retry later.
 
-Updating Manager does not replace the stable Runner used by Steam. A later explicit **Save and generate launch options** checks and prepares Runner when safe. If Runner is busy, let the game finish normally and retry; SteamWrapper does not force-close games. Follow any displayed Runner warning before using a new launch command; see [Runner troubleshooting](/SteamWrapper/guides/troubleshooting/).
+Updating Manager does not replace the stable Runner used by Steam. Saving a profile checks and prepares Runner when safe. Public v0.2.8 calls this **Save and generate launch options**. The v0.2.9 candidate offers **Save only** and **Save and apply to Steam**; only the apply flow can write the selected Steam setting after confirmation. Candidate validation, real Steam acceptance and release checks are pending; see [configuration](/SteamWrapper/guides/configuration/). If Runner is busy, let the game finish normally and retry. Follow any displayed Runner warning before using a new launch command; see [Runner troubleshooting](/SteamWrapper/guides/troubleshooting/).
 
 <a id="where-manager-and-runner-keep-data"></a>
 

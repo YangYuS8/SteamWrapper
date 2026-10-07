@@ -3,7 +3,7 @@ param(
     [Parameter(Position = 0)][string]$RepoRoot = (Join-Path $PSScriptRoot '../..'),
     [Parameter(Position = 1)][string]$PublishDirectory,
     [switch]$Inspect,
-    [ValidateSet('add-local', 'manual-appid', 'dirty-add', 'keyboard', 'updates', 'runner-update', 'profile-actions', 'steam-names', 'existing-editor', 'saved-editor')][string[]]$Cases = @()
+    [ValidateSet('add-local', 'manual-appid', 'dirty-add', 'keyboard', 'updates', 'runner-update', 'profile-actions', 'steam-names', 'steam-integration', 'existing-editor', 'saved-editor')][string[]]$Cases = @()
 )
 
 $ErrorActionPreference = 'Stop'

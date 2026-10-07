@@ -89,11 +89,12 @@ public sealed class SteamLaunchRestorationTests
         var path = Config(steam, "1", $"\"{Path.Combine(data, "bin", "SteamWrapperRunner.exe")}\" --appid \"123\" -- %command%");
         var plan = SteamLaunchRestoration.Inspect(steam, data);
         var external = Encoding.UTF8.GetBytes("\"external\" \"later user value\"");
-        Assert.ThrowsExactly<IOException>(() => SteamLaunchRestoration.Restore(plan, data, () => false, target =>
+        var error = Assert.ThrowsExactly<DeploymentException>(() => SteamLaunchRestoration.Restore(plan, data, () => false, target =>
         {
             File.WriteAllBytes(target + ".external", external);
             File.Replace(target + ".external", target, null);
         }));
+        Assert.AreEqual("SteamUnconfirmed", error.Code);
         var saved = Directory.GetFiles(Path.Combine(data, "backups", "steam-launch-options"), "*-replaced.vdf", SearchOption.AllDirectories);
         Assert.AreEqual(1, saved.Length);
         CollectionAssert.AreEqual(external, File.ReadAllBytes(saved[0]));

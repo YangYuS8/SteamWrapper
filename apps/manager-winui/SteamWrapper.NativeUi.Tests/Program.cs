@@ -15,7 +15,7 @@ internal static partial class Program
     private static Dictionary<string, string> publicationHashes = [];
     private static string publication = "";
     private static string evidenceRoot = "";
-    private static readonly string[] FocusedCases = ["add-local", "manual-appid", "dirty-add", "keyboard", "updates", "runner-update", "profile-actions", "steam-names"];
+    private static readonly string[] FocusedCases = ["add-local", "manual-appid", "dirty-add", "keyboard", "updates", "runner-update", "profile-actions", "steam-names", "steam-integration"];
     private static readonly string[] SupportedCases = [.. FocusedCases, "existing-editor", "saved-editor"];
     private static readonly List<object> FixtureProcesses = [];
     private static readonly List<object> KeyboardObservations = [];
@@ -30,7 +30,7 @@ internal static partial class Program
         catch (ArgumentException error)
         {
             Console.Error.WriteLine(error.Message);
-            Console.Error.WriteLine("Usage: SteamWrapper.NativeUi.Tests <repo-root> <publish-directory> [--inspect | --case <add-local|manual-appid|dirty-add|keyboard|updates|runner-update|profile-actions|steam-names|existing-editor|saved-editor> ...]");
+            Console.Error.WriteLine("Usage: SteamWrapper.NativeUi.Tests <repo-root> <publish-directory> [--inspect | --case <add-local|manual-appid|dirty-add|keyboard|updates|runner-update|profile-actions|steam-names|steam-integration|existing-editor|saved-editor> ...]");
             return 2;
         }
         if (!Environment.UserInteractive || Process.GetCurrentProcess().SessionId == 0)
@@ -170,6 +170,7 @@ internal static partial class Program
             foreach (var name in FocusedCases.Where(name => selectedCases.Count == 0 || selectedCases.Contains(name)))
                 if (name == "profile-actions") ProfileActionsFlow(args[0], args[1]);
                 else if (name == "steam-names") SteamNamesFlow(args[0], args[1]);
+                else if (name == "steam-integration") SteamIntegrationFlow(args[0], args[1]);
                 else AdditionalFlow(args[0], args[1], name);
             AssertPublicationUnchanged();
         }
@@ -182,6 +183,7 @@ internal static partial class Program
                 publication, publicationSha256 = publicationHashes,
                 fixtureRoot = evidenceRoot, fixtureRoots = FixtureRoots, selectedCases = selectedCases.ToArray(), cases = Results,
                 fixtureProcesses = FixtureProcesses, keyboardObservations = KeyboardObservations,
+                steamIntegrationObservations = SteamIntegrationObservations,
                 limits = new[] { "No real Steam/game operation", "IME and display-scaling acceptance not automated", "Keyboard evidence is fixture-owned HWND Tab/Escape messages and observed focus, not hardware input", "CDN-off UI state alone is not zero-network evidence", "Clipboard is not modified" }
             }, new JsonSerializerOptions { WriteIndented = true }));
         }

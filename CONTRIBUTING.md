@@ -2,7 +2,7 @@
 
 English | [简体中文](CONTRIBUTING.zh-CN.md)
 
-SteamWrapper v2 is a Windows-first configuration Manager and an independent Rust Runner. Read the [README](README.md), [architecture](https://yangyus8.top/SteamWrapper/development/architecture/), and [roadmap](https://yangyus8.top/SteamWrapper/project/roadmap/) before changing a product boundary. The WinUI Manager is a preview; WinUI is the only Manager; its installer and stable-release delivery gates remain unfinished.
+SteamWrapper v2 is a Windows-first configuration Manager and an independent Rust Runner. Read the [README](README.md), [architecture](https://yangyus8.top/SteamWrapper/development/architecture/), and [roadmap](https://yangyus8.top/SteamWrapper/project/roadmap/) before changing a product boundary. WinUI is the only Manager; v0.2.7 established the first stable Windows 11 24H2 x64 release within the documented current Windows/Steam-account scope. Future releases still require their own relevant delivery gates.
 
 ## Issues and proposals
 

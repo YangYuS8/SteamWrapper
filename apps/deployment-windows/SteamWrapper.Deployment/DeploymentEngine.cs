@@ -1,3 +1,5 @@
+using System.Runtime.ExceptionServices;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -392,8 +394,54 @@ public sealed partial class DeploymentEngine
     {
         var temporary = path + ".tmp-" + Guid.NewGuid().ToString("N");
         using (var file = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { file.Write(bytes); file.Flush(true); }
-        try { if (overwrite && File.Exists(path)) File.Replace(temporary, path, null); else File.Move(temporary, path); }
+        try { if (overwrite && File.Exists(path)) ReplaceOwnedMetadata(temporary, path, bytes); else File.Move(temporary, path); }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
+
+    internal static void ReplaceOwnedMetadata(string temporary, string destination, byte[] bytes, Action<string, string>? replacement = null)
+    {
+        replacement ??= (source, target) => File.Replace(source, target, null);
+        if (!OperatingSystem.IsWindows()) { replacement(temporary, destination); return; }
+        const int maximumBytes = 32 * 1024 * 1024;
+        if (bytes.Length > maximumBytes) throw new InvalidDataException("Owned deployment metadata exceeds its bounded replacement limit.");
+        var before = Fingerprint(destination);
+        var expected = ((long)bytes.Length, Convert.ToHexStringLower(SHA256.HashData(bytes)));
+        if (Fingerprint(temporary) != expected) throw new IOException("Owned deployment temporary bytes changed before replacement.");
+        IOException? originalFailure = null;
+        // The caller holds the installation lease. Hash checks do not make replacement a compare-and-swap.
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try { replacement(temporary, destination); return; }
+            catch (IOException error) when (error.HResult == unchecked((int)0x80070497))
+            {
+                originalFailure ??= error;
+                if (attempt == 2) ExceptionDispatchInfo.Throw(originalFailure);
+                Thread.Sleep(attempt == 0 ? 50 : 100);
+                var unchanged = false;
+                try { unchanged = Fingerprint(destination) == before && Fingerprint(temporary) == expected; }
+                catch (Exception inspectionError) when (inspectionError is IOException or UnauthorizedAccessException or InvalidDataException)
+                { ExceptionDispatchInfo.Throw(originalFailure); }
+                if (!unchanged) ExceptionDispatchInfo.Throw(originalFailure);
+            }
+        }
+
+        (long Bytes, string Sha256) Fingerprint(string path)
+        {
+            SafePaths.CheckAncestors(path);
+            var attributes = File.GetAttributes(path);
+            if ((attributes & (FileAttributes.ReparsePoint | FileAttributes.Directory | FileAttributes.ReadOnly)) != 0)
+                throw new InvalidDataException("Owned deployment metadata must remain a writable regular file.");
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
+            SteamLaunchIntegrationPaths.VerifyOpenedPath(stream);
+            var length = stream.Length;
+            if (length > maximumBytes) throw new InvalidDataException("Owned deployment metadata exceeds its bounded replacement limit.");
+            var contents = new byte[checked((int)length)];
+            stream.ReadExactly(contents);
+            if (stream.Length != length || stream.ReadByte() != -1) throw new IOException("Owned deployment metadata changed during verification.");
+            SteamLaunchIntegrationPaths.VerifyOpenedPath(stream);
+            if (File.GetAttributes(path) != attributes) throw new IOException("Owned deployment metadata attributes changed during verification.");
+            return (length, Convert.ToHexStringLower(SHA256.HashData(contents)));
+        }
     }
     private void DeleteOwnedVersion(string directory)
     {

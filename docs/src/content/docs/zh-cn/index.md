@@ -16,7 +16,7 @@ hero:
       variant: secondary
 ---
 
-SteamWrapper 将 Steam 库中的游戏关联到你选择的游戏程序或启动器。在 Manager 中配置后，将生成的启动选项复制到 Steam；日常游玩时可以关闭 Manager。
+SteamWrapper 将 Steam 库中的游戏关联到你选择的游戏程序或启动器。在 Manager 中配置游戏并设置 Steam 启动选项；日常游玩时可以关闭 Manager。
 
 :::note[当前交付状态]
 **v0.2.8 已作为最新稳定版发布**，支持 **Windows 11 24H2 x64**，使用与 Steam 相同的 Windows 账户及普通权限。[下载 Setup 安装包](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.8/SteamWrapper-v0.2.8-win-x64-setup.exe) · [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.8/SteamWrapper-v0.2.8-win-x64-setup.exe) · [便携 ZIP 与发布说明](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8)。

@@ -43,11 +43,11 @@ Returning to a retained, compatible previous Manager is a maintenance operation.
 
 Close Manager, then use **Windows Settings → Apps → Installed apps → SteamWrapper → Uninstall**, or the installed uninstaller. The default removes Manager's owned program files, shortcuts and installation registration. **Your game configurations, Runner and other separate data are kept.**
 
-The uninstaller offers seven independent choices, all **off by default**:
+The uninstaller offers seven independent choices, all **off by default**. The original-value restoration described here is implemented in the **v0.2.9 candidate**, with candidate validation, real Steam acceptance and release checks pending. Public v0.2.8 uses the legacy recognized-command clearing behavior.
 
 | Choice | What it removes |
 | --- | --- |
-| Restore normal game launches from Steam | Exact recognized SteamWrapper commands in Steam Launch Options, after backing up the affected account files. |
+| Restore normal game launches from Steam | In the v0.2.9 candidate, recorded previous Launch Options are restored after backing up the affected account files. Exact recognized commands without an original-value record are cleared. |
 | Delete saved game configurations | SteamWrapper's `profiles.toml`; these are launch configurations, not game saves. |
 | Delete game configuration backups | Recognized SteamWrapper profile backups; Steam restoration backups are kept. |
 | Remove Runner | The verified stable Runner and its matching metadata. |
@@ -57,7 +57,9 @@ The uninstaller offers seven independent choices, all **off by default**:
 
 **No choice deletes game files or saves.** Choose only the categories you want to remove. For a temporary removal or a change of installation location, leave every choice off.
 
-Before removing Steam launch commands, game configurations or Runner, **exit Steam normally**. The uninstaller clears only the exact generated command for this data folder's stable Runner and matching AppID. It preserves customized commands and every other part of the account file. Earlier manually overwritten arguments were not recorded, so it cannot reconstruct an unknown historical value.
+Before restoring Steam launch settings, removing game configurations or removing Runner, **exit Steam normally**. In the v0.2.9 candidate, recorded originals are restored only while the current target still matches the recorded applied command; later edits to other games are preserved. An edited target, unknown recovery information or an unconfirmed replacement stops automatic restoration for review. Keep the current setting and recovery copies.
+
+Without an original-value record, only the exact generated command for this data folder's stable Runner and matching AppID is cleared. Custom commands remain untouched. Earlier manually overwritten arguments were not recorded, so neither this fallback nor the public v0.2.8 uninstaller can reconstruct an unknown historical value. Manager's explicit restoration lets you choose one account; the uninstall choice scans local Steam accounts for this data folder's integration.
 
 Deleting profiles or Runner also requires a complete scan of the local Steam accounts with no remaining Runner references or unresolved restoration backups. If a customized launch command still uses Runner, review it in Steam before retrying. Keeping profiles and Runner is safe when you are unsure.
 

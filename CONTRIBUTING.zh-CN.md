@@ -2,7 +2,7 @@
 
 [English](CONTRIBUTING.md) | 简体中文
 
-SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成。修改产品边界前，请阅读 [README](README.zh-CN.md)、[架构](https://yangyus8.top/SteamWrapper/zh-cn/development/architecture/)和[路线](https://yangyus8.top/SteamWrapper/zh-cn/project/roadmap/)。WinUI Manager 仍是预览；WinUI 是唯一的 Manager，安装器和稳定发布交付门槛仍待完成。
+SteamWrapper v2 由 Windows 优先的配置 Manager 与独立 Rust Runner 组成。修改产品边界前，请阅读 [README](README.zh-CN.md)、[架构](https://yangyus8.top/SteamWrapper/zh-cn/development/architecture/)和[路线](https://yangyus8.top/SteamWrapper/zh-cn/project/roadmap/)。WinUI 是唯一的 Manager；v0.2.7 已在文档限定的当前 Windows／Steam 账户范围发布首个 Windows 11 24H2 x64 稳定版本，后续版本仍需通过各自相关交付门槛。
 
 ## 问题与提案
 
