@@ -5,9 +5,9 @@ description: Install or use the complete Windows release, keep your game configu
 
 For **Windows 11 24H2 x64**, we recommend **Setup**. It includes the files needed to run Manager; you do not need development tools or a separate runtime installation. Other Windows builds are not yet verified.
 
-**[Download Setup — v0.2.8](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.8/SteamWrapper-v0.2.8-win-x64-setup.exe)** · [CNB mirror](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.8/SteamWrapper-v0.2.8-win-x64-setup.exe) · [Release notes and other downloads](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8)
+**[Download Setup — v0.2.9](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.9/SteamWrapper-v0.2.9-win-x64-setup.exe)** · [CNB mirror](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.9/SteamWrapper-v0.2.9-win-x64-setup.exe) · [Release notes and other downloads](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.9)
 
-GitHub and CNB provide the same verified installer for **v0.2.8, the latest stable release**. The release has three downloads: Setup, portable ZIP and `SHA256SUMS`. It has no Windows Authenticode signature, so Windows may show an unknown-publisher warning. Use the official downloads above and keep normal Windows protection enabled.
+GitHub and CNB provide the same verified installer for **v0.2.9, the latest stable release**. The release has three downloads: Setup, portable ZIP and `SHA256SUMS`. It has no Windows Authenticode signature, so Windows may show an unknown-publisher warning. Use the official downloads above and keep normal Windows protection enabled.
 
 <a id="get-a-versioned-preview"></a>
 <a id="open-the-complete-application"></a>
@@ -27,7 +27,7 @@ Without a saved language choice, Manager follows a supported system UI language 
 
 ## Use the portable ZIP
 
-If you prefer not to install Manager, download **`SteamWrapper-v0.2.8-win-x64.zip`** from the [same release page](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8). Extract the **complete ZIP** into a folder you intend to keep, then open `SteamWrapper.Manager.exe` from File Explorer.
+If you prefer not to install Manager, download **`SteamWrapper-v0.2.9-win-x64.zip`** from the [same release page](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.9). Extract the **complete ZIP** into a folder you intend to keep, then open `SteamWrapper.Manager.exe` from File Explorer.
 
 Keep all accompanying files together. Do not run the EXE inside the ZIP or copy out just the EXE. Close Manager before moving its complete folder. Your separate game configurations and stable Runner keep their existing locations, so moving Manager does not require changing Steam Launch Options.
 
@@ -43,7 +43,7 @@ The default **Download source** is **Automatic**, which tries GitHub first and c
 
 For an installed copy, select **Download update**, then **Install update** and confirm. Finish or discard unsaved edits first. Manager closes normally for installation and reopens after success. Updates and repairs keep your registered installation folder and preserve separate data. If a connection or verification fails, keep using the current version and retry later.
 
-Updating Manager does not replace the stable Runner used by Steam. Saving a profile checks and prepares Runner when safe. Public v0.2.8 calls this **Save and generate launch options**. The v0.2.9 candidate offers **Save only** and **Save and apply to Steam**; only the apply flow can write the selected Steam setting after confirmation. Candidate validation, real Steam acceptance and release checks are pending; see [configuration](/SteamWrapper/guides/configuration/). If Runner is busy, let the game finish normally and retry. Follow any displayed Runner warning before using a new launch command; see [Runner troubleshooting](/SteamWrapper/guides/troubleshooting/).
+Updating Manager does not replace the stable Runner used by Steam. Saving a profile checks and prepares Runner when safe. Use **Save only** to keep the configuration without changing Steam, or **Save and apply to Steam** to review and confirm the selected account's setting; see [configuration](/SteamWrapper/guides/configuration/). If Runner is busy, let the game finish normally and retry. Follow any displayed Runner warning before using a new launch command; see [Runner troubleshooting](/SteamWrapper/guides/troubleshooting/).
 
 <a id="where-manager-and-runner-keep-data"></a>
 

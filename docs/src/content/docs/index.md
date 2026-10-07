@@ -19,7 +19,7 @@ hero:
 SteamWrapper connects a Steam library entry to the game executable or launcher you choose. Configure your game in Manager and set up its Steam Launch Options; Manager can stay closed during daily play.
 
 :::note[Current delivery]
-**v0.2.8 is the latest stable release**, for **Windows 11 24H2 x64**, using the same Windows account as Steam with ordinary permissions. [Download Setup](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.8/SteamWrapper-v0.2.8-win-x64-setup.exe) · [CNB mirror](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.8/SteamWrapper-v0.2.8-win-x64-setup.exe) · [Portable ZIP and release notes](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8).
+**v0.2.9 is the latest stable release**, for **Windows 11 24H2 x64**, using the same Windows account as Steam with ordinary permissions. [Download Setup](https://github.com/YangYuS8/SteamWrapper/releases/download/v0.2.9/SteamWrapper-v0.2.9-win-x64-setup.exe) · [CNB mirror](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/download/v0.2.9/SteamWrapper-v0.2.9-win-x64-setup.exe) · [Portable ZIP and release notes](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.9).
 
 WinUI 3 is the only Manager. The complete downloads include the required runtimes; no development tools are needed. Setup remains Authenticode-unsigned, while optional application updates verify a separate project signature. Read [installation](/SteamWrapper/guides/installation/) for setup and data-preserving uninstall. Compatibility and acceptance remain specific to the recorded game, package and environment.
 :::

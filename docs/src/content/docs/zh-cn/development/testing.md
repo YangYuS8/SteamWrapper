@@ -11,13 +11,15 @@ SteamWrapper 分别验证跨 Windows/Linux 的 Rust core 与独立 Runner，以�
 
 ## 当前验收（2026-10-07）
 
-最新公开版本为 **[v0.2.8](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.8)**，另有 [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.8)；v0.2.7 仍是首个 Windows 稳定版。准确主线标签的工作流九项任务全部通过，两站各三个附件经独立匿名下载，两个签名更新渠道均通过真实公钥／时效／精确安装包绑定校验。CNB 发行元数据通过既有已登录 CLI 读取，附件及更新源请求没有使用凭据。下方私有客户端及历史日期记录保留原始载荷范围；公开下载检查没有执行 Setup。
+最新公开版本为 **[v0.2.9](https://github.com/YangYuS8/SteamWrapper/releases/tag/v0.2.9)**，另有 [CNB 镜像](https://cnb.cool/Nesoriel/SteamWrapper/-/releases/tag/v0.2.9)；v0.2.7 仍是首个 Windows 稳定版。准确主线标签的工作流九项任务全部通过，两站各三个附件经独立匿名下载，两个签名更新渠道均通过真实公钥／时效／精确安装包绑定校验。CNB 发行元数据通过既有已登录 CLI 读取，附件及更新源请求没有使用凭据。实际公开 Setup 与 NativeAOT Host 的执行[另见下文](#public-029-delivery-2026-10-07)，私有客户端及历史日期记录保留原始载荷范围。
 
 | 范围 | 当前结果 |
 | --- | --- |
-| 公开精简稳定交付 | [发布运行 37520487430](https://github.com/YangYuS8/SteamWrapper/actions/runs/37520487430)在 `v0.2.8`／提交 `8fc993e4b99bbb5de4a281971885dc89f48a1c50` 上九项任务全部通过。GitHub／CNB 各公开 Setup、ZIP、SHA256SUMS 三个附件，核验长度／摘要一致。四份稳定／预览更新源均通过真实公钥、时效、准确安装器／来源验证及同频道字节一致性检查。该检查没有执行产品程序。 |
+| 公开精简稳定 0.2.9 交付 | [发布运行 37557175992](https://github.com/YangYuS8/SteamWrapper/actions/runs/37557175992)在 `v0.2.9`／主线提交 `7c98954f57ea6a45ef9efe484e7d09977b9046a6` 上九项任务全部通过。两站各三个匿名附件及四份签名更新源经独立核验。实际公开 `0.2.8 → 0.2.9` 干净升级通过 18 步并保留基线稳定 Runner；公开 NativeAOT Host 另通过两项卸载用例。 |
+| 当前 C# 与 Runner 契约 | 267 项 Application、37 项 Windows、261 项 Deployment 通过（共 565 项，无失败／跳过），未改变的 C#/Rust 契约通过。准确源码／本地构建证据保留在 [Steam 集成章节](#steam-integration-029-2026-10-07)。 |
+| 此前公开精简 0.2.8 交付 | [发布运行 37520487430](https://github.com/YangYuS8/SteamWrapper/actions/runs/37520487430)在 `v0.2.8`／提交 `8fc993e4b99bbb5de4a281971885dc89f48a1c50` 上九项任务全部通过。GitHub／CNB 各公开 Setup、ZIP、SHA256SUMS 三个附件，核验长度／摘要一致。四份稳定／预览更新源均通过真实公钥、时效、准确安装器／来源验证及同频道字节一致性检查。该检查没有执行产品程序。 |
 | 公开稳定交付 | [发布运行 37500459000](https://github.com/YangYuS8/SteamWrapper/actions/runs/37500459000)在 `v0.2.7`／提交 `0987802b86460eff711c6cf694015cdbf086bbb2` 上九项任务全部通过：完整 Rust／WinUI／文档、自包含发布、安装器／打包、GitHub、CNB 及两个签名更新渠道。四份更新源另经真实公钥核验，每份绑定精确的公开 Setup，各渠道两站字节相同。该检查没有执行公开安装器。 |
-| 当前 C# 与 Runner 契约 | 178 项 Application、37 项 Windows、160 项 Deployment 通过，另有一项有条件的跨盘跳过。跨语言 Runner 契约通过，输出为 `target/winui-contracts/ef24ca53d4b24fd1a7f2051fea869138/results`。这是源码／服务／进程结果。 |
+| 此前 C# 与 Runner 契约 | 178 项 Application、37 项 Windows、160 项 Deployment 通过，另有一项有条件的跨盘跳过。跨语言 Runner 契约通过，输出为 `target/winui-contracts/ef24ca53d4b24fd1a7f2051fea869138/results`。这是源码／服务／进程结果。 |
 | 旧 Runner 启动提示 | 聚焦原生 `runner-update` 回归先按预期失败，修复后通过；聚焦 Runner／本地化服务另通过 11 项。新增的是可见提示，保留旧 Runner，不自动替换。 |
 | 指定进程名观察修正（2026-10-07） | 实际 Windows CI 失败及确定性隔离 CLI 失败揭示：目标比启动器先结束时会被漏过。修正后两项原生回归、Windows Runner 十项套件及全新发布 CLI 复测通过；PR、主线和发布标签的 Linux／Windows CI 也全部通过。保留基线排除、启动器状态与发现／空档／最长等待规则。 |
 | 准备中的稳定版界面文案 | 0.2.7 发布目录的聚焦原生更新用例在两种语言中通过，夹具管理器正常退出。界面文案不代表稳定版本已公开或公网更新安装通过。 |
@@ -48,7 +50,7 @@ CNB 实际更新记录为 `target/winui/public-update-ba2b49e8c41b48f78233113b88
 
 私有 0.2.7 安装包为 47.63 MiB，ZIP 为 70.39 MiB。实际首次安装程序文件共 203,401,695 字节（193.98 MiB），含维护程序／卸载器，不含独立数据目录或保留旧版本。最终软件渲染沙盒中，从启动器到可操作的首次启动为 10,403 ms，迁移后为 6,334 ms；工作集分别为 161,820,672、165,781,504 字节。这是单次客体观测，不保证宿主性能，也不是 CI 已公开 v0.2.7 包的精确大小或性能测量。
 
-Windows 11 x64 核心交付已有原生配置、已记录输入法／缩放、真实普通进程权限、干净自包含安装／便携使用及有界恢复证据。全新账户完整主登录、双用户 GUI 和多显示器硬件矩阵仍未验证。Windows Authenticode 可选，项目签名更新元数据是独立来源认证要求；CNB 手动公网更新已在上述范围内通过，GitHub 超时另行保留。通用 Steam 启动项自动应用继续暂缓。v0.2.7 标签工作流与公开附件／更新源现已核验，限定的当前账户支持范围和未覆盖的更广矩阵不变。
+Windows 11 x64 核心交付已有原生配置、已记录输入法／缩放、真实普通进程权限、干净自包含安装／便携使用及有界恢复证据。全新账户完整主登录、双用户 GUI 和多显示器硬件矩阵仍未验证。Windows Authenticode 可选，项目签名更新元数据是独立来源认证要求；CNB 手动公网更新已在上述范围内通过，GitHub 超时另行保留。v0.2.9 已实现确认单账号后应用 Steam 启动项及恢复已记录原值；下方分别记录源码／本地客户端与公开字节证据。v0.2.7 标签工作流与公开附件／更新源保留为首个稳定版历史，限定的当前账户支持范围和未覆盖的更广矩阵不变。
 
 [Manager 实测比较](/SteamWrapper/zh-cn/project/decisions/manager-comparison/)是选型的归档证据；[测量脚本](https://github.com/YangYuS8/SteamWrapper/blob/ca6a09ed5af8a06a04b3c36b2587efa5d94dc92c/scripts/windows/Measure-ManagerComparison.ps1)与 Dioxus 源码固定在提交 `ca6a09e`，不再是当前开发前置条件。
 
@@ -58,11 +60,13 @@ Windows [Rust 运行 37494490736](https://github.com/YangYuS8/SteamWrapper/actio
 
 <a id="steam-integration-029-2026-10-07"></a>
 
-## Steam 集成候选 0.2.9（2026-10-07）
+## Steam 集成源码与本地候选 0.2.9（2026-10-07）
+
+本节保留发布前源码与本地构建证据。Setup、Host 和 Runner 哈希标识这些不可改写的本地载荷，包括记录中的未提交工作区；它们与后来 CI 构建的公开 v0.2.9 字节及下方公开验收相互独立。
 
 最终源码通过 **267 项 Application、37 项 Windows、261 项 Deployment 测试**（共 565 项，无失败／跳过）。准确命令／结果为 `target/steam-integration-tests/final-resilient-publication-dce7ade3d67f4fe7bfc7d5c4e4c64bf9/`；未改变的 C#/Rust 契约另行通过，记录于 `target/winui-contracts/aece773a7b1a4cf481059eab944cbd85/results`。重点 RED→GREEN 回归覆盖账号标识、准确 VDF 范围编辑、保留首次原值、确认后改动、同账号待处理操作、中断记录、共用数据／Runner 锁、文件句柄实际路径、取消及 Steam 启动检查。新应用／恢复与历史清理均通过显式 `D:\SteamWrapper-test-fixtures` 跨盘路径，服务证据为 `target/steam-integration-tests/service-final/integration-final.trx`。后续针对性检查也区分历史清理的不确定变更与写入前失败、扫描后再核对 Steam、验证流构造失败时立即释放原生句柄，以及诊断信息有界且不保留用户消息／路径。
 
-最终发布目录通过 **21 项原生夹具用例**，记录于 `target/winui/native-ui/中文 空格 ' abbcbe6472c84535bbf1aa8b41f08e2d/evidence.json`。英语／简体中文分别执行保存后取消、实际隔离应用与原值恢复、重启 Manager、保留后来追加的无关注释、明确多账号选择、单账号历史命令清理和无账号手动备用。Steam 当时已退出，两份 `steamIntegrationObservations` 均记录 `mutation=passed`；既有编辑／取消／本地名称检查同时通过，全部 600 个发布目录文件保持不变。这些是一次性 Steam／用户数据夹具，不是真实 Steam 客户端持久显示证据。
+最终本地发布目录通过 **21 项原生夹具用例**，记录于 `target/winui/native-ui/中文 空格 ' abbcbe6472c84535bbf1aa8b41f08e2d/evidence.json`。英语／简体中文分别执行保存后取消、实际隔离应用与原值恢复、重启 Manager、保留后来追加的无关注释、明确多账号选择、单账号历史命令清理和无账号手动备用。Steam 当时已退出，两份 `steamIntegrationObservations` 均记录 `mutation=passed`；既有编辑／取消／本地名称检查同时通过，全部 600 个发布目录文件保持不变。这些是一次性 Steam／用户数据夹具，不是真实 Steam 客户端持久显示证据。
 
 原生测试发现就绪 Runner 信息相同时仍被不必要替换。共享读取回归先失败；修正后避免该替换，同时保留不一致／不安全／占用失败。早先失败的原生结果保留。最终发布目录的 **NativeAOT Host** 另通过记录非空原值卸载恢复和外部改动拒绝两项测试，证据为 `target/steam-integration-tests/installer-acceptance-resilient-final-b0032ce07a4c4f808b31cb1973d85a40/native-uninstall/`，绑定 4,724,224 字节及 SHA-256 `d9e5071b3898654d9a294884015671ec61d046c0985391edddcb7fb0c9408c3f`。
 
@@ -70,11 +74,43 @@ Windows [Rust 运行 37494490736](https://github.com/YangYuS8/SteamWrapper/actio
 
 私有证据为 `target/steam-integration-tests/live-d5c1c7a9fae14c05994745d347b0810c/`。独立哈希覆盖官方／汉化目录全部 150 个文件：非存档文件没有改变或新增。正常标题启动／退出自然更新五个引擎管理的 `savedata` 文件；测试前七个存档文件副本全部保留，没有选择读档／新游戏／保存。从 Explorer 复制的实际共享配置保持逐字节一致（1,250 字节、六份配置）；实际稳定 Runner 匹配候选 SHA-256 `b63046aa9b2b20b9e15ed63daa1cc7736acaa52b2d54cc04fe2135f8d08bffaa`。结论限于所测客户端／账号／游戏，不证明汉化存档实际云同步、成就触发、任意启动器或更广账号／硬件。
 
-最终发布目录通过真实隔离 `0.2.8 → 0.2.9 → 0.2.8 → 0.2.9` 生命周期的 13 项预期结果，保留六份数据夹具与 1,204 个回滚版本文件，并通过全部 14 项安装选项结果。证据为 `target/steam-integration-tests/installer-acceptance-production-final-772308b4e53c4d52a3c5f07648954665/`；两条路径均非合成版本，且 `cleanVm=false`。
+本地会话收尾时，在 Steam 关闭的情况下，通过普通 Explorer 恢复原有 `0.2.8` Runner 及其清单，只还原这两个文件，保留配置与用户精确启动项。读回记录 `target/steam-integration-tests/live-d5c1c7a9fae14c05994745d347b0810c/runner-after-public-reset/verification.json` 确认 Runner SHA-256 为 `7e3ee968f3ad6113b91dc21466e4c07c1872b4743c0a922d250e0ed8425e4a5a`。本地候选会话已结束，用户稳定数据目录未留下字节不同的本地 `0.2.9` Runner。
 
-完整原生清理、干净客户端验收及准确标签公开交付仍待完成。新的英语清理运行 `target/winui/installer-options-ui-71336f2ecfb04545a25693298fa562e9/` 通过六个选择后，在日志清理失败，Host 退出 11，诊断为 `IOException HResult=0x80070497`；其余两个英语选择与全部九个中文选择未执行。既有 Removed 日志、当前完整版本及玩家夹具仍保留。早先隔离安装选项和中文缓存卸载失败也保留证据。有界会话诊断只在既有安装日志保留异常类别／错误码，不保留消息或用户路径；CLI 路径或后续诊断检查通过，不能证明这些自然失败的原因。
+最终本地发布目录通过真实隔离 `0.2.8 → 0.2.9 → 0.2.8 → 0.2.9` 生命周期的 13 项预期结果，保留六份数据夹具与 1,204 个回滚版本文件，并通过全部 14 项安装选项结果。证据为 `target/steam-integration-tests/installer-acceptance-resilient-final-b0032ce07a4c4f808b31cb1973d85a40/`；两条路径均非合成版本，且 `cleanVm=false`。
 
-全新自有文件探针 `target/steam-integration-tests/replace-probe-bca67851b53a42059d16179191797bc7/` 在前 26 次成功后，第 27 次真实 `File.Replace` 复现同一 1175，没有注入读取者，也未运行 Steam 或卸载路径；两个文件仍保留准确原字节。源码现跳过没有剩余目录的已完成 Removed 记录改写，并仅对 Windows 1175 的内部安装元数据替换提供最多三次尝试，重试前核对哈希、大小、普通文件及实际路径。三项记录用例和 23 项替换用例在预期失败后通过；文件改变、缺失或不安全，以及其他错误码均停止。这不向 Steam 写入增加重试，不证明原子预期内容替换，也不确定系统层原因；最终发布目录／客户端验收仍分别进行。另行复制的生产 Deployment DLL 在 `target/steam-integration-tests/resilient-replace-probe-998303d569304f65b761a6c3355b6b30/` 完成 100 次真实 helper 调用，共 105 次实际替换：五次自然 1175 均在第二次成功，目标哈希准确。没有注入错误／读取者；这是托管文件系统 helper 证据，不是安装器／客户端验收。
+完整原生清理的英语九项全部通过，记录于 `target/winui/installer-options-ui-27a8c14118724436b2fb606c7ca2b172/cleanup-evidence.json`；简体中文九项全部通过，记录于 `target/winui/installer-options-ui-f9c2ce42b5194fec95ad5dcd04369983/cleanup-evidence.json`。实际 Inno 复选框运行覆盖七项单独选择、敏感组合及全部选择，保留未选／受保护数据、未知图片、游戏哨兵文件、恢复历史及无关 Steam 字节。最终合并记录 `target/steam-integration-tests/final-resilient-native-cleanup-c7330b4a3a2744c4ababf43429b2645c/final-result.json` 将 21 项原生用例和这 18 项清理用例绑定到未改变的 600 文件发布目录，且无夹具进程残留。这些夹具未使用真实 Steam 或游戏数据。
+
+实际更新接力通过，证据为 `target/winui/update-handoff-1c0779cb33944fd9af6bf2b232412fc8/evidence.json`：隔离 `0.2.8 → 0.2.9` 安装器等待父进程正常退出，自动重启健康 Manager，随后 Manager 正常退出。更新及默认卸载前后，配置、偏好和稳定 Runner 夹具字节均不变，保留前一版本。记录为 `actualInstaller=true`、`cleanVm=false`、`signedFeedNetwork=false`，不是公开更新源下载验收。
+
+生产安装身份的本地候选通过全部 **18 项干净升级步骤**，证据为 `target/winui/clean-windows-9e69909f53fa4f9d9c9bcfe6dc970a49/evidence/evidence.json`，经测试工具按匹配运行的 `ReadEvidence` 核验。全新离线 Windows 11 构建 26100 沙盒使用具有管理员权限的 WDAG 账号，未安装 SDK 或外部运行时。准确的公开 `v0.2.8` Setup（`cff21a3b3cb109562d35568ef68810a37bc5ca15103ce8f2579223477ec61049`）完成安装／修复，再真实升级至本地 `v0.2.9` Setup：50,025,029 字节，SHA-256 `44e454a8aab242069ba877ef739da4edd9de3ddc459e465fda1945bcaae25e85`。原生保存配置、明确更新稳定 Runner、关闭 Manager 后启动无害程序、默认卸载保留数据、中文自选文件夹重装及最终自有文件移除全部通过。本地构建早于功能提交，因此记录正确保留 `sourceHeadCommit=3383b7ba1c2532732c23b001b3a9d58c48427f42`、`workingCopyDirty=true`。这仍是该未发布本地载荷的证据。准确标签公开附件、签名更新源及实际公开 Setup 执行现已另行通过，见下文；本地来源／未提交标记及 Setup 字节保持不变。两条路径均不证明独立 ISO 虚拟机、新普通账号、双用户或硬件验收。
+
+早先的英语清理运行 `target/winui/installer-options-ui-71336f2ecfb04545a25693298fa562e9/` 通过六个选择后，在日志清理失败，Host 退出 11，诊断为 `IOException HResult=0x80070497`；该次早先运行的其余两个英语选择与全部九个中文选择未执行。既有 Removed 日志、当前完整版本及玩家夹具仍保留。早先隔离安装选项和中文缓存卸载失败也保留证据。有界会话诊断只在既有安装日志保留异常类别／错误码，不保留消息或用户路径；全新最终运行通过仍不能确定这些自然失败的最终系统层原因。
+
+全新自有文件探针 `target/steam-integration-tests/replace-probe-bca67851b53a42059d16179191797bc7/` 在前 26 次成功后，第 27 次真实 `File.Replace` 复现同一 1175，没有注入读取者，也未运行 Steam 或卸载路径；两个文件仍保留准确原字节。源码现跳过没有剩余目录的已完成 Removed 记录改写，并仅对 Windows 1175 的内部安装元数据替换提供最多三次尝试，重试前核对哈希、大小、普通文件及实际路径。三项记录用例和 23 项替换用例在预期失败后通过；文件改变、缺失或不安全，以及其他错误码均停止。这不向 Steam 写入增加重试，不证明原子预期内容替换，也不确定系统层原因。另行复制的生产 Deployment DLL 在 `target/steam-integration-tests/resilient-replace-probe-998303d569304f65b761a6c3355b6b30/` 完成 100 次真实 helper 调用，共 105 次实际替换：五次自然 1175 均在第二次成功，目标哈希准确。没有注入错误／读取者；这是托管文件系统 helper 证据，与上方最终安装器／客户端验收分别记录。
+
+<a id="public-029-delivery-2026-10-07"></a>
+
+## 公开 0.2.9 交付（2026-10-07）
+
+不可改写的 `v0.2.9` 标签绑定主线提交 `7c98954f57ea6a45ef9efe484e7d09977b9046a6`。[发布运行 37557175992](https://github.com/YangYuS8/SteamWrapper/actions/runs/37557175992)九项任务全部成功。GitHub 和 CNB 各公开三个附件，标题均为 `v0.2.9`，正文分别匹配已提交的英语与简体中文说明。两站匿名附件字节相同；CNB 元数据通过已登录 CLI 读取。证据为 `target/winui/public-inspection-tools/compact-asset-inspection-eee63830a9214cf9858b6dc73576fe4e/summary.json`。
+
+| 公开附件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| Setup | 50,024,401 | `ea994217bfdd53e8446ab21b11bff6fd9f4259187fc2b1c3566fdb714ef0f657` |
+| 便携 ZIP | 73,944,192 | `53980d2c9de9d316bc667806227678d83bc3f424f8f16e347a7f448ffda42e41` |
+| SHA256SUMS | 204 | `c55e3710e900fe2f523b2bffd5594d86a53ae0ab61e9bd57572e91d9f31c767b` |
+
+校验和文件只列出两个载荷。四份匿名获取的 GitHub／CNB 稳定／预览更新源通过真实项目公钥签名、时效、准确源码提交／Setup 绑定及同渠道原始字节一致性检查，记录为 `target/winui/public-inspection-tools/compact-feed-inspection-b38e030efc4d4564929d8d62ea31fb3a/summary.json`。稳定序列 `1791337508051` 签发于 `2026-10-07T01:45:08Z`，预览序列 `1791337533494` 签发于 `2026-10-07T01:45:33Z`，记录的到期时间分别为 2026-11-04 的对应时刻。这些静态检查记录 `productExecuted=false`；完整内部包验证与产品执行有独立证据。
+
+**实际公开包干净升级：**`target/winui/clean-windows-4ff2ae6e7cab48319603be0b607be538/evidence/evidence.json` 及匹配的 `verified-evidence.json` 记录 **18 步通过、零失败**，场景为 `PublicUpgrade`。全新离线 Windows 11 构建 26100 沙盒使用具有管理员权限的 WDAG 账号，没有外部 SDK／运行时或真实 Steam。客体独立验证并执行准确公开 `v0.2.8` 基线 Setup（`cff21a3b3cb109562d35568ef68810a37bc5ca15103ce8f2579223477ec61049`）和上表公开 `v0.2.9` Setup。原生保存配置、安装／修复、真实升级、关闭 Manager 后无界面启动无害程序、默认卸载保留数据、中文文件夹重装与最终卸载通过，自有 VM 已停止。升级保留基线稳定 Runner；此记录为 `stableRunnerUpdated=false`，各次启动使用保留的 Runner（`7e3ee968f3ad6113b91dc21466e4c07c1872b4743c0a922d250e0ed8425e4a5a`）。它不证明新捆绑的公开 0.2.9 Runner 已执行，也不证明公开更新源下载至安装流程。
+
+**实际公开 NativeAOT Host：**`target/steam-integration-tests/public-native-uninstall-ac8913e7bfdc41d28cb5c5ca7a59816a/evidence.json` 记录 **两项通过、零失败／跳过**，没有重新构建：按记录恢复原值的卸载，以及拒绝外部修改过的目标。公开 x64 GUI NativeAOT Host 为 4,724,224 字节，SHA-256 `0a8254c4fb65f7f30d9c6870f2981435b5d40faa16e533b4678ef3d2a1f96aae`。已核验公开 ZIP 包含 603 个有界条目，未压缩总计 186,636,646 字节；本路径只提取 Host、Runner 和 Runner 清单三个文件。本地发布目录全部 600 个文件、公开 ZIP 及提取二进制均保持原字节。使用一次性 Steam 夹具，没有操作真实 Steam 设置或桌面。
+
+**实际公开 ZIP 与 Runner：**`target/winui/public-portable-originalci-eab5cba3d29f4c1d9ca4d27149898f53/evidence/evidence.json`、`provenance-prepared.json` 和 `result.json` 记录**既有十项便携步骤全部通过**。未修改的测试工具仍记录 `scenario=PortableCandidate`、`localCandidate=true` 与 `unpublishedCandidate=true`，没有增加新的公开便携场景。独立来源记录使用 `Test-WinUIReleaseArtifactDirectory` 验证运行 37557175992 的原始七文件产物，逐字节复制原 schema-1 便携描述符（SHA-256 `ca0df0e7506a7337b29d07974757d5e12985f897b35d00ea9d9e9248749b7f66`），并将执行 ZIP 绑定到上表匿名公开字节及提交 `7c98954f57ea6a45ef9efe484e7d09977b9046a6`。
+
+全新离线 Windows 11 构建 26100 沙盒使用具有管理员权限的 WDAG 账号，没有外部 SDK／运行时或真实 Steam，全部 603 个载荷文件均经验证。在原生界面保存中文配置后，准确公开 `0.2.9` Runner 安装到共享稳定路径。关闭 Manager 并移动便携目录前后，Runner 进程 2128 与 5608 均以 0 退出并留下无害程序标记，Manager 进程 1244 与 2820 均正常关闭并以 0 退出。既有便携目录占用保护通过 Host 退出 11 拒绝覆盖，保留程序及数据。最终见证确认原始七项 CI 产物、密封客体输入、公开 ZIP 与本地发布目录全部 600 个文件字节均未改变。没有构建或已跟踪源码修改；自有 VM 已停止，剩余沙盒实例为零。
+
+公开 0.2.9 Runner 为 1,283,072 字节，SHA-256 `888ca3976827883f87cf70f6f211eb2045677caa7520a735cda71c0d2606302c`，不同于上方 9-nine 真实会话使用的本地候选 `b63046aa…` Runner。公开 Host 路径保留 `runnerExecuted=false`；独立便携路径已证明准确公开 Runner 字节的无害程序执行。这些记录不证明公开 Runner 的真实 Steam 游玩。全新普通账户主登录、双用户 GUI、更广硬件／云存档／成就覆盖及早先失败的网络／账户路径保留既有边界。Authenticode 仍为可选。
 
 <a id="public-028-and-ci-observations-2026-10-07"></a>
 
@@ -90,7 +126,7 @@ Windows [Rust 运行 37494490736](https://github.com/YangYuS8/SteamWrapper/actio
 
 ## 玩家反馈改进，源码 0.2.8（2026-10-07）
 
-以下是本地发布前结果，当时最新公开版本仍为 `v0.2.7`。当前公开 `v0.2.8` 的核验另见上文。初始快照通过 216 项 Application、37 项 Windows 和 167 项 Deployment 测试，有一项条件式跨卷跳过。C#/Rust 契约通过，记录为 `target/winui-contracts/f4a2ed8ddb5a40eeb7d30f65e1266d65/results`。服务回归覆盖选定配置删除、字节／备份保留、Steam 退出／引用保护，以及有界只读 Steam 游戏名解析。
+以下是本地发布前结果，当时最新公开版本仍为 `v0.2.7`。之后公开 `v0.2.8` 的核验保留在上文。初始快照通过 216 项 Application、37 项 Windows 和 167 项 Deployment 测试，有一项条件式跨卷跳过。C#/Rust 契约通过，记录为 `target/winui-contracts/f4a2ed8ddb5a40eeb7d30f65e1266d65/results`。服务回归覆盖选定配置删除、字节／备份保留、Steam 退出／引用保护，以及有界只读 Steam 游戏名解析。
 
 最终复核复现了跨游戏旧配置 Key 引用漏检。移除现在同时检查配置 Key 与 AppID，恢复仍只清除所选规范 AppID 的标准命令。新增十一项缺失行为用例先失败，字面／前缀对照通过；最终聚焦门槛通过 25 项、完整 Deployment 门槛通过 180 项，各有一项条件式跨卷跳过。需要命令行转义的 Key 会保留配置并报告检查失败，不会视为没有引用。Manager 已针对新保护编译通过。下方私有原生／安装器载荷早于最后这处保护，最终发布仍须准确标签构建与安装器门禁。
 
@@ -443,7 +479,7 @@ Runner 进程测试覆盖 Linux `process_group`、Windows Job Object，以及两
 ## 限制
 
 - C# 服务/契约和发布检查不能证明原生 UI、可访问性或干净 Windows 安装；原生 UI 工具仅证明在交互桌面实际执行的夹具用例，不等于整个 W1 门槛通过。
-- 常规自动化不操作真实 Steam；真实验收需要授权、记录原启动项、保护存档、校验文件并恢复。候选 `0.2.9` 已实现一键应用／恢复 Launch Options，源码、原生夹具和真实验收证据须分别记录。
+- 常规自动化不操作真实 Steam；真实验收需要授权、记录原启动项、保护存档、校验文件并恢复。公开 `0.2.9` 已实现一键应用／恢复 Launch Options；源码、本地候选真实会话及准确公开字节验收须分别记录。
 - Runner 进程 fixture 仅证明对应平台和已测生命周期场景，不证明真实 Proton、breakaway、Unix daemonize/新 session 或 Steam Deck 兼容性。
 - 稳定版包含完整的 Windows 自包含目录和单独的未签名安装器；上方分别记录实际执行的客户端、向导与认证更新路径，本机隔离或公开下载检查本身不能证明更广泛的干净客户端矩阵。
 - 上述 2026-09-07–09-08 Dioxus 记录是归档历史结果，不是当前 WinUI 证据。
